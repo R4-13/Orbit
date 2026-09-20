@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": false,
+    "incremental": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "baseUrl": ".",
+    "paths": {
+      "@orbit/domain": ["packages/domain/src/index.ts"],
+      "@orbit/domain/*": ["packages/domain/src/*"],
+      "@orbit/agent-core": ["packages/agent-core/src/index.ts"],
+      "@orbit/agent-core/*": ["packages/agent-core/src/*"],
+      "@orbit/integration-core": ["packages/integration-core/src/index.ts"],
+      "@orbit/integration-core/*": ["packages/integration-core/src/*"],
+      "@orbit/shared": ["packages/shared/src/index.ts"],
+      "@orbit/shared/*": ["packages/shared/src/*"],
+      "@orbit/config": ["packages/config/src/index.ts"],
+      "@orbit/config/*": ["packages/config/src/*"],
+      "@orbit/ui": ["packages/ui/src/index.ts"],
+      "@orbit/ui/*": ["packages/ui/src/*"],
+      "@orbit/testing": ["packages/testing/src/index.ts"],
+      "@orbit/testing/*": ["packages/testing/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", "coverage"]
+}

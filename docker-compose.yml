@@ -1,0 +1,141 @@
+version: "3.9"
+
+# Project ORBIT — local development stack.
+# `docker compose up` brings up infra (Postgres, Redis, MinIO) plus the
+# API, Worker and Web app. See docs/LOCAL_DEVELOPMENT.md for details.
+
+name: orbit
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orbit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: orbit
+      POSTGRES_PASSWORD: orbit_local_dev
+      POSTGRES_DB: orbit
+    ports:
+      - "5432:5432"
+    volumes:
+      - orbit_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orbit -d orbit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: orbit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - orbit_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: orbit-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: orbit_minio_admin
+      MINIO_ROOT_PASSWORD: orbit_minio_admin_secret_change_me
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - orbit_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: orbit-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 orbit_minio_admin orbit_minio_admin_secret_change_me &&
+      mc mb -p local/orbit-documents &&
+      exit 0
+      "
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: orbit-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      S3_ENDPOINT: "http://minio:9000"
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/v1/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: orbit-worker
+    restart: unless-stopped
+    command: ["node", "dist/worker/main.js"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      S3_ENDPOINT: "http://minio:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: orbit-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      API_BASE_URL: "http://api:3001"
+      NEXT_PUBLIC_API_BASE_URL: "http://localhost:3001"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  orbit_postgres_data:
+  orbit_redis_data:
+  orbit_minio_data:

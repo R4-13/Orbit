@@ -1,0 +1,23 @@
+// Project ORBIT — Prisma schema (placeholder, Phase 1).
+//
+// The full multi-tenant data model (§10 of the master spec: Tenant, User,
+// Case, Invoice, Lead, AgentRun, AuditEvent, ...) is added in Phase 2. This
+// placeholder exists so `prisma generate` succeeds during Phase 1 CI/build
+// and the workspace installs cleanly end-to-end.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Placeholder model, replaced by the full schema in Phase 2.
+model SchemaPlaceholder {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  @@map("_schema_placeholder")
+}
