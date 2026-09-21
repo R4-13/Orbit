@@ -13,3 +13,5 @@ export * from './crm/types';
 export * from './crm/mock-crm-connector';
 export * from './telephony/types';
 export * from './telephony/mock-telephony-connector';
+export * from './ocr/types';
+export * from './ocr/mock-ocr-provider';

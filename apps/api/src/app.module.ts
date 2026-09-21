@@ -1,14 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
 import { EnvModule } from './config/env.module';
+import { ConnectorsModule } from './connectors/connectors.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
+import { InvoicesModule } from './invoices/invoices.module';
+import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
+import { SuppliersModule } from './suppliers/suppliers.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TenantsModule } from './tenants/tenants.module';
 
@@ -40,11 +45,16 @@ import { TenantsModule } from './tenants/tenants.module';
     PrismaModule,
     AuditModule,
     StorageModule,
+    ConnectorsModule,
+    PolicyModule,
     TenantsModule,
     AuthModule,
     CasesModule,
     TasksModule,
     DocumentsModule,
+    ApprovalsModule,
+    SuppliersModule,
+    InvoicesModule,
     HealthModule,
   ],
 })

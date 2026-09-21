@@ -59,4 +59,15 @@ export class StorageService {
   async delete(storageKey: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: storageKey }));
   }
+
+  /**
+   * Downloads an object's full bytes into memory — used server-side for
+   * processing (OCR extraction, Phase 7), never for serving a file to a
+   * browser (that goes through `getDownloadUrl`'s presigned URL instead).
+   */
+  async getObjectBytes(storageKey: string): Promise<Buffer> {
+    const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: storageKey }));
+    const bytes = await response.Body?.transformToByteArray();
+    return Buffer.from(bytes ?? []);
+  }
 }

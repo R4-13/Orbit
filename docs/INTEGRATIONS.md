@@ -36,7 +36,7 @@ Implementierungen unterschiedlich behandelt.
 | CRM (HubSpot) | `CrmConnector` (`src/crm/types.ts`) | `CRM_CONNECTOR` (`mock` \| `hubspot`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 10 |
 | Telefonie (Twilio) | `TelephonyConnector` (`src/telephony/types.ts`) | `TELEPHONY_CONNECTOR` (`mock` \| `twilio`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 11 |
 | Object Storage (S3-kompatibel / MinIO) | `StorageService` (`apps/api/src/storage/storage.service.ts`) | `S3_ENDPOINT`/`S3_*` | LIVE TESTED (MinIO via Docker) | — (kein Connector im engeren Sinn, echte S3-API bereits live nutzbar) |
-| OCR (Rechnungs-Texterkennung) | — | `OCR_PROVIDER` (`mock` \| `tesseract`) | NICHT BEGONNEN | Phase 7 (Finance-Workflow, Rechnungsextraktion) |
+| OCR (Rechnungs-Texterkennung) | `OcrProvider` (`packages/integration-core/src/ocr/types.ts`) | `OCR_PROVIDER` (`mock` \| `tesseract`) | Interface + Mock: IMPLEMENTED. Real (Tesseract): NICHT BEGONNEN (Implementierungs-, kein Zugangsdaten-Blocker) | Phase 7 (Finance-Workflow, Rechnungsextraktion) |
 | Speech-to-Text | — | `STT_PROVIDER` (`mock` \| `whisper`) | NICHT BEGONNEN | Phase 11 (Telefonie/Sales-Workflow) |
 | LLM-Provider (Agent-Runtime) | `LLMProvider` | `LLM_PROVIDER` (`mock` \| `anthropic`) | NICHT BEGONNEN | Phase 6 (Agent Runtime) |
 
