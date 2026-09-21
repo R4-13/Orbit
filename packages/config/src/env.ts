@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
 /**
+ * `z.coerce.boolean()` calls `Boolean(value)`, so any non-empty string
+ * (including the literal text "false") coerces to `true`. Env vars are
+ * always strings, so booleans need explicit "true"/"false" parsing instead.
+ */
+function booleanEnvVar(defaultValue: boolean) {
+  return z
+    .enum(['true', 'false'])
+    .default(defaultValue ? 'true' : 'false')
+    .transform((value) => value === 'true');
+}
+
+/**
  * Central, validated environment schema for the whole platform.
  *
  * The API, worker and web apps all import this rather than reading
@@ -38,14 +50,14 @@ export const envSchema = z.object({
   S3_BUCKET: z.string().default('orbit-documents'),
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
-  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  S3_FORCE_PATH_STYLE: booleanEnvVar(true),
 
   // Auth / security
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(1, 'CREDENTIAL_ENCRYPTION_KEY is required'),
-  COOKIE_SECURE: z.coerce.boolean().default(false),
+  COOKIE_SECURE: booleanEnvVar(false),
   CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
 
   // AI provider layer
@@ -97,7 +109,7 @@ export const envSchema = z.object({
 
   // Observability
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  OTEL_ENABLED: z.coerce.boolean().default(false),
+  OTEL_ENABLED: booleanEnvVar(false),
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().optional().default(''),
 
   // Rate limiting

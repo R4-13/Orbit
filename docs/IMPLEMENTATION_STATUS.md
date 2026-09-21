@@ -10,17 +10,18 @@ Legende (siehe §63 des Master-Prompts):
 
 | Komponente | Status | Anmerkung |
 |---|---|---|
-| Monorepo-Struktur (pnpm + Turborepo) | IMPLEMENTED | Phase 1 |
-| Docker Compose (Postgres/Redis/MinIO/API/Web/Worker) | IMPLEMENTED | Healthchecks vorhanden; noch nicht end-to-end gebaut |
-| Branding-Konfiguration (`@orbit/config`) | IMPLEMENTED | |
-| Env-Validierung (Zod-Schema) | IMPLEMENTED | |
-| Fehler-Typen (`@orbit/shared`) | IMPLEMENTED | |
-| RBAC-Konstanten (Rollen/Permissions) | IMPLEMENTED | Enforcement folgt Phase 3 |
-| Policy-Engine-Konstanten (Default-Modi) | IMPLEMENTED | Engine-Logik folgt Phase 6 |
+| Monorepo-Struktur (pnpm + Turborepo) | TESTED LOCALLY | `pnpm install` lokal verifiziert (siehe ASSUMPTIONS #11) |
+| Docker Compose (Postgres/Redis/MinIO/API/Web/Worker) | IMPLEMENTED | Healthchecks vorhanden; `docker compose up` in dieser Sandbox nicht verifizierbar (kein Docker verfügbar) |
+| Branding-Konfiguration (`@orbit/config`) | TESTED LOCALLY | Unit-Tests (`branding.spec.ts`) grün |
+| Env-Validierung (Zod-Schema) | TESTED LOCALLY | Unit-Tests (`env.spec.ts`); echter Boolean-Parsing-Bug gefunden & behoben (ASSUMPTIONS #16) |
+| Fehler-Typen (`@orbit/shared`) | TESTED LOCALLY | Unit-Tests (`errors.spec.ts`) grün |
+| RBAC-Konstanten (Rollen/Permissions) | TESTED LOCALLY | Unit-Tests (`permissions.spec.ts`); Enforcement folgt Phase 3 |
+| Policy-Engine-Konstanten (Default-Modi) | TESTED LOCALLY | Unit-Tests (`policy.spec.ts`); Engine-Logik folgt Phase 6 |
 | Audit-Event-Typen | IMPLEMENTED | Persistenz folgt Phase 2/4 |
-| API-Grundgerüst (NestJS, Health-Endpoint) | IMPLEMENTED | Fachmodule folgen ab Phase 3 |
+| ESLint-9-Flat-Config (Root + `apps/web`) | IMPLEMENTED | Fehlte in Phase 1 komplett, nachgezogen (ASSUMPTIONS #12) |
+| API-Grundgerüst (NestJS, Health-Endpoint) | TESTED LOCALLY | E2E-Test gegen `/api/v1/health` + `/health/ready` grün (`apps/api/test/app.e2e-spec.ts`) |
 | Worker-Grundgerüst | IMPLEMENTED | Queue-Prozessoren folgen Phase 5 |
-| Web-Grundgerüst (Next.js, Tailwind) | IMPLEMENTED | Seiten folgen Phase 12 |
+| Web-Grundgerüst (Next.js, Tailwind) | TESTED LOCALLY | Typecheck/Lint grün; `next build` lokal unter Windows durch fehlende Symlink-Rechte blockiert (Docker-Build nicht betroffen, ASSUMPTIONS #17) |
 | Prisma-Schema (vollständiges Datenmodell) | NICHT BEGONNEN | Phase 2 |
 | Auth/RBAC-Enforcement | NICHT BEGONNEN | Phase 3 |
 | Cases/Tasks/Documents/Audit-Module | NICHT BEGONNEN | Phase 4 |
