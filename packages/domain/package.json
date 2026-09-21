@@ -18,7 +18,9 @@
   },
   "dependencies": {
     "@orbit/shared": "workspace:*",
-    "@prisma/client": "^6.1.0"
+    "@orbit/integration-core": "workspace:*",
+    "@prisma/client": "^6.1.0",
+    "argon2": "^0.41.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
