@@ -25,7 +25,7 @@ Legende (siehe §63 des Master-Prompts):
 | Prisma-Schema (vollständiges Datenmodell, 25 Modelle) | IMPLEMENTED | Schema validiert (`prisma validate`) + Client generiert (`prisma generate`); initiale Migration erzeugt (siehe ASSUMPTIONS #20). Live-Migration gegen echte Postgres-Instanz noch offen (kein Docker in dieser Sandbox) — **REQUIRES DOCKER/POSTGRES** |
 | Tenant-Isolation (`@orbit/domain` `forTenant()` Prisma-Client-Extension) | TESTED LOCALLY | 10 Unit-Tests (`tenant-scope.spec.ts`) gegen die reine Query-Rewriting-Logik; End-to-End gegen echte DB noch offen |
 | Auth/RBAC-Enforcement (JWT Login/Refresh/Logout, PermissionsGuard, Tenant-Bootstrap) | TESTED LOCALLY | 19 Unit-Tests (`auth.service.spec.ts`, `permissions.guard.spec.ts`, `tenants.service.spec.ts`) gegen gemockten Prisma-Client; E2E-Login-Flow gegen echte DB noch offen — **REQUIRES DOCKER/POSTGRES** |
-| Cases/Tasks/Documents/Audit-Module | NICHT BEGONNEN | Phase 4 |
+| Cases/Tasks/Documents/Audit-Module (CRUD + Permissions + Audit-Events + S3-Upload via presigned URLs) | TESTED LOCALLY | 13 neue Unit-Tests gegen gemockten Prisma-/Storage-Client; echter Lauf gegen MinIO + Postgres steht noch aus — **REQUIRES DOCKER/POSTGRES** |
 | Connector-Interfaces + Mocks | NICHT BEGONNEN | Phase 5 |
 | Agent Runtime / LLMProvider / Tool Registry | NICHT BEGONNEN | Phase 6 |
 | Finance-Workflow | NICHT BEGONNEN | Phase 7 |
