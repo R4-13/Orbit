@@ -26,7 +26,7 @@ Legende (siehe §63 des Master-Prompts):
 | Tenant-Isolation (`@orbit/domain` `forTenant()` Prisma-Client-Extension) | LIVE TESTED | 10 Unit-Tests gegen die Query-Rewriting-Logik + live über `CasesService`/`AuditService` gegen echte DB bestätigt (Case-Erstellung, -Abfrage) |
 | Auth/RBAC-Enforcement (JWT Login/Refresh/Logout, PermissionsGuard, Tenant-Bootstrap) | LIVE TESTED | 19 Unit-Tests; zusätzlich live: `TenantsService.bootstrapTenant()` + `POST /api/v1/auth/login` gegen echte DB → echtes JWT mit aus DB geladenen Rollen/Permissions; geschützte Route ohne Token → 401. Dabei doppeltes `v1`-Präfix in den Controller-Routen gefunden & behoben (ASSUMPTIONS #40) |
 | Cases/Tasks/Documents/Audit-Module (CRUD + Permissions + Audit-Events + S3-Upload via presigned URLs) | TESTED LOCALLY | 13 Unit-Tests; Cases-CRUD + Audit-Log live gegen echte DB verifiziert (`POST /api/v1/cases` → `CASE_CREATED`-Eintrag). Document-Upload gegen echtes MinIO noch nicht live getestet. |
-| Connector-Interfaces + Mocks | NICHT BEGONNEN | Phase 5 |
+| Connector-Interfaces + Mocks (Finance/Mail/Calendar/CRM/Telephony) | TESTED WITH MOCK | 20 Unit-Tests gegen alle fünf Mock-Connectoren grün. Reale Provider-Implementierungen (DATEV/Lexware/Microsoft/Gmail/HubSpot/Twilio) — **REQUIRES PROVIDER CREDENTIALS**, siehe docs/INTEGRATIONS.md |
 | Agent Runtime / LLMProvider / Tool Registry | NICHT BEGONNEN | Phase 6 |
 | Finance-Workflow | NICHT BEGONNEN | Phase 7 |
 | Sales-Workflow | NICHT BEGONNEN | Phase 8 |

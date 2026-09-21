@@ -126,4 +126,12 @@ Nach allen Fixes: `docker compose build` (api/worker/web) und
 sind "healthy" bzw. antworten mit HTTP 200 über die echten Container-Ports
 (3001/3000), nicht nur über `pnpm run dev`.
 
+## Phase 5 — Connector-Interfaces + Mocks
+
+| # | Annahme | Begründung |
+|---|---------|------------|
+| 47 | Fünf providerunabhängige Connector-Interfaces (`FinanceConnector`, `MailConnector`, `CalendarConnector`, `CrmConnector`, `TelephonyConnector`) in `packages/integration-core/src/` aus PRODUCT_CONTEXT.md und den bereits bestehenden Env-Variablen (`*_CONNECTOR`, `@orbit/config/env.ts`) abgeleitet, jeweils mit vollständiger Mock-Implementierung, aber (noch) ohne echte Provider-Implementierung | Reale Implementierungen (DATEV/Lexware, Microsoft/Gmail, HubSpot, Twilio) erfordern OAuth-App-Registrierungen bzw. bei DATEV eine Partnerschaft — echte Blocker gemäß §62, dokumentiert in `docs/INTEGRATIONS.md` und `docs/DATEV_INTEGRATION.md`. Erfindung von Endpunkten wurde bewusst vermieden (CLAUDE.md-Vorgabe); die reale Anbindung folgt pro Connector in Phase 7/9/10/11 gegen offizielle Herstellerdokumentation. |
+| 48 | `TelephonyConnector` bildet nur Anruf-Metadaten ab (`listRecentCalls`), keine Anrufsteuerung/IVR | PRODUCT_CONTEXT.md scoped Telefonie-Intake auf "Interessentenkontakt per Telefon erkennen" — vollwertige Telefonanlagen-Funktionalität ist kein MVP-Ziel. |
+| 49 | `docs/INTEGRATIONS.md` und `docs/DATEV_INTEGRATION.md` neu angelegt — beide wurden bereits seit Phase 1 aus Kommentaren in `.env.example`/`packages/config/src/env.ts` referenziert, existierten aber nicht | Vervollständigt die Doku-Referenzen; enthält den vollständigen Connector-Katalog mit Status je Connector und was für eine Live-Anbindung fehlt. |
+
 Weitere Annahmen werden in den folgenden Phasen ergänzt.

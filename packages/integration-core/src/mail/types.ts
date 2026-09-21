@@ -1,0 +1,51 @@
+/**
+ * Provider-agnostic contract for the Mail connector (Microsoft
+ * Graph/Outlook or Gmail — §9). Covers only the operations the
+ * Communication Agent actually needs: reading new inbound mail and
+ * sending replies/notifications.
+ */
+
+export interface EmailAttachment {
+  fileName: string;
+  mimeType: string;
+  contentBase64: string;
+}
+
+export interface InboundEmail {
+  /** The mail provider's own message id — used for de-duplication (EmailMessage.providerMessageId). */
+  providerMessageId: string;
+  from: string;
+  to: string[];
+  subject: string;
+  bodyText: string;
+  receivedAt: Date;
+  attachments: EmailAttachment[];
+}
+
+export interface SendEmailInput {
+  to: string[];
+  subject: string;
+  bodyText: string;
+  /** Message-Id of the email being replied to, if any (threading). */
+  inReplyToProviderMessageId?: string;
+}
+
+export interface SendEmailResult {
+  providerMessageId: string;
+}
+
+export interface MailConnector {
+  readonly providerName: string;
+
+  testConnection(): Promise<boolean>;
+
+  /**
+   * Returns inbound messages received after `sinceProviderMessageId` (or
+   * all recent messages if omitted — used on first sync). Providers that
+   * push via webhook (Gmail Pub/Sub, Microsoft Graph change notifications)
+   * still expose this as a reconciliation/backfill path.
+   */
+  listNewMessages(sinceProviderMessageId?: string): Promise<InboundEmail[]>;
+
+  sendMessage(input: SendEmailInput): Promise<SendEmailResult>;
+}
