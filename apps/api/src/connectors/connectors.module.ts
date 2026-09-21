@@ -1,13 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { IntegrationUnavailableError } from '@orbit/shared';
-import { MockFinanceConnector, MockOcrProvider } from '@orbit/integration-core';
+import { MockCalendarConnector, MockCrmConnector, MockFinanceConnector, MockOcrProvider } from '@orbit/integration-core';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
-import { FINANCE_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
+import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
 
 /**
- * Wires the FINANCE_CONNECTOR/OCR_PROVIDER env selection (@orbit/config)
- * to a concrete @orbit/integration-core implementation. Only "mock" exists
+ * Wires each *_CONNECTOR/*_PROVIDER env selection (@orbit/config) to a
+ * concrete @orbit/integration-core implementation. Only "mock" exists
  * today (see docs/INTEGRATIONS.md) — selecting a real provider fails fast
  * at boot with a clear IntegrationUnavailableError rather than silently
  * falling back to the mock.
@@ -39,7 +39,31 @@ import { FINANCE_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
         return new MockOcrProvider();
       },
     },
+    {
+      provide: CRM_CONNECTOR,
+      inject: [ORBIT_ENV],
+      useFactory: (env: OrbitEnv) => {
+        if (env.CRM_CONNECTOR !== 'mock') {
+          throw new IntegrationUnavailableError(
+            `CrmConnector "${env.CRM_CONNECTOR}" is not implemented yet — see docs/INTEGRATIONS.md.`,
+          );
+        }
+        return new MockCrmConnector();
+      },
+    },
+    {
+      provide: CALENDAR_CONNECTOR,
+      inject: [ORBIT_ENV],
+      useFactory: (env: OrbitEnv) => {
+        if (env.CALENDAR_CONNECTOR !== 'mock') {
+          throw new IntegrationUnavailableError(
+            `CalendarConnector "${env.CALENDAR_CONNECTOR}" is not implemented yet — see docs/INTEGRATIONS.md.`,
+          );
+        }
+        return new MockCalendarConnector();
+      },
+    },
   ],
-  exports: [FINANCE_CONNECTOR, OCR_PROVIDER],
+  exports: [FINANCE_CONNECTOR, OCR_PROVIDER, CRM_CONNECTOR, CALENDAR_CONNECTOR],
 })
 export class ConnectorsModule {}

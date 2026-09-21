@@ -5,11 +5,16 @@ import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
+import { CompaniesModule } from './companies/companies.module';
 import { EnvModule } from './config/env.module';
 import { ConnectorsModule } from './connectors/connectors.module';
+import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { LeadsModule } from './leads/leads.module';
+import { MeetingsModule } from './meetings/meetings.module';
+import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
@@ -55,6 +60,11 @@ import { TenantsModule } from './tenants/tenants.module';
     ApprovalsModule,
     SuppliersModule,
     InvoicesModule,
+    CompaniesModule,
+    ContactsModule,
+    LeadsModule,
+    OpportunitiesModule,
+    MeetingsModule,
     HealthModule,
   ],
 })
