@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AuthProvider } from '../lib/auth-context';
+import { QueryProvider } from '../lib/query-provider';
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT',
@@ -13,7 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de-DE">
-      <body className="bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className="bg-slate-50 text-slate-900 antialiased">
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
+      </body>
     </html>
   );
 }

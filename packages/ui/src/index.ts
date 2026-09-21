@@ -1,2 +1,6 @@
 export * from './lib/cn';
-// Component exports are added as each is built in Phase 12 (Frontend).
+export * from './components/button';
+export * from './components/card';
+export * from './components/badge';
+export * from './components/input';
+export * from './components/label';

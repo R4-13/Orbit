@@ -33,7 +33,7 @@ Legende (siehe §63 des Master-Prompts):
 | Mail-/Kalender-Connectoren (real, Microsoft/Gmail/Google Calendar) | REQUIRES PROVIDER CREDENTIALS | Interface + Mock bereits seit Phase 5 fertig (`MailConnector`/`CalendarConnector`, siehe docs/INTEGRATIONS.md) und in Phase 8 produktiv genutzt (Terminvorschläge). Reale OAuth-Anbindung braucht `MICROSOFT_CLIENT_ID`/`GOOGLE_CLIENT_ID` etc. — kein Implementierungsrückstand, echter Zugangsdaten-Blocker. |
 | CRM-Connector (real, HubSpot) | REQUIRES PROVIDER CREDENTIALS | Interface + Mock bereits seit Phase 5 fertig (`CrmConnector`) und in Phase 8 produktiv genutzt (Contacts/Companies/Leads). Reale Anbindung braucht `HUBSPOT_CLIENT_ID`/`HUBSPOT_CLIENT_SECRET`. |
 | Telefonie-Connector (real, Twilio) | REQUIRES PROVIDER CREDENTIALS | Interface + Mock bereits seit Phase 5 fertig (`TelephonyConnector`), aber noch nicht in einen konkreten Workflow eingebunden (kein "Anruf → Lead"-Endpunkt bisher). Reale Anbindung braucht `TWILIO_ACCOUNT_SID` etc. |
-| Frontend-Seiten (Dashboard, Inbox, Finance, Sales, ...) | NICHT BEGONNEN | Phase 12 |
+| Frontend (Login, App-Shell/Navigation, Dashboard, Rechnungen inkl. Freigabe/Transfer, Lieferanten-Freigabe, Leads/Kontakte, Aufgaben, Freigaben-Übersicht) | LIVE TESTED | Vollständig manuell im Browser gegen echte API+DB verifiziert (Login bis Logout, inkl. Redirect-Schutz und Fehlerbehandlung). Automatisierte E2E-Tests (Playwright) noch offen — Phase 14. Inbox (E-Mail-Ansicht) nicht gebaut, da kein Mail-Connector-Workflow existiert (siehe Phase 9). |
 | Demo-Daten (Musterwerk GmbH) | NICHT BEGONNEN | Phase 13 |
 | Automatisierte Tests (Unit/Integration/E2E) | NICHT BEGONNEN | Phase 14 |
 | Security Hardening | NICHT BEGONNEN | Phase 15 |
