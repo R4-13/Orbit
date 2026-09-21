@@ -1,21 +1,12 @@
-import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { VersioningType } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 
 describe('AppModule (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleRef.createNestApplication();
-    app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
-    app.setGlobalPrefix('api');
-    await app.init();
+    app = await bootstrapE2eApp();
   });
 
   afterAll(async () => {

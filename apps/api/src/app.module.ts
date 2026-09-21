@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { findRepoRootEnvFile } from '@orbit/config';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -35,9 +36,11 @@ import { TenantsModule } from './tenants/tenants.module';
  * AuthController's own endpoints and HealthController are meant to stay
  * public.
  */
+const rootEnvFile = findRepoRootEnvFile(__dirname);
+
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: rootEnvFile ? [rootEnvFile] : undefined }),
     EnvModule,
     ThrottlerModule.forRoot({
       throttlers: [

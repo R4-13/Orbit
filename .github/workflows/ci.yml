@@ -42,6 +42,23 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      minio:
+        # bitnami's image (unlike minio/minio) auto-creates the bucket from
+        # MINIO_DEFAULT_BUCKETS on startup, which GH Actions' `services:`
+        # block needs since it has no equivalent of docker-compose's
+        # one-shot `minio-init` container / custom command override.
+        image: bitnami/minio:latest
+        ports:
+          - 9000:9000
+        env:
+          MINIO_ROOT_USER: ci_minio_admin
+          MINIO_ROOT_PASSWORD: ci_minio_admin_secret
+          MINIO_DEFAULT_BUCKETS: orbit-documents
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/minio/health/live || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +93,38 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Seed demo data
+        run: pnpm prisma:seed
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @orbit/web exec playwright install --with-deps chromium
+
+      - name: Start API server (apps/web's Playwright suite calls it directly)
+        run: |
+          node apps/api/dist/src/main.js > api-server.log 2>&1 &
+          echo $! > api-server.pid
+
+      - name: Wait for API to become healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3001/api/v1/health > /dev/null; then
+              echo "API is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time." >&2
+          cat api-server.log
+          exit 1
+
       - name: E2E tests
         run: pnpm test:e2e
         continue-on-error: false
+
+      - name: Show API server log
+        if: always()
+        run: cat api-server.log
+
+      - name: Stop API server
+        if: always()
+        run: kill "$(cat api-server.pid)" || true
