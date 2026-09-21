@@ -20,6 +20,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "prisma:generate": "pnpm --filter @orbit/domain prisma:generate",
     "prisma:migrate": "pnpm --filter @orbit/domain prisma:migrate",
+    "prisma:deploy": "pnpm --filter @orbit/domain prisma:deploy",
     "prisma:seed": "pnpm --filter @orbit/domain prisma:seed",
     "db:reset": "pnpm --filter @orbit/domain prisma:reset"
   },

@@ -1,9 +1,30 @@
-// Project ORBIT — Prisma schema (placeholder, Phase 1).
+// Project ORBIT — Prisma schema (Phase 2: vollständiges Multi-Tenant-Datenmodell).
 //
-// The full multi-tenant data model (§10 of the master spec: Tenant, User,
-// Case, Invoice, Lead, AgentRun, AuditEvent, ...) is added in Phase 2. This
-// placeholder exists so `prisma generate` succeeds during Phase 1 CI/build
-// and the workspace installs cleanly end-to-end.
+// Architektur-Entscheidungen, die dieses Schema prägen (siehe docs/ASSUMPTIONS.md
+// für die vollständige Begründung jeder einzelnen Annahme):
+//
+// - Single-Tenant-Membership: ein User gehört genau einem Tenant (User.email ist
+//   global eindeutig). Ein Wechsel zu Multi-Tenant-Membership pro User wäre ein
+//   Breaking Change (zusätzliche Join-Tabelle User<->Tenant) und wird nicht für
+//   den MVP benötigt.
+// - Permission-Strings (RolePermission.permission) und Policy-Action-Strings
+//   (PolicyConfig.action, ToolInvocation.policyAction) sind bewusst `String`,
+//   nicht Prisma-Enum: die kanonische, versionierte Liste lebt bereits in
+//   @orbit/shared (permissions.ts, policy.ts) — siehe Kommentar dort ("single
+//   source of truth"). Ein DB-Enum müsste bei jedem neuen Tool/jeder neuen
+//   Permission per Migration mitgezogen werden, was Anwendungs- und
+//   Datenbank-Ebene unnötig koppelt. Validierung erfolgt in der Service-Schicht.
+// - AuditLog.actorUserId ist bewusst KEINE Foreign-Key-Relation zu User: das
+//   Audit-Log muss unveränderlich bleiben und unabhängig von der Lebensdauer
+//   eines Nutzeraccounts (Löschung/Deaktivierung) lesbar bleiben (§31 Audit
+//   Trail, DSGVO-Nachvollziehbarkeit).
+// - Tenant-Isolation wird in Phase 2 nur strukturell (tenant_id auf jeder
+//   Fachtabelle + Indizes) hergestellt. Die Durchsetzung erfolgt zunächst über
+//   tenant-scoped Repository-Helfer in @orbit/domain (Phase 3), echtes
+//   Postgres Row-Level-Security als zusätzliche Verteidigungslinie ist für
+//   Phase 15 (Security Hardening) vorgesehen.
+// - Geldbeträge sind `Decimal(14,2)` (kein Float), um Rundungsfehler in der
+//   Finanzbuchhaltung auszuschließen.
 
 generator client {
   provider = "prisma-client-js"
@@ -14,10 +35,774 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Placeholder model, replaced by the full schema in Phase 2.
-model SchemaPlaceholder {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+// ============================================================================
+// Enums
+// ============================================================================
 
-  @@map("_schema_placeholder")
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DEACTIVATED
+}
+
+/// Muss mit POLICY_MODES in packages/shared/src/policy.ts synchron gehalten werden.
+enum PolicyMode {
+  DISABLED
+  SUGGEST_ONLY
+  REQUIRE_APPROVAL
+  AUTONOMOUS
+}
+
+enum ActorType {
+  USER
+  AGENT
+  SYSTEM
+}
+
+enum CaseType {
+  FINANCE
+  SALES
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_APPROVAL
+  DONE
+  CANCELLED
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+enum TaskSource {
+  AGENT
+  USER
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SupplierStatus {
+  ACTIVE
+  PENDING_APPROVAL
+  BLOCKED
+}
+
+enum InvoiceStatus {
+  RECEIVED
+  EXTRACTED
+  DUPLICATE_SUSPECTED
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  TRANSFERRED
+  TRANSFER_FAILED
+}
+
+enum BookingProposalStatus {
+  PROPOSED
+  APPROVED
+  REJECTED
+}
+
+enum FinanceTransferStatus {
+  STARTED
+  COMPLETED
+  FAILED
+}
+
+enum ApprovalEntityType {
+  INVOICE
+  BOOKING_PROPOSAL
+  SUPPLIER
+  FOLLOW_UP
+  MEETING
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeadSource {
+  EMAIL
+  PHONE
+  WEB
+  MANUAL
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  DISQUALIFIED
+  CONVERTED
+}
+
+enum OpportunityStage {
+  NEW
+  QUALIFICATION
+  PROPOSAL
+  WON
+  LOST
+}
+
+enum MeetingStatus {
+  PROPOSED
+  CONFIRMED
+  CANCELLED
+}
+
+/// Muss mit den *_CONNECTOR-Enums in packages/config/src/env.ts synchron bleiben.
+enum IntegrationConnectorType {
+  DATEV
+  LEXWARE
+  MICROSOFT
+  GMAIL
+  GOOGLE_CALENDAR
+  HUBSPOT
+  TWILIO
+}
+
+enum IntegrationStatus {
+  NOT_CONFIGURED
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum AgentType {
+  ORCHESTRATOR
+  COMMUNICATION
+  FINANCE
+  SALES
+}
+
+enum AgentRunTriggerType {
+  EMAIL
+  WEBHOOK
+  SCHEDULE
+  MANUAL
+}
+
+enum AgentRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ToolInvocationStatus {
+  SUCCESS
+  FAILED
+  BLOCKED_AWAITING_APPROVAL
+  DENIED
+}
+
+// ============================================================================
+// Tenant & Auth (RBAC)
+// ============================================================================
+
+model Tenant {
+  id        String       @id @default(uuid())
+  name      String
+  slug      String       @unique
+  status    TenantStatus @default(ACTIVE)
+  locale    String       @default("de-DE")
+  timezone  String       @default("Europe/Berlin")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  users            User[]
+  roles            Role[]
+  policyConfigs    PolicyConfig[]
+  auditLogs        AuditLog[]
+  cases            Case[]
+  tasks            Task[]
+  documents        Document[]
+  emailMessages    EmailMessage[]
+  suppliers        Supplier[]
+  invoices         Invoice[]
+  bookingProposals BookingProposal[]
+  financeTransfers FinanceTransfer[]
+  approvals        Approval[]
+  companies        Company[]
+  contacts         Contact[]
+  leads            Lead[]
+  opportunities    Opportunity[]
+  meetings         Meeting[]
+  integrations     Integration[]
+  agentRuns        AgentRun[]
+  toolInvocations  ToolInvocation[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  tenantId     String     @map("tenant_id")
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  firstName    String     @map("first_name")
+  lastName     String     @map("last_name")
+  status       UserStatus @default(INVITED)
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
+
+  assignedCases Case[] @relation("CaseAssignee")
+  assignedTasks Task[] @relation("TaskAssignee")
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+/// Tenant-scoped Rolle. Beim Tenant-Bootstrap aus DEFAULT_ROLE_PERMISSIONS
+/// (@orbit/shared) geseedet; Permission-Zuordnung ist pro Tenant anpassbar.
+model Role {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  name            String
+  isSystemDefault Boolean  @default(false) @map("is_system_default")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@unique([tenantId, name])
+  @@map("roles")
+}
+
+model RolePermission {
+  id         String @id @default(uuid())
+  roleId     String @map("role_id")
+  /// Permission-String aus PERMISSIONS (@orbit/shared/permissions.ts), z. B. "invoice.approve".
+  permission String
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permission])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// ============================================================================
+// Policy Engine (§17)
+// ============================================================================
+
+/// Ein Eintrag pro Tenant und Policy-Action. Beim Tenant-Bootstrap aus
+/// DEFAULT_POLICY_CONFIG (@orbit/shared/policy.ts) geseedet.
+model PolicyConfig {
+  id              String     @id @default(uuid())
+  tenantId        String     @map("tenant_id")
+  /// Action-Key aus POLICY_ACTIONS (@orbit/shared/policy.ts), z. B. "invoice.transfer_to_fibu".
+  action          String
+  mode            PolicyMode
+  /// Wenn true, darf ein Tenant-Admin diese Action nicht unter REQUIRE_APPROVAL absenken.
+  locked          Boolean    @default(false)
+  updatedByUserId String?    @map("updated_by_user_id")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, action])
+  @@map("policy_configs")
+}
+
+// ============================================================================
+// Audit Trail (§31)
+// ============================================================================
+
+/// Append-only. Kein FK auf User (siehe Datei-Kopfkommentar) — das Log muss
+/// unabhängig von Nutzer-Lifecycle lesbar bleiben.
+model AuditLog {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  /// Event-Typ aus AUDIT_EVENT_TYPES (@orbit/shared/audit.ts).
+  eventType   String    @map("event_type")
+  actorType   ActorType @map("actor_type")
+  actorUserId String?   @map("actor_user_id")
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  payload     Json?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// Cases / Tasks / Documents / Kommunikation (Phase 4)
+// ============================================================================
+
+/// Der übergreifende Vorgang (Finance- oder Sales-Prozessinstanz), an dem
+/// Tasks, Dokumente, E-Mails und fachliche Entitäten (Invoice, Lead, ...) hängen.
+model Case {
+  id          String     @id @default(uuid())
+  tenantId    String     @map("tenant_id")
+  type        CaseType
+  status      CaseStatus @default(OPEN)
+  title       String
+  description String?
+  assigneeId  String?    @map("assignee_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignee User?  @relation("CaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  tasks         Task[]
+  documents     Document[]
+  emailMessages EmailMessage[]
+  invoices      Invoice[]
+  leads         Lead[]
+  agentRuns     AgentRun[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@map("cases")
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  tenantId    String     @map("tenant_id")
+  caseId      String?    @map("case_id")
+  title       String
+  description String?
+  status      TaskStatus @default(OPEN)
+  source      TaskSource @default(USER)
+  dueDate     DateTime?  @map("due_date")
+  assigneeId  String?    @map("assignee_id")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case     Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  assignee User?  @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([caseId])
+  @@map("tasks")
+}
+
+/// Metadaten zu einer in S3/MinIO abgelegten Datei (siehe ASSUMPTIONS #6).
+/// storageKey ist der Object-Key im Bucket, niemals ein direkt aufrufbarer Pfad.
+model Document {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  caseId           String?  @map("case_id")
+  fileName         String   @map("file_name")
+  mimeType         String   @map("mime_type")
+  sizeBytes        Int      @map("size_bytes")
+  storageKey       String   @map("storage_key")
+  checksum         String?
+  uploadedByUserId String?  @map("uploaded_by_user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  invoices Invoice[]
+
+  @@index([tenantId])
+  @@index([caseId])
+  @@map("documents")
+}
+
+model EmailMessage {
+  id                String         @id @default(uuid())
+  tenantId          String         @map("tenant_id")
+  caseId            String?        @map("case_id")
+  direction         EmailDirection
+  fromAddress       String         @map("from_address")
+  toAddresses       String[]       @map("to_addresses")
+  subject           String?
+  bodyPreview       String?        @map("body_preview")
+  providerMessageId String?        @map("provider_message_id")
+  /// Grobklassifikation durch den Communication-Agent, z. B. "invoice", "sales_inquiry".
+  classification    String?
+  receivedAt        DateTime?      @map("received_at")
+  sentAt            DateTime?      @map("sent_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, providerMessageId])
+  @@index([tenantId, direction])
+  @@index([caseId])
+  @@map("email_messages")
+}
+
+// ============================================================================
+// Finance (Phase 7)
+// ============================================================================
+
+model Supplier {
+  id                String         @id @default(uuid())
+  tenantId          String         @map("tenant_id")
+  name              String
+  taxId             String?        @map("tax_id")
+  vatId             String?        @map("vat_id")
+  iban              String?
+  bic               String?
+  email             String?
+  addressLine1      String?        @map("address_line1")
+  addressLine2      String?        @map("address_line2")
+  postalCode        String?        @map("postal_code")
+  city              String?
+  country           String?        @default("DE")
+  status            SupplierStatus @default(PENDING_APPROVAL)
+  /// Lieferanten-ID im angebundenen FiBu-System (DATEV/Lexware).
+  externalFinanceId String?        @map("external_finance_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, status])
+  @@map("suppliers")
+}
+
+model Invoice {
+  id                   String        @id @default(uuid())
+  tenantId             String        @map("tenant_id")
+  caseId               String?       @map("case_id")
+  supplierId           String?       @map("supplier_id")
+  documentId           String?       @map("document_id")
+  invoiceNumber        String?       @map("invoice_number")
+  invoiceDate          DateTime?     @map("invoice_date")
+  dueDate              DateTime?     @map("due_date")
+  amountNet            Decimal?      @map("amount_net") @db.Decimal(14, 2)
+  amountGross          Decimal?      @map("amount_gross") @db.Decimal(14, 2)
+  vatAmount            Decimal?      @map("vat_amount") @db.Decimal(14, 2)
+  vatRate              Decimal?      @map("vat_rate") @db.Decimal(5, 2)
+  currency             String        @default("EUR")
+  status               InvoiceStatus @default(RECEIVED)
+  /// Extraktions-Konfidenz (0..1) des OCR/LLM-Auslesevorgangs; steuert LowConfidenceError-Schwelle.
+  confidenceScore      Float?        @map("confidence_score")
+  /// Roh-Extraktionsergebnis (Feld-für-Feld inkl. Konfidenzwerten) zur Nachvollziehbarkeit.
+  extractedData        Json?         @map("extracted_data")
+  duplicateOfInvoiceId String?       @map("duplicate_of_invoice_id")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case     Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  duplicateOf      Invoice?          @relation("InvoiceDuplicate", fields: [duplicateOfInvoiceId], references: [id], onDelete: SetNull)
+  duplicates       Invoice[]         @relation("InvoiceDuplicate")
+  bookingProposals BookingProposal[]
+  financeTransfers FinanceTransfer[]
+
+  @@index([tenantId, status])
+  @@index([supplierId])
+  @@map("invoices")
+}
+
+model BookingProposal {
+  id          String                @id @default(uuid())
+  tenantId    String                @map("tenant_id")
+  invoiceId   String                @map("invoice_id")
+  /// Sachkonto (z. B. SKR03/SKR04-Kontonummer).
+  accountCode String                @map("account_code")
+  costCenter  String?               @map("cost_center")
+  amount      Decimal               @db.Decimal(14, 2)
+  taxCode     String?               @map("tax_code")
+  description String?
+  status      BookingProposalStatus @default(PROPOSED)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("booking_proposals")
+}
+
+model FinanceTransfer {
+  id                String                @id @default(uuid())
+  tenantId          String                @map("tenant_id")
+  invoiceId         String                @map("invoice_id")
+  /// FINANCE_CONNECTOR-Wert (@orbit/config/env.ts), z. B. "datev", "lexware", "mock".
+  connector         String
+  externalReference String?               @map("external_reference")
+  status            FinanceTransferStatus @default(STARTED)
+  errorMessage      String?               @map("error_message")
+  startedAt         DateTime              @default(now()) @map("started_at")
+  completedAt       DateTime?             @map("completed_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("finance_transfers")
+}
+
+// ============================================================================
+// Approvals (generische Freigabe-Warteschlange der Policy Engine)
+// ============================================================================
+
+model Approval {
+  id                String             @id @default(uuid())
+  tenantId          String             @map("tenant_id")
+  entityType        ApprovalEntityType @map("entity_type")
+  entityId          String             @map("entity_id")
+  /// Action-Key aus POLICY_ACTIONS, der diese Freigabe ausgelöst hat.
+  policyAction      String             @map("policy_action")
+  status            ApprovalStatus     @default(PENDING)
+  requestedByUserId String?            @map("requested_by_user_id")
+  decidedByUserId   String?            @map("decided_by_user_id")
+  reason            String?
+  requestedAt       DateTime           @default(now()) @map("requested_at")
+  decidedAt         DateTime?          @map("decided_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([entityType, entityId])
+  @@map("approvals")
+}
+
+// ============================================================================
+// Sales / CRM (Phase 8)
+// ============================================================================
+
+model Company {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  name          String
+  domain        String?
+  industry      String?
+  /// Company-ID im angebundenen CRM (HubSpot).
+  crmExternalId String?  @map("crm_external_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contacts      Contact[]
+  leads         Lead[]
+  opportunities Opportunity[]
+
+  @@index([tenantId])
+  @@map("companies")
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  companyId     String?  @map("company_id")
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  email         String?
+  phone         String?
+  crmExternalId String?  @map("crm_external_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  leads         Lead[]
+  opportunities Opportunity[]
+  meetings      Meeting[]
+
+  @@index([tenantId])
+  @@index([companyId])
+  @@map("contacts")
+}
+
+model Lead {
+  id        String     @id @default(uuid())
+  tenantId  String     @map("tenant_id")
+  caseId    String?    @map("case_id")
+  contactId String     @map("contact_id")
+  companyId String?    @map("company_id")
+  source    LeadSource
+  status    LeadStatus @default(NEW)
+  notes     String?
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case    Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  contact Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  opportunities Opportunity[]
+
+  @@index([tenantId, status])
+  @@map("leads")
+}
+
+model Opportunity {
+  id            String           @id @default(uuid())
+  tenantId      String           @map("tenant_id")
+  leadId        String?          @map("lead_id")
+  companyId     String?          @map("company_id")
+  contactId     String?          @map("contact_id")
+  name          String
+  stage         OpportunityStage @default(NEW)
+  value         Decimal?         @db.Decimal(14, 2)
+  currency      String           @default("EUR")
+  crmExternalId String?          @map("crm_external_id")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  meetings Meeting[]
+
+  @@index([tenantId, stage])
+  @@map("opportunities")
+}
+
+model Meeting {
+  id                 String        @id @default(uuid())
+  tenantId           String        @map("tenant_id")
+  contactId          String?       @map("contact_id")
+  opportunityId      String?       @map("opportunity_id")
+  title              String
+  /// Vorgeschlagene Terminslots (Array von ISO-Zeitfenstern) vor Bestätigung.
+  proposedSlots      Json?         @map("proposed_slots")
+  scheduledAt        DateTime?     @map("scheduled_at")
+  status             MeetingStatus @default(PROPOSED)
+  calendarExternalId String?       @map("calendar_external_id")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@map("meetings")
+}
+
+// ============================================================================
+// Integrationen / Connector-Credentials (Phase 5, 9-11)
+// ============================================================================
+
+/// Ein Eintrag pro Tenant und Connector-Typ. Credentials sind AES-256-GCM-
+/// verschlüsselt (CREDENTIAL_ENCRYPTION_KEY, siehe ASSUMPTIONS #7) abgelegt,
+/// niemals im Klartext.
+model Integration {
+  id                   String                   @id @default(uuid())
+  tenantId             String                   @map("tenant_id")
+  connectorType        IntegrationConnectorType @map("connector_type")
+  status               IntegrationStatus        @default(NOT_CONFIGURED)
+  encryptedCredentials Bytes?                   @map("encrypted_credentials")
+  /// Nicht-geheime Konfiguration (z. B. gewählte DATEV-Umgebung, Postfach-Adresse).
+  config               Json?
+  lastTestedAt         DateTime?                @map("last_tested_at")
+  lastTestStatus       String?                  @map("last_test_status")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, connectorType])
+  @@map("integrations")
+}
+
+// ============================================================================
+// Agent Runtime (Phase 6)
+// ============================================================================
+
+model AgentRun {
+  id           String              @id @default(uuid())
+  tenantId     String              @map("tenant_id")
+  caseId       String?             @map("case_id")
+  agentType    AgentType           @map("agent_type")
+  triggerType  AgentRunTriggerType @map("trigger_type")
+  status       AgentRunStatus      @default(RUNNING)
+  input        Json?
+  output       Json?
+  errorMessage String?             @map("error_message")
+  startedAt    DateTime            @default(now()) @map("started_at")
+  completedAt  DateTime?           @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  toolInvocations ToolInvocation[]
+
+  @@index([tenantId, status])
+  @@map("agent_runs")
+}
+
+/// Jeder Aufruf eines Tools aus der Tool Registry durch einen Agenten, inkl.
+/// der von der Policy Engine getroffenen Entscheidung (§17-Architekturprinzip:
+/// Agent -> Tool Registry -> Policy Engine -> ... -> Connector).
+model ToolInvocation {
+  id           String               @id @default(uuid())
+  tenantId     String               @map("tenant_id")
+  agentRunId   String               @map("agent_run_id")
+  toolName     String               @map("tool_name")
+  policyAction String?              @map("policy_action")
+  policyMode   PolicyMode?          @map("policy_mode")
+  input        Json?
+  output       Json?
+  status       ToolInvocationStatus
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agentRun AgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId])
+  @@index([tenantId, toolName])
+  @@map("tool_invocations")
 }

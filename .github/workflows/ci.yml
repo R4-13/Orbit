@@ -68,7 +68,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Run database migrations
-        run: pnpm prisma:migrate deploy || true
+        run: pnpm prisma:deploy
 
       - name: Unit & integration tests
         run: pnpm test

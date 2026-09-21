@@ -22,7 +22,8 @@ Legende (siehe §63 des Master-Prompts):
 | API-Grundgerüst (NestJS, Health-Endpoint) | TESTED LOCALLY | E2E-Test gegen `/api/v1/health` + `/health/ready` grün (`apps/api/test/app.e2e-spec.ts`) |
 | Worker-Grundgerüst | IMPLEMENTED | Queue-Prozessoren folgen Phase 5 |
 | Web-Grundgerüst (Next.js, Tailwind) | TESTED LOCALLY | Typecheck/Lint grün; `next build` lokal unter Windows durch fehlende Symlink-Rechte blockiert (Docker-Build nicht betroffen, ASSUMPTIONS #17) |
-| Prisma-Schema (vollständiges Datenmodell) | NICHT BEGONNEN | Phase 2 |
+| Prisma-Schema (vollständiges Datenmodell, 25 Modelle) | IMPLEMENTED | Schema validiert (`prisma validate`) + Client generiert (`prisma generate`); initiale Migration erzeugt (siehe ASSUMPTIONS #20). Live-Migration gegen echte Postgres-Instanz noch offen (kein Docker in dieser Sandbox) — **REQUIRES DOCKER/POSTGRES** |
+| Tenant-Isolation (`@orbit/domain` `forTenant()` Prisma-Client-Extension) | TESTED LOCALLY | 10 Unit-Tests (`tenant-scope.spec.ts`) gegen die reine Query-Rewriting-Logik; End-to-End gegen echte DB noch offen |
 | Auth/RBAC-Enforcement | NICHT BEGONNEN | Phase 3 |
 | Cases/Tasks/Documents/Audit-Module | NICHT BEGONNEN | Phase 4 |
 | Connector-Interfaces + Mocks | NICHT BEGONNEN | Phase 5 |
