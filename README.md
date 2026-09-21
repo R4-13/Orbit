@@ -10,7 +10,10 @@ mittelständischen Unternehmen automatisiert. Schwerpunkt: End-to-End-
 Automatisierung der Prozesse **Finance** (E-Mail → Rechnung → Buchungsvorschlag
 → Freigabe → DATEV/Lexware) und **Sales** (E-Mail/Anruf → Lead → CRM →
 Follow-up). Siehe [`docs/PRODUCT_CONTEXT.md`](docs/PRODUCT_CONTEXT.md) für
-den vollständigen fachlichen Kontext.
+den vollständigen fachlichen Kontext. Architektur-Überblick:
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (System) und
+[`docs/AGENT_ARCHITECTURE.md`](docs/AGENT_ARCHITECTURE.md) (LLM/Tool
+Registry/Policy Engine).
 
 ## Tech-Stack
 
@@ -56,8 +59,8 @@ pnpm install
 # Infrastruktur (Postgres, Redis, MinIO) starten
 docker compose -f docker-compose.dev.yml up -d
 
-# Datenbank migrieren + Demo-Daten laden
-pnpm prisma:migrate
+# Datenbank migrieren (inkl. Row-Level-Security-Policies) + Demo-Daten laden
+pnpm prisma:deploy
 pnpm prisma:seed
 
 # API, Worker und Web parallel starten
@@ -70,8 +73,7 @@ Alternativ die komplette Demo inkl. API/Web/Worker containerisiert:
 docker compose up
 ```
 
-Details: [`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md) (folgt in
-Phase 16).
+Details: [`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md).
 
 ## Qualitätssicherung
 
@@ -88,8 +90,7 @@ pnpm test:e2e
 Das Projekt wird in 17 Phasen gemäß dem Master-Entwicklungsplan umgesetzt.
 Aktueller Stand je Komponente: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
 Getroffene Architekturannahmen: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
-Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md)
-(folgt in Phase 16).
+Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
 ## Lizenz
 

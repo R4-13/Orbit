@@ -54,5 +54,5 @@ Kein direkter LLM-Zugriff auf externe Systeme. Jede Aktion läuft über:
 Agent → Tool Registry → Policy Engine → Authorization Check → Tool Gateway → Connector → External System
 ```
 
-Siehe /docs/ARCHITECTURE.md und /docs/AGENT_ARCHITECTURE.md (folgen in
-Phase 16) für Details.
+Siehe [`ARCHITECTURE.md`](ARCHITECTURE.md) und
+[`AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md) für Details.
