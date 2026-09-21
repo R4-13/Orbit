@@ -24,7 +24,7 @@ Legende (siehe §63 des Master-Prompts):
 | Web-Grundgerüst (Next.js, Tailwind) | TESTED LOCALLY | Typecheck/Lint grün; `next build` lokal unter Windows durch fehlende Symlink-Rechte blockiert (Docker-Build nicht betroffen, ASSUMPTIONS #17) |
 | Prisma-Schema (vollständiges Datenmodell, 25 Modelle) | IMPLEMENTED | Schema validiert (`prisma validate`) + Client generiert (`prisma generate`); initiale Migration erzeugt (siehe ASSUMPTIONS #20). Live-Migration gegen echte Postgres-Instanz noch offen (kein Docker in dieser Sandbox) — **REQUIRES DOCKER/POSTGRES** |
 | Tenant-Isolation (`@orbit/domain` `forTenant()` Prisma-Client-Extension) | TESTED LOCALLY | 10 Unit-Tests (`tenant-scope.spec.ts`) gegen die reine Query-Rewriting-Logik; End-to-End gegen echte DB noch offen |
-| Auth/RBAC-Enforcement | NICHT BEGONNEN | Phase 3 |
+| Auth/RBAC-Enforcement (JWT Login/Refresh/Logout, PermissionsGuard, Tenant-Bootstrap) | TESTED LOCALLY | 19 Unit-Tests (`auth.service.spec.ts`, `permissions.guard.spec.ts`, `tenants.service.spec.ts`) gegen gemockten Prisma-Client; E2E-Login-Flow gegen echte DB noch offen — **REQUIRES DOCKER/POSTGRES** |
 | Cases/Tasks/Documents/Audit-Module | NICHT BEGONNEN | Phase 4 |
 | Connector-Interfaces + Mocks | NICHT BEGONNEN | Phase 5 |
 | Agent Runtime / LLMProvider / Tool Registry | NICHT BEGONNEN | Phase 6 |

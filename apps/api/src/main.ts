@@ -1,10 +1,11 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadEnv, loadBrandingConfig } from '@orbit/config';
+import { OrbitExceptionFilter } from './common/filters/orbit-exception.filter';
 
 async function bootstrap() {
   const env = loadEnv();
@@ -15,6 +16,9 @@ async function bootstrap() {
   });
 
   app.use(helmet());
+
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter));
   app.enableCors({
     origin: env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
     credentials: true,

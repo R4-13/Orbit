@@ -1,18 +1,29 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AuthModule } from './auth/auth.module';
+import { EnvModule } from './config/env.module';
 import { HealthModule } from './health/health.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { TenantsModule } from './tenants/tenants.module';
 
 /**
- * Root module. This starts as a lean shell (health checks only); each
- * backend module named in §7 of the master spec (AuthModule, TenantModule,
- * CaseModule, FinanceModule, SalesModule, AgentModule, ...) is added here
+ * Root module. Each backend module named in §7 of the master spec
+ * (CaseModule, FinanceModule, SalesModule, AgentModule, ...) is added here
  * as it's implemented in its respective development phase — see
  * /docs/IMPLEMENTATION_STATUS.md for current status per module.
+ *
+ * Route-protection convention: there is no global JwtAuthGuard. Each
+ * controller/route that needs authentication or a specific permission
+ * applies `@UseGuards(JwtAuthGuard, PermissionsGuard)` (+ optionally
+ * `@RequirePermissions(...)`) explicitly — see auth/guards. Only
+ * AuthController's own endpoints and HealthController are meant to stay
+ * public.
  */
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EnvModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -21,6 +32,9 @@ import { HealthModule } from './health/health.module';
         },
       ],
     }),
+    PrismaModule,
+    TenantsModule,
+    AuthModule,
     HealthModule,
   ],
 })
