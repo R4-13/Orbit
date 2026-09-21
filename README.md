@@ -91,6 +91,7 @@ Das Projekt wird in 17 Phasen gemäß dem Master-Entwicklungsplan umgesetzt.
 Aktueller Stand je Komponente: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
 Getroffene Architekturannahmen: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+Abschlussbericht: [`docs/MVP_COMPLETION_REPORT.md`](docs/MVP_COMPLETION_REPORT.md).
 
 ## Lizenz
 

@@ -41,4 +41,4 @@ Legende (siehe §63 des Master-Prompts):
 | CI-Pipeline (GitHub Actions) | LIVE TESTED | Seit Phase 1 vorhanden (`.github/workflows/ci.yml`); in Phase 14 um MinIO-Service, Demo-Daten-Seed, API-Server-Start und Playwright-Browser-Install erweitert (ASSUMPTIONS #83), in Phase 15 um den RLS-Rollen-Setup-Schritt (ASSUMPTIONS #89) — die Erweiterungen selbst sind **nicht live gegen einen echten GitHub-Actions-Runner verifiziert**, jede einzelne Komponente aber gegen das lokale Docker-Äquivalent. |
 
 Diese Datei wird nach jeder Phase aktualisiert und dient als Grundlage für
-den finalen `/docs/MVP_COMPLETION_REPORT.md`.
+den finalen [`/docs/MVP_COMPLETION_REPORT.md`](MVP_COMPLETION_REPORT.md).
