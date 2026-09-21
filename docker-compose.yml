@@ -6,13 +6,15 @@ name: orbit
 
 services:
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: ./docker/postgres
     container_name: orbit-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: orbit
       POSTGRES_PASSWORD: orbit_local_dev
       POSTGRES_DB: orbit
+      DATABASE_APP_PASSWORD: ${DATABASE_APP_PASSWORD:-orbit_app_local_dev}
     ports:
       - "5432:5432"
     volumes:
@@ -79,6 +81,7 @@ services:
       - .env
     environment:
       DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
+      DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
       REDIS_URL: "redis://redis:6379"
       S3_ENDPOINT: "http://minio:9000"
     ports:
@@ -107,6 +110,7 @@ services:
       - .env
     environment:
       DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
+      DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
       REDIS_URL: "redis://redis:6379"
       S3_ENDPOINT: "http://minio:9000"
     depends_on:

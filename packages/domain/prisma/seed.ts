@@ -12,6 +12,13 @@
  * docs/ASSUMPTIONS.md for the full reasoning.
  *
  * Run with `pnpm prisma:seed` (needs DATABASE_URL set — see .env.example).
+ *
+ * Connects via `new PrismaClient()`'s default (DATABASE_URL, the
+ * migration-owning superuser), not DATABASE_URL_APP — so unlike
+ * apps/api's AuthService/TenantsService it needs no explicit Postgres RLS
+ * bypass (Phase 15, docs/ASSUMPTIONS.md): superusers always bypass RLS
+ * regardless of policy, which is also exactly why the running app must
+ * NEVER use this same connection (see PrismaService).
  */
 import { randomUUID } from 'node:crypto';
 import * as argon2 from 'argon2';

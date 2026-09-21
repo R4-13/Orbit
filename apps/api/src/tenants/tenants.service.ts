@@ -39,6 +39,13 @@ export class TenantsService {
 
   async bootstrapTenant(input: BootstrapTenantInput): Promise<BootstrapTenantResult> {
     return this.prisma.$transaction(async (tx) => {
+      // A brand-new tenant/role/user genuinely can't be scoped to a
+      // tenantId that doesn't exist yet — the one legitimate use of the
+      // Postgres RLS bypass GUC here (see PrismaService.withRlsBypass;
+      // this method predates that helper by using its own $transaction()
+      // for the whole bootstrap, so the bypass is set inline instead).
+      await tx.$executeRaw`SELECT set_config('app.bypass_rls', 'on', true)`;
+
       const tenant = await tx.tenant.create({
         data: { name: input.name, slug: input.slug },
       });

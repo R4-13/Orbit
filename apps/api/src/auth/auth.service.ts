@@ -33,10 +33,11 @@ export class AuthService {
   ) {}
 
   async login(email: string, password: string): Promise<AuthTokens> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: USER_WITH_ROLES_INCLUDE,
-    });
+    // Looking up a user by email, before we know their tenant, is one of
+    // the few genuinely cross-tenant operations — see PrismaService.withRlsBypass.
+    const user = await this.prisma.withRlsBypass((tx) =>
+      tx.user.findUnique({ where: { email }, include: USER_WITH_ROLES_INCLUDE }),
+    );
 
     if (!user || user.status !== 'ACTIVE' || user.tenant.status !== 'ACTIVE') {
       throw new UnauthorizedException('Invalid credentials.');
@@ -52,22 +53,23 @@ export class AuthService {
 
   async refresh(rawRefreshToken: string): Promise<AuthTokens> {
     const tokenHash = this.hashToken(rawRefreshToken);
-    const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
 
-    if (!stored || stored.revokedAt || stored.expiresAt.getTime() < Date.now()) {
-      throw new AuthenticationExpiredError('Refresh token is invalid, revoked or expired.');
-    }
+    // Same cross-tenant caveat as login(): a refresh token doesn't carry a
+    // known tenant until we've looked up the user it belongs to.
+    const user = await this.prisma.withRlsBypass(async (tx) => {
+      const stored = await tx.refreshToken.findUnique({ where: { tokenHash } });
+      if (!stored || stored.revokedAt || stored.expiresAt.getTime() < Date.now()) {
+        throw new AuthenticationExpiredError('Refresh token is invalid, revoked or expired.');
+      }
 
-    // Rotate: the presented token is single-use, whether or not the
-    // request below succeeds, so a stolen-and-replayed token dies here.
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    });
+      // Rotate: the presented token is single-use, whether or not the
+      // lookup below succeeds, so a stolen-and-replayed token dies here.
+      await tx.refreshToken.update({
+        where: { id: stored.id },
+        data: { revokedAt: new Date() },
+      });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: stored.userId },
-      include: USER_WITH_ROLES_INCLUDE,
+      return tx.user.findUnique({ where: { id: stored.userId }, include: USER_WITH_ROLES_INCLUDE });
     });
 
     if (!user || user.status !== 'ACTIVE' || user.tenant.status !== 'ACTIVE') {
@@ -79,10 +81,12 @@ export class AuthService {
 
   async logout(rawRefreshToken: string): Promise<void> {
     const tokenHash = this.hashToken(rawRefreshToken);
-    await this.prisma.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.prisma.withRlsBypass((tx) =>
+      tx.refreshToken.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    );
   }
 
   private async issueTokens(user: AuthenticatedUser): Promise<AuthTokens> {
@@ -97,13 +101,15 @@ export class AuthService {
 
     const rawRefreshToken = randomBytes(32).toString('hex');
     const refreshTtlMs = parseDurationToMs(this.env.JWT_REFRESH_TTL);
-    await this.prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: this.hashToken(rawRefreshToken),
-        expiresAt: new Date(Date.now() + refreshTtlMs),
-      },
-    });
+    await this.prisma.withRlsBypass((tx) =>
+      tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: this.hashToken(rawRefreshToken),
+          expiresAt: new Date(Date.now() + refreshTtlMs),
+        },
+      }),
+    );
 
     return {
       accessToken,

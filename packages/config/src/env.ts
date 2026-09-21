@@ -40,6 +40,13 @@ export const envSchema = z.object({
 
   // Database
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  /**
+   * The connection the running app (not the Prisma CLI) actually uses —
+   * a restricted, non-superuser role so Postgres Row-Level Security
+   * policies apply (DATABASE_URL's role is a migration-owning superuser,
+   * which always bypasses RLS). See docs/ASSUMPTIONS.md Phase 15.
+   */
+  DATABASE_URL_APP: z.string().min(1, 'DATABASE_URL_APP is required'),
 
   // Redis
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),

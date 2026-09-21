@@ -1,0 +1,7 @@
+# Shell scripts must always have LF line endings, regardless of the
+# checking-out machine's git config (core.autocrlf) — a CRLF shell script
+# baked into a Linux Docker image fails with "bad interpreter" (the
+# shebang line's trailing \r isn't part of a valid interpreter path).
+# Found live while adding docker/postgres/10-init-app-role.sh (Phase 15,
+# docs/ASSUMPTIONS.md) on this Windows dev machine.
+*.sh text eol=lf

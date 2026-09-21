@@ -19,10 +19,12 @@
 //   eines Nutzeraccounts (Löschung/Deaktivierung) lesbar bleiben (§31 Audit
 //   Trail, DSGVO-Nachvollziehbarkeit).
 // - Tenant-Isolation wird in Phase 2 nur strukturell (tenant_id auf jeder
-//   Fachtabelle + Indizes) hergestellt. Die Durchsetzung erfolgt zunächst über
-//   tenant-scoped Repository-Helfer in @orbit/domain (Phase 3), echtes
-//   Postgres Row-Level-Security als zusätzliche Verteidigungslinie ist für
-//   Phase 15 (Security Hardening) vorgesehen.
+//   Fachtabelle + Indizes) hergestellt. Die Durchsetzung erfolgt über
+//   tenant-scoped Repository-Helfer in @orbit/domain (Phase 3) als
+//   Anwendungs-Verteidigungslinie, ergänzt in Phase 15 (Security Hardening)
+//   um echtes Postgres Row-Level-Security als DB-Verteidigungslinie (siehe
+//   migrations/20260921124445_enable_row_level_security und
+//   packages/domain/src/tenant-scope.ts).
 // - Geldbeträge sind `Decimal(14,2)` (kein Float), um Rundungsfehler in der
 //   Finanzbuchhaltung auszuschließen.
 

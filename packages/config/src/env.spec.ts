@@ -3,6 +3,7 @@ import { loadEnv } from './env';
 
 const MINIMAL_VALID_ENV = {
   DATABASE_URL: 'postgresql://orbit:orbit@localhost:5432/orbit',
+  DATABASE_URL_APP: 'postgresql://orbit_app:orbit_app@localhost:5432/orbit',
   REDIS_URL: 'redis://localhost:6379',
   S3_ENDPOINT: 'http://localhost:9000',
   S3_ACCESS_KEY: 'minioadmin',

@@ -37,6 +37,7 @@ describe('AuthService', () => {
   let prisma: {
     user: { findUnique: jest.Mock };
     refreshToken: { create: jest.Mock; findUnique: jest.Mock; update: jest.Mock; updateMany: jest.Mock };
+    withRlsBypass: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -48,6 +49,11 @@ describe('AuthService', () => {
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      // Real PrismaService.withRlsBypass() runs `fn` inside a transaction
+      // with an RLS-bypass GUC set (Phase 15); the mock just runs `fn`
+      // against this same mock object, since it exposes the identical
+      // user/refreshToken delegate shape a real `tx` would.
+      withRlsBypass: jest.fn((fn: (tx: unknown) => unknown) => fn(prisma)),
     };
 
     const moduleRef = await Test.createTestingModule({

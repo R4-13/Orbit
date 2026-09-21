@@ -8,6 +8,7 @@ on:
 
 env:
   DATABASE_URL: "postgresql://orbit:orbit_ci@localhost:5432/orbit_ci?schema=public"
+  DATABASE_URL_APP: "postgresql://orbit_app:orbit_app_ci@localhost:5432/orbit_ci?schema=public&connection_limit=20"
   REDIS_URL: "redis://localhost:6379"
   S3_ENDPOINT: "http://localhost:9000"
   S3_ACCESS_KEY: "ci_minio_admin"
@@ -77,6 +78,25 @@ jobs:
 
       - name: Generate Prisma client
         run: pnpm prisma:generate
+
+      - name: Provision restricted DB role (for Row-Level Security)
+        # GH Actions service containers start before checkout, so they
+        # can't mount docker/postgres/10-init-app-role.sh the way
+        # docker-compose*.yml does (see docs/ASSUMPTIONS.md Phase 15) —
+        # this step does the same thing explicitly, before any migration
+        # creates a table, so the ALTER DEFAULT PRIVILEGES rule below
+        # covers every table `prisma migrate deploy` is about to create.
+        run: |
+          PGPASSWORD=orbit_ci psql -h localhost -U orbit -d orbit_ci -v ON_ERROR_STOP=1 <<-'EOSQL'
+            CREATE ROLE orbit_app LOGIN PASSWORD 'orbit_app_ci'
+              NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+            GRANT CONNECT ON DATABASE orbit_ci TO orbit_app;
+            GRANT USAGE ON SCHEMA public TO orbit_app;
+            ALTER DEFAULT PRIVILEGES FOR ROLE orbit IN SCHEMA public
+              GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO orbit_app;
+            ALTER DEFAULT PRIVILEGES FOR ROLE orbit IN SCHEMA public
+              GRANT USAGE, SELECT ON SEQUENCES TO orbit_app;
+          EOSQL
 
       - name: Lint
         run: pnpm lint

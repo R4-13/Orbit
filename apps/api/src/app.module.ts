@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { findRepoRootEnvFile } from '@orbit/config';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
@@ -69,6 +70,17 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     OpportunitiesModule,
     MeetingsModule,
     HealthModule,
+  ],
+  providers: [
+    // ThrottlerModule.forRoot() above only *registers* the rate-limit
+    // config — without this, no request was ever actually being throttled
+    // (found while writing Phase 15's security hardening pass: no
+    // controller applied ThrottlerGuard, and there was no APP_GUARD either,
+    // so RATE_LIMIT_MAX/_WINDOW_MS had zero effect). Global, so every route
+    // (including AuthController's public login/refresh) gets at least the
+    // default limit; @Throttle() on individual routes (see
+    // AuthController.login/refresh) layers a stricter one on top.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

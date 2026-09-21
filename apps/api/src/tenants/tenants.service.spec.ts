@@ -6,6 +6,7 @@ import { TenantsService } from './tenants.service';
 describe('TenantsService.bootstrapTenant', () => {
   let service: TenantsService;
   let tx: {
+    $executeRaw: jest.Mock;
     tenant: { create: jest.Mock };
     role: { create: jest.Mock };
     rolePermission: { createMany: jest.Mock };
@@ -18,6 +19,10 @@ describe('TenantsService.bootstrapTenant', () => {
 
   beforeEach(async () => {
     tx = {
+      // bootstrapTenant()'s first statement — sets the Postgres RLS bypass
+      // GUC (Phase 15); the mock only needs to be callable as a tagged
+      // template, same as the real Prisma `$executeRaw`.
+      $executeRaw: jest.fn(),
       tenant: { create: jest.fn().mockResolvedValue({ id: 'tenant_1', name: 'Musterwerk GmbH' }) },
       role: {
         create: jest.fn().mockImplementation(({ data }: { data: { name: string } }) =>
