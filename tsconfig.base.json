@@ -19,23 +19,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
-    "baseUrl": ".",
-    "paths": {
-      "@orbit/domain": ["packages/domain/src/index.ts"],
-      "@orbit/domain/*": ["packages/domain/src/*"],
-      "@orbit/agent-core": ["packages/agent-core/src/index.ts"],
-      "@orbit/agent-core/*": ["packages/agent-core/src/*"],
-      "@orbit/integration-core": ["packages/integration-core/src/index.ts"],
-      "@orbit/integration-core/*": ["packages/integration-core/src/*"],
-      "@orbit/shared": ["packages/shared/src/index.ts"],
-      "@orbit/shared/*": ["packages/shared/src/*"],
-      "@orbit/config": ["packages/config/src/index.ts"],
-      "@orbit/config/*": ["packages/config/src/*"],
-      "@orbit/ui": ["packages/ui/src/index.ts"],
-      "@orbit/ui/*": ["packages/ui/src/*"],
-      "@orbit/testing": ["packages/testing/src/index.ts"],
-      "@orbit/testing/*": ["packages/testing/src/*"]
-    }
+    "baseUrl": "."
   },
   "exclude": ["node_modules", "dist", ".next", "coverage"]
 }

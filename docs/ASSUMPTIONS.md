@@ -67,4 +67,63 @@ dokumentiere sie hier"). Neue Annahmen werden fortlaufend ergänzt.
 | 36 | `AuditService.record()` schreibt immer über den tenant-gescopten Prisma-Client (`forTenantId()`), nie über den rohen `PrismaService` | Konsistenz mit dem in Phase 2 etablierten Verteidigungsprinzip (ASSUMPTIONS #21) — Audit-Logs sind das sicherheitskritischste Modell im Schema, hier keine Ausnahme zu machen. |
 | 37 | `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` als neue `apps/api`-Dependencies (AWS SDK v3, MinIO-kompatibel über `forcePathStyle`) | Offizielles, S3-API-kompatibles SDK; keine MinIO-spezifische Bibliothek nötig, da MinIO die S3-API implementiert (§5/§53). |
 
+## Nachtrag — Live-Verifikation gegen echte Infrastruktur (Docker jetzt verfügbar)
+
+Nachdem der Nutzer Docker Desktop + WSL2 lokal installiert hat, wurden Phase
+1–4 erstmals live gegen eine echte Postgres/Redis/MinIO-Umgebung getestet
+(`docker compose -f docker-compose.dev.yml up -d`). Dabei wurden drei
+**echte, vorher unentdeckte Bugs** gefunden und behoben — keiner davon war
+über `tsc --noEmit`/Jest/Vitest sichtbar, weil keines dieser Werkzeuge den
+tatsächlichen Produktionslaufweg (`node dist/api/main.js`, echtes
+Docker-Image, echte HTTP-Routen) durchläuft:
+
+| # | Bug | Fund & Fix |
+|---|-----|------------|
+| 38 | `minio/minio:latest` auf Docker Hub liefert `pull access denied` — MinIO hat sein offizielles Image vor einiger Zeit zu `quay.io/minio/minio` verschoben, das alte Docker-Hub-Image ist deprecated/nicht mehr verfügbar | `docker-compose.yml` und `docker-compose.dev.yml` auf `quay.io/minio/minio:latest` geändert. Ohne diesen Fund wäre `docker compose up` in jeder frischen Umgebung fehlgeschlagen. |
+| 39 | **Kritisch**: `node dist/api/main.js` (der reale Laufzeit-Pfad, nicht `tsc --noEmit`) konnte `@orbit/domain`, `@orbit/config`, `@orbit/shared` nicht laden — `ERR_MODULE_NOT_FOUND` beim Start. Ursache: Alle Workspace-Packages hatten `package.json#main` direkt auf `src/index.ts` gesetzt, und deren `index.ts`-Dateien re-exportieren mit erweiterungslosen relativen Pfaden (`export * from './tenant-scope'`). `tsc --noEmit`/Jest/Vitest haben das nie bemerkt, weil sie über `tsconfig.base.json`s `paths`-Mapping direkt auf die Quelle zeigten (Type-Checking) bzw. eigene TS-Transform-Pipelines nutzten (ts-jest/vitest) — beide ignorieren `package.json#main` komplett. Nur ein echter `node`-Prozess (kein Compiler/Test-Runner mit eigenem TS-Loader) nutzt Node's native Modulauflösung, die bei erweiterungslosen Imports in einem Kontext landet, der strikte ESM-Auflösung (explizite Dateiendung erforderlich) statt klassischer CJS-Auflösung erzwingt | Doppelter Fix: (1) `package.json#main`/`#types` von `packages/{shared,config,domain,agent-core,integration-core}` auf `dist/index.js`/`dist/index.d.ts` umgestellt (kompilierte, für Node ganz normal ladbare JS-Ausgabe) — NICHT für `ui`/`testing`, die nur von Next.js/Vitest gebündelt werden und nie über einen reinen `node`-Prozess laufen. (2) `paths`-Mapping komplett aus `tsconfig.base.json` entfernt — Cross-Package-Auflösung läuft jetzt einheitlich über normale `node_modules`-Symlinks (die pnpm ohnehin anlegt) + das jeweilige `package.json#main`/`#types`, für Quellcode-Pakete (ui/testing) wie für dist-Pakete gleichermaßen. Das macht auch den in ASSUMPTIONS #22 dokumentierten `rootDir`-Workaround in `packages/domain/tsconfig.json` überflüssig (zurückgesetzt auf `rootDir: "src"`), da kein Cross-Package-Quellcode mehr in dieselbe Kompilationseinheit gezogen wird. **Konsequenz für den Dev-Workflow**: `turbo.json`s `dev`-Task hat jetzt `dependsOn: ["^build"]` — `pnpm run dev` baut alle Dependency-Packages einmalig, bevor `apps/api`/`apps/web` starten. Wer eine `packages/shared`-Datei ändert, muss `pnpm run build` (oder gezielt `pnpm --filter @orbit/shared build`) erneut laufen lassen, damit `apps/api`'s Dev-Server die Änderung sieht — es gibt (noch) keinen Cross-Package-Watch-Build. Das ist Standard-Turborepo-Praxis (Pakete werden als gebaute Artefakte konsumiert), aber eine bewusste MVP-Einschränkung gegenüber "perfektem" Hot-Reload über Package-Grenzen hinweg. |
+| 40 | Doppeltes `v1` in der URL: `AuthController`, `CasesController`, `TasksController`, `DocumentsController` hatten `@Controller({ path: 'v1/xyz' })` **und** die globale URI-Versionierung (`defaultVersion: '1'`, siehe main.ts) war aktiv — Ergebnis: `/api/v1/v1/auth/login` statt `/api/v1/auth/login`, jeder Aufruf der dokumentierten Route lieferte 404. `HealthController` hatte das ursprünglich korrekt mit `version: ''` umgangen, dieses Muster wurde aber für keinen der in Phase 3/4 neu geschriebenen Controller übernommen | Vereinheitlicht: **kein** Controller setzt mehr manuell `v1` in seinen `path` oder überschreibt `version`. Alle Controller (inkl. `HealthController`, jetzt konsistent) deklarieren nur ihr Ressourcen-Segment (`'health'`, `'auth'`, `'cases'`, ...); das `v1`-Präfix kommt ausschließlich aus der globalen Versionierung. Live verifiziert: `POST /api/v1/auth/login` → echtes JWT mit aus der DB geladenen Rollen/Permissions; `POST /api/v1/cases` mit Token → 201 + `CASE_CREATED`-Audit-Log-Eintrag; ohne Token → 401. |
+
+Diese drei Funde sind ein starkes Argument dafür, `docker compose up` +
+echte HTTP-Aufrufe regelmäßig auszuführen, sobald es die Umgebung erlaubt —
+nicht nur Typecheck/Unit-Tests. IMPLEMENTATION_STATUS.md wurde entsprechend
+von "TESTED LOCALLY" (gemockt) auf "LIVE TESTED" (echte DB, echter
+HTTP-Request) aktualisiert, wo zutreffend.
+
+## Nachtrag 2 — `docker compose build`/`up` für den vollen Produktions-Stack
+
+Nach den drei Funden oben wurde zusätzlich der volle Produktions-Build
+(`docker compose build` für `api`/`worker`/`web`, dann `docker compose up`)
+durchgespielt — bis dahin nie verifiziert (Phase 1: "Healthchecks
+vorhanden; noch nicht end-to-end gebaut"). Dabei kamen sechs weitere echte
+Bugs zum Vorschein:
+
+| # | Bug | Fund & Fix |
+|---|-----|------------|
+| 41 | `pnpm install --frozen-lockfile --ignore-scripts` in beiden Dockerfiles: (a) `--ignore-scripts` hätte auch `argon2`s natives `node-gyp-build` und Prisma-Engine-Postinstalls übersprungen (beide zur Laufzeit nötig!), (b) die `deps`-Stage kopierte nur eine Teilmenge der Workspace-`package.json`-Dateien (fehlten u. a. `packages/ui`, `packages/testing`, `apps/web`), wodurch `--frozen-lockfile` gegen ein unvollständiges Workspace-Abbild lief und einzelne Pakete ihre eigenen devDependency-Bins (`tsc`, `prisma`) nicht bekamen | Siehe #42 — komplett durch `turbo prune` ersetzt statt einzeln nachzuflicken. |
+| 42 | Statt die kopierten `package.json`-Pfade weiter zu pflegen: beide Dockerfiles auf das offizielle Turborepo-Muster `pnpm dlx turbo prune <package> --docker` umgestellt — berechnet automatisch die korrekte Workspace-Teilmenge inkl. einem dazu passenden, in sich konsistenten `pnpm-lock.yaml`. Root-`package.json#packageManager` von `pnpm@10.28.0` auf `pnpm@9.15.0` korrigiert (der überall sonst tatsächlich genutzte Wert — Dockerfiles, CI, diese ganze Session lang lokal) — die Abweichung ließ Corepack transparent pnpm 10 statt 9 ausführen, was mit dem pnpm-9-Lockfile kollidierte und pnpm 10s neues "Ignored build scripts"-Sicherheits-Feature auslöste (verschluckt Postinstalls ohne explizites `pnpm approve-builds`) | Beide Fixes zusammen beheben #41 vollständig; sauberer, robusterer, offiziell empfohlener Ansatz. |
+| 43 | `turbo prune` folgt nur dem package-manifest-Abhängigkeitsgraphen — eine Datei, die nur über `tsconfig`-`extends` referenziert wird (`tsconfig.base.json`), fehlte im geprunten Kontext (`Cannot read file '/repo/tsconfig.base.json'`) | `COPY tsconfig.base.json ./` explizit in der `build`-Stage beider Dockerfiles ergänzt. |
+| 44 | `RUN pnpm --filter @orbit/domain... --filter @orbit/api build` (unverändert seit Phase 1) baute `@orbit/config` gar nicht mit, obwohl `apps/api` es direkt importiert — `--filter @orbit/api` (ohne `...`) zieht NUR das Paket selbst, nicht dessen eigene Workspace-Abhängigkeiten | Ersetzt durch `pnpm --filter @orbit/api... build` (das `...` auf `@orbit/api` selbst zieht dessen kompletten Abhängigkeits-Baum in korrekter Reihenfolge). |
+| 45 | `CMD ["node", "apps/api/dist/api/main.js"]` (Dockerfile) und `"start": "node dist/api/main.js"` (package.json) zeigten auf einen Pfad, der nie existierte — `nest-cli.json`s `outDir: "dist/api"` wird vom Standard-`tsc`-Builder ignoriert, maßgeblich ist `apps/api/tsconfig.json`s eigenes `outDir: "./dist"` ohne explizites `rootDir` (gemeinsame Wurzel von `src/` und `worker/` = `apps/api` selbst) → tatsächlicher Output ist `dist/src/main.js`. Container crashte in einer Restart-Schleife mit `Cannot find module`. Zusätzlich: `docker-compose.yml`s `worker`-Service-Kommando `["node", "dist/worker/main.js"]` fehlte das `apps/api/`-Präfix (WORKDIR ist `/repo`, nicht `/repo/apps/api`) | CMD/Skript auf den tatsächlichen Pfad `apps/api/dist/src/main.js` korrigiert; Worker-Kommando auf `apps/api/dist/worker/main.js` korrigiert. Live verifiziert: `orbit-api`-Container wird "healthy". |
+| 46 | `docker-compose.yml` referenzierte `minio/mc:latest` (derselbe Docker-Hub-Deprecation-Bug wie `minio/minio`, siehe #38) für den `minio-init`-Bucket-Anlage-Service; zusätzlich veraltetes `version: "3.9"`-Feld (von Compose V2 ignoriert, aber eine Warnung wert) | Auf `quay.io/minio/mc:latest` geändert; `version`-Zeile entfernt. |
+
+**Nicht behoben (kein Bug, erwartetes Verhalten)**: Der `worker`-Container
+bootet, loggt `"Worker process started"` und beendet sich dann sofort
+(Exit-Code 0) — `worker/main.ts` erstellt einen NestJS-Application-Context,
+ruft `app.init()` auf und kehrt zurück; ohne einen registrierten
+BullMQ-Queue-Consumer (folgt erst mit Phase 5/6) hält nichts die Node-
+Event-Loop offen. `restart: unless-stopped` lässt ihn dadurch endlos neu
+starten — lokal harmlos, aber für die Dauer dieser Session gestoppt
+(`docker compose stop worker`), um Log-Rauschen zu vermeiden.
+
+`apps/web/public/` fehlte komplett (Next.js braucht das Verzeichnis fürs
+`COPY` im Runtime-Image) — mit einem Platzhalter-Logo unter
+`public/branding/logo.svg` angelegt, passend zum Default-Wert von
+`BRAND_LOGO` in `packages/config/src/branding.ts`; vor Go-Live durch das
+echte Markenlogo zu ersetzen.
+
+Nach allen Fixes: `docker compose build` (api/worker/web) und
+`docker compose up` laufen vollständig durch; `orbit-api` und `orbit-web`
+sind "healthy" bzw. antworten mit HTTP 200 über die echten Container-Ports
+(3001/3000), nicht nur über `pnpm run dev`.
+
 Weitere Annahmen werden in den folgenden Phasen ergänzt.

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "nest build && nest build -c nest-cli.worker.json",
     "dev": "nest start --watch",
-    "start": "node dist/api/main.js",
+    "start": "node dist/src/main.js",
     "start:worker": "node dist/worker/main.js",
     "lint": "eslint src test --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -13,7 +13,7 @@ import { TasksService } from './tasks.service';
 @ApiTags('tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller({ path: 'v1/tasks' })
+@Controller({ path: 'tasks' })
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 

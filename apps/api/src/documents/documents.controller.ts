@@ -18,7 +18,7 @@ import { DocumentsService } from './documents.service';
 @ApiTags('documents')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller({ path: 'v1/documents' })
+@Controller({ path: 'documents' })
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 

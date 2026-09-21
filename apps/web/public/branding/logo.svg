@@ -1,0 +1,8 @@
+<svg width="160" height="40" viewBox="0 0 160 40" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Brand logo placeholder">
+  <!-- Placeholder logo. Referenced by the default BRAND_LOGO value in
+       packages/config/src/branding.ts. Replace with the real brand asset
+       before go-live — see docs/PRODUCT_CONTEXT.md on the ORBIT working
+       name / white-label branding requirement. -->
+  <rect width="160" height="40" rx="6" fill="#4338CA" />
+  <text x="80" y="25" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#FFFFFF" text-anchor="middle">Brand Logo</text>
+</svg>

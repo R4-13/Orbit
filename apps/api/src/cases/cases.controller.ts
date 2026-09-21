@@ -14,7 +14,7 @@ import { UpdateCaseStatusDto } from './dto/update-case-status.dto';
 @ApiTags('cases')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller({ path: 'v1/cases' })
+@Controller({ path: 'cases' })
 export class CasesController {
   constructor(private readonly casesService: CasesService) {}
 
