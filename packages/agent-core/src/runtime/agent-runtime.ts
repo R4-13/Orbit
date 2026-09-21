@@ -1,0 +1,123 @@
+import type { PolicyActionKey, PolicyMode } from '@orbit/shared';
+import type { LLMMessage, LLMProvider } from '../llm/types';
+import { decidePolicyAction, type PolicyDecision } from '../policy/policy-engine';
+import type { ToolExecutionContext } from '../tools/types';
+import type { ToolRegistry } from '../tools/tool-registry';
+
+/** Resolves a tenant's currently configured mode for a policy action (DB lookup lives in apps/api). */
+export type PolicyModeResolver = (
+  action: PolicyActionKey,
+  context: ToolExecutionContext,
+) => Promise<PolicyMode>;
+
+export interface RunAgentTurnInput {
+  systemPrompt?: string;
+  messages: LLMMessage[];
+  /** Guards against infinite tool-calling loops. Default 5. */
+  maxToolIterations?: number;
+}
+
+export interface ToolCallOutcome {
+  toolCallId: string;
+  toolName: string;
+  decision: PolicyDecision;
+  output?: unknown;
+  error?: string;
+}
+
+export interface AgentTurnResult {
+  finalText?: string;
+  toolCallOutcomes: ToolCallOutcome[];
+  iterations: number;
+}
+
+/**
+ * Runs one agent turn end to end: LLMProvider -> Tool Registry -> Policy
+ * Engine -> (only if ALLOWed) tool execution, looping until the LLM stops
+ * requesting tools or `maxToolIterations` is hit. This is the concrete
+ * implementation of the architecture principle in PRODUCT_CONTEXT.md
+ * ("Agent -> Tool Registry -> Policy Engine -> Authorization Check -> Tool
+ * Gateway -> Connector -> External System") — "Authorization Check" and
+ * "Tool Gateway" are `resolvePolicyMode` + `ToolRegistry.execute()`.
+ *
+ * A SUGGEST_ONLY/REQUIRE_APPROVAL/DENY decision never calls the tool: the
+ * LLM is told the outcome (via the synthetic tool-result message pushed
+ * back into the conversation) but the side effect never happens here. It
+ * is the caller's job (Finance/Sales workflow code, Phase 7/8) to act on a
+ * REQUIRE_APPROVAL outcome by creating an Approval record.
+ */
+export class AgentRuntime {
+  constructor(
+    private readonly llm: LLMProvider,
+    private readonly tools: ToolRegistry,
+    private readonly resolvePolicyMode: PolicyModeResolver,
+  ) {}
+
+  async runTurn(context: ToolExecutionContext, input: RunAgentTurnInput): Promise<AgentTurnResult> {
+    const maxIterations = input.maxToolIterations ?? 5;
+    const messages: LLMMessage[] = [...input.messages];
+    const toolCallOutcomes: ToolCallOutcome[] = [];
+    let iterations = 0;
+
+    while (iterations < maxIterations) {
+      iterations += 1;
+
+      const completion = await this.llm.complete({
+        systemPrompt: input.systemPrompt,
+        messages,
+        tools: this.tools.toLLMToolDefinitions(),
+      });
+
+      if (completion.toolCalls.length === 0) {
+        return { finalText: completion.text, toolCallOutcomes, iterations };
+      }
+
+      messages.push({ role: 'assistant', content: completion.text ?? '' });
+
+      for (const toolCall of completion.toolCalls) {
+        const outcome = await this.executeToolCall(toolCall, context);
+        toolCallOutcomes.push(outcome);
+        messages.push({
+          role: 'user',
+          content: `[tool_result:${toolCall.toolName}] ${JSON.stringify(outcome.output ?? outcome.error ?? { decision: outcome.decision })}`,
+        });
+      }
+    }
+
+    return { finalText: undefined, toolCallOutcomes, iterations };
+  }
+
+  private async executeToolCall(
+    toolCall: { toolCallId: string; toolName: string; input: Record<string, unknown> },
+    context: ToolExecutionContext,
+  ): Promise<ToolCallOutcome> {
+    const tool = this.tools.get(toolCall.toolName);
+    if (!tool) {
+      return {
+        toolCallId: toolCall.toolCallId,
+        toolName: toolCall.toolName,
+        decision: 'DENY',
+        error: `Unknown tool "${toolCall.toolName}".`,
+      };
+    }
+
+    const mode = await this.resolvePolicyMode(tool.policyAction, context);
+    const decision = decidePolicyAction(mode);
+
+    if (decision !== 'ALLOW') {
+      return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision };
+    }
+
+    try {
+      const output = await this.tools.execute(tool.name, toolCall.input, context);
+      return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision, output };
+    } catch (error) {
+      return {
+        toolCallId: toolCall.toolCallId,
+        toolName: tool.name,
+        decision,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+}
