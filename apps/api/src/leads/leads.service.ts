@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '@orbit/shared';
-import type { Lead, LeadSource, LeadStatus } from '@orbit/domain';
+import type { Company, Contact, Lead, LeadSource, LeadStatus, Opportunity } from '@orbit/domain';
 import type { CrmConnector } from '@orbit/integration-core';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
@@ -93,8 +93,15 @@ export class LeadsService {
     });
   }
 
-  async findOne(tenantId: string, id: string): Promise<Lead> {
-    const found = await this.prisma.forTenantId(tenantId).lead.findUnique({ where: { id } });
+  /** Enriched for the Lead detail page (§36) — contact/company context plus any Opportunities converted from this Lead. */
+  async findOne(
+    tenantId: string,
+    id: string,
+  ): Promise<Lead & { contact: Contact; company: Company | null; opportunities: Opportunity[] }> {
+    const found = await this.prisma.forTenantId(tenantId).lead.findUnique({
+      where: { id },
+      include: { contact: true, company: true, opportunities: { orderBy: { createdAt: 'desc' } } },
+    });
     if (!found) {
       throw new NotFoundError('Lead not found.', { id });
     }

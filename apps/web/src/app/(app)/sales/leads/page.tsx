@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import type { LeadSource } from '@orbit/domain';
 import { Badge, Button, Card } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
@@ -117,7 +118,11 @@ export default function LeadsPage() {
                 const status = statusLabel(lead.status);
                 return (
                   <tr key={lead.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-slate-700">{SOURCE_LABELS[lead.source]}</td>
+                    <td className="px-4 py-3">
+                      <Link href={`/sales/leads/${lead.id}`} className="font-medium text-brand hover:underline">
+                        {SOURCE_LABELS[lead.source]}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">{lead.notes ?? '–'}</td>
                     <td className="px-4 py-3">
                       <Badge tone={status.tone}>{status.label}</Badge>

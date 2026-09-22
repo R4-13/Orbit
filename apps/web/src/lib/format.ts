@@ -10,3 +10,8 @@ export function formatAmount(value: unknown, currency: string): string {
   if (value === null || value === undefined) return '–';
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(Number(value));
 }
+
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '–';
+  return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}

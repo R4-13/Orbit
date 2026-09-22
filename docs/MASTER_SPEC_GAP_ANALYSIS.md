@@ -34,13 +34,16 @@ Trigger — der Endpunkt *simuliert* eine eingehende E-Mail, es gibt
 keinen echten Mail-Connector-Webhook, der ihn automatisch aufruft (kein
 Microsoft Graph-/Gmail-Zugang). Details: `AGENT_ARCHITECTURE.md`.
 
-**Jetzt größte Lücke: Frontend-Seitenabdeckung** (§32) — von 17
-geforderten Routen existieren 9 nicht (`/inbox`, `/cases`, `/cases/[id]`,
-`/finance`, `/sales`, `/sales/opportunities`, `/activity`,
-`/integrations`, `/admin/*`). Kein Lead-Detail, kein Case-Konzept im UI
-sichtbar, keine Unified Inbox (die den neuen Intake-Endpunkt bedienen
-könnte), kein Agent-Activity-Log (der die neuen `AgentRun`-Daten zeigen
-könnte), keine Integrations-Verwaltung, keine Policy-Konfigurations-UI.
+**~~Zweitgrößte Lücke: Frontend-Seitenabdeckung~~ Größtenteils behoben in
+Phase 19a** (§32) — `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+`/sales/opportunities` + `/sales/opportunities/[id]` und `/activity`
+existieren jetzt, mit den passenden neuen Backend-Endpunkten
+(`GET /api/v1/agent-runs`, angereicherte `CasesService.findOne()` und
+`LeadsService.findOne()`). **Weiterhin offen**: `/inbox` (Unified Inbox
+für den Intake-Endpunkt), `/integrations`, `/admin/users`,
+`/admin/policies`, `/admin/settings` — letztere insbesondere blockiert
+durch ein komplett fehlendes Backend-CRUD für `PolicyConfig`
+(`PolicyModule` hat bisher keinen Controller).
 
 **Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind 2
 vollständig erfüllt (Duplicate, Multi-Tenant), 2 seit Phase 18 deutlich
@@ -324,19 +327,24 @@ Event-Typen.
 | `/login` | ✅ |
 | `/dashboard` | ✅ |
 | `/inbox` | ❌ |
-| `/cases`, `/cases/[id]` | ❌ |
+| `/cases`, `/cases/[id]` | ✅ seit Phase 19a — Liste (mit Finance/Sales-Filter) + Detailseite mit allen verknüpften Datensätzen (Tasks, Dokumente, E-Mails, Rechnungen, Leads, Agent-Läufe inkl. Tool-Aufrufe) |
 | `/finance` | ❌ (nur `/finance/invoices`, `/finance/suppliers` direkt) |
 | `/finance/invoices`, `/finance/invoices/[id]` | ✅ |
 | `/sales` | ❌ |
-| `/sales/leads` | ✅ (nur Liste, kein `[id]`) |
-| `/sales/opportunities` | ❌ (obwohl `Opportunity`-Modell + API existieren) |
+| `/sales/leads`, `/sales/leads/[id]` | ✅ seit Phase 19a — Detailseite mit Kontakt/Firma, Status-Wechsel, verknüpften Opportunities |
+| `/sales/opportunities`, `/sales/opportunities/[id]` | ✅ seit Phase 19a — Liste, Anlage-Formular, Detailseite mit Stage-Wechsel |
 | `/approvals` | ⚠️ existiert, zeigt aber strukturell nie Inhalte (siehe §37) |
 | `/tasks` | ✅ |
-| `/activity` | ❌ |
+| `/activity` | ✅ seit Phase 19a — Agent-Run-Feed mit Tool-Aufrufen, Filter nach Agent-Typ, Link zum zugehörigen Vorgang |
 | `/integrations` | ❌ |
 | `/admin/users`, `/admin/policies`, `/admin/settings` | ❌ (alle drei) |
 
-**9 von 17 spezifizierten Routen fehlen vollständig.**
+**4 von 17 spezifizierten Routen fehlen noch vollständig** (`/inbox`,
+`/integrations`, `/admin/users`, `/admin/policies`, `/admin/settings` —
+letztere zählen als drei separate Routen, macht 5 Einzelrouten in 4
+Themenblöcken). `/finance` und `/sales` als reine Übersichtsseiten
+(ohne eigene Funktion über die Unterrouten hinaus) bleiben ebenfalls
+offen, sind aber niedrige Priorität.
 
 ## §33 — Dashboard
 
@@ -372,11 +380,15 @@ UI-Element dafür).
 
 ## §36 — Sales UI (Lead Detail)
 
-❌ **Es gibt keine Lead-Detailseite.** Leads werden ausschließlich in
-einer Listenansicht mit Quelle/Notizen/Status angezeigt. Keiner der
-geforderten Abschnitte (Contact, Company, Summary, Intent, Opportunity,
-Next Action, Suggested Follow-Up, Tasks, Meetings, CRM Sync Status,
-Communication History) existiert als eigene Ansicht.
+⚠️ **Seit Phase 19a vorhanden, aber nicht vollständig.** `/sales/leads/[id]`
+zeigt Contact (Name/E-Mail/Telefon), Company, Quelle, Notizen, Status
+(mit Wechsel-Dropdown) und die aus diesem Lead entstandenen
+Opportunities (mit Wert/Phase). **Weiterhin fehlt**: Summary/Intent
+(keine LLM-generierte Zusammenfassung), Next Action / Suggested
+Follow-Up als eigener Abschnitt (existiert nur implizit als Task in der
+zugehörigen Case-Ansicht), Meetings-Abschnitt, CRM-Sync-Status-Anzeige,
+Communication-History (E-Mail-Verlauf) direkt auf der Lead-Seite — die
+gehört aktuell nur zur Case-Detailseite, nicht zur Lead-Seite selbst.
 
 ## §37 — Approval Center
 
@@ -400,9 +412,16 @@ zentralen Liste sichtbar (nur lesend).
 
 ## §38 — Agent Activity
 
-❌ Vollständig fehlend — konsistent mit dem Fehlen der Agentenarchitektur
-selbst (§12-17). Es gibt keine Timeline-Ansicht einzelner Agent-Schritte,
-weil keine Agent-Schritte je erzeugt werden.
+✅ Seit Phase 19a: `/activity` zeigt jeden `AgentRun` (neueste zuerst,
+max. 100), gefiltert nach Agent-Typ, mit Status-Badge, Trigger-Typ,
+Zeitstempel, jedem einzelnen `ToolInvocation` (Tool-Name + Status) und
+einem Link zum zugehörigen Vorgang, sofern vorhanden. Backend-seitig neu:
+`GET /api/v1/agent-runs` (+ `/:id`), vorher komplett fehlend (§42).
+**Bewusst nicht abgebildet**: die einzelne Policy-Entscheidung pro
+Tool-Aufruf (ALLOW/DENY/REQUIRE_APPROVAL) wird aktuell nicht als eigenes
+UI-Element angezeigt, nur der grobe SUCCESS/FAILED-Status der
+`ToolInvocation` — die Entscheidung selbst steckt im `output`-JSON-Feld,
+aber nicht extra gerendert.
 
 ## §39 — Integration Administration
 
@@ -440,7 +459,9 @@ nicht verdrahtet.
 eingerichtet. Von den 17 geforderten Ressourcen-Gruppen fehlen als
 eigenständige REST-Endpunkte: `tenants` (nur intern), `users`,
 `bookings` (nur verschachtelt unter `/invoices/:id/booking-proposal`),
-`agent-runs`, `integrations`, `audit`, `webhooks` — **7 von 17**. Dafür
+`integrations`, `audit`, `webhooks` — **6 von 17** (`agent-runs` seit
+Phase 19a behoben: `GET /api/v1/agent-runs` + `/:id`, lesend,
+Permission-Gating über `CASE_READ` wie bei `DocumentsController`). Dafür
 existieren sinnvolle, nicht explizit geforderte Zusatz-Ressourcen
 (`/suppliers`, `/meetings`).
 
@@ -462,10 +483,15 @@ Invoice, §18). Deutlich unter der geforderten Datenmenge.
 **Sales-Demo (§45)** — Soll: 5 Unternehmen, 10 Kontakte, 5 Leads, 3
 Opportunities, Beispiel-E-Mails, Beispiel-Telefontranskripte. Ist: 2
 Unternehmen, 3 Kontakte, 3 Leads, 2 Opportunities, **keine**
-Beispiel-E-Mails/-Transkripte (da `EmailMessage`/`Call` ungenutzt). Die
-geforderte Live-Demo "eingehende E-Mail → automatisch Case → Contact →
-Company → Lead → Task → Follow-up" ist **nicht auslösbar** — es gibt
-keinen Mechanismus, eine eingehende E-Mail zu simulieren.
+Beispiel-E-Mails/-Transkripte als Seed-Daten (`Call` bleibt ungenutzt).
+Die geforderte Live-Demo "eingehende E-Mail → automatisch Case → Contact
+→ Company → Lead → Task → Follow-up" ist seit Phase 18 über `POST
+/api/v1/intake/emails` tatsächlich auslösbar und live gegen echte
+Postgres verifiziert (siehe `intake-workflow.e2e-spec.ts`) —
+**Einschränkung bleibt**: der Trigger ist simuliert (manueller
+API-Aufruf), kein echter Mail-Connector-Webhook ruft ihn automatisch
+auf, und im UI gibt es dafür keine Eingabemöglichkeit (keine
+`/inbox`-Seite).
 
 *Hinweis: Die aktuell laufende Datenbank enthält durch wiederholte
 E2E-Testläufe dieser Session deutlich mehr Datensätze (33 Lieferanten, 49
@@ -647,12 +673,14 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
 2. ~~**E-Mail-Eingang simulieren**~~ — erledigt in Phase 18, als Teil
    desselben Endpunkts. Ein **echter** Mail-Connector-Trigger bleibt
    offen (braucht Microsoft/Google-Credentials).
-3. **Fehlende Kern-Frontend-Seiten**: `/cases/[id]`, Lead-Detail,
-   `/activity` (kann jetzt echte `AgentRun`-Daten zeigen), `/inbox` (kann
-   jetzt den echten Intake-Endpunkt bedienen statt nur ihn zu simulieren),
-   `/admin/policies` (Policy Engine hat sonst keine UI, jetzt mit 16 statt
-   11 Actions umso relevanter) — höchster Nutzen pro Aufwand, da
-   Backend-Daten jetzt größtenteils existieren.
+3. ~~**Fehlende Kern-Frontend-Seiten**~~ — größtenteils erledigt in Phase
+   19a: `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+   `/sales/opportunities` + `/sales/opportunities/[id]`, `/activity`
+   (zeigt echte `AgentRun`-Daten inkl. Tool-Aufrufe), neuer Endpunkt
+   `GET /api/v1/agent-runs`. **Noch offen**: `/inbox` (kann den echten
+   Intake-Endpunkt bedienen statt nur simulieren), `/admin/policies`
+   (braucht zuerst neues Backend-CRUD, `PolicyModule` hat noch keinen
+   Controller), `/integrations`, `/admin/users`, `/admin/settings`.
 4. **`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
    `docs/TESTING.md`** nachziehen — reine Dokumentationsarbeit, kein
    Coderisiko.
@@ -667,6 +695,10 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
 8. **Approval-Center-Frontend nachziehen** — Backend liefert seit Phase 18
    echte Daten (§37), die Seite selbst hat aber noch keine
    funktionierenden Approve/Reject-Buttons für die generische Ansicht.
+9. **`/admin/policies`-Backend** (Policy Engine hat sonst keine UI, jetzt
+   mit 16 statt 11 Actions umso relevanter) — CRUD-Endpunkte für
+   `PolicyConfig` fehlen komplett, `PolicyModule` hat aktuell nur
+   `PolicyEnforcementService`, keinen `Controller`.
 
 Diese Datei ergänzt, ersetzt aber nicht
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) (Komponentenstatus)

@@ -39,12 +39,16 @@ Master-Spec).
 Seit Phase 18 gibt es ein `AgentModule` + einen echten Endpunkt (`POST
 /api/v1/intake/emails`), der die volle Kette LLM → Tool Registry →
 Policy Engine → Tool Gateway → Connector live gegen echte Postgres
-ausführt (Communication/Intake-, Finance/AP- und Sales/CRM-Agent). Was
-weiterhin fehlt: ein **echter Trigger** — der Endpunkt *simuliert* eine
-eingehende E-Mail, es gibt keinen echten Mail-Connector-Webhook, der ihn
-automatisch aufruft (kein Microsoft Graph-/Gmail-Zugang), keine Unified-
-Inbox-UI, die ihn bedient, und keinen vierten Agenten-Typ (Orchestrator)
-als eigenen LLM-Lauf (das Routing ist deterministischer Code). Details:
+ausführt (Communication/Intake-, Finance/AP- und Sales/CRM-Agent). Seit
+Phase 19a lässt sich das Ergebnis auch tatsächlich im Frontend
+nachvollziehen: `/activity` zeigt jeden `AgentRun` samt seinen
+`ToolInvocation`s, `/cases/[id]` zeigt dieselben Läufe im Kontext des
+jeweiligen Vorgangs. Was weiterhin fehlt: ein **echter Trigger** — der
+Endpunkt *simuliert* eine eingehende E-Mail, es gibt keinen echten
+Mail-Connector-Webhook, der ihn automatisch aufruft (kein Microsoft
+Graph-/Gmail-Zugang), keine Unified-Inbox-UI, die ihn bedient (siehe
+unten), und keinen vierten Agenten-Typ (Orchestrator) als eigenen
+LLM-Lauf (das Routing ist deterministischer Code). Details:
 [`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md).
 
 Direkt daraus folgt weiterhin: **echte OCR** (Tesseract) ist nicht

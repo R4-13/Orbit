@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
+import type { Company, Contact, Lead, Opportunity } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -32,7 +33,10 @@ export class LeadsController {
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.CRM_CONTACT_READ)
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<Lead & { contact: Contact; company: Company | null; opportunities: Opportunity[] }> {
     return this.leadsService.findOne(user.tenantId, id);
   }
 

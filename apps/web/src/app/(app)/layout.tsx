@@ -16,7 +16,14 @@ interface NavItem {
 }
 
 const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
-  { title: '', items: [{ href: '/dashboard', label: 'Übersicht' }] },
+  {
+    title: '',
+    items: [
+      { href: '/dashboard', label: 'Übersicht' },
+      { href: '/cases', label: 'Vorgänge', permission: PERMISSIONS.CASE_READ },
+      { href: '/activity', label: 'Activity', permission: PERMISSIONS.CASE_READ },
+    ],
+  },
   {
     title: 'Finance',
     items: [
@@ -28,6 +35,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     title: 'Sales',
     items: [
       { href: '/sales/leads', label: 'Leads', permission: PERMISSIONS.CRM_CONTACT_READ },
+      { href: '/sales/opportunities', label: 'Opportunities', permission: PERMISSIONS.CRM_OPPORTUNITY_MANAGE },
       { href: '/sales/contacts', label: 'Kontakte', permission: PERMISSIONS.CRM_CONTACT_READ },
     ],
   },
