@@ -23,6 +23,18 @@ export const POLICY_ACTIONS = {
   CRM_ACTIVITY_LOG: 'crm.activity.log',
   MEETING_PROPOSE: 'meeting.propose',
   MEETING_CREATE: 'meeting.create',
+  /**
+   * Added for Agent Runtime wiring (docs/ASSUMPTIONS.md Phase 18): the
+   * §14 tool list needs a policy action for every tool, including the
+   * ones §17 never named a default for. All four are routine,
+   * low-risk data-entry/read steps — AUTONOMOUS by default, same
+   * category as EMAIL_CLASSIFY/LEAD_CREATE.
+   */
+  INVOICE_INTAKE: 'invoice.intake',
+  CONTACT_MANAGE: 'crm.contact.manage',
+  TASK_CREATE: 'task.create',
+  CALENDAR_READ: 'calendar.read',
+  EMAIL_DRAFT: 'email.draft',
 } as const;
 
 export type PolicyActionKey = (typeof POLICY_ACTIONS)[keyof typeof POLICY_ACTIONS];
@@ -51,4 +63,9 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.CRM_ACTIVITY_LOG]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.MEETING_PROPOSE]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.MEETING_CREATE]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.INVOICE_INTAKE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.CONTACT_MANAGE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.TASK_CREATE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.CALENDAR_READ]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.EMAIL_DRAFT]: { mode: 'AUTONOMOUS' },
 };

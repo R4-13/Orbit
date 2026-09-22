@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { isOrbitError } from '@orbit/shared';
+import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../audit/audit.service';
 import { FINANCE_CONNECTOR } from '../connectors/connectors.tokens';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
@@ -13,6 +14,7 @@ describe('SuppliersService', () => {
   };
   let audit: { record: jest.Mock };
   let policy: { decide: jest.Mock };
+  let approvals: { create: jest.Mock; markDecided: jest.Mock };
   let financeConnector: { createSupplier: jest.Mock };
 
   beforeEach(async () => {
@@ -27,6 +29,10 @@ describe('SuppliersService', () => {
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
     policy = { decide: jest.fn() };
+    approvals = {
+      create: jest.fn().mockResolvedValue(undefined),
+      markDecided: jest.fn().mockResolvedValue(undefined),
+    };
     financeConnector = { createSupplier: jest.fn().mockResolvedValue({ externalId: 'mock-supplier-1' }) };
 
     const moduleRef = await Test.createTestingModule({
@@ -35,6 +41,7 @@ describe('SuppliersService', () => {
         { provide: PrismaService, useValue: { forTenantId: jest.fn().mockReturnValue(scoped) } },
         { provide: AuditService, useValue: audit },
         { provide: PolicyEnforcementService, useValue: policy },
+        { provide: ApprovalsService, useValue: approvals },
         { provide: FINANCE_CONNECTOR, useValue: financeConnector },
       ],
     }).compile();
@@ -93,6 +100,10 @@ describe('SuppliersService', () => {
       data: expect.objectContaining({ status: 'PENDING_APPROVAL' }),
     });
     expect(result.created).toBe(true);
+    expect(approvals.create).toHaveBeenCalledWith(
+      'tenant_1',
+      expect.objectContaining({ entityType: 'SUPPLIER', entityId: 'sup_pending' }),
+    );
   });
 
   it('approve() rejects a supplier that is not PENDING_APPROVAL', async () => {
@@ -120,6 +131,7 @@ describe('SuppliersService', () => {
 
     expect(financeConnector.createSupplier).toHaveBeenCalled();
     expect(result.status).toBe('ACTIVE');
+    expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'SUPPLIER', 'sup_1', 'user_1', 'APPROVED');
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'APPROVAL_GRANTED' }));
   });
 
@@ -131,6 +143,7 @@ describe('SuppliersService', () => {
 
     expect(financeConnector.createSupplier).not.toHaveBeenCalled();
     expect(result.status).toBe('BLOCKED');
+    expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'SUPPLIER', 'sup_1', 'user_1', 'REJECTED');
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'APPROVAL_REJECTED' }));
   });
 });

@@ -2,7 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError, POLICY_ACTIONS } from '@orbit/shared';
 import type { Supplier } from '@orbit/domain';
 import type { FinanceConnector } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { ApprovalsService } from '../approvals/approvals.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { FINANCE_CONNECTOR } from '../connectors/connectors.tokens';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,13 +36,15 @@ export class SuppliersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly policy: PolicyEnforcementService,
+    private readonly approvals: ApprovalsService,
     @Inject(FINANCE_CONNECTOR) private readonly financeConnector: FinanceConnector,
   ) {}
 
   async findOrCreate(
     tenantId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     input: FindOrCreateSupplierInput,
+    actorType: AuditActorType = 'USER',
   ): Promise<FindOrCreateSupplierResult> {
     const existing = await this.findExisting(tenantId, input);
     if (existing) {
@@ -82,7 +85,7 @@ export class SuppliersService {
       await this.audit.record({
         tenantId,
         eventType: 'SUPPLIER_CREATED',
-        actorType: 'USER',
+        actorType,
         actorUserId,
         entityType: 'Supplier',
         entityId: supplier.id,
@@ -110,11 +113,30 @@ export class SuppliersService {
     await this.audit.record({
       tenantId,
       eventType: 'SUPPLIER_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Supplier',
       entityId: supplier.id,
       payload: { name: supplier.name, status: 'PENDING_APPROVAL' },
+    });
+
+    // §37: feed the central Approval Center instead of leaving pending
+    // suppliers visible only on /finance/suppliers.
+    await this.approvals.create(tenantId, {
+      entityType: 'SUPPLIER',
+      entityId: supplier.id,
+      policyAction: POLICY_ACTIONS.SUPPLIER_CREATE,
+      requestedByUserId: actorUserId,
+      reason: `Neuer Lieferant „${supplier.name}“ wartet auf Freigabe.`,
+    });
+    await this.audit.record({
+      tenantId,
+      eventType: 'APPROVAL_REQUESTED',
+      actorType,
+      actorUserId,
+      entityType: 'Supplier',
+      entityId: supplier.id,
+      payload: { policyAction: POLICY_ACTIONS.SUPPLIER_CREATE },
     });
 
     return { supplier, created: true };
@@ -152,6 +174,7 @@ export class SuppliersService {
       data: { status: 'ACTIVE', externalFinanceId: externalSupplier.externalId },
     });
 
+    await this.approvals.markDecided(tenantId, 'SUPPLIER', id, actorUserId, 'APPROVED');
     await this.audit.record({
       tenantId,
       eventType: 'APPROVAL_GRANTED',
@@ -173,6 +196,7 @@ export class SuppliersService {
       data: { status: 'BLOCKED' },
     });
 
+    await this.approvals.markDecided(tenantId, 'SUPPLIER', id, actorUserId, 'REJECTED');
     await this.audit.record({
       tenantId,
       eventType: 'APPROVAL_REJECTED',

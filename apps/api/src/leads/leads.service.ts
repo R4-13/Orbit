@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '@orbit/shared';
 import type { Lead, LeadSource, LeadStatus } from '@orbit/domain';
 import type { CrmConnector } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -30,7 +30,12 @@ export class LeadsService {
     @Inject(CRM_CONNECTOR) private readonly crmConnector: CrmConnector,
   ) {}
 
-  async create(tenantId: string, actorUserId: string, input: CreateLeadInput): Promise<Lead> {
+  async create(
+    tenantId: string,
+    actorUserId: string | undefined,
+    input: CreateLeadInput,
+    actorType: AuditActorType = 'USER',
+  ): Promise<Lead> {
     const contact = await this.prisma.forTenantId(tenantId).contact.findUnique({
       where: { id: input.contactId },
     });
@@ -59,18 +64,24 @@ export class LeadsService {
     await this.audit.record({
       tenantId,
       eventType: 'LEAD_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Lead',
       entityId: lead.id,
       payload: { source: lead.source, crmExternalId: crmLead.externalId },
     });
 
-    await this.tasks.create(tenantId, actorUserId, {
-      title: `Neuen Lead kontaktieren: ${contact.firstName} ${contact.lastName}`,
-      description: input.notes,
-      caseId: input.caseId,
-    });
+    await this.tasks.create(
+      tenantId,
+      actorUserId,
+      {
+        title: `Neuen Lead kontaktieren: ${contact.firstName} ${contact.lastName}`,
+        description: input.notes,
+        caseId: input.caseId,
+      },
+      actorType,
+      actorType === 'AGENT' ? 'AGENT' : 'USER',
+    );
 
     return lead;
   }

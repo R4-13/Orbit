@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '@orbit/shared';
 import type { Company } from '@orbit/domain';
 import type { CrmConnector } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -27,7 +27,12 @@ export class CompaniesService {
     @Inject(CRM_CONNECTOR) private readonly crmConnector: CrmConnector,
   ) {}
 
-  async upsert(tenantId: string, actorUserId: string, input: UpsertCompanyInput): Promise<Company> {
+  async upsert(
+    tenantId: string,
+    actorUserId: string | undefined,
+    input: UpsertCompanyInput,
+    actorType: AuditActorType = 'USER',
+  ): Promise<Company> {
     const existing = input.domain
       ? await this.prisma.forTenantId(tenantId).company.findFirst({ where: { domain: input.domain } })
       : null;
@@ -50,7 +55,7 @@ export class CompaniesService {
     await this.audit.record({
       tenantId,
       eventType: 'COMPANY_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Company',
       entityId: company.id,

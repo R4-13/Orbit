@@ -32,4 +32,16 @@ describe('MockLLMProvider', () => {
     expect(provider.getRequests()).toHaveLength(1);
     expect(provider.getRequests()[0]?.systemPrompt).toBe('be helpful');
   });
+
+  it('seedResponse() appends to the queue of a long-lived instance', async () => {
+    const provider = new MockLLMProvider();
+    provider.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'seeded-1' });
+
+    const a = await provider.complete({ messages: [], tools: [] });
+    expect(a.text).toBe('seeded-1');
+
+    provider.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'seeded-2' });
+    const b = await provider.complete({ messages: [], tools: [] });
+    expect(b.text).toBe('seeded-2');
+  });
 });

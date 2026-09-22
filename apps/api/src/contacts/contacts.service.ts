@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError } from '@orbit/shared';
 import type { Contact } from '@orbit/domain';
 import type { CrmConnector } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -22,7 +22,12 @@ export class ContactsService {
     @Inject(CRM_CONNECTOR) private readonly crmConnector: CrmConnector,
   ) {}
 
-  async upsert(tenantId: string, actorUserId: string, input: UpsertContactInput): Promise<Contact> {
+  async upsert(
+    tenantId: string,
+    actorUserId: string | undefined,
+    input: UpsertContactInput,
+    actorType: AuditActorType = 'USER',
+  ): Promise<Contact> {
     const existing = input.email
       ? await this.prisma.forTenantId(tenantId).contact.findFirst({ where: { email: input.email } })
       : null;
@@ -52,7 +57,7 @@ export class ContactsService {
     await this.audit.record({
       tenantId,
       eventType: 'CONTACT_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Contact',
       entityId: contact.id,
@@ -64,6 +69,11 @@ export class ContactsService {
 
   findAll(tenantId: string): Promise<Contact[]> {
     return this.prisma.forTenantId(tenantId).contact.findMany({ orderBy: { createdAt: 'desc' } });
+  }
+
+  /** Read-only lookup — used by the Communication/Intake Agent's `find_contact` tool. */
+  findByEmail(tenantId: string, email: string): Promise<Contact | null> {
+    return this.prisma.forTenantId(tenantId).contact.findFirst({ where: { email } });
   }
 
   async findOne(tenantId: string, id: string): Promise<Contact> {

@@ -2,7 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError } from '@orbit/shared';
 import { Prisma, type BookingProposal, type Invoice } from '@orbit/domain';
 import type { FinanceConnector, OcrProvider } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { ApprovalsService } from '../approvals/approvals.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { FINANCE_CONNECTOR, OCR_PROVIDER } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -36,14 +37,16 @@ export class InvoicesService {
     private readonly audit: AuditService,
     private readonly storage: StorageService,
     private readonly suppliers: SuppliersService,
+    private readonly approvals: ApprovalsService,
     @Inject(FINANCE_CONNECTOR) private readonly financeConnector: FinanceConnector,
     @Inject(OCR_PROVIDER) private readonly ocrProvider: OcrProvider,
   ) {}
 
   async createFromDocument(
     tenantId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     input: CreateInvoiceFromDocumentInput,
+    actorType: AuditActorType = 'USER',
   ): Promise<Invoice> {
     const document = await this.prisma.forTenantId(tenantId).document.findUnique({
       where: { id: input.documentId },
@@ -64,10 +67,12 @@ export class InvoicesService {
 
     let supplierId: string | undefined;
     if (!duplicate && extracted.supplierName) {
-      const { supplier } = await this.suppliers.findOrCreate(tenantId, actorUserId, {
-        name: extracted.supplierName,
-        taxId: extracted.supplierTaxId,
-      });
+      const { supplier } = await this.suppliers.findOrCreate(
+        tenantId,
+        actorUserId,
+        { name: extracted.supplierName, taxId: extracted.supplierTaxId },
+        actorType,
+      );
       supplierId = supplier.id;
     }
 
@@ -95,7 +100,7 @@ export class InvoicesService {
     await this.audit.record({
       tenantId,
       eventType: 'DOCUMENT_PARSED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Invoice',
       entityId: invoice.id,
@@ -104,7 +109,7 @@ export class InvoicesService {
     await this.audit.record({
       tenantId,
       eventType: 'INVOICE_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Invoice',
       entityId: invoice.id,
@@ -114,11 +119,23 @@ export class InvoicesService {
       await this.audit.record({
         tenantId,
         eventType: 'DUPLICATE_INVOICE_DETECTED',
-        actorType: 'USER',
+        actorType,
         actorUserId,
         entityType: 'Invoice',
         entityId: invoice.id,
         payload: { duplicateOfInvoiceId: duplicate.id },
+      });
+    } else {
+      // §37: an invoice awaiting a booking proposal + approval belongs in
+      // the central Approval Center, same as pending suppliers.
+      await this.approvals.create(tenantId, {
+        entityType: 'INVOICE',
+        entityId: invoice.id,
+        policyAction: 'invoice.approve',
+        requestedByUserId: actorUserId,
+        reason: invoice.invoiceNumber
+          ? `Rechnung ${invoice.invoiceNumber} wartet auf Buchungsvorschlag und Freigabe.`
+          : 'Neue Rechnung wartet auf Buchungsvorschlag und Freigabe.',
       });
     }
 
@@ -142,9 +159,10 @@ export class InvoicesService {
 
   async addBookingProposal(
     tenantId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     invoiceId: string,
     input: AddBookingProposalInput,
+    actorType: AuditActorType = 'USER',
   ): Promise<BookingProposal> {
     const invoice = await this.findOne(tenantId, invoiceId);
     if (invoice.status !== 'PENDING_APPROVAL') {
@@ -168,7 +186,7 @@ export class InvoicesService {
     await this.audit.record({
       tenantId,
       eventType: 'BOOKING_PROPOSED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'BookingProposal',
       entityId: proposal.id,
@@ -204,6 +222,7 @@ export class InvoicesService {
       data: { status: 'APPROVED' },
     });
 
+    await this.approvals.markDecided(tenantId, 'INVOICE', invoiceId, actorUserId, 'APPROVED');
     await this.audit.record({
       tenantId,
       eventType: 'APPROVAL_GRANTED',
@@ -217,7 +236,12 @@ export class InvoicesService {
     return updated;
   }
 
-  async transfer(tenantId: string, actorUserId: string, invoiceId: string): Promise<Invoice> {
+  async transfer(
+    tenantId: string,
+    actorUserId: string | undefined,
+    invoiceId: string,
+    actorType: AuditActorType = 'USER',
+  ): Promise<Invoice> {
     const invoice = await this.findOne(tenantId, invoiceId);
     if (invoice.status !== 'APPROVED') {
       throw new PolicyViolationError('Invoice is not approved for transfer.', {
@@ -249,7 +273,7 @@ export class InvoicesService {
     await this.audit.record({
       tenantId,
       eventType: 'FINANCE_TRANSFER_STARTED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Invoice',
       entityId: invoiceId,
@@ -290,7 +314,7 @@ export class InvoicesService {
       await this.audit.record({
         tenantId,
         eventType: 'FINANCE_TRANSFER_COMPLETED',
-        actorType: 'USER',
+        actorType,
         actorUserId,
         entityType: 'Invoice',
         entityId: invoiceId,
@@ -319,7 +343,7 @@ export class InvoicesService {
       await this.audit.record({
         tenantId,
         eventType: 'FINANCE_TRANSFER_FAILED',
-        actorType: 'USER',
+        actorType,
         actorUserId,
         entityType: 'Invoice',
         entityId: invoiceId,

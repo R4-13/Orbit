@@ -4,6 +4,15 @@ import type { PolicyActionKey } from '@orbit/shared';
 export interface ToolExecutionContext {
   tenantId: string;
   agentRunId: string;
+  /**
+   * The human user this run is acting on behalf of, if any — e.g. a user
+   * manually re-triggered a run. Absent for genuinely autonomous runs
+   * (an inbound email arriving with no human in the loop yet), which is
+   * the normal case; tool implementations should attribute their audit
+   * events to `actorType: 'AGENT'` when this is undefined rather than
+   * inventing a user.
+   */
+  actorUserId?: string;
 }
 
 /**

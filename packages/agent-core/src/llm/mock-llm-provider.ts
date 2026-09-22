@@ -12,18 +12,33 @@ export class MockLLMProvider implements LLMProvider {
 
   private callCount = 0;
   private readonly requests: LLMCompletionRequest[] = [];
+  private readonly queue: LLMCompletionResult[];
 
-  constructor(private readonly scriptedResponses: LLMCompletionResult[] = []) {}
+  constructor(scriptedResponses: LLMCompletionResult[] = []) {
+    this.queue = [...scriptedResponses];
+  }
 
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     this.requests.push(request);
-    const response = this.scriptedResponses[this.callCount];
     this.callCount += 1;
+    const response = this.queue.shift();
 
     if (!response) {
       return { toolCalls: [], stopReason: 'end_turn', text: '' };
     }
     return response;
+  }
+
+  /**
+   * Test/dev helper — not part of the LLMProvider contract. Appends to the
+   * response queue rather than only accepting a fixed constructor array,
+   * so a long-lived singleton instance (this provider is DI-scoped
+   * process-wide in apps/api, same as MockOcrProvider/MockFinanceConnector)
+   * can be re-scripted before each orchestration run instead of needing a
+   * fresh instance per call. Mirrors MockOcrProvider.seedResult().
+   */
+  seedResponse(response: LLMCompletionResult): void {
+    this.queue.push(response);
   }
 
   /** Test/dev helper — not part of the LLMProvider contract. */

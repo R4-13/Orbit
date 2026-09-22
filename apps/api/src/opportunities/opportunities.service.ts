@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '@orbit/shared';
 import type { Opportunity, OpportunityStage } from '@orbit/domain';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface CreateOpportunityInput {
@@ -20,7 +20,12 @@ export class OpportunitiesService {
     private readonly audit: AuditService,
   ) {}
 
-  async create(tenantId: string, actorUserId: string, input: CreateOpportunityInput): Promise<Opportunity> {
+  async create(
+    tenantId: string,
+    actorUserId: string | undefined,
+    input: CreateOpportunityInput,
+    actorType: AuditActorType = 'USER',
+  ): Promise<Opportunity> {
     const opportunity = await this.prisma.forTenantId(tenantId).opportunity.create({
       data: {
         tenantId,
@@ -36,7 +41,7 @@ export class OpportunitiesService {
     await this.audit.record({
       tenantId,
       eventType: 'OPPORTUNITY_CREATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Opportunity',
       entityId: opportunity.id,
@@ -53,6 +58,11 @@ export class OpportunitiesService {
     });
   }
 
+  /** Read-only lookup — used by the Sales Agent's `update_opportunity` tool to decide create-vs-update. */
+  findByLeadId(tenantId: string, leadId: string): Promise<Opportunity | null> {
+    return this.prisma.forTenantId(tenantId).opportunity.findFirst({ where: { leadId } });
+  }
+
   async findOne(tenantId: string, id: string): Promise<Opportunity> {
     const found = await this.prisma.forTenantId(tenantId).opportunity.findUnique({ where: { id } });
     if (!found) {
@@ -63,9 +73,10 @@ export class OpportunitiesService {
 
   async updateStage(
     tenantId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     id: string,
     stage: OpportunityStage,
+    actorType: AuditActorType = 'USER',
   ): Promise<Opportunity> {
     const existing = await this.findOne(tenantId, id);
 
@@ -77,7 +88,7 @@ export class OpportunitiesService {
     await this.audit.record({
       tenantId,
       eventType: 'OPPORTUNITY_UPDATED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Opportunity',
       entityId: id,

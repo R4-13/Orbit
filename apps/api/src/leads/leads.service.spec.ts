@@ -63,6 +63,8 @@ describe('LeadsService', () => {
       'tenant_1',
       'user_1',
       expect.objectContaining({ title: expect.stringContaining('Kim Kunde') }),
+      'USER',
+      'USER',
     );
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'LEAD_CREATED' }));
   });

@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../audit/audit.service';
 import { FINANCE_CONNECTOR, OCR_PROVIDER } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
@@ -20,6 +21,7 @@ describe('InvoicesService', () => {
   let ocr: { extractInvoiceData: jest.Mock };
   let financeConnector: { transferInvoice: jest.Mock; providerName: string };
   let suppliers: { findOrCreate: jest.Mock };
+  let approvals: { create: jest.Mock; markDecided: jest.Mock };
 
   beforeEach(async () => {
     scoped = {
@@ -37,6 +39,10 @@ describe('InvoicesService', () => {
       providerName: 'mock',
     };
     suppliers = { findOrCreate: jest.fn() };
+    approvals = {
+      create: jest.fn().mockResolvedValue(undefined),
+      markDecided: jest.fn().mockResolvedValue(undefined),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -45,6 +51,7 @@ describe('InvoicesService', () => {
         { provide: AuditService, useValue: audit },
         { provide: StorageService, useValue: storage },
         { provide: SuppliersService, useValue: suppliers },
+        { provide: ApprovalsService, useValue: approvals },
         { provide: FINANCE_CONNECTOR, useValue: financeConnector },
         { provide: OCR_PROVIDER, useValue: ocr },
       ],
@@ -74,15 +81,21 @@ describe('InvoicesService', () => {
       const result = await service.createFromDocument('tenant_1', 'user_1', { documentId: 'doc_1' });
 
       expect(storage.getObjectBytes).toHaveBeenCalledWith('tenants/t1/documents/x.pdf');
-      expect(suppliers.findOrCreate).toHaveBeenCalledWith('tenant_1', 'user_1', {
-        name: 'Muster GmbH',
-        taxId: 'DE123',
-      });
+      expect(suppliers.findOrCreate).toHaveBeenCalledWith(
+        'tenant_1',
+        'user_1',
+        { name: 'Muster GmbH', taxId: 'DE123' },
+        'USER',
+      );
       expect(scoped.invoice.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ supplierId: 'sup_1', status: 'PENDING_APPROVAL' }),
       });
       expect(result.status).toBe('PENDING_APPROVAL');
       expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'INVOICE_CREATED' }));
+      expect(approvals.create).toHaveBeenCalledWith(
+        'tenant_1',
+        expect.objectContaining({ entityType: 'INVOICE', entityId: 'inv_1' }),
+      );
     });
 
     it('marks the invoice DUPLICATE_SUSPECTED when invoiceNumber+amountGross already exist, and skips supplier matching', async () => {
@@ -110,6 +123,7 @@ describe('InvoicesService', () => {
       expect(audit.record).toHaveBeenCalledWith(
         expect.objectContaining({ eventType: 'DUPLICATE_INVOICE_DETECTED' }),
       );
+      expect(approvals.create).not.toHaveBeenCalled();
     });
   });
 
@@ -141,6 +155,7 @@ describe('InvoicesService', () => {
         data: { status: 'APPROVED' },
       });
       expect(result.status).toBe('APPROVED');
+      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'APPROVED');
     });
   });
 

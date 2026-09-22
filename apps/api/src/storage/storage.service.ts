@@ -70,4 +70,20 @@ export class StorageService {
     const bytes = await response.Body?.transformToByteArray();
     return Buffer.from(bytes ?? []);
   }
+
+  /**
+   * Uploads bytes directly, server-side — used when the API process
+   * itself receives file content (an inbound-email attachment via
+   * IntakeService, Phase 18) rather than a browser doing a presigned-URL
+   * PUT. This is the one legitimate exception to this class's own "files
+   * never transit through the API process" rule above: a real mail
+   * connector's webhook handler would face the identical situation
+   * (Microsoft Graph/Gmail hand you attachment bytes directly, not a URL
+   * for the browser to upload to).
+   */
+  async putObjectBytes(storageKey: string, bytes: Buffer, contentType: string): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({ Bucket: this.bucket, Key: storageKey, Body: bytes, ContentType: contentType }),
+    );
+  }
 }
