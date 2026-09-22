@@ -92,6 +92,8 @@ Aktueller Stand je Komponente: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTA
 Getroffene Architekturannahmen: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 Abschlussbericht: [`docs/MVP_COMPLETION_REPORT.md`](docs/MVP_COMPLETION_REPORT.md).
+Abschnitt-für-Abschnitt-Abgleich gegen den Master-Prompt:
+[`docs/MASTER_SPEC_GAP_ANALYSIS.md`](docs/MASTER_SPEC_GAP_ANALYSIS.md).
 
 ## Lizenz
 
