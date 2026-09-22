@@ -59,6 +59,23 @@ export const envSchema = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: booleanEnvVar(true),
 
+  /**
+   * Server-side enforcement of declared upload metadata before a
+   * presigned URL is even issued — DocumentsService.createUploadUrl()
+   * rejects a request exceeding this or with a MIME type outside the
+   * allow-list. Comma-separated MIME list; default covers what the
+   * Finance/Sales workflows actually attach (invoice PDFs/scans, common
+   * office documents). See docs/SECURITY.md §5 for what this does *not*
+   * cover (the actually-uploaded bytes are never verified against this
+   * declaration — files never transit through the API process).
+   */
+  MAX_UPLOAD_SIZE_BYTES: z.coerce.number().int().positive().default(20 * 1024 * 1024),
+  ALLOWED_UPLOAD_MIME_TYPES: z
+    .string()
+    .default(
+      'application/pdf,image/png,image/jpeg,image/tiff,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain',
+    ),
+
   // Auth / security
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),

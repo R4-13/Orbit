@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { isOrbitError } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
+import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { DocumentsService } from './documents.service';
@@ -36,6 +37,10 @@ describe('DocumentsService', () => {
         { provide: PrismaService, useValue: { forTenantId: jest.fn().mockReturnValue(scoped) } },
         { provide: AuditService, useValue: audit },
         { provide: StorageService, useValue: storage },
+        {
+          provide: ORBIT_ENV,
+          useValue: { MAX_UPLOAD_SIZE_BYTES: 20 * 1024 * 1024, ALLOWED_UPLOAD_MIME_TYPES: 'application/pdf,image/png' },
+        },
       ],
     }).compile();
 
@@ -69,6 +74,30 @@ describe('DocumentsService', () => {
     });
     expect(result.uploadUrl).toBe('https://minio.local/upload?sig=1');
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'DOCUMENT_UPLOADED' }));
+  });
+
+  it('createUploadUrl() rejects a file exceeding MAX_UPLOAD_SIZE_BYTES before creating any row', async () => {
+    await expect(
+      service.createUploadUrl('tenant_1', 'user_1', {
+        fileName: 'huge.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 21 * 1024 * 1024,
+      }),
+    ).rejects.toMatchObject({ code: 'POLICY_VIOLATION' });
+    expect(scoped.document.create).not.toHaveBeenCalled();
+    expect(storage.getUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it('createUploadUrl() rejects a MIME type outside the allow-list before creating any row', async () => {
+    await expect(
+      service.createUploadUrl('tenant_1', 'user_1', {
+        fileName: 'script.exe',
+        mimeType: 'application/x-msdownload',
+        sizeBytes: 1024,
+      }),
+    ).rejects.toMatchObject({ code: 'POLICY_VIOLATION' });
+    expect(scoped.document.create).not.toHaveBeenCalled();
+    expect(storage.getUploadUrl).not.toHaveBeenCalled();
   });
 
   it('findOne() throws NotFoundError for a missing document', async () => {

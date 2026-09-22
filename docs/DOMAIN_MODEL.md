@@ -47,6 +47,7 @@ erDiagram
         string id PK
         string slug UK
         TenantStatus status
+        datetime deletionRequestedAt "§52 DSGVO-Löschworkflow"
     }
     USER {
         string id PK
@@ -278,11 +279,12 @@ kommt vom Agent Runtime (blockierte Tool-Aufrufe, siehe
 `ApprovalEntityType`-Enum vorgesehen, aber im Code (noch) nirgends
 tatsächlich erzeugt.
 
-## 6. Integrationen und Agent Runtime
+## 6. Integrationen, Agent Runtime und Webhooks
 
 ```mermaid
 erDiagram
     TENANT ||--o{ INTEGRATION : "konfiguriert"
+    TENANT ||--o{ WEBHOOK_EVENT : "empfängt (künftig)"
     CASE ||--o{ AGENT_RUN : "hat"
     AGENT_RUN ||--o{ TOOL_INVOCATION : "führt aus"
 
@@ -291,7 +293,7 @@ erDiagram
         string tenantId FK
         IntegrationConnectorType connectorType
         IntegrationStatus status
-        bytes encryptedCredentials "vorgesehen, noch ungenutzt"
+        bytes encryptedCredentials "AES-256-GCM, nie über die API lesbar"
         json config
     }
     AGENT_RUN {
@@ -310,13 +312,25 @@ erDiagram
         PolicyMode policyMode
         ToolInvocationStatus status
     }
+    WEBHOOK_EVENT {
+        string id PK
+        string tenantId FK
+        string source "z. B. microsoft, hubspot, twilio"
+        string externalEventId "unique mit (tenantId, source)"
+        datetime receivedAt
+    }
 ```
 
 `AgentType.ORCHESTRATOR` existiert im Enum, wird aber aktuell nie als
 eigener `AgentRun` erzeugt — das Routing zwischen Finance-/Sales-Agent
 ist deterministischer Code (`IntakeService`), kein eigener LLM-Lauf
-(`docs/ASSUMPTIONS.md` #99). `Integration.encryptedCredentials` ist
-vorbereitet, aber ungenutzt — siehe `docs/SECURITY.md` Abschnitt 4.
+(`docs/ASSUMPTIONS.md` #99). `Integration.encryptedCredentials` wird
+seit Phase 19g tatsächlich beschrieben (`IntegrationsModule` +
+`CredentialEncryptionService`) — siehe `docs/SECURITY.md` Abschnitt 4.
+`WebhookEvent` ist reine Idempotenz-Infrastruktur für einen künftigen
+echten Webhook-Empfänger (noch keiner vorhanden, jeder Connector bleibt
+ein Mock) — der eindeutige Index auf `(tenantId, source,
+externalEventId)` macht Duplikaterkennung atomar auf DB-Ebene.
 
 ## Enum-Übersicht
 

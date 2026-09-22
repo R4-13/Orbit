@@ -15,17 +15,20 @@ import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
 import { IntakeModule } from './intake/intake.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { LeadsModule } from './leads/leads.module';
 import { MeetingsModule } from './meetings/meetings.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SecurityModule } from './security/security.module';
 import { StorageModule } from './storage/storage.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 /**
  * Root module. Each backend module named in §7 of the master spec
@@ -56,6 +59,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     }),
     PrismaModule,
     AuditModule,
+    SecurityModule,
     StorageModule,
     ConnectorsModule,
     PolicyModule,
@@ -75,6 +79,8 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     MeetingsModule,
     AgentModule,
     IntakeModule,
+    IntegrationsModule,
+    WebhooksModule,
     HealthModule,
   ],
   providers: [

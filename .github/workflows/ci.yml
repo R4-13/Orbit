@@ -14,7 +14,12 @@ env:
   S3_ACCESS_KEY: "ci_minio_admin"
   S3_SECRET_KEY: "ci_minio_admin_secret"
   JWT_SECRET: "ci_only_jwt_secret_not_for_production_use"
-  CREDENTIAL_ENCRYPTION_KEY: "Y2lfb25seV8zMl9ieXRlX2tleV9wbGFjZWhvbGRlcg=="
+  # Must decode (base64) to exactly 32 bytes — CredentialEncryptionService
+  # (apps/api/src/security) enforces this at boot (Phase 19g). The
+  # previous placeholder here decoded to 31 bytes and would have broken
+  # every app bootstrap in CI the moment anything used it; not a secret,
+  # just a fixed CI-only value, safe to keep in plaintext.
+  CREDENTIAL_ENCRYPTION_KEY: "+IAkpdDW966PxKwZh+/LsxVNqVy6RJmuqTXeUc2a5yU="
 
 jobs:
   build-and-test:

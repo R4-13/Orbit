@@ -122,18 +122,25 @@ die ausführliche Begründung):
 - **Transport**: TLS wird von der jeweiligen Deployment-Umgebung
   terminiert (Reverse Proxy/Load Balancer) — nicht Teil der
   Anwendung selbst. Siehe `docs/DEPLOYMENT.md`.
-- **At-Rest, Connector-Credentials**: `Integration.encryptedCredentials`
-  (`Bytes?`-Spalte) ist als verschlüsseltes Feld **vorgesehen**, und
-  `CREDENTIAL_ENCRYPTION_KEY` ist als Pflicht-Env-Var deklariert
-  (`packages/config/src/env.ts`) — **aber aktuell nirgends im Code
-  tatsächlich zum Ver-/Entschlüsseln verwendet**. Da bisher jeder
-  Connector nur als Mock existiert (keine reale DATEV/HubSpot/Microsoft-
-  Anbindung, siehe `docs/INTEGRATIONS.md`), wird `encryptedCredentials`
-  aktuell nie beschrieben — das Feld liegt bereit, die
-  Verschlüsselungslogik selbst ist noch nicht gebaut. Sobald ein erster
-  echter Connector Zugangsdaten persistiert, muss das vor dem ersten
-  Schreiben nachgezogen werden (z. B. AES-256-GCM mit
-  `CREDENTIAL_ENCRYPTION_KEY` als Schlüssel).
+- **At-Rest, Connector-Credentials**: seit Phase 19g tatsächlich
+  implementiert. `CredentialEncryptionService`
+  (`apps/api/src/security/`) verschlüsselt/entschlüsselt mit
+  AES-256-GCM (`CREDENTIAL_ENCRYPTION_KEY`, ein frischer, zufälliger
+  IV pro Aufruf — nie derselbe IV zweimal mit demselben Schlüssel;
+  authentifiziert, also manipulationssicher: eine veränderte
+  Ciphertext/IV/Tag-Kombination lässt `decrypt()` fehlschlagen statt
+  stillschweigend falsche Daten zu liefern). Neues `IntegrationsModule`
+  (`GET /integrations`, `PUT /integrations/:connectorType/credentials`,
+  `DELETE /integrations/:connectorType`, gated über
+  `INTEGRATION_CONFIGURE`) ist der erste echte Schreib-/Lesepfad für
+  `Integration.encryptedCredentials` — die entschlüsselten Klartext-
+  Credentials werden **nie** über die API zurückgegeben, nur ein
+  `hasCredentials: boolean`-Flag; Entschlüsselung ist ausschließlich für
+  die künftige interne Nutzung durch einen echten Connector-Adapter
+  vorgesehen (noch keiner vorhanden, jeder Connector bleibt ein Mock,
+  siehe `docs/INTEGRATIONS.md`). Live gegen echte Postgres verifiziert:
+  die gespeicherten Bytes sind nachweislich Chiffretext, kein Klartext
+  im DB-Dump auffindbar.
 - **At-Rest, sonstige Daten**: keine anwendungsseitige Verschlüsselung
   einzelner Felder (z. B. IBAN, personenbezogene Daten) — Schutz beruht
   auf RLS + Infrastruktur-Verschlüsselung (Postgres-Volume-Encryption,
@@ -145,18 +152,25 @@ die ausführliche Begründung):
   forbidNonWhitelisted: true, transform: true`, `main.ts`) — jeder
   DTO-Typ (`class-validator`-Decorators) lehnt unbekannte Felder ab,
   statt sie stillschweigend zu ignorieren.
-- **Datei-Upload**: `MAX_FILE_SIZE`/erlaubte MIME-Types werden vom
-  Client im Presigned-URL-Request **behauptet**
-  (`DocumentsService.createUploadUrl`) und in der `Document`-Zeile
-  gespeichert — es gibt **keine serverseitige Prüfung, dass die
-  tatsächlich zu MinIO/S3 hochgeladenen Bytes dieser Behauptung
-  entsprechen** (kein Content-Type-Sniffing, keine
-  Größen-Verifikation nach dem Upload). Dateien laufen bewusst nie durch
-  den API-Prozess (Presigned-URL-Flow, direkter Client→S3-Upload) — ein
-  serverseitiger Check bräuchte entweder einen S3-Event-Webhook
+- **Datei-Upload**: seit Phase 19g serverseitig durchgesetzt, mit einer
+  bewusst bestehen bleibenden Einschränkung. `DocumentsService.
+  createUploadUrl()` prüft die **deklarierte** Größe/MIME-Type gegen
+  `MAX_UPLOAD_SIZE_BYTES`/`ALLOWED_UPLOAD_MIME_TYPES`
+  (`packages/config/src/env.ts`, konfigurierbar) und lehnt eine
+  Anfrage außerhalb dieser Grenzen ab, **bevor** überhaupt eine
+  `Document`-Zeile oder eine Presigned-URL erzeugt wird (live
+  verifiziert: 403 für zu große Datei, 403 für nicht erlaubten
+  MIME-Type, 201 für eine gültige PDF). **Weiterhin offen**: da Dateien
+  nie durch den API-Prozess laufen (direkter Client→S3-Upload), gibt es
+  **keine Prüfung, dass die tatsächlich hochgeladenen Bytes** dieser
+  Deklaration entsprechen (kein Content-Type-Sniffing, keine
+  Größen-Verifikation nach dem Upload) — ein Client könnte technisch
+  trotzdem größere/andere Bytes unter der deklarierten Signatur hochladen.
+  Ein echter Check bräuchte entweder einen S3-Event-Webhook
   (Post-Upload-Validierung + ggf. Löschung) oder den Umweg über
   `putObjectBytes()` (Phase 18, aktuell nur vom Agent-Intake-Pfad
-  genutzt). Offener Härtungspunkt.
+  genutzt) für jeden Upload — beides eine größere Änderung am
+  Upload-Flow, bewusst nicht in dieser Phase mitgezogen.
 - **Keine Antiviren-/Malware-Prüfung** hochgeladener Dokumente.
 
 ## 6. HTTP-Härtung
@@ -183,18 +197,33 @@ unabhängig vom Lebenszyklus eines Nutzerkontos lesbar bleiben (ein
 gelöschter Nutzer darf seine historischen Aktionen nicht aus dem Log
 reißen).
 
-## 8. Bekannte offene Punkte (Zusammenfassung)
+## 8. Webhook-Idempotenz (vorbereitet)
+
+Kein einziger echter Webhook-Empfänger existiert bisher (jeder Connector
+ist noch ein Mock) — trotzdem bereits vorbereitet, damit der erste
+tatsächliche Provider-Webhook (z. B. ein Microsoft-Graph-Postfach-Push)
+nicht ohne Duplikatschutz gebaut wird. `WebhookIdempotencyService`
+(`apps/api/src/webhooks/`) plus das neue `WebhookEvent`-Modell
+(eindeutiger Index auf `(tenantId, source, externalEventId)`) machen die
+Prüfung "wurde dieses Ereignis schon verarbeitet?" atomar auf
+Datenbankebene — ein `INSERT`-Konflikt statt eines separaten
+"erst lesen, dann schreiben"-Schritts, der unter echter paralleler
+Zustellung (jeder Webhook-Anbieter garantiert nur *at-least-once*, nie
+*exactly-once*) ein Race-Fenster hätte. Live verifiziert, inkl. eines
+echten Nebenläufigkeits-Tests (5 parallele Aufrufe desselben Ereignisses
+— genau einer "gewinnt").
+
+## 9. Bekannte offene Punkte (Zusammenfassung)
 
 | Punkt | Status | Verweis |
 |---|---|---|
-| Connector-Credentials-Verschlüsselung | Feld vorbereitet, Logik fehlt | Abschnitt 4 |
 | httpOnly-Cookie statt `localStorage`-JWT | Bewusst zurückgestellt | `ASSUMPTIONS.md` #68, #92 |
-| Datei-Upload-Validierung serverseitig durchsetzen | Nur Client-Behauptung gespeichert | Abschnitt 5 |
+| Datei-Upload: tatsächliche Bytes nicht gegen deklariertes Größe/MIME-Type geprüft | Nur die Deklaration wird serverseitig durchgesetzt (seit Phase 19g), nicht die real hochgeladenen Bytes | Abschnitt 5 |
 | Antiviren-/Malware-Scan für Uploads | Nicht implementiert | Abschnitt 5 |
 | Dependency-Vulnerability-Scanning (`pnpm audit` o. Ä.) in CI | Nicht Teil der Pipeline | `KNOWN_LIMITATIONS.md` |
 | `role_permissions`/`user_roles`/`refresh_tokens` ohne direkte RLS-Policy | Indirekt über Elterntabelle abgesichert, akzeptierter MVP-Tradeoff | `ASSUMPTIONS.md` #87 |
 | Rechteänderungen wirken erst nach Token-Ablauf | Architektur-Tradeoff (zustandsloses JWT) | Abschnitt 2 |
-| Webhook-Idempotenz (für künftige reale Connector-Webhooks) | Noch nicht gebaut, kein Webhook existiert bisher | `MASTER_SPEC_GAP_ANALYSIS.md` |
+| Webhook-Endpunkt selbst | `WebhookIdempotencyService` ist einsatzbereit, aber es gibt noch keinen echten Webhook-Empfänger, der ihn aufruft (kein realer Connector) | Abschnitt 8 |
 
 Für den vollständigen Implementierungsstand jeder einzelnen Komponente
 siehe [`docs/IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md); für

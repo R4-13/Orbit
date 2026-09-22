@@ -43,6 +43,7 @@ export const TENANT_SCOPED_MODELS = [
   'Integration',
   'AgentRun',
   'ToolInvocation',
+  'WebhookEvent',
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);

@@ -257,6 +257,7 @@ model Tenant {
   integrations     Integration[]
   agentRuns        AgentRun[]
   toolInvocations  ToolInvocation[]
+  webhookEvents    WebhookEvent[]
 
   @@map("tenants")
 }
@@ -821,4 +822,35 @@ model ToolInvocation {
   @@index([agentRunId])
   @@index([tenantId, toolName])
   @@map("tool_invocations")
+}
+
+// ============================================================================
+// Webhook-Idempotenz (vorbereitet für künftige echte Connector-Webhooks —
+// aktuell existiert kein einziger echter Webhook-Empfänger, jeder Connector
+// ist noch ein Mock, siehe docs/INTEGRATIONS.md; die Endpoint-Seite kommt
+// erst mit dem ersten echten Provider)
+// ============================================================================
+
+/// Jede erfolgreich verarbeitete Webhook-Zustellung, zur Duplikaterkennung
+/// bei erneuter Zustellung desselben Ereignisses (fast jeder Webhook-Anbieter
+/// garantiert nur "at-least-once", nie "exactly-once"). Der eindeutige Index
+/// auf (tenantId, source, externalEventId) macht die Prüfung atomar und
+/// race-sicher — WebhookIdempotencyService.recordIfNew() (apps/api) verlässt
+/// sich auf den daraus resultierenden Datenbankfehler bei Duplikaten, statt
+/// selbst "erst lesen, dann schreiben" zu machen (klassische TOCTOU-Lücke
+/// bei parallelen Zustellungen desselben Ereignisses).
+model WebhookEvent {
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  /// Provider-Name, analog zu den *_CONNECTOR-Werten (@orbit/config/env.ts), z. B. "microsoft", "hubspot", "twilio".
+  source String
+  /// Die vom Provider selbst vergebene Ereignis-/Nachrichten-ID.
+  externalEventId String   @map("external_event_id")
+  receivedAt      DateTime @default(now()) @map("received_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, source, externalEventId])
+  @@index([tenantId, receivedAt])
+  @@map("webhook_events")
 }

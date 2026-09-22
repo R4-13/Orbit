@@ -112,7 +112,8 @@ Kategorien:
 |---|---|---|
 | Datenbank | `DATABASE_URL` (Migrations-Rolle, Superuser), `DATABASE_URL_APP` (App-Laufzeit-Rolle, RLS-gebunden) | **Zwei verschiedene Rollen, zwei verschiedene URLs** — niemals dieselbe Verbindung für beide Zwecke nutzen, sonst ist RLS wirkungslos (siehe `docs/SECURITY.md`) |
 | Auth | `JWT_SECRET` (≥16 Zeichen), `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL` | `JWT_SECRET` **muss** in Produktion ein echtes, zufälliges Secret sein — kein Default vorhanden (Zod-Validierung bricht sonst beim Boot ab) |
-| Verschlüsselung | `CREDENTIAL_ENCRYPTION_KEY` (Base64, 256-Bit) | Aktuell nirgends tatsächlich zum Ver-/Entschlüsseln verwendet (`docs/SECURITY.md` Abschnitt 4) — trotzdem als Pflichtwert validiert |
+| Verschlüsselung | `CREDENTIAL_ENCRYPTION_KEY` (Base64, muss zu exakt 32 Bytes dekodieren) | Seit Phase 19g tatsächlich für AES-256-GCM genutzt (`CredentialEncryptionService`, `docs/SECURITY.md` Abschnitt 4) — `apps/api` verweigert den Boot, wenn der Wert nicht zu 32 Bytes dekodiert |
+| Datei-Upload-Limits | `MAX_UPLOAD_SIZE_BYTES` (Default 20 MB), `ALLOWED_UPLOAD_MIME_TYPES` (kommagetrennt) | Seit Phase 19g serverseitig durchgesetzt vor Ausstellung einer Presigned-URL (`docs/SECURITY.md` Abschnitt 5) |
 | Connectors | `FINANCE_CONNECTOR`, `MAIL_CONNECTOR`, `CALENDAR_CONNECTOR`, `CRM_CONNECTOR`, `TELEPHONY_CONNECTOR`, `OCR_PROVIDER`, `STT_PROVIDER` | Jeweils `mock` oder ein realer Provider-Name; eine nicht-`mock`-Auswahl ohne die zugehörigen Credentials lässt die App beim Boot mit `IntegrationUnavailableError` laut scheitern (kein stiller Mock-Fallback) |
 | LLM | `LLM_PROVIDER` (`mock`\|`anthropic`), `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Siehe `docs/AGENT_ARCHITECTURE.md` |
 | CORS/Netzwerk | `CORS_ALLOWED_ORIGINS`, `API_BASE_URL`, `WEB_BASE_URL`, `NEXT_PUBLIC_API_BASE_URL` | Kein Wildcard-Origin in Produktion |

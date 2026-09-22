@@ -432,10 +432,22 @@ aber nicht extra gerendert.
 
 ## §39 — Integration Administration
 
-❌ Vollständig fehlend (keine `/integrations`-Seite, kein
-Connected/Disconnected-Status, kein Test-Connection-Button im UI —
-obwohl `testConnection()` auf Connector-Ebene existiert und technisch
-aufrufbar wäre).
+⚠️ **Backend seit Phase 19g, Frontend weiterhin offen.** Neues
+`IntegrationsModule`: `GET /integrations` (Status je Connector-Typ,
+inkl. `hasCredentials`, nie die Credentials selbst),
+`PUT /integrations/:connectorType/credentials` (verschlüsselt
+speichern, siehe §52/`docs/SECURITY.md` Abschnitt 4),
+`DELETE /integrations/:connectorType` (trennen). Live verifiziert.
+**Weiterhin fehlend**: die `/integrations`-Frontend-Seite selbst (kein
+Connected/Disconnected-Status im UI, kein Formular zum Eintragen von
+Zugangsdaten), sowie ein Test-Connection-Button — `testConnection()`
+existiert zwar auf jeder Connector-Ebene, ist aber bewusst noch nicht
+an die neuen Endpunkte angebunden (der `IntegrationConnectorType`-Enum
+ordnet z. B. `MICROSOFT` sowohl Mail als auch Kalender zu, eine
+eindeutige Zuordnung zu genau einem der fünf `*_CONNECTOR`-DI-Tokens
+bräuchte eine eigene Design-Entscheidung, die hier bewusst nicht
+mitgezogen wurde, um den Scope nicht auf die volle Admin-UI
+auszudehnen).
 
 ## §40 — Fehlerbehandlung
 
@@ -744,9 +756,20 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    nebenbei einen echten, bis dahin nie ausgelösten Bug in
    `tenant-scope.ts` gefunden und behoben. Bewusst offen gelassen:
    Retention-Settings (keine Schema-/Scheduler-Grundlage vorhanden).
-7. **Datenschutz/Security-Detailarbeit**: CREDENTIAL_ENCRYPTION_KEY
-   tatsächlich nutzen, Datei-Upload-Limits serverseitig durchsetzen,
-   Idempotency für künftige Webhooks vorbereiten.
+7. ~~**Datenschutz/Security-Detailarbeit**~~ — erledigt in Phase 19g:
+   CREDENTIAL_ENCRYPTION_KEY tatsächlich genutzt (neues
+   `IntegrationsModule` + `CredentialEncryptionService`, AES-256-GCM,
+   live verifiziert), Datei-Upload-Limits serverseitig durchgesetzt
+   (`MAX_UPLOAD_SIZE_BYTES`/`ALLOWED_UPLOAD_MIME_TYPES`, live
+   verifiziert — Einschränkung: nur die *deklarierten* Metadaten werden
+   geprüft, nicht die tatsächlich hochgeladenen Bytes, siehe
+   `docs/SECURITY.md` §5), Webhook-Idempotenz vorbereitet
+   (`WebhookIdempotencyService` + neues `WebhookEvent`-Modell, DB-atomar,
+   live inkl. echtem Nebenläufigkeitstest verifiziert — noch kein echter
+   Webhook-Empfänger, der es aufruft). Dabei nebenbei einen weiteren
+   pre-existing Bug gefunden und behoben: CIs
+   `CREDENTIAL_ENCRYPTION_KEY`-Platzhalter dekodierte zu 31 statt 32
+   Bytes.
 8. ~~**Approval-Center-Frontend nachziehen**~~ — erledigt in Phase 19c:
    funktionierende Freigeben-/Ablehnen-Buttons für `SUPPLIER`/`INVOICE`,
    live verifiziert. Offen bleibt der Resume-Mechanismus für
