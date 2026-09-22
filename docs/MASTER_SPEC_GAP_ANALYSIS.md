@@ -34,16 +34,15 @@ Trigger — der Endpunkt *simuliert* eine eingehende E-Mail, es gibt
 keinen echten Mail-Connector-Webhook, der ihn automatisch aufruft (kein
 Microsoft Graph-/Gmail-Zugang). Details: `AGENT_ARCHITECTURE.md`.
 
-**~~Zweitgrößte Lücke: Frontend-Seitenabdeckung~~ Größtenteils behoben in
-Phase 19a** (§32) — `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
-`/sales/opportunities` + `/sales/opportunities/[id]` und `/activity`
-existieren jetzt, mit den passenden neuen Backend-Endpunkten
-(`GET /api/v1/agent-runs`, angereicherte `CasesService.findOne()` und
-`LeadsService.findOne()`). **Weiterhin offen**: `/inbox` (Unified Inbox
-für den Intake-Endpunkt), `/integrations`, `/admin/users`,
-`/admin/policies`, `/admin/settings` — letztere insbesondere blockiert
-durch ein komplett fehlendes Backend-CRUD für `PolicyConfig`
-(`PolicyModule` hat bisher keinen Controller).
+**~~Zweitgrößte Lücke: Frontend-Seitenabdeckung~~ Größtenteils behoben
+in Phase 19a/19h** (§32) — `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+`/sales/opportunities` + `/sales/opportunities/[id]`, `/activity` und
+`/admin/policies` existieren jetzt, mit den passenden neuen
+Backend-Endpunkten (`GET /api/v1/agent-runs`, angereicherte
+`CasesService.findOne()`/`LeadsService.findOne()`, neues
+`PolicyController`-CRUD). **Weiterhin offen**: `/inbox` (Unified Inbox
+für den Intake-Endpunkt), die `/integrations`-Frontend-Seite (Backend
+seit Phase 19g fertig), `/admin/users`, `/admin/settings`.
 
 **Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind seit
 Phase 19e 3 vollständig erfüllt (Duplicate, ~~Bank-Change~~, Multi-Tenant),
@@ -336,16 +335,16 @@ Event-Typen.
 | `/sales` | ❌ |
 | `/sales/leads`, `/sales/leads/[id]` | ✅ seit Phase 19a — Detailseite mit Kontakt/Firma, Status-Wechsel, verknüpften Opportunities |
 | `/sales/opportunities`, `/sales/opportunities/[id]` | ✅ seit Phase 19a — Liste, Anlage-Formular, Detailseite mit Stage-Wechsel |
-| `/approvals` | ⚠️ existiert, zeigt aber strukturell nie Inhalte (siehe §37) |
+| `/approvals` | ✅ seit Phase 19c — funktionierende Freigeben-/Ablehnen-Buttons, korrekt dispatchend je Entitätstyp (siehe §37) |
 | `/tasks` | ✅ |
 | `/activity` | ✅ seit Phase 19a — Agent-Run-Feed mit Tool-Aufrufen, Filter nach Agent-Typ, Link zum zugehörigen Vorgang |
-| `/integrations` | ❌ |
-| `/admin/users`, `/admin/policies`, `/admin/settings` | ❌ (alle drei) |
+| `/integrations` | ⚠️ Backend seit Phase 19g fertig (`GET/PUT/DELETE /integrations`), Frontend-Seite fehlt weiterhin |
+| `/admin/policies` | ✅ seit Phase 19h — Liste aller 16 Policy-Actions mit Modus-Dropdown je Zeile, live gegen echtes Backend, respektiert gesperrte Ober­grenzen |
+| `/admin/users`, `/admin/settings` | ❌ (beide) |
 
-**4 von 17 spezifizierten Routen fehlen noch vollständig** (`/inbox`,
-`/integrations`, `/admin/users`, `/admin/policies`, `/admin/settings` —
-letztere zählen als drei separate Routen, macht 5 Einzelrouten in 4
-Themenblöcken). `/finance` und `/sales` als reine Übersichtsseiten
+**3 von 17 spezifizierten Routen fehlen noch vollständig** (`/inbox`,
+`/admin/users`, `/admin/settings`) plus `/integrations` mit Backend aber
+ohne Frontend. `/finance` und `/sales` als reine Übersichtsseiten
 (ohne eigene Funktion über die Unterrouten hinaus) bleiben ebenfalls
 offen, sind aber niedrige Priorität.
 
@@ -732,14 +731,16 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
 2. ~~**E-Mail-Eingang simulieren**~~ — erledigt in Phase 18, als Teil
    desselben Endpunkts. Ein **echter** Mail-Connector-Trigger bleibt
    offen (braucht Microsoft/Google-Credentials).
-3. ~~**Fehlende Kern-Frontend-Seiten**~~ — größtenteils erledigt in Phase
-   19a: `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+3. ~~**Fehlende Kern-Frontend-Seiten**~~ — größtenteils erledigt in
+   Phase 19a/19h: `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
    `/sales/opportunities` + `/sales/opportunities/[id]`, `/activity`
-   (zeigt echte `AgentRun`-Daten inkl. Tool-Aufrufe), neuer Endpunkt
-   `GET /api/v1/agent-runs`. **Noch offen**: `/inbox` (kann den echten
-   Intake-Endpunkt bedienen statt nur simulieren), `/admin/policies`
-   (braucht zuerst neues Backend-CRUD, `PolicyModule` hat noch keinen
-   Controller), `/integrations`, `/admin/users`, `/admin/settings`.
+   (zeigt echte `AgentRun`-Daten inkl. Tool-Aufrufe), `/admin/policies`
+   (16 Policy-Actions, Modus-Dropdown, respektiert gesperrte
+   Obergrenzen), neue Endpunkte `GET /api/v1/agent-runs` +
+   `GET/PATCH /api/v1/policies`. **Noch offen**: `/inbox` (kann den
+   echten Intake-Endpunkt bedienen statt nur simulieren),
+   `/integrations` (Backend seit Phase 19g fertig, nur die Seite
+   fehlt), `/admin/users`, `/admin/settings`.
 4. ~~**`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
    `docs/TESTING.md`**~~ — erledigt in Phase 19d, inkl. der zuvor
    fehlenden Mermaid-Diagramme (§56). Verbleibend, niedrigste Priorität:
@@ -774,10 +775,12 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    funktionierende Freigeben-/Ablehnen-Buttons für `SUPPLIER`/`INVOICE`,
    live verifiziert. Offen bleibt der Resume-Mechanismus für
    `FOLLOW_UP`-Einträge (blockierte Agent-Tool-Aufrufe) — siehe §37.
-9. **`/admin/policies`-Backend** (Policy Engine hat sonst keine UI, jetzt
-   mit 16 statt 11 Actions umso relevanter) — CRUD-Endpunkte für
-   `PolicyConfig` fehlen komplett, `PolicyModule` hat aktuell nur
-   `PolicyEnforcementService`, keinen `Controller`.
+9. ~~**`/admin/policies`-Backend + Frontend**~~ — erledigt in Phase 19h:
+   neues `PolicyController` (`GET /policies`, `PATCH /policies/:action`)
+   + `PolicyConfigService` mit Ceiling-Durchsetzung für gesperrte
+   Actions (z. B. `payment.execute` kann nie über `DISABLED` hinaus
+   geändert werden), neue `/admin/policies`-Seite. Live verifiziert,
+   inkl. Audit-Trail (neuer Event-Typ `POLICY_CONFIG_UPDATED`).
 
 Diese Datei ergänzt, ersetzt aber nicht
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) (Komponentenstatus)

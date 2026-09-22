@@ -202,19 +202,22 @@ describe('TenantsService', () => {
   describe('exportTenantData', () => {
     it('throws NotFoundError when the tenant does not exist', async () => {
       scoped.tenant.findUnique.mockResolvedValue(null);
-      await expect(service.exportTenantData('tenant_1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+      await expect(service.exportTenantData('tenant_1', 'user_1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
-    it('gathers every tenant-scoped collection into a single export object', async () => {
+    it('gathers every tenant-scoped collection into a single export object and records TENANT_DATA_EXPORTED', async () => {
       scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', name: 'Musterwerk GmbH' });
       scoped.invoice.findMany.mockResolvedValue([{ id: 'inv_1' }]);
 
-      const result = await service.exportTenantData('tenant_1');
+      const result = await service.exportTenantData('tenant_1', 'user_1');
 
       expect(result.tenant).toEqual({ id: 'tenant_1', name: 'Musterwerk GmbH' });
       expect(result.invoices).toEqual([{ id: 'inv_1' }]);
       expect(result.exportedAt).toEqual(expect.any(String));
       expect(prisma.forTenantId).toHaveBeenCalledWith('tenant_1');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'TENANT_DATA_EXPORTED', tenantId: 'tenant_1', actorUserId: 'user_1' }),
+      );
     });
   });
 

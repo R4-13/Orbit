@@ -27,7 +27,7 @@ export class TenantsController {
 
   @Get('export')
   export(@CurrentUser() user: AuthenticatedUser): Promise<TenantDataExport> {
-    return this.tenantsService.exportTenantData(user.tenantId);
+    return this.tenantsService.exportTenantData(user.tenantId, user.id);
   }
 
   @Post('deletion-request')

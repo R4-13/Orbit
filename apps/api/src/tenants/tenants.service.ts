@@ -198,7 +198,7 @@ export class TenantsService {
    * credentials (Integration.encryptedCredentials, itself unused so far —
    * see docs/SECURITY.md).
    */
-  async exportTenantData(tenantId: string): Promise<TenantDataExport> {
+  async exportTenantData(tenantId: string, actorUserId: string): Promise<TenantDataExport> {
     const scoped = this.prisma.forTenantId(tenantId);
 
     const [
@@ -248,6 +248,15 @@ export class TenantsService {
     if (!tenant) {
       throw new NotFoundError('Tenant not found.', { id: tenantId });
     }
+
+    await this.audit.record({
+      tenantId,
+      eventType: 'TENANT_DATA_EXPORTED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Tenant',
+      entityId: tenantId,
+    });
 
     return {
       exportedAt: new Date().toISOString(),

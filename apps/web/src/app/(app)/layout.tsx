@@ -46,6 +46,10 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: '/approvals', label: 'Freigaben', permission: PERMISSIONS.APPROVAL_READ },
     ],
   },
+  {
+    title: 'Administration',
+    items: [{ href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE }],
+  },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

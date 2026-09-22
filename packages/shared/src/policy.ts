@@ -8,6 +8,20 @@ export const POLICY_MODES = ['DISABLED', 'SUGGEST_ONLY', 'REQUIRE_APPROVAL', 'AU
 export type PolicyMode = (typeof POLICY_MODES)[number];
 
 /**
+ * Least-to-most autonomous, in that order (index in POLICY_MODES doubles
+ * as its own rank). Used by the /admin/policies CRUD (PolicyConfigService,
+ * apps/api) to enforce a `locked` action's autonomy ceiling: a locked
+ * row can only be changed to a mode whose rank is <= the ceiling defined
+ * in DEFAULT_POLICY_CONFIG for that action — e.g. PAYMENT_EXECUTE
+ * (locked at DISABLED, rank 0) can never be changed to anything else,
+ * while SUPPLIER_CREATE (locked at REQUIRE_APPROVAL, rank 2) can be
+ * tightened to DISABLED/SUGGEST_ONLY but never relaxed to AUTONOMOUS.
+ */
+export function policyModeRank(mode: PolicyMode): number {
+  return POLICY_MODES.indexOf(mode);
+}
+
+/**
  * Canonical action keys that the Policy Engine governs. Every tool in the
  * Tool Registry maps to exactly one of these (see @orbit/agent-core).
  */
