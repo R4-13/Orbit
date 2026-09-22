@@ -14,6 +14,7 @@ import { OpportunitiesModule } from '../opportunities/opportunities.module';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { TasksModule } from '../tasks/tasks.module';
 import { AgentRunRecorderService } from './agent-run-recorder.service';
+import { AgentRunsController } from './agent-runs.controller';
 import { AGENT_RUNTIME, LLM_PROVIDER, TOOL_REGISTRY } from './agent.tokens';
 import { CommunicationAgentTools } from './tools/communication.tools';
 import { FinanceAgentTools } from './tools/finance.tools';
@@ -43,6 +44,7 @@ import { SalesAgentTools } from './tools/sales.tools';
     TasksModule,
     MeetingsModule,
   ],
+  controllers: [AgentRunsController],
   providers: [
     FinanceAgentTools,
     SalesAgentTools,

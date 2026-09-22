@@ -52,8 +52,27 @@ export class CasesService {
     });
   }
 
+  /**
+   * Includes every related record a Case detail screen needs (§11: "jeder
+   * Vorgang muss von Anfang bis Ende nachvollziehbar sein") — tasks,
+   * documents, invoices, leads, inbound/outbound emails, and agent runs
+   * with their individual tool invocations.
+   */
   async findOne(tenantId: string, id: string): Promise<Case> {
-    const found = await this.prisma.forTenantId(tenantId).case.findUnique({ where: { id } });
+    const found = await this.prisma.forTenantId(tenantId).case.findUnique({
+      where: { id },
+      include: {
+        tasks: { orderBy: { createdAt: 'desc' } },
+        documents: { orderBy: { createdAt: 'desc' } },
+        emailMessages: { orderBy: { createdAt: 'desc' } },
+        invoices: { orderBy: { createdAt: 'desc' } },
+        leads: { orderBy: { createdAt: 'desc' } },
+        agentRuns: {
+          orderBy: { startedAt: 'desc' },
+          include: { toolInvocations: { orderBy: { createdAt: 'asc' } } },
+        },
+      },
+    });
     if (!found) {
       throw new NotFoundError('Case not found.', { id });
     }

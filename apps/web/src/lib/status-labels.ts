@@ -29,7 +29,32 @@ const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   CONVERTED: { label: 'Konvertiert', tone: 'success' },
   // Approval
   PENDING: { label: 'Ausstehend', tone: 'warning' },
+  // Case (OPEN/DONE/CANCELLED shared with Task above)
+  IN_PROGRESS: { label: 'In Bearbeitung', tone: 'info' },
+  WAITING_APPROVAL: { label: 'Wartet auf Freigabe', tone: 'warning' },
+  // Opportunity (NEW shared with Lead above)
+  QUALIFICATION: { label: 'Qualifizierung', tone: 'info' },
+  PROPOSAL: { label: 'Angebot', tone: 'info' },
+  WON: { label: 'Gewonnen', tone: 'success' },
+  LOST: { label: 'Verloren', tone: 'danger' },
+  // AgentRun
+  RUNNING: { label: 'Läuft', tone: 'info' },
+  COMPLETED: { label: 'Abgeschlossen', tone: 'success' },
+  FAILED: { label: 'Fehlgeschlagen', tone: 'danger' },
+  // Meeting (CONFIRMED shares APPROVED's meaning but not its string)
+  PROPOSED: { label: 'Vorgeschlagen', tone: 'info' },
+  CONFIRMED: { label: 'Bestätigt', tone: 'success' },
 };
+
+/** German labels for CaseType — kept separate since it's not a "status". */
+const CASE_TYPE_LABELS: Record<string, string> = {
+  FINANCE: 'Finance',
+  SALES: 'Sales',
+};
+
+export function caseTypeLabel(type: string): string {
+  return CASE_TYPE_LABELS[type] ?? type;
+}
 
 export function statusLabel(status: string): { label: string; tone: BadgeTone } {
   return STATUS_LABELS[status] ?? { label: status, tone: 'neutral' };

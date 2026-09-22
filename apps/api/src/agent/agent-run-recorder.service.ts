@@ -1,9 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { AgentTurnResult, ToolCallOutcome, ToolRegistry } from '@orbit/agent-core';
-import type { AgentRun, AgentRunTriggerType, AgentType, Prisma } from '@orbit/domain';
+import type { AgentRun, AgentRunTriggerType, AgentType, Prisma, ToolInvocation } from '@orbit/domain';
+import { NotFoundError } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TOOL_REGISTRY } from './agent.tokens';
+
+export interface QueryAgentRunsInput {
+  agentType?: AgentType;
+  caseId?: string;
+}
 
 export interface StartAgentRunInput {
   tenantId: string;
@@ -118,6 +124,30 @@ export class AgentRunRecorderService {
       entityId: agentRunId,
       payload: { iterations: result.iterations },
     });
+  }
+
+  /** Read side for the §38 Activity feed — newest runs first, across all agent types unless filtered. */
+  findAll(
+    tenantId: string,
+    query: QueryAgentRunsInput,
+  ): Promise<Array<AgentRun & { toolInvocations: ToolInvocation[] }>> {
+    return this.prisma.forTenantId(tenantId).agentRun.findMany({
+      where: { agentType: query.agentType, caseId: query.caseId },
+      include: { toolInvocations: { orderBy: { createdAt: 'asc' } } },
+      orderBy: { startedAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async findOne(tenantId: string, id: string): Promise<AgentRun & { toolInvocations: ToolInvocation[] }> {
+    const found = await this.prisma.forTenantId(tenantId).agentRun.findUnique({
+      where: { id },
+      include: { toolInvocations: { orderBy: { createdAt: 'asc' } } },
+    });
+    if (!found) {
+      throw new NotFoundError('AgentRun not found.', { id });
+    }
+    return found;
   }
 
   async fail(tenantId: string, agentRunId: string, errorMessage: string): Promise<void> {
