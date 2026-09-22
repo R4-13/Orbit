@@ -26,17 +26,32 @@ function detailLink(entityType: string, entityId: string): string | null {
 
 /**
  * Deciding an approval always happens on the owning entity's own
- * endpoint (see ApprovalsService's own doc comment) — this table maps
- * an Approval's entityType to that endpoint. FOLLOW_UP entries (agent
- * tool calls blocked by the Policy Engine) have no such endpoint yet:
- * the Agent Runtime never persists the blocked call's arguments for a
- * later resume, so there is nothing to actually execute on approval —
- * see docs/MASTER_SPEC_GAP_ANALYSIS.md §37. Shown read-only.
+ * endpoint (see ApprovalsService's own doc comment), not a generic
+ * "decide" endpoint — this resolves which one to call. Most cases are a
+ * plain (entityType, decision) -> endpoint mapping, except a bank-change-
+ * flagged invoice (§59 Szenario C): approving that must hit
+ * confirm-bank-change (updates the supplier's IBAN on file), not the
+ * normal approve endpoint (which requires PENDING_APPROVAL and would
+ * 403) — `policyAction` is what the backend already uses to tag that
+ * case, so it's the signal used here too, no extra fetch needed.
+ * FOLLOW_UP entries (agent tool calls blocked by the Policy Engine) have
+ * no endpoint at all yet: the Agent Runtime never persists the blocked
+ * call's arguments for a later resume, so there is nothing to actually
+ * execute on approval — see docs/MASTER_SPEC_GAP_ANALYSIS.md §37. Shown
+ * read-only.
  */
-const DECIDABLE_ENDPOINTS: Record<string, (id: string) => string> = {
-  INVOICE: (id) => `/v1/invoices/${id}`,
-  SUPPLIER: (id) => `/v1/suppliers/${id}`,
-};
+function resolveDecisionPath(approval: Approval, decision: 'approve' | 'reject'): string | null {
+  if (approval.entityType === 'SUPPLIER') {
+    return `/v1/suppliers/${approval.entityId}/${decision}`;
+  }
+  if (approval.entityType === 'INVOICE') {
+    if (decision === 'approve' && approval.policyAction === 'invoice.bank_change_review') {
+      return `/v1/invoices/${approval.entityId}/confirm-bank-change`;
+    }
+    return `/v1/invoices/${approval.entityId}/${decision}`;
+  }
+  return null;
+}
 
 export default function ApprovalsPage() {
   const { data: approvals, isLoading } = useApprovals();
@@ -45,11 +60,11 @@ export default function ApprovalsPage() {
 
   const decide = useMutation({
     mutationFn: ({ approval, decision }: { approval: Approval; decision: 'approve' | 'reject' }) => {
-      const buildPath = DECIDABLE_ENDPOINTS[approval.entityType];
-      if (!buildPath) {
+      const path = resolveDecisionPath(approval, decision);
+      if (!path) {
         throw new Error(`Für „${approval.entityType}“ gibt es keine automatische Entscheidungs-Aktion.`);
       }
-      return apiFetch(`${buildPath(approval.entityId)}/${decision}`, { method: 'PATCH' });
+      return apiFetch(path, { method: 'PATCH' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
@@ -96,7 +111,8 @@ export default function ApprovalsPage() {
                 const status = statusLabel(approval.status);
                 const link = detailLink(approval.entityType, approval.entityId);
                 const label = ENTITY_LABELS[approval.entityType] ?? approval.entityType;
-                const decidable = approval.status === 'PENDING' && Boolean(DECIDABLE_ENDPOINTS[approval.entityType]);
+                const decidable = approval.status === 'PENDING' && Boolean(resolveDecisionPath(approval, 'approve'));
+                const isBankChangeReview = approval.policyAction === 'invoice.bank_change_review';
                 const isPendingThis =
                   decide.isPending && decide.variables?.approval.id === approval.id;
                 return (
@@ -125,7 +141,7 @@ export default function ApprovalsPage() {
                               decide.mutate({ approval, decision: 'approve' });
                             }}
                           >
-                            Freigeben
+                            {isBankChangeReview ? 'Neue IBAN bestätigen' : 'Freigeben'}
                           </Button>
                           <Button
                             variant="ghost"

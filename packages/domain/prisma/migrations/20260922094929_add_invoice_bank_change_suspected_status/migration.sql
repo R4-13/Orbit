@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "InvoiceStatus" ADD VALUE 'BANK_CHANGE_SUSPECTED';

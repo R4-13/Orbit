@@ -162,6 +162,71 @@ describe('Finance workflow (e2e)', () => {
     expect(second.body.duplicateOfInvoiceId).toBe(first.body.id);
   });
 
+  it('flags an invoice BANK_CHANGE_SUSPECTED when the extracted IBAN differs from the one on file, and confirming it updates the supplier + resumes the normal flow (§59 Szenario C)', async () => {
+    const supplierName = `E2E Bankwechsel ${randomUUID()}`;
+    const originalIban = 'DE12500105170648489890';
+    const newIban = 'DE89370400440532013000';
+
+    const supplierCreate = await request(app.getHttpServer())
+      .post('/api/v1/suppliers')
+      .set('Authorization', `Bearer ${approverToken}`)
+      .send({ name: supplierName, iban: originalIban })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch(`/api/v1/suppliers/${supplierCreate.body.id}/approve`)
+      .set('Authorization', `Bearer ${approverToken}`)
+      .expect(200);
+
+    const documentId = await uploadDocument();
+    ocrProvider.seedResult({
+      supplierName,
+      supplierIban: newIban,
+      invoiceNumber: `E2E-BANK-${randomUUID()}`,
+      amountGross: 199,
+      confidenceScore: 0.9,
+    });
+
+    const invoiceCreate = await request(app.getHttpServer())
+      .post('/api/v1/invoices')
+      .set('Authorization', `Bearer ${financeToken}`)
+      .send({ documentId })
+      .expect(201);
+    expect(invoiceCreate.body.status).toBe('BANK_CHANGE_SUSPECTED');
+    expect(invoiceCreate.body.supplierId).toBe(supplierCreate.body.id);
+    const invoiceId = invoiceCreate.body.id as string;
+
+    // The flagged invoice shows up in the central Approval Center, not the normal booking-proposal queue.
+    await request(app.getHttpServer())
+      .post(`/api/v1/invoices/${invoiceId}/booking-proposal`)
+      .set('Authorization', `Bearer ${financeToken}`)
+      .send({ accountCode: '4400', amount: 199 })
+      .expect(403); // PolicyViolationError: "Invoice is not awaiting a booking proposal."
+
+    const confirmed = await request(app.getHttpServer())
+      .patch(`/api/v1/invoices/${invoiceId}/confirm-bank-change`)
+      .set('Authorization', `Bearer ${approverToken}`)
+      .expect(200);
+    expect(confirmed.body.status).toBe('PENDING_APPROVAL');
+
+    const supplierAfter = await request(app.getHttpServer())
+      .get(`/api/v1/suppliers/${supplierCreate.body.id}`)
+      .set('Authorization', `Bearer ${approverToken}`)
+      .expect(200);
+    expect(supplierAfter.body.iban).toBe(newIban);
+
+    // Normal flow resumes from here — booking proposal + approval works again.
+    await request(app.getHttpServer())
+      .post(`/api/v1/invoices/${invoiceId}/booking-proposal`)
+      .set('Authorization', `Bearer ${financeToken}`)
+      .send({ accountCode: '4400', amount: 199 })
+      .expect(201);
+    const approved = await request(app.getHttpServer())
+      .patch(`/api/v1/invoices/${invoiceId}/approve`)
+      .set('Authorization', `Bearer ${approverToken}`)
+      .expect(200);
+    expect(approved.body.status).toBe('APPROVED');
+  });
+
   it('rejects transfer with the documented 403 when no supplier was matched', async () => {
     const documentId = await uploadDocument();
     ocrProvider.seedResult({

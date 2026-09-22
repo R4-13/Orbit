@@ -22,8 +22,9 @@ Alle Demo-Nutzer haben dasselbe Passwort: **`Musterwerk#2026!`**
 
 ## Was ist enthalten
 
-**Finance** (vier Vorgänge, die die wichtigsten Zustände des
-Rechnungsworkflows zeigen — siehe `docs/ASSUMPTIONS.md` Phase 7):
+**Finance** (fünf Vorgänge, die die wichtigsten Zustände des
+Rechnungsworkflows zeigen — siehe `docs/ASSUMPTIONS.md` Phase 7 und
+Phase 19e):
 
 - **Papier & Büro GmbH** — aktiver Lieferant, eine vollständig durchgelaufene
   Rechnung (RE-2026-0312, freigegeben, gebucht, an die FiBu übertragen)
@@ -35,6 +36,13 @@ Rechnungsworkflows zeigen — siehe `docs/ASSUMPTIONS.md` Phase 7):
 - Eine erkannte **Dublette**: zwei Rechnungen mit identischer Nummer
   (RE-2026-0455) und identischem Betrag — eine bereits verarbeitet, die
   zweite als "Mögliche Dublette" markiert
+- Eine erkannte **Bankverbindungs-Änderung** (§59 Szenario C): eine
+  weitere Rechnung von IT-Service Nord (INV-9107) mit einer von der
+  hinterlegten IBAN abweichenden Zahlungs-IBAN — Status
+  "Bankverbindung geändert", inkl. Eintrag im Freigabe-Center und
+  eigener Prüf-Aufgabe. Im UI: `/finance/invoices/<id>` zeigt den
+  Alt-/Neu-IBAN-Vergleich; `/approvals` bietet "Neue IBAN bestätigen"
+  als eigene Aktion an.
 
 **Sales** (zwei Vorgänge + ein bereits abgeschlossener Lead):
 
@@ -47,8 +55,9 @@ Rechnungsworkflows zeigen — siehe `docs/ASSUMPTIONS.md` Phase 7):
   Vorgang, als Beispiel für einen abgeschlossenen Fall
 
 Jede wesentliche Aktion (Nutzer-/Lieferanten-/Rechnungs-/Lead-Anlage,
-Freigaben, FiBu-Übertragung, Dubletten-Erkennung) erzeugt einen passenden
-Eintrag im Audit-Log — insgesamt 26 Einträge nach dem Seed-Lauf.
+Freigaben, FiBu-Übertragung, Dubletten-/Bankwechsel-Erkennung) erzeugt
+einen passenden Eintrag im Audit-Log — insgesamt 44 Einträge nach dem
+Seed-Lauf (Stand Phase 19e).
 
 ## Bekannte Einschränkung
 

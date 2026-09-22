@@ -10,6 +10,7 @@ const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   RECEIVED: { label: 'Eingegangen', tone: 'neutral' },
   EXTRACTED: { label: 'Ausgelesen', tone: 'info' },
   DUPLICATE_SUSPECTED: { label: 'Mögliche Dublette', tone: 'warning' },
+  BANK_CHANGE_SUSPECTED: { label: 'Bankverbindung geändert', tone: 'danger' },
   PENDING_APPROVAL: { label: 'Freigabe erforderlich', tone: 'warning' },
   APPROVED: { label: 'Freigegeben', tone: 'success' },
   REJECTED: { label: 'Abgelehnt', tone: 'danger' },

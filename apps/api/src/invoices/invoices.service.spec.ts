@@ -13,7 +13,7 @@ describe('InvoicesService', () => {
     document: { findUnique: jest.Mock };
     invoice: { create: jest.Mock; findFirst: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
     bookingProposal: { create: jest.Mock; findMany: jest.Mock; updateMany: jest.Mock; findFirst: jest.Mock };
-    supplier: { findUnique: jest.Mock };
+    supplier: { findUnique: jest.Mock; update: jest.Mock };
     financeTransfer: { create: jest.Mock };
   };
   let audit: { record: jest.Mock };
@@ -28,7 +28,7 @@ describe('InvoicesService', () => {
       document: { findUnique: jest.fn() },
       invoice: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
       bookingProposal: { create: jest.fn(), findMany: jest.fn(), updateMany: jest.fn(), findFirst: jest.fn() },
-      supplier: { findUnique: jest.fn() },
+      supplier: { findUnique: jest.fn(), update: jest.fn() },
       financeTransfer: { create: jest.fn() },
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
@@ -125,6 +125,68 @@ describe('InvoicesService', () => {
       );
       expect(approvals.create).not.toHaveBeenCalled();
     });
+
+    it('marks the invoice BANK_CHANGE_SUSPECTED when the extracted IBAN differs from the one on file, and does not flag a brand-new supplier', async () => {
+      scoped.document.findUnique.mockResolvedValue({
+        id: 'doc_1',
+        storageKey: 'x',
+        mimeType: 'application/pdf',
+      });
+      ocr.extractInvoiceData.mockResolvedValue({
+        supplierName: 'Muster GmbH',
+        invoiceNumber: 'RE-2026-002',
+        amountGross: 250,
+        supplierIban: 'DE99 0000 0000 0000 0000 99',
+        confidenceScore: 0.9,
+      });
+      scoped.invoice.findFirst.mockResolvedValue(null); // no duplicate
+      suppliers.findOrCreate.mockResolvedValue({
+        supplier: { id: 'sup_1', iban: 'DE00000000000000000000' },
+        created: false,
+      });
+      scoped.invoice.create.mockResolvedValue({ id: 'inv_3', status: 'BANK_CHANGE_SUSPECTED' });
+
+      const result = await service.createFromDocument('tenant_1', 'user_1', { documentId: 'doc_1' });
+
+      expect(scoped.invoice.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ status: 'BANK_CHANGE_SUSPECTED', supplierId: 'sup_1' }),
+      });
+      expect(result.status).toBe('BANK_CHANGE_SUSPECTED');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'SUPPLIER_BANK_DETAILS_CHANGED',
+          payload: expect.objectContaining({ previousIban: 'DE00000000000000000000', newIban: 'DE99 0000 0000 0000 0000 99' }),
+        }),
+      );
+      expect(approvals.create).toHaveBeenCalledWith(
+        'tenant_1',
+        expect.objectContaining({ entityType: 'INVOICE', entityId: 'inv_3', policyAction: 'invoice.bank_change_review' }),
+      );
+    });
+
+    it('does not flag a bank change when the IBAN only differs by formatting (spaces/case)', async () => {
+      scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'x', mimeType: 'application/pdf' });
+      ocr.extractInvoiceData.mockResolvedValue({
+        supplierName: 'Muster GmbH',
+        invoiceNumber: 'RE-2026-003',
+        amountGross: 50,
+        supplierIban: 'de12 3456 0000 0000 0000 00',
+        confidenceScore: 0.9,
+      });
+      scoped.invoice.findFirst.mockResolvedValue(null);
+      suppliers.findOrCreate.mockResolvedValue({
+        supplier: { id: 'sup_1', iban: 'DE12345600000000000000' },
+        created: false,
+      });
+      scoped.invoice.create.mockResolvedValue({ id: 'inv_4', status: 'PENDING_APPROVAL' });
+
+      const result = await service.createFromDocument('tenant_1', 'user_1', { documentId: 'doc_1' });
+
+      expect(result.status).toBe('PENDING_APPROVAL');
+      expect(scoped.invoice.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ status: 'PENDING_APPROVAL' }),
+      });
+    });
   });
 
   describe('approve', () => {
@@ -179,6 +241,83 @@ describe('InvoicesService', () => {
       });
       expect(result.status).toBe('REJECTED');
       expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'REJECTED');
+    });
+
+    it('also accepts a BANK_CHANGE_SUSPECTED invoice', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({ id: 'inv_1', status: 'BANK_CHANGE_SUSPECTED' });
+      scoped.invoice.update.mockResolvedValue({ id: 'inv_1', status: 'REJECTED' });
+
+      const result = await service.reject('tenant_1', 'user_1', 'inv_1');
+
+      expect(result.status).toBe('REJECTED');
+    });
+  });
+
+  describe('confirmBankChange', () => {
+    it('rejects an invoice that is not BANK_CHANGE_SUSPECTED', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({ id: 'inv_1', status: 'PENDING_APPROVAL' });
+      await expect(service.confirmBankChange('tenant_1', 'user_1', 'inv_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+    });
+
+    it('rejects when the invoice has no linked supplier', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({
+        id: 'inv_1',
+        status: 'BANK_CHANGE_SUSPECTED',
+        supplierId: null,
+      });
+      await expect(service.confirmBankChange('tenant_1', 'user_1', 'inv_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+    });
+
+    it('rejects when the invoice has no extracted IBAN', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({
+        id: 'inv_1',
+        status: 'BANK_CHANGE_SUSPECTED',
+        supplierId: 'sup_1',
+        extractedData: {},
+      });
+      await expect(service.confirmBankChange('tenant_1', 'user_1', 'inv_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+    });
+
+    it('updates the supplier IBAN, re-enters PENDING_APPROVAL, and re-queues the normal approval', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({
+        id: 'inv_1',
+        status: 'BANK_CHANGE_SUSPECTED',
+        supplierId: 'sup_1',
+        invoiceNumber: 'RE-2026-002',
+        extractedData: { supplierIban: 'DE99000000000000000099' },
+      });
+      scoped.supplier.findUnique.mockResolvedValue({ id: 'sup_1', iban: 'DE00000000000000000000' });
+      scoped.invoice.update.mockResolvedValue({ id: 'inv_1', status: 'PENDING_APPROVAL' });
+
+      const result = await service.confirmBankChange('tenant_1', 'user_1', 'inv_1');
+
+      expect(scoped.supplier.update).toHaveBeenCalledWith({
+        where: { id: 'sup_1' },
+        data: { iban: 'DE99000000000000000099' },
+      });
+      expect(scoped.invoice.update).toHaveBeenCalledWith({
+        where: { id: 'inv_1' },
+        data: { status: 'PENDING_APPROVAL' },
+      });
+      expect(result.status).toBe('PENDING_APPROVAL');
+      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'APPROVED');
+      expect(approvals.create).toHaveBeenCalledWith(
+        'tenant_1',
+        expect.objectContaining({ entityType: 'INVOICE', entityId: 'inv_1', policyAction: 'invoice.approve' }),
+      );
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'SUPPLIER_BANK_DETAILS_CHANGED',
+          entityType: 'Supplier',
+          entityId: 'sup_1',
+        }),
+      );
     });
   });
 

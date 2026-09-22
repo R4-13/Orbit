@@ -105,6 +105,12 @@ enum InvoiceStatus {
   RECEIVED
   EXTRACTED
   DUPLICATE_SUSPECTED
+  /// §59 Szenario C: die auf der Rechnung ausgewiesene Bankverbindung des
+  /// Lieferanten weicht von der bereits hinterlegten ab — klassisches
+  /// Betrugsmuster (kompromittierte Lieferanten-E-Mail), erfordert
+  /// zwingend eine menschliche Bestätigung, bevor der normale
+  /// Freigabe-Workflow fortgesetzt wird.
+  BANK_CHANGE_SUSPECTED
   PENDING_APPROVAL
   APPROVED
   REJECTED

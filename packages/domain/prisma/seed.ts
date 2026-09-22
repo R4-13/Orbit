@@ -368,6 +368,67 @@ async function main(): Promise<void> {
       },
     });
 
+    // --- Finance Case 5: suspected bank-account change (§59 Szenario C) ---
+    const case5 = await tx.case.create({
+      data: {
+        tenantId: tenant.id,
+        type: 'FINANCE',
+        status: 'WAITING_APPROVAL',
+        title: 'Achtung: Bankverbindung IT-Service Nord geändert',
+        assigneeId: financeUserId,
+      },
+    });
+    const invoice5 = await tx.invoice.create({
+      data: {
+        tenantId: tenant.id,
+        caseId: case5.id,
+        supplierId: itServiceNord.id,
+        invoiceNumber: 'INV-9107',
+        invoiceDate: new Date('2026-03-28'),
+        dueDate: new Date('2026-04-27'),
+        amountNet: 640.0,
+        vatAmount: 121.6,
+        vatRate: 19,
+        amountGross: 761.6,
+        currency: 'EUR',
+        status: 'BANK_CHANGE_SUSPECTED',
+        confidenceScore: 0.9,
+        extractedData: {
+          supplierName: itServiceNord.name,
+          invoiceNumber: 'INV-9107',
+          // Deliberately different from itServiceNord.iban above — simulates
+          // the classic vendor-email-compromise fraud pattern §59 Szenario C
+          // guards against.
+          supplierIban: 'DE44500105175407324931',
+        },
+      },
+    });
+    await recordAudit(tx, tenant.id, 'INVOICE_CREATED', 'Invoice', invoice5.id, financeUserId);
+    await recordAudit(tx, tenant.id, 'SUPPLIER_BANK_DETAILS_CHANGED', 'Invoice', invoice5.id, undefined, {
+      supplierId: itServiceNord.id,
+      previousIban: itServiceNord.iban,
+      newIban: 'DE44500105175407324931',
+    });
+    await tx.approval.create({
+      data: {
+        tenantId: tenant.id,
+        entityType: 'INVOICE',
+        entityId: invoice5.id,
+        policyAction: 'invoice.bank_change_review',
+        reason: `Achtung: Die Bankverbindung des Lieferanten hat sich geändert (bisher ${itServiceNord.iban}, neu DE44500105175407324931). Bitte vor Weiterbearbeitung prüfen.`,
+      },
+    });
+    await tx.task.create({
+      data: {
+        tenantId: tenant.id,
+        caseId: case5.id,
+        title: 'Neue Bankverbindung IT-Service Nord telefonisch verifizieren',
+        status: 'OPEN',
+        source: 'AGENT',
+        assigneeId: financeUserId,
+      },
+    });
+
     // --- Sales: companies & contacts ---
     const nordwind = await createCrmCompany(tx, tenant.id, {
       name: 'Nordwind Immobilien GmbH',

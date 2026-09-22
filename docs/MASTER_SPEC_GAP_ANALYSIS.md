@@ -45,11 +45,11 @@ für den Intake-Endpunkt), `/integrations`, `/admin/users`,
 durch ein komplett fehlendes Backend-CRUD für `PolicyConfig`
 (`PolicyModule` hat bisher keinen Controller).
 
-**Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind 2
-vollständig erfüllt (Duplicate, Multi-Tenant), 2 seit Phase 18 deutlich
-näher am Soll aber nicht vollständig (Finance, Sales — der Trigger bleibt
-simuliert statt real), 2 vollständig unerfüllt (Bank-Change-Erkennung,
-Telefonie).
+**Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind seit
+Phase 19e 3 vollständig erfüllt (Duplicate, ~~Bank-Change~~, Multi-Tenant),
+2 seit Phase 18 deutlich näher am Soll aber nicht vollständig (Finance,
+Sales — der Trigger bleibt simuliert statt real), 1 vollständig unerfüllt
+(Telefonie, braucht Twilio-Credentials).
 
 **Dokumentation:** ~~8~~ 4 von 16 geforderten Dateien fehlen noch
 (nur die vier Provider-spezifischen Integrationsdokumente
@@ -244,9 +244,9 @@ Extrahierte Felder — Ist-Zustand gegen die 14 geforderten:
 `invoiceNumber`✅ `invoiceDate`✅ `supplierName`✅ `supplierAddress`❌
 `supplierVATId`✅(als `supplierTaxId`) `customerName`❌(kein
 Customer-Konzept) `netAmount`✅ `taxAmount`✅ `grossAmount`✅ `currency`✅
-`iban`❌ `dueDate`✅ `paymentTerms`❌ `lineItems`❌. **7 von 14 Feldern
-fehlen**, darunter `iban` — mit direkter Konsequenz für §59 Szenario C
-(siehe dort). `confidence`/`source` pro Feld ⚠️ nur global
+`iban`✅(seit Phase 19e, als `supplierIban`) `dueDate`✅ `paymentTerms`❌
+`lineItems`❌. **6 von 14 Feldern fehlen** noch. `iban` schließt direkt
+§59 Szenario C (siehe dort). `confidence`/`source` pro Feld ⚠️ nur global
 (`confidenceScore` auf Invoice-Ebene), nicht pro Einzelfeld wie
 spezifiziert.
 
@@ -614,14 +614,14 @@ als Chat — sogar mit einem Code-Kommentar, der §58 direkt zitiert.
 |---|---|
 | A — Finance (E-Mail → … → Transfer, 14 Schritte) | ⚠️ Seit Phase 18 deutlich näher am Soll: `POST /intake/emails` empfängt die E-Mail, speichert den Anhang, klassifiziert, erzeugt den Case automatisch, extrahiert (Agent-Tool `extract_invoice`), prüft auf Dublette, erzeugt den Buchungsvorschlag (`create_booking_proposal`, reagiert auf das echte Extraktions-Ergebnis) — live verifiziert. **Fehlt weiterhin**: Freigabe/Transfer laufen nach wie vor nur über die separate, menschliche RBAC-Route (nicht als Teil desselben Agent-Turns), und der Trigger ist simuliert, kein echter Mail-Connector. |
 | B — Duplicate | ✅ vollständig, live getestet |
-| C — Bank Change | ❌ vollständig fehlend (kein IBAN-Tracking, keine Risiko-Markierung) |
+| C — Bank Change | ✅ seit Phase 19e: `extract_invoice`/OCR liefert jetzt `supplierIban`, `InvoicesService.createFromDocument()` vergleicht sie gegen die beim Lieferanten hinterlegte IBAN (Format-normalisiert), flaggt bei Abweichung `BANK_CHANGE_SUSPECTED` (neuer `InvoiceStatus`-Wert), erzeugt einen Approval-Eintrag + `SUPPLIER_BANK_DETAILS_CHANGED`-Audit-Event. Neuer Endpunkt `PATCH /invoices/:id/confirm-bank-change` aktualisiert nach menschlicher Bestätigung die Lieferanten-IBAN und setzt den normalen Freigabe-Workflow fort; `reject()` funktioniert ebenfalls für diesen Status. Frontend: Warnbanner mit altem/neuem IBAN-Vergleich auf der Rechnungsdetailseite, korrekt dispatchendes Freigabe-Center. Live gegen echte Postgres verifiziert (neuer E2E-Test + manueller Browser-Durchlauf über beide Wege). Neues Demo-Szenario in `packages/domain/prisma/seed.ts` (Case 5, IT-Service Nord). |
 | D — Sales Email | ⚠️ Seit Phase 18 deutlich näher am Soll: `POST /intake/emails` erkennt Sales-Intent (Klassifikation), identifiziert/legt Kontakt und Firma an (`create_company`→`create_contact`, reagieren auf echte Zwischenergebnisse), erzeugt Lead + Case + automatische Folgeaufgabe — live verifiziert. **Fehlt weiterhin**: kein separater "Follow-up-Vorschlag" als eigene Entität (nur die Task selbst), CRM-Sync-Bestätigung nicht im UI sichtbar. |
 | E — Phone/Twilio | ❌ vollständig fehlend (Telefonie-Connector in keinen Workflow eingebunden) |
 | F — Multi Tenant | ✅✅ vollständig, mehrfach und auf zwei Ebenen bewiesen |
 
-**2 von 6 Szenarien vollständig erfüllt (B, F), 2 deutlich verbessert aber
-nicht vollständig (A, D — echter Trigger fehlt weiterhin), 2 weiterhin
-vollständig offen (C, E).**
+**3 von 6 Szenarien vollständig erfüllt (B, C, F), 2 deutlich verbessert
+aber nicht vollständig (A, D — echter Trigger fehlt weiterhin), 1
+weiterhin vollständig offen (E, braucht Twilio-Credentials).**
 
 ## §60 — Nicht-Ziele
 
@@ -700,9 +700,11 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    fehlenden Mermaid-Diagramme (§56). Verbleibend, niedrigste Priorität:
    `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
    `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`.
-5. **IBAN-Tracking + Bank-Change-Erkennung** (§59 Szenario C) — kleiner,
-   klar umrissener Scope, schließt ein explizit benanntes
-   Abnahme-Kriterium.
+5. ~~**IBAN-Tracking + Bank-Change-Erkennung**~~ (§59 Szenario C) —
+   erledigt in Phase 19e: neuer `InvoiceStatus.BANK_CHANGE_SUSPECTED`,
+   Erkennung beim Rechnungs-Upload, `PATCH /invoices/:id/confirm-bank-change`,
+   Frontend-Warnbanner, korrekt dispatchendes Freigabe-Center, neuer
+   E2E-Test + Demo-Szenario. Live verifiziert.
 6. **DSGVO-Admin-Funktionen** (§52) — Datenexport, Nutzer-Deaktivierung,
    Tenant-Löschung: rechtlich relevant, aktuell komplett offen.
 7. **Datenschutz/Security-Detailarbeit**: CREDENTIAL_ENCRYPTION_KEY

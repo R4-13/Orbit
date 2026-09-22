@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
-import type { BookingProposal, Invoice } from '@orbit/domain';
+import type { BookingProposal, Invoice, Supplier } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,7 +36,10 @@ export class InvoicesController {
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.INVOICE_READ)
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {
+  findOne(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<Invoice & { supplier: Supplier | null }> {
     return this.invoicesService.findOne(user.tenantId, id);
   }
 
@@ -60,6 +63,12 @@ export class InvoicesController {
   @RequirePermissions(PERMISSIONS.INVOICE_APPROVE)
   reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {
     return this.invoicesService.reject(user.tenantId, user.id, id);
+  }
+
+  @Patch(':id/confirm-bank-change')
+  @RequirePermissions(PERMISSIONS.INVOICE_APPROVE)
+  confirmBankChange(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {
+    return this.invoicesService.confirmBankChange(user.tenantId, user.id, id);
   }
 
   @Post(':id/transfer')

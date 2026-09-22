@@ -8,6 +8,8 @@
 export interface ExtractedInvoiceData {
   supplierName?: string;
   supplierTaxId?: string;
+  /** IBAN printed on the invoice as the payment destination — compared against the supplier's IBAN on file to detect bank-change fraud (§59 Szenario C). */
+  supplierIban?: string;
   invoiceNumber?: string;
   /** ISO 8601 date string. */
   invoiceDate?: string;

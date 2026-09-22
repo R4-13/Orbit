@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError } from '@orbit/shared';
-import { Prisma, type BookingProposal, type Invoice } from '@orbit/domain';
+import { Prisma, type BookingProposal, type Invoice, type Supplier } from '@orbit/domain';
 import type { FinanceConnector, OcrProvider } from '@orbit/integration-core';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
@@ -19,6 +19,11 @@ export interface AddBookingProposalInput {
   costCenter?: string;
   description?: string;
   amount: number;
+}
+
+/** IBAN comparison ignores spaces/case — "DE12 3456" and "de123456" are the same account. */
+function normalizeIban(iban: string): string {
+  return iban.replace(/\s+/g, '').toUpperCase();
 }
 
 /**
@@ -66,6 +71,7 @@ export class InvoicesService {
         : null;
 
     let supplierId: string | undefined;
+    let bankChange: { previousIban: string; newIban: string } | undefined;
     if (!duplicate && extracted.supplierName) {
       const { supplier } = await this.suppliers.findOrCreate(
         tenantId,
@@ -74,7 +80,17 @@ export class InvoicesService {
         actorType,
       );
       supplierId = supplier.id;
+
+      // §59 Szenario C: an IBAN on the invoice that differs from the one
+      // already on file for this supplier is a classic fraud pattern
+      // (compromised supplier email announcing "new bank details") — a
+      // brand-new supplier (no prior IBAN) is not a "change".
+      if (supplier.iban && extracted.supplierIban && normalizeIban(supplier.iban) !== normalizeIban(extracted.supplierIban)) {
+        bankChange = { previousIban: supplier.iban, newIban: extracted.supplierIban };
+      }
     }
+
+    const status = duplicate ? 'DUPLICATE_SUSPECTED' : bankChange ? 'BANK_CHANGE_SUSPECTED' : 'PENDING_APPROVAL';
 
     const invoice = await this.prisma.forTenantId(tenantId).invoice.create({
       data: {
@@ -92,7 +108,7 @@ export class InvoicesService {
         currency: extracted.currency ?? 'EUR',
         confidenceScore: extracted.confidenceScore,
         extractedData: extracted as unknown as Prisma.InputJsonValue,
-        status: duplicate ? 'DUPLICATE_SUSPECTED' : 'PENDING_APPROVAL',
+        status,
         duplicateOfInvoiceId: duplicate?.id,
       },
     });
@@ -125,6 +141,23 @@ export class InvoicesService {
         entityId: invoice.id,
         payload: { duplicateOfInvoiceId: duplicate.id },
       });
+    } else if (bankChange) {
+      await this.audit.record({
+        tenantId,
+        eventType: 'SUPPLIER_BANK_DETAILS_CHANGED',
+        actorType,
+        actorUserId,
+        entityType: 'Invoice',
+        entityId: invoice.id,
+        payload: { supplierId, previousIban: bankChange.previousIban, newIban: bankChange.newIban },
+      });
+      await this.approvals.create(tenantId, {
+        entityType: 'INVOICE',
+        entityId: invoice.id,
+        policyAction: 'invoice.bank_change_review',
+        requestedByUserId: actorUserId,
+        reason: `Achtung: Die Bankverbindung des Lieferanten hat sich geändert (bisher ${bankChange.previousIban}, neu ${bankChange.newIban}). Bitte vor Weiterbearbeitung prüfen.`,
+      });
     } else {
       // §37: an invoice awaiting a booking proposal + approval belongs in
       // the central Approval Center, same as pending suppliers.
@@ -149,8 +182,18 @@ export class InvoicesService {
     });
   }
 
-  async findOne(tenantId: string, id: string): Promise<Invoice> {
-    const found = await this.prisma.forTenantId(tenantId).invoice.findUnique({ where: { id } });
+  /**
+   * Includes the linked Supplier (name + IBAN) so the invoice detail page
+   * can show the bank-change comparison (§59 Szenario C) to whoever can
+   * already read this invoice (INVOICE_READ) — without also requiring
+   * SUPPLIER_MANAGE just to see the one field that matters for that
+   * comparison. See docs/ASSUMPTIONS.md Phase 19e.
+   */
+  async findOne(tenantId: string, id: string): Promise<Invoice & { supplier: Supplier | null }> {
+    const found = await this.prisma.forTenantId(tenantId).invoice.findUnique({
+      where: { id },
+      include: { supplier: true },
+    });
     if (!found) {
       throw new NotFoundError('Invoice not found.', { id });
     }
@@ -238,7 +281,7 @@ export class InvoicesService {
 
   async reject(tenantId: string, actorUserId: string, invoiceId: string): Promise<Invoice> {
     const invoice = await this.findOne(tenantId, invoiceId);
-    if (invoice.status !== 'PENDING_APPROVAL') {
+    if (invoice.status !== 'PENDING_APPROVAL' && invoice.status !== 'BANK_CHANGE_SUSPECTED') {
       throw new PolicyViolationError('Invoice is not awaiting approval.', {
         id: invoiceId,
         status: invoice.status,
@@ -258,7 +301,73 @@ export class InvoicesService {
       actorUserId,
       entityType: 'Invoice',
       entityId: invoiceId,
-      payload: { policyAction: 'invoice.approve' },
+      payload: { policyAction: invoice.status === 'BANK_CHANGE_SUSPECTED' ? 'invoice.bank_change_review' : 'invoice.approve' },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Resolves a BANK_CHANGE_SUSPECTED invoice after a human has verified
+   * the new IBAN is legitimate (e.g. called the supplier back on a known
+   * number — out of scope for this system to verify itself, §59 Szenario
+   * C only requires the *flag*, the human makes the actual judgment call).
+   * Updates the Supplier's IBAN on file and continues the normal
+   * booking-proposal + approval flow — this does NOT itself approve the
+   * invoice for payment.
+   */
+  async confirmBankChange(tenantId: string, actorUserId: string, invoiceId: string): Promise<Invoice> {
+    const invoice = await this.findOne(tenantId, invoiceId);
+    if (invoice.status !== 'BANK_CHANGE_SUSPECTED') {
+      throw new PolicyViolationError('Invoice has no pending bank-change review.', {
+        id: invoiceId,
+        status: invoice.status,
+      });
+    }
+    if (!invoice.supplierId) {
+      throw new PolicyViolationError('Invoice has no linked supplier to update.', { id: invoiceId });
+    }
+
+    const extracted = invoice.extractedData as { supplierIban?: string } | null;
+    const newIban = extracted?.supplierIban;
+    if (!newIban) {
+      throw new PolicyViolationError('Invoice has no extracted IBAN to confirm.', { id: invoiceId });
+    }
+
+    const previousSupplier = await this.prisma.forTenantId(tenantId).supplier.findUnique({
+      where: { id: invoice.supplierId },
+    });
+    await this.prisma.forTenantId(tenantId).supplier.update({
+      where: { id: invoice.supplierId },
+      data: { iban: newIban },
+    });
+
+    const updated = await this.prisma.forTenantId(tenantId).invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'PENDING_APPROVAL' },
+    });
+
+    await this.approvals.markDecided(tenantId, 'INVOICE', invoiceId, actorUserId, 'APPROVED');
+    await this.audit.record({
+      tenantId,
+      eventType: 'SUPPLIER_BANK_DETAILS_CHANGED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Supplier',
+      entityId: invoice.supplierId,
+      payload: { previousIban: previousSupplier?.iban, newIban, confirmedViaInvoiceId: invoiceId },
+    });
+
+    // Bank-change risk cleared — the invoice still needs the normal
+    // booking-proposal + approval step, so re-enter that queue.
+    await this.approvals.create(tenantId, {
+      entityType: 'INVOICE',
+      entityId: invoiceId,
+      policyAction: 'invoice.approve',
+      requestedByUserId: actorUserId,
+      reason: invoice.invoiceNumber
+        ? `Rechnung ${invoice.invoiceNumber} wartet auf Buchungsvorschlag und Freigabe.`
+        : 'Neue Rechnung wartet auf Buchungsvorschlag und Freigabe.',
     });
 
     return updated;

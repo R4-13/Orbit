@@ -8,7 +8,9 @@ import { formatAmount } from '../../../../../lib/format';
 import {
   useAddBookingProposal,
   useApproveInvoice,
+  useConfirmBankChange,
   useInvoice,
+  useRejectInvoice,
   useTransferInvoice,
 } from '../../../../../lib/hooks/use-invoices';
 import { statusLabel } from '../../../../../lib/status-labels';
@@ -19,6 +21,8 @@ export default function InvoiceDetailPage() {
   const addBookingProposal = useAddBookingProposal(id);
   const approveInvoice = useApproveInvoice(id);
   const transferInvoice = useTransferInvoice(id);
+  const rejectInvoice = useRejectInvoice(id);
+  const confirmBankChange = useConfirmBankChange(id);
 
   const [accountCode, setAccountCode] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
@@ -64,6 +68,24 @@ export default function InvoiceDetailPage() {
     setActionError(null);
     try {
       await transferInvoice.mutateAsync();
+    } catch (error) {
+      setActionError(describeError(error));
+    }
+  }
+
+  async function handleReject() {
+    setActionError(null);
+    try {
+      await rejectInvoice.mutateAsync();
+    } catch (error) {
+      setActionError(describeError(error));
+    }
+  }
+
+  async function handleConfirmBankChange() {
+    setActionError(null);
+    try {
+      await confirmBankChange.mutateAsync();
     } catch (error) {
       setActionError(describeError(error));
     }
@@ -130,9 +152,12 @@ export default function InvoiceDetailPage() {
                 Vorschlag speichern
               </Button>
             </form>
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2">
               <Button onClick={handleApprove} disabled={approveInvoice.isPending} variant="secondary">
                 Rechnung freigeben
+              </Button>
+              <Button onClick={handleReject} disabled={rejectInvoice.isPending} variant="ghost">
+                Ablehnen
               </Button>
             </div>
           </CardContent>
@@ -157,6 +182,42 @@ export default function InvoiceDetailPage() {
           <CardContent className="text-sm text-amber-800">
             Diese Rechnung könnte eine Dublette einer bereits erfassten Rechnung sein. Bitte manuell
             prüfen.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {invoice.status === 'BANK_CHANGE_SUSPECTED' ? (
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="text-red-800">Achtung: Bankverbindung geändert</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-red-800">
+              Die auf dieser Rechnung angegebene Bankverbindung weicht von der beim Lieferanten
+              hinterlegten ab — ein typisches Muster bei Rechnungsbetrug (kompromittierte
+              Lieferanten-E-Mail). Bitte die neue IBAN telefonisch beim Lieferanten unter einer
+              bekannten Nummer verifizieren, bevor Sie fortfahren.
+            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-slate-500">Bisher hinterlegte IBAN</dt>
+              <dd>{invoice.supplier?.iban ?? '–'}</dd>
+              <dt className="text-slate-500">Neue IBAN auf der Rechnung</dt>
+              <dd className="font-medium text-red-800">
+                {(invoice.extractedData as { supplierIban?: string } | null)?.supplierIban ?? '–'}
+              </dd>
+            </dl>
+            <div className="mt-4 flex gap-2">
+              <Button
+                onClick={handleConfirmBankChange}
+                disabled={confirmBankChange.isPending}
+                variant="secondary"
+              >
+                Neue IBAN bestätigen und fortfahren
+              </Button>
+              <Button onClick={handleReject} disabled={rejectInvoice.isPending} variant="ghost">
+                Rechnung ablehnen
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : null}
