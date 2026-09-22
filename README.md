@@ -94,6 +94,10 @@ Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.
 Abschlussbericht: [`docs/MVP_COMPLETION_REPORT.md`](docs/MVP_COMPLETION_REPORT.md).
 Abschnitt-für-Abschnitt-Abgleich gegen den Master-Prompt:
 [`docs/MASTER_SPEC_GAP_ANALYSIS.md`](docs/MASTER_SPEC_GAP_ANALYSIS.md).
+Sicherheitsübersicht: [`docs/SECURITY.md`](docs/SECURITY.md).
+Datenmodell (mit Diagrammen): [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md).
+Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Test-Strategie: [`docs/TESTING.md`](docs/TESTING.md).
 
 ## Lizenz
 

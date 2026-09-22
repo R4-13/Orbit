@@ -51,11 +51,14 @@ näher am Soll aber nicht vollständig (Finance, Sales — der Trigger bleibt
 simuliert statt real), 2 vollständig unerfüllt (Bank-Change-Erkennung,
 Telefonie).
 
-**Dokumentation:** 8 von 16 geforderten Dateien fehlen komplett
-(`SECURITY.md`, `DOMAIN_MODEL.md`, `DEPLOYMENT.md`, `TESTING.md`,
+**Dokumentation:** ~~8~~ 4 von 16 geforderten Dateien fehlen noch
+(nur die vier Provider-spezifischen Integrationsdokumente
 `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
-`HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`). Keines der neu geschriebenen
-Dokumente enthält die geforderten Mermaid-Diagramme (§56).
+`HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`). `SECURITY.md`,
+`DOMAIN_MODEL.md`, `DEPLOYMENT.md`, `TESTING.md` seit Phase 19d
+geschrieben, inkl. der zuvor komplett fehlenden Mermaid-Diagramme (§56:
+System Context, Internal Architecture, beide Sequenzdiagramme
+Finance/Sales — jetzt alle in `ARCHITECTURE.md`).
 
 ---
 
@@ -568,11 +571,11 @@ Umgebung).
 | Gefordert | Status |
 |---|---|
 | `README.md` | ✅ |
-| `ARCHITECTURE.md` | ✅ (Phase 16) |
+| `ARCHITECTURE.md` | ✅ (Phase 16, Diagramme seit Phase 19d) |
 | `PRODUCT_CONTEXT.md` | ✅ |
-| `DOMAIN_MODEL.md` | ❌ |
+| `DOMAIN_MODEL.md` | ✅ (Phase 19d) |
 | `AGENT_ARCHITECTURE.md` | ✅ (Phase 16) |
-| `SECURITY.md` | ❌ |
+| `SECURITY.md` | ✅ (Phase 19d) |
 | `INTEGRATIONS.md` | ✅ |
 | `DATEV_INTEGRATION.md` | ⚠️ existiert, nur Platzhalter-Tiefe |
 | `MICROSOFT_INTEGRATION.md` | ❌ |
@@ -580,16 +583,23 @@ Umgebung).
 | `HUBSPOT_INTEGRATION.md` | ❌ |
 | `TELEPHONY.md` | ❌ |
 | `LOCAL_DEVELOPMENT.md` | ✅ (Phase 16) |
-| `DEPLOYMENT.md` | ❌ |
-| `TESTING.md` | ❌ |
+| `DEPLOYMENT.md` | ✅ (Phase 19d) |
+| `TESTING.md` | ✅ (Phase 19d) |
 | `ASSUMPTIONS.md` | ✅ |
 | `KNOWN_LIMITATIONS.md` | ✅ (Phase 16) |
 
-**8 von 16 geforderten Dateien fehlen.** ❌ **Mermaid-Diagramme**: keines
-der vorhandenen Dokumente enthält ein einziges Mermaid-Diagramm — weder
-System Context noch Internal Architecture noch die beiden
-Sequenzdiagramme (Finance/Sales) wie in §56 explizit gefordert. Ein reiner
-Prosa-/Tabellen-Ansatz wurde stattdessen gewählt.
+**4 von 16 geforderten Dateien fehlen noch** (die vier Provider-
+spezifischen Integrationsdokumente `MICROSOFT_INTEGRATION.md`,
+`GOOGLE_INTEGRATION.md`, `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md` —
+niedrigste Priorität, da inhaltlich stark redundant mit dem bereits
+vorhandenen `DATEV_INTEGRATION.md`-Muster und ohne echte
+Provider-Credentials ohnehin nicht verifizierbar). ✅ **Mermaid-
+Diagramme** seit Phase 19d: System-Context- und Internal-Architecture-
+Diagramm in `ARCHITECTURE.md`, die beiden geforderten
+Sequenzdiagramme (Finance/Sales) ebenfalls dort, plus sechs
+ER-Diagramme (nach fachlichem Cluster gruppiert) in `DOMAIN_MODEL.md`
+und je ein Architektur-/Test-Pyramide-Diagramm in `DEPLOYMENT.md`/
+`TESTING.md`.
 
 ## §57-58 — UX-Prinzipien
 
@@ -685,9 +695,11 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    Intake-Endpunkt bedienen statt nur simulieren), `/admin/policies`
    (braucht zuerst neues Backend-CRUD, `PolicyModule` hat noch keinen
    Controller), `/integrations`, `/admin/users`, `/admin/settings`.
-4. **`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
-   `docs/TESTING.md`** nachziehen — reine Dokumentationsarbeit, kein
-   Coderisiko.
+4. ~~**`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
+   `docs/TESTING.md`**~~ — erledigt in Phase 19d, inkl. der zuvor
+   fehlenden Mermaid-Diagramme (§56). Verbleibend, niedrigste Priorität:
+   `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
+   `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`.
 5. **IBAN-Tracking + Bank-Change-Erkennung** (§59 Szenario C) — kleiner,
    klar umrissener Scope, schließt ein explizit benanntes
    Abnahme-Kriterium.

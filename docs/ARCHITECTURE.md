@@ -16,10 +16,72 @@ AgentRuntime) stehen separat in
 Agent → Tool Registry → Policy Engine → Authorization Check → Tool Gateway → Connector → External System
 ```
 
+## System Context
+
+```mermaid
+flowchart TB
+    User["Kaufmännische:r Sachbearbeiter:in<br/>(Browser)"]
+    Orbit["Project ORBIT<br/>(Intelligence-/Orchestrierungsschicht)"]
+    DATEV["DATEV / Lexware<br/>(FiBu, System of Record)"]
+    Mail["Microsoft 365 / Gmail<br/>(Mail, System of Record)"]
+    Calendar["Google/Microsoft Calendar"]
+    CRM["HubSpot<br/>(CRM, System of Record)"]
+    Telephony["Twilio<br/>(Telefonie)"]
+    LLM["Anthropic API<br/>(LLM Provider)"]
+
+    User <--> Orbit
+    Orbit <--> DATEV
+    Orbit <--> Mail
+    Orbit <--> Calendar
+    Orbit <--> CRM
+    Orbit <--> Telephony
+    Orbit --> LLM
+```
+
+ORBIT ersetzt keines dieser Systeme — es liest, klassifiziert, schlägt
+vor und schreibt zurück, immer über die jeweilige offizielle Connector-
+Schnittstelle (siehe Abschnitt "Connectors" unten). Aktuell sind alle
+sechs externen Systeme nur als **Mock-Connector** angebunden (siehe
+`docs/INTEGRATIONS.md`) — das Diagramm zeigt die vorgesehene, nicht die
+bereits live verdrahtete Anbindung.
+
 Kein direkter LLM-/Agent-Zugriff auf externe Systeme oder die Datenbank.
 ORBIT ist eine Intelligence-/Orchestrierungsschicht **über** bestehenden
 Systems of Record (DATEV/Lexware, HubSpot, Microsoft 365/Gmail) — es
 ersetzt sie nicht.
+
+## Internal Architecture
+
+```mermaid
+flowchart TB
+    subgraph "apps/web (Next.js)"
+        UI["React Pages/Hooks"]
+    end
+    subgraph "apps/api (NestJS, modularer Monolith)"
+        Ctrl["Controllers<br/>(REST, /api/v1/*)"]
+        Svc["Fach-Services<br/>(Invoices, Suppliers, Leads, ...)"]
+        Agent["AgentModule<br/>(AgentRuntime, Tool Registry)"]
+        Policy["PolicyEnforcementService"]
+        Conn["Connector-Wrapper<br/>(Finance/Mail/Calendar/CRM/Telephony/OCR)"]
+    end
+    subgraph "packages/domain"
+        Prisma["Prisma Client<br/>+ forTenant() Extension"]
+    end
+    DB[("Postgres<br/>+ Row-Level Security")]
+    S3[("MinIO/S3")]
+    Ext["Externe Systeme<br/>(Mock oder real)"]
+
+    UI -->|"JWT Bearer"| Ctrl
+    Ctrl --> Svc
+    Svc --> Prisma
+    Svc --> Conn
+    Agent --> Policy
+    Agent --> Conn
+    Svc -.->|"triggert"| Agent
+    Prisma --> DB
+    Conn --> S3
+    Conn --> Ext
+```
 
 ## Monorepo-Struktur
 
@@ -157,6 +219,67 @@ eine andere Auswahl scheitert beim Boot laut mit
 7. Bei einem `OrbitError` (z. B. `PolicyViolationError`): globaler
    `OrbitExceptionFilter` mappt auf den deklarierten HTTP-Status + JSON-Body
    (`{code, message, details}`) statt einer nackten 500
+
+## Sequenzdiagramm: Finance-Workflow
+
+```mermaid
+sequenceDiagram
+    participant U as Sachbearbeiter:in
+    participant API as InvoicesController/Service
+    participant OCR as OCR-Connector (mock)
+    participant Sup as SuppliersService
+    participant App as ApprovalsService
+    participant DATEV as Finance-Connector (mock)
+
+    U->>API: POST /documents/upload-url + Upload zu MinIO
+    U->>API: POST /invoices { documentId }
+    API->>OCR: extractInvoiceData(document)
+    OCR-->>API: {invoiceNumber, amounts, confidence, ...}
+    API->>Sup: findOrCreate(supplierName)
+    alt neuer Lieferant
+        Sup->>App: create(entityType=SUPPLIER)
+        Sup-->>API: status=PENDING_APPROVAL
+    else bekannter, aktiver Lieferant
+        Sup-->>API: status=ACTIVE
+    end
+    API-->>U: Invoice { status: RECEIVED|DUPLICATE_SUSPECTED }
+    U->>API: POST /invoices/:id/booking-proposal
+    API->>App: create(entityType=INVOICE) (falls Freigabe nötig)
+    U->>API: PATCH /invoices/:id/approve
+    API->>App: markDecided(APPROVED)
+    U->>API: POST /invoices/:id/transfer
+    API->>DATEV: transferInvoice(...)
+    DATEV-->>API: externalReference
+    API-->>U: Invoice { status: TRANSFERRED }
+```
+
+## Sequenzdiagramm: Sales-Workflow
+
+```mermaid
+sequenceDiagram
+    participant U as Sachbearbeiter:in
+    participant Comp as CompaniesService
+    participant Cont as ContactsService
+    participant Lead as LeadsService
+    participant Task as TasksService
+    participant CRM as CRM-Connector (mock)
+    participant Opp as OpportunitiesService
+
+    U->>Comp: POST /companies { name, domain }
+    Comp->>CRM: upsertCompany(...)
+    Comp-->>U: Company
+    U->>Cont: POST /contacts { companyId, ... }
+    Cont->>CRM: upsertContact(...)
+    Cont-->>U: Contact
+    U->>Lead: POST /leads { contactId, source }
+    Lead->>CRM: createLead(...)
+    Lead->>Task: create("Neuen Lead kontaktieren")
+    Lead-->>U: Lead { status: NEW } + Task
+    U->>Opp: POST /opportunities { leadId, name, value }
+    Opp-->>U: Opportunity { stage: NEW }
+    U->>Opp: PATCH /opportunities/:id/stage { stage: WON }
+    Opp-->>U: Opportunity { stage: WON }
+```
 
 ## Deployment
 

@@ -738,9 +738,12 @@ model Meeting {
 // Integrationen / Connector-Credentials (Phase 5, 9-11)
 // ============================================================================
 
-/// Ein Eintrag pro Tenant und Connector-Typ. Credentials sind AES-256-GCM-
-/// verschlüsselt (CREDENTIAL_ENCRYPTION_KEY, siehe ASSUMPTIONS #7) abgelegt,
-/// niemals im Klartext.
+/// Ein Eintrag pro Tenant und Connector-Typ. `encryptedCredentials` ist als
+/// AES-256-GCM-verschlüsseltes Feld vorgesehen (CREDENTIAL_ENCRYPTION_KEY,
+/// siehe ASSUMPTIONS #7) — die tatsächliche Ver-/Entschlüsselungslogik ist
+/// aber noch NICHT implementiert (kein realer Connector persistiert bisher
+/// Credentials, siehe docs/SECURITY.md Abschnitt 4). Nicht vor dem ersten
+/// echten Schreiben dieses Feldes nachziehen vergessen.
 model Integration {
   id                   String                   @id @default(uuid())
   tenantId             String                   @map("tenant_id")
