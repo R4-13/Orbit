@@ -1,8 +1,76 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import { DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, ROLES } from '@orbit/shared';
-import type { Tenant, User } from '@orbit/domain';
+import { DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, NotFoundError, PolicyViolationError, ROLES } from '@orbit/shared';
+import type {
+  AgentRun,
+  Approval,
+  AuditLog,
+  BookingProposal,
+  Case,
+  Company,
+  Contact,
+  Document,
+  EmailMessage,
+  FinanceTransfer,
+  Integration,
+  Invoice,
+  Lead,
+  Meeting,
+  Opportunity,
+  Supplier,
+  Task,
+  Tenant,
+  ToolInvocation,
+  User,
+} from '@orbit/domain';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+export interface TenantDataExport {
+  exportedAt: string;
+  tenant: Tenant;
+  users: Array<Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'status' | 'lastLoginAt' | 'createdAt'>>;
+  cases: Case[];
+  tasks: Task[];
+  documents: Document[];
+  emailMessages: EmailMessage[];
+  suppliers: Supplier[];
+  invoices: Invoice[];
+  bookingProposals: BookingProposal[];
+  financeTransfers: FinanceTransfer[];
+  approvals: Approval[];
+  companies: Company[];
+  contacts: Contact[];
+  leads: Lead[];
+  opportunities: Opportunity[];
+  meetings: Meeting[];
+  integrations: Array<
+    Pick<Integration, 'id' | 'connectorType' | 'status' | 'config' | 'lastTestedAt' | 'lastTestStatus' | 'createdAt'>
+  >;
+  agentRuns: AgentRun[];
+  toolInvocations: ToolInvocation[];
+  auditLogs: AuditLog[];
+}
+
+const USER_EXPORT_SELECT = {
+  id: true,
+  email: true,
+  firstName: true,
+  lastName: true,
+  status: true,
+  lastLoginAt: true,
+  createdAt: true,
+} as const;
+
+const INTEGRATION_EXPORT_SELECT = {
+  id: true,
+  connectorType: true,
+  status: true,
+  config: true,
+  lastTestedAt: true,
+  lastTestStatus: true,
+  createdAt: true,
+} as const;
 
 export interface BootstrapTenantInput {
   name: string;
@@ -35,7 +103,12 @@ export interface BootstrapTenantResult {
  */
 @Injectable()
 export class TenantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(TenantsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async bootstrapTenant(input: BootstrapTenantInput): Promise<BootstrapTenantResult> {
     return this.prisma.$transaction(async (tx) => {
@@ -113,5 +186,167 @@ export class TenantsService {
 
       return { tenant, adminUser };
     });
+  }
+
+  /**
+   * §52 Datenexport: a single JSON bundle of everything this tenant owns,
+   * for the "right to data portability" — every collection queried through
+   * forTenantId() (never the raw client), so this can never leak another
+   * tenant's rows even if called with a forged id. Deliberately excludes
+   * secrets that were never the tenant's own "data" to export in the first
+   * place: password hashes, refresh token hashes, and connector
+   * credentials (Integration.encryptedCredentials, itself unused so far —
+   * see docs/SECURITY.md).
+   */
+  async exportTenantData(tenantId: string): Promise<TenantDataExport> {
+    const scoped = this.prisma.forTenantId(tenantId);
+
+    const [
+      tenant,
+      users,
+      cases,
+      tasks,
+      documents,
+      emailMessages,
+      suppliers,
+      invoices,
+      bookingProposals,
+      financeTransfers,
+      approvals,
+      companies,
+      contacts,
+      leads,
+      opportunities,
+      meetings,
+      integrations,
+      agentRuns,
+      toolInvocations,
+      auditLogs,
+    ] = await Promise.all([
+      scoped.tenant.findUnique({ where: { id: tenantId } }),
+      scoped.user.findMany({ select: USER_EXPORT_SELECT, orderBy: { createdAt: 'asc' } }),
+      scoped.case.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.task.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.document.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.emailMessage.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.supplier.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.invoice.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.bookingProposal.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.financeTransfer.findMany({ orderBy: { startedAt: 'asc' } }),
+      scoped.approval.findMany({ orderBy: { requestedAt: 'asc' } }),
+      scoped.company.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.contact.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.lead.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.opportunity.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.meeting.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.integration.findMany({ select: INTEGRATION_EXPORT_SELECT, orderBy: { createdAt: 'asc' } }),
+      scoped.agentRun.findMany({ orderBy: { startedAt: 'asc' } }),
+      scoped.toolInvocation.findMany({ orderBy: { createdAt: 'asc' } }),
+      scoped.auditLog.findMany({ orderBy: { createdAt: 'asc' } }),
+    ]);
+
+    if (!tenant) {
+      throw new NotFoundError('Tenant not found.', { id: tenantId });
+    }
+
+    return {
+      exportedAt: new Date().toISOString(),
+      tenant,
+      users,
+      cases,
+      tasks,
+      documents,
+      emailMessages,
+      suppliers,
+      invoices,
+      bookingProposals,
+      financeTransfers,
+      approvals,
+      companies,
+      contacts,
+      leads,
+      opportunities,
+      meetings,
+      integrations,
+      agentRuns,
+      toolInvocations,
+      auditLogs,
+    };
+  }
+
+  /** §52 Tenant-Löschungsworkflow, Schritt 1: records intent, does not delete anything yet. */
+  async requestDeletion(tenantId: string, actorUserId: string): Promise<Tenant> {
+    const updated = await this.prisma.forTenantId(tenantId).tenant.update({
+      where: { id: tenantId },
+      data: { deletionRequestedAt: new Date(), deletionRequestedByUserId: actorUserId },
+    });
+
+    await this.audit.record({
+      tenantId,
+      eventType: 'TENANT_DELETE_REQUESTED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Tenant',
+      entityId: tenantId,
+    });
+
+    return updated;
+  }
+
+  /** Undoes a pending deletion request — the workflow's escape hatch before the irreversible step. */
+  async cancelDeletionRequest(tenantId: string, actorUserId: string): Promise<Tenant> {
+    const tenant = await this.prisma.forTenantId(tenantId).tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant || !tenant.deletionRequestedAt) {
+      throw new PolicyViolationError('No pending deletion request for this tenant.', { id: tenantId });
+    }
+
+    const updated = await this.prisma.forTenantId(tenantId).tenant.update({
+      where: { id: tenantId },
+      data: { deletionRequestedAt: null, deletionRequestedByUserId: null },
+    });
+
+    await this.audit.record({
+      tenantId,
+      eventType: 'TENANT_DELETE_REQUESTED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Tenant',
+      entityId: tenantId,
+      payload: { cancelled: true },
+    });
+
+    return updated;
+  }
+
+  /**
+   * §52 Tenant-Löschungsworkflow, Schritt 2: the irreversible step.
+   * Requires a prior requestDeletion() call — a second, separately
+   * authenticated call is the deliberate safety hurdle here, not a
+   * confirmation dialog (there is no UI concept at this layer).
+   *
+   * Deleting the Tenant row cascades (`onDelete: Cascade`, see every
+   * relation in schema.prisma) through every one of its ~19 tenant-scoped
+   * child tables in one operation — including its own AuditLog rows. That
+   * means the TENANT_DELETE_COMPLETED fact cannot itself be written to
+   * this tenant's audit trail (it wouldn't survive the delete it
+   * describes), so it goes to the structured application logger instead —
+   * a durable, platform-level audit trail outside any single tenant's
+   * scope doesn't exist in this schema and would be a separate feature
+   * (see docs/ASSUMPTIONS.md Phase 19f).
+   */
+  async confirmDeletion(tenantId: string, actorUserId: string): Promise<{ tenantId: string; deletedAt: string }> {
+    const tenant = await this.prisma.forTenantId(tenantId).tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant || !tenant.deletionRequestedAt) {
+      throw new PolicyViolationError('Tenant deletion must be requested first.', { id: tenantId });
+    }
+
+    await this.prisma.forTenantId(tenantId).tenant.delete({ where: { id: tenantId } });
+
+    const deletedAt = new Date().toISOString();
+    this.logger.warn(
+      `Tenant ${tenantId} (${tenant.name}) permanently deleted (§52 DSGVO), requested by ${tenant.deletionRequestedByUserId}, confirmed by ${actorUserId}, at ${deletedAt}.`,
+    );
+
+    return { tenantId, deletedAt };
   }
 }

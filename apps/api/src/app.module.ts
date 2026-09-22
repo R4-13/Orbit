@@ -25,6 +25,7 @@ import { StorageModule } from './storage/storage.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { UsersModule } from './users/users.module';
 
 /**
  * Root module. Each backend module named in §7 of the master spec
@@ -59,6 +60,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     ConnectorsModule,
     PolicyModule,
     TenantsModule,
+    UsersModule,
     AuthModule,
     CasesModule,
     TasksModule,

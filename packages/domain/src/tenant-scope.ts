@@ -9,13 +9,21 @@ import { TenantIsolationViolationError } from '@orbit/shared';
  * internals. Must be kept in sync with prisma/schema.prisma — a mismatch is
  * caught by tenant-scope.spec.ts, which cross-checks this list against every
  * model Prisma.ModelName defines.
+ *
+ * `RefreshToken`, `RolePermission`, `UserRole` are deliberately excluded:
+ * none of the three has its own `tenant_id` column (they reach their tenant
+ * only indirectly, via `User`/`Role`) and none has a Postgres RLS policy of
+ * its own (docs/SECURITY.md §1) — the three excluded tables mentioned there.
+ * Listing them here used to be a real, if dormant, bug: `applyTenantScope()`
+ * would try to stamp a nonexistent `tenantId` column into their writes,
+ * which Prisma rejects outright (`Unknown argument \`tenantId\``), and their
+ * reads would come back empty under RLS with no GUC set — found live while
+ * writing `tenant-admin.e2e-spec.ts` (Phase 19f), the first code path ever
+ * to call `forTenantId().userRole.create()`. See docs/ASSUMPTIONS.md.
  */
 export const TENANT_SCOPED_MODELS = [
   'User',
-  'RefreshToken',
   'Role',
-  'RolePermission',
-  'UserRole',
   'PolicyConfig',
   'AuditLog',
   'Case',

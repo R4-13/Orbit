@@ -1,9 +1,10 @@
 import { Test } from '@nestjs/testing';
 import { DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, POLICY_ACTIONS, ROLES } from '@orbit/shared';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantsService } from './tenants.service';
 
-describe('TenantsService.bootstrapTenant', () => {
+describe('TenantsService', () => {
   let service: TenantsService;
   let tx: {
     $executeRaw: jest.Mock;
@@ -15,7 +16,30 @@ describe('TenantsService.bootstrapTenant', () => {
     userRole: { create: jest.Mock };
     auditLog: { create: jest.Mock };
   };
-  let prisma: { $transaction: jest.Mock };
+  let scoped: {
+    tenant: { findUnique: jest.Mock; update: jest.Mock; delete: jest.Mock };
+    user: { findMany: jest.Mock };
+    case: { findMany: jest.Mock };
+    task: { findMany: jest.Mock };
+    document: { findMany: jest.Mock };
+    emailMessage: { findMany: jest.Mock };
+    supplier: { findMany: jest.Mock };
+    invoice: { findMany: jest.Mock };
+    bookingProposal: { findMany: jest.Mock };
+    financeTransfer: { findMany: jest.Mock };
+    approval: { findMany: jest.Mock };
+    company: { findMany: jest.Mock };
+    contact: { findMany: jest.Mock };
+    lead: { findMany: jest.Mock };
+    opportunity: { findMany: jest.Mock };
+    meeting: { findMany: jest.Mock };
+    integration: { findMany: jest.Mock };
+    agentRun: { findMany: jest.Mock };
+    toolInvocation: { findMany: jest.Mock };
+    auditLog: { findMany: jest.Mock };
+  };
+  let prisma: { $transaction: jest.Mock; forTenantId: jest.Mock };
+  let audit: { record: jest.Mock };
 
   beforeEach(async () => {
     tx = {
@@ -37,10 +61,40 @@ describe('TenantsService.bootstrapTenant', () => {
       userRole: { create: jest.fn().mockResolvedValue({ id: 'user_role_1' }) },
       auditLog: { create: jest.fn().mockResolvedValue({ id: 'audit_1' }) },
     };
-    prisma = { $transaction: jest.fn().mockImplementation((callback) => callback(tx)) };
+    scoped = {
+      tenant: { findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() },
+      user: { findMany: jest.fn().mockResolvedValue([]) },
+      case: { findMany: jest.fn().mockResolvedValue([]) },
+      task: { findMany: jest.fn().mockResolvedValue([]) },
+      document: { findMany: jest.fn().mockResolvedValue([]) },
+      emailMessage: { findMany: jest.fn().mockResolvedValue([]) },
+      supplier: { findMany: jest.fn().mockResolvedValue([]) },
+      invoice: { findMany: jest.fn().mockResolvedValue([]) },
+      bookingProposal: { findMany: jest.fn().mockResolvedValue([]) },
+      financeTransfer: { findMany: jest.fn().mockResolvedValue([]) },
+      approval: { findMany: jest.fn().mockResolvedValue([]) },
+      company: { findMany: jest.fn().mockResolvedValue([]) },
+      contact: { findMany: jest.fn().mockResolvedValue([]) },
+      lead: { findMany: jest.fn().mockResolvedValue([]) },
+      opportunity: { findMany: jest.fn().mockResolvedValue([]) },
+      meeting: { findMany: jest.fn().mockResolvedValue([]) },
+      integration: { findMany: jest.fn().mockResolvedValue([]) },
+      agentRun: { findMany: jest.fn().mockResolvedValue([]) },
+      toolInvocation: { findMany: jest.fn().mockResolvedValue([]) },
+      auditLog: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    prisma = {
+      $transaction: jest.fn().mockImplementation((callback) => callback(tx)),
+      forTenantId: jest.fn().mockReturnValue(scoped),
+    };
+    audit = { record: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [TenantsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        TenantsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: AuditService, useValue: audit },
+      ],
     }).compile();
 
     service = moduleRef.get(TenantsService);
@@ -142,6 +196,92 @@ describe('TenantsService.bootstrapTenant', () => {
         actorType: 'SYSTEM',
         entityId: 'user_1',
       }),
+    });
+  });
+
+  describe('exportTenantData', () => {
+    it('throws NotFoundError when the tenant does not exist', async () => {
+      scoped.tenant.findUnique.mockResolvedValue(null);
+      await expect(service.exportTenantData('tenant_1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('gathers every tenant-scoped collection into a single export object', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', name: 'Musterwerk GmbH' });
+      scoped.invoice.findMany.mockResolvedValue([{ id: 'inv_1' }]);
+
+      const result = await service.exportTenantData('tenant_1');
+
+      expect(result.tenant).toEqual({ id: 'tenant_1', name: 'Musterwerk GmbH' });
+      expect(result.invoices).toEqual([{ id: 'inv_1' }]);
+      expect(result.exportedAt).toEqual(expect.any(String));
+      expect(prisma.forTenantId).toHaveBeenCalledWith('tenant_1');
+    });
+  });
+
+  describe('requestDeletion', () => {
+    it('sets deletionRequestedAt/By and records TENANT_DELETE_REQUESTED', async () => {
+      scoped.tenant.update.mockResolvedValue({ id: 'tenant_1', deletionRequestedAt: new Date() });
+
+      await service.requestDeletion('tenant_1', 'user_1');
+
+      expect(scoped.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant_1' },
+        data: expect.objectContaining({ deletionRequestedByUserId: 'user_1' }),
+      });
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'TENANT_DELETE_REQUESTED', tenantId: 'tenant_1' }),
+      );
+    });
+  });
+
+  describe('cancelDeletionRequest', () => {
+    it('rejects when there is no pending deletion request', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', deletionRequestedAt: null });
+      await expect(service.cancelDeletionRequest('tenant_1', 'user_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+    });
+
+    it('clears the deletion-request fields', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', deletionRequestedAt: new Date() });
+      scoped.tenant.update.mockResolvedValue({ id: 'tenant_1', deletionRequestedAt: null });
+
+      await service.cancelDeletionRequest('tenant_1', 'user_1');
+
+      expect(scoped.tenant.update).toHaveBeenCalledWith({
+        where: { id: 'tenant_1' },
+        data: { deletionRequestedAt: null, deletionRequestedByUserId: null },
+      });
+    });
+  });
+
+  describe('confirmDeletion', () => {
+    it('rejects when there is no pending deletion request', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', deletionRequestedAt: null });
+      await expect(service.confirmDeletion('tenant_1', 'user_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+      expect(scoped.tenant.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the tenant row (cascading through every child table) when a request is pending', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({
+        id: 'tenant_1',
+        name: 'Musterwerk GmbH',
+        deletionRequestedAt: new Date(),
+        deletionRequestedByUserId: 'user_requester',
+      });
+      scoped.tenant.delete.mockResolvedValue({ id: 'tenant_1' });
+
+      const result = await service.confirmDeletion('tenant_1', 'user_1');
+
+      expect(scoped.tenant.delete).toHaveBeenCalledWith({ where: { id: 'tenant_1' } });
+      expect(result.tenantId).toBe('tenant_1');
+      // The completion fact cannot be written to this tenant's own AuditLog
+      // (it was just cascade-deleted) — see the service's own doc comment.
+      expect(audit.record).not.toHaveBeenCalledWith(
+        expect.objectContaining({ eventType: 'TENANT_DELETE_COMPLETED' }),
+      );
     });
   });
 });

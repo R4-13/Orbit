@@ -551,11 +551,44 @@ weil es nichts zu trennen gibt.
 
 ## §52 — Datenschutz
 
-❌ **Vollständig unimplementiert.** Kein Datenexport, keine
-Nutzer-Deaktivierungs-Route (`User.status` kennt `DEACTIVATED` als
-Enum-Wert, aber kein Endpunkt setzt ihn), kein administrativer
-Tenant-Löschungsworkflow, keine Retention-Settings. Der gesamte
-Abschnitt ist ein offener Punkt.
+⚠️ **Seit Phase 19f größtenteils umgesetzt, eine Anforderung bewusst
+zurückgestellt.** Neu:
+
+- **Datenexport** (`GET /tenants/me/export`): ein einzelnes JSON-Bundle
+  aller ~19 tenant-gescopten Collections (Users ohne Passwort-Hash,
+  Cases, Tasks, Documents, Invoices, Suppliers, Leads, Opportunities,
+  AgentRuns, AuditLogs, …), live gegen echte Postgres verifiziert.
+- **Nutzer-Deaktivierung** (`PATCH /users/:id/deactivate`, neues
+  `UsersModule`): setzt `User.status = DEACTIVATED` **und** widerruft
+  sofort alle aktiven Refresh-Tokens (nicht nur künftige Logins
+  gesperrt) — live per E2E-Test verifiziert, inkl. Ablehnung der
+  Selbst-Deaktivierung.
+- **Tenant-Löschungsworkflow** (`POST /tenants/me/deletion-request`,
+  `DELETE /tenants/me/deletion-request` zum Abbrechen,
+  `POST /tenants/me/deletion-confirm`): zweistufig als bewusste
+  Sicherheitshürde gegen versehentliche Löschung. `confirmDeletion()`
+  löscht die Tenant-Zeile tatsächlich (kaskadiert durch alle Kindtabellen)
+  — live gegen einen frisch angelegten Wegwerf-Tenant verifiziert, nie
+  gegen den Musterwerk-Demo-Mandanten.
+
+**Bewusst nicht umgesetzt**: Retention-Settings (keine
+Aufbewahrungsfristen-Konfiguration und kein automatisierter
+Lösch-/Anonymisierungs-Job nach Ablauf einer Frist) — dafür gibt es
+im Schema keinerlei Grundlage (kein Retention-Policy-Feld auf Tenant
+oder einzelnen Entitäten) und kein Scheduler/Cron-Mechanismus im
+MVP; ein unvollständiger Konfigurations-Stub ohne tatsächliche
+Durchsetzung wäre schlechter als eine ehrlich offene Lücke gewesen
+(§63). Alle drei umgesetzten Endpunkte sind zudem nur für Mitglieder
+der (pro Tenant seedbaren) `SYSTEM_ADMIN`-Rolle erreichbar
+(`TENANT_MANAGE`), nicht für `TENANT_ADMIN` — konsistent mit der
+bereits bestehenden `DEFAULT_ROLE_PERMISSIONS`-Entscheidung, siehe
+`docs/ASSUMPTIONS.md` #126.
+
+Nebenbei gefunden und behoben: ein echter, bis dahin nie ausgelöster
+Bug in `packages/domain/src/tenant-scope.ts` (`RefreshToken`,
+`RolePermission`, `UserRole` fälschlich als "tenant-scoped" gelistet,
+obwohl keines eine eigene `tenant_id`-Spalte hat) — siehe
+`docs/ASSUMPTIONS.md` #129.
 
 ## §53-54 — Infrastruktur und CI
 
@@ -705,8 +738,12 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    Erkennung beim Rechnungs-Upload, `PATCH /invoices/:id/confirm-bank-change`,
    Frontend-Warnbanner, korrekt dispatchendes Freigabe-Center, neuer
    E2E-Test + Demo-Szenario. Live verifiziert.
-6. **DSGVO-Admin-Funktionen** (§52) — Datenexport, Nutzer-Deaktivierung,
-   Tenant-Löschung: rechtlich relevant, aktuell komplett offen.
+6. ~~**DSGVO-Admin-Funktionen**~~ (§52) — erledigt in Phase 19f:
+   Datenexport, Nutzer-Deaktivierung (inkl. Session-Widerruf),
+   zweistufiger Tenant-Löschungsworkflow, alle live verifiziert. Dabei
+   nebenbei einen echten, bis dahin nie ausgelösten Bug in
+   `tenant-scope.ts` gefunden und behoben. Bewusst offen gelassen:
+   Retention-Settings (keine Schema-/Scheduler-Grundlage vorhanden).
 7. **Datenschutz/Security-Detailarbeit**: CREDENTIAL_ENCRYPTION_KEY
    tatsächlich nutzen, Datei-Upload-Limits serverseitig durchsetzen,
    Idempotency für künftige Webhooks vorbereiten.

@@ -228,6 +228,11 @@ model Tenant {
   status    TenantStatus @default(ACTIVE)
   locale    String       @default("de-DE")
   timezone  String       @default("Europe/Berlin")
+  /// §52 DSGVO-Löschworkflow: gesetzt durch POST /tenants/me/deletion-request,
+  /// Voraussetzung für POST /tenants/me/deletion-confirm. Zwei getrennte
+  /// Aufrufe als bewusste Sicherheitshürde gegen versehentliche Löschung.
+  deletionRequestedAt       DateTime? @map("deletion_requested_at")
+  deletionRequestedByUserId String?   @map("deletion_requested_by_user_id")
   createdAt DateTime     @default(now()) @map("created_at")
   updatedAt DateTime     @updatedAt @map("updated_at")
 

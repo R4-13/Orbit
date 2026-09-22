@@ -6,16 +6,25 @@ import { applyTenantScope, isTenantScopedModel, TENANT_SCOPED_MODELS } from './t
 const TENANT_ID = 'tenant_1';
 const OTHER_TENANT_ID = 'tenant_2';
 
+// Models with no `tenant_id` column of their own (reach their tenant only
+// indirectly, via User/Role) and no RLS policy of their own — see
+// docs/SECURITY.md §1 and TENANT_SCOPED_MODELS' own doc comment.
+const MODELS_WITHOUT_OWN_TENANT_ID = ['Tenant', 'RefreshToken', 'RolePermission', 'UserRole'] as const;
+
 describe('TENANT_SCOPED_MODELS', () => {
-  it('covers every Prisma model except the Tenant root itself', () => {
+  it('covers every Prisma model except Tenant and the three indirectly-scoped tables', () => {
     const allModels = new Set(Object.values(Prisma.ModelName));
-    allModels.delete('Tenant');
+    for (const model of MODELS_WITHOUT_OWN_TENANT_ID) {
+      allModels.delete(model);
+    }
 
     expect(new Set(TENANT_SCOPED_MODELS)).toEqual(allModels);
   });
 
-  it('isTenantScopedModel() rejects the Tenant model and unknown names', () => {
-    expect(isTenantScopedModel('Tenant')).toBe(false);
+  it('isTenantScopedModel() rejects models without their own tenant_id column and unknown names', () => {
+    for (const model of MODELS_WITHOUT_OWN_TENANT_ID) {
+      expect(isTenantScopedModel(model)).toBe(false);
+    }
     expect(isTenantScopedModel('NotAModel')).toBe(false);
     expect(isTenantScopedModel('Invoice')).toBe(true);
   });
