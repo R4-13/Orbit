@@ -1,40 +1,31 @@
 # Agent-Architektur — Project ORBIT
 
-Diese Datei beschreibt `packages/agent-core`: die LLM-/Tool-/Policy-
-Infrastruktur für autonome Agenten, und — ebenso wichtig — **wie weit sie
-tatsächlich in die laufenden Finance-/Sales-Workflows verdrahtet ist**.
+Diese Datei beschreibt `packages/agent-core` (LLM-/Tool-/Policy-
+Infrastruktur) und **wie sie seit Phase 18 tatsächlich verdrahtet ist**.
 Für RBAC/Auth (die andere, unabhängige Autorisierungsachse) siehe
 [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
 
-## Ehrlicher Status zuerst
+## Status
 
-`packages/agent-core` ist eine vollständig gebaute, unit-getestete
-Bibliothek (20 Tests, siehe `docs/IMPLEMENTATION_STATUS.md`) — aber es
-gibt **kein `AgentModule`** in `apps/api` und **keinen HTTP-Endpunkt**, der
-die volle Schleife (LLM → Tool-Aufruf → Policy-Entscheidung → Tool-
-Ausführung) tatsächlich laufen lässt. `AgentRuntime`, `ToolRegistry` und
-jeder `LLMProvider` (Mock wie `AnthropicLLMProvider`) werden aktuell
-**nirgends** aus `apps/api/src` heraus importiert oder instanziiert.
+Seit Phase 18 (`docs/ASSUMPTIONS.md`) gibt es ein echtes `AgentModule`
+(`apps/api/src/agent/`) und einen echten Einstiegspunkt
+(`POST /api/v1/intake/emails`, `apps/api/src/intake/`), der die volle
+Schleife **Agent → Tool Registry → Policy Engine → Tool Gateway →
+Connector** tatsächlich live gegen Postgres ausführt — verifiziert über
+`apps/api/test/intake-workflow.e2e-spec.ts`. Drei der vier in §12
+spezifizierten Agenten sind als konkrete Tool-Gruppen + System-Prompts
+umgesetzt: **Communication/Intake** (Klassifikation),
+**Finance/AP** (Rechnungsverarbeitung), **Sales/CRM** (Lead-Erzeugung).
+Der vierte, der **Orchestrator**, existiert nicht als eigener Agent-Typ
+mit eigenem LLM-Aufruf, sondern als deterministischer Ablauf in
+`IntakeService` selbst (Case anlegen, klassifizieren, an den passenden
+Fachagenten weiterreichen) — siehe "Bewusste Vereinfachungen" unten.
 
-Die einzige Stelle, an der Agent-Core-Code in einem echten Request-Pfad
-läuft, ist `packages/agent-core`s reine Entscheidungsfunktion
-`decidePolicyAction(mode)` — importiert und aufgerufen von
-`apps/api/src/policy/policy-enforcement.service.ts`, das wiederum nur von
-`SuppliersService.findOrCreate()` (für die Policy-Action
-`SUPPLIER_CREATE`) genutzt wird. Der komplette Finance-Workflow
-(Rechnung → Buchungsvorschlag → Freigabe → Transfer) und der Sales-
-Workflow (Lead → Termin) laufen als **direkte, RBAC-gated Service-Aufrufe**
-— kein Agent, kein LLM, keine Tool Registry beteiligt (siehe
-`invoices.service.ts`s eigener Kommentar dazu: Freigabe/Transfer sind
-"ein Mensch, der bereits die Berechtigung hat", nicht Agent-Autonomie).
-
-Das ist kein Bug, sondern der aktuelle, bewusste Stand: die Bausteine für
-echte agentische Automatisierung existieren und sind einzeln verifiziert,
-aber ihre Verdrahtung zu einem laufenden "der Agent liest eingehende
-E-Mails und handelt autonom"-Feature (§7 des Master-Spec, `AgentModule`)
-ist noch nicht erfolgt. Die folgenden Abschnitte beschreiben die
-Bausteine so, wie sie **heute funktionieren würden, wenn sie verdrahtet
-wären** — als Grundlage für diese künftige Arbeit.
+**Weiterhin nicht angebunden**: ein echter Trigger. `POST
+/api/v1/intake/emails` *simuliert* eine eingehende E-Mail — es gibt
+keinen echten Mail-Connector-Webhook, der diesen Endpunkt automatisch
+aufruft (kein Microsoft Graph-/Gmail-Zugang, siehe
+`docs/KNOWN_LIMITATIONS.md`). Telefonie ist ebenfalls nicht angebunden.
 
 ## Bausteine
 
@@ -51,10 +42,35 @@ interface LLMProvider {
 
 `LLMCompletionRequest` trägt `systemPrompt?`, `messages`, die verfügbaren
 `tools` (als `LLMToolDefinition[]`) und `maxTokens?`. Zwei
-Implementierungen: `MockLLMProvider` (deterministisch, für Tests) und
-`AnthropicLLMProvider` (echter `@anthropic-ai/sdk`-Wrapper — ausgewählt
-über `LLM_PROVIDER=anthropic`, braucht `ANTHROPIC_API_KEY`; **REQUIRES
-PROVIDER CREDENTIALS**, nie live gegen die echte Anthropic-API getestet).
+Implementierungen, ausgewählt über `LLM_PROVIDER` (Env-Var, Default
+`mock`):
+
+- **`MockLLMProvider`** — die Default-Implementierung dieser Umgebung.
+  Kein Algorithmus "was würde ein LLM sagen" — stattdessen eine Warteschlange
+  vorab bestimmter Antworten, per `seedResponse()` befüllbar. Eine
+  Antwort kann entweder ein fester Wert **oder eine Funktion** sein, die
+  die tatsächliche Konversation (inkl. der echten Tool-Ergebnisse
+  vorheriger Schritte) liest und daraus ihre Antwort ableitet — das ist,
+  was `IntakeService` nutzt, um z. B. `create_booking_proposal` mit dem
+  *echten*, gerade erst erzeugten `invoiceId`/`amountGross` aus
+  `extract_invoice`s Ergebnis aufzurufen, statt mit einem vorab
+  festgelegten Wert. **Wichtig**: `MockLLMProvider` ist ein
+  Prozess-weites Singleton (wie `MockOcrProvider`/`MockFinanceConnector`)
+  — jeder Aufrufer muss **genau** so viele Antworten vorseeden, wie
+  tatsächlich konsumiert werden, sonst bleiben Antworten in der
+  Warteschlange liegen und verfälschen den *nächsten*, unabhängigen
+  Aufruf. Live gefunden und behoben (siehe ASSUMPTIONS #98) — deshalb
+  seedet `IntakeService` nie eine überzählige "end_turn"-Abschlussantwort:
+  `MockLLMProvider.complete()` liefert bei leerer Warteschlange ohnehin
+  automatisch einen sicheren leeren `end_turn` zurück.
+- **`AnthropicLLMProvider`** — echter `@anthropic-ai/sdk`-Wrapper,
+  ausgewählt über `LLM_PROVIDER=anthropic`, braucht `ANTHROPIC_API_KEY`.
+  **REQUIRES PROVIDER CREDENTIALS** — nie live gegen die echte
+  Anthropic-API getestet, aber derselbe Code-Pfad (`AgentModule`,
+  `IntakeService`, alle Tools) läuft strukturell identisch damit; nur das
+  Skripten der `MockLLMProvider`-Antworten entfällt dann, weil eine
+  echte LLM-Antwort selbst entscheidet, welche Tools sie in welcher
+  Reihenfolge aufruft.
 
 ### Tool Registry (`packages/agent-core/src/tools/`)
 
@@ -73,43 +89,73 @@ interface ToolDefinition<TInput, TOutput> {
 Ein einziges Zod-Schema pro Tool dient doppelt: `ToolRegistry.execute()`
 validiert eingehende (vom LLM erzeugte) Eingaben zur Laufzeit damit, und
 `toLLMToolDefinitions()` leitet daraus (über `zod-to-json-schema`) das
-JSON-Schema ab, das dem LLM als Tool-Definition angeboten wird — beide
-können nie auseinanderlaufen, weil es dieselbe Quelle ist.
+JSON-Schema ab, das dem LLM als Tool-Definition angeboten wird.
 
-`ToolExecutionContext` trägt `tenantId` + `agentRunId` — jedes Tool weiß,
-für welchen Tenant und im Rahmen welches `AgentRun`-Datensatzes es läuft.
+`ToolExecutionContext` trägt `tenantId`, `agentRunId` und optional
+`actorUserId` (fehlt bei einem echt autonomen Lauf ohne menschlichen
+Auslöser — Tools attribuieren ihre Audit-Einträge dann als `actorType:
+'AGENT'` statt einen Nutzer zu erfinden).
+
+**15 konkrete Tools** sind registriert
+(`apps/api/src/agent/tools/{finance,sales,communication}.tools.ts`), alle
+als dünne Wrapper um bereits getestete Phase-7/8-Services — keine
+Geschäftslogik wurde dupliziert:
+
+| Tool | Wrappt | Policy Action | Default-Modus |
+|---|---|---|---|
+| `classify_message` | (Stichwort-Heuristik) | `email.classify` | AUTONOMOUS |
+| `extract_invoice` | `InvoicesService.createFromDocument` | `invoice.intake` | AUTONOMOUS |
+| `create_booking_proposal` | `InvoicesService.addBookingProposal` | `booking_proposal.create` | AUTONOMOUS |
+| `transfer_invoice_to_finance` | `InvoicesService.transfer` | `invoice.transfer_to_fibu` | REQUIRE_APPROVAL |
+| `find_contact` / `create_contact` | `ContactsService` | `crm.contact.manage` | AUTONOMOUS |
+| `create_company` | `CompaniesService.upsert` | `crm.contact.manage` | AUTONOMOUS |
+| `create_lead` | `LeadsService.create` | `lead.create` | AUTONOMOUS |
+| `update_opportunity` | `OpportunitiesService` | `crm.activity.log` | AUTONOMOUS |
+| `create_task` | `TasksService.create` | `task.create` | AUTONOMOUS |
+| `get_calendar_availability` | `CalendarConnector.findAvailability` | `calendar.read` | AUTONOMOUS |
+| `create_meeting` | `MeetingsService.proposeSlots` | `meeting.propose` | AUTONOMOUS |
+| `log_crm_activity` | `CrmConnector.logActivity` | `crm.activity.log` | AUTONOMOUS |
+| `draft_email` / `send_email` | `EmailMessage`/`MailConnector.sendMessage` | `email.draft`/`followup.send` | AUTONOMOUS/REQUIRE_APPROVAL |
+
+`find_customer` aus §14 fehlt bewusst — es gibt kein Customer/AR-Modell
+(nur Supplier/AP), siehe `docs/MASTER_SPEC_GAP_ANALYSIS.md` §10.
+`find_supplier`/`check_duplicate_invoice` sind nicht als eigene Tools
+registriert — `extract_invoice` erledigt beides bereits intern (dieselbe
+Methode, die Phase 7 schon live testete) und gibt das Ergebnis
+(`supplierId`, `status`) zurück, was ein vorheriger Lookup ohnehin liefern
+würde.
 
 ### Policy Engine (`packages/agent-core/src/policy/`)
 
-Keine Klasse, bewusst eine einzige reine Funktion:
+Unverändert eine reine Funktion:
 
 ```ts
 type PolicyDecision = 'ALLOW' | 'SUGGEST_ONLY' | 'REQUIRE_APPROVAL' | 'DENY';
-
 function decidePolicyAction(mode: PolicyMode): PolicyDecision;
-// DISABLED → DENY, SUGGEST_ONLY → SUGGEST_ONLY,
-// REQUIRE_APPROVAL → REQUIRE_APPROVAL, AUTONOMOUS → ALLOW
 ```
 
-`PolicyMode` (`DISABLED|SUGGEST_ONLY|REQUIRE_APPROVAL|AUTONOMOUS`) und die
-`POLICY_ACTIONS`-Liste (elf Actions, z. B. `invoice.transfer_to_fibu`,
-`supplier.create`, `payment.execute`) leben in
-`packages/shared/src/policy.ts` — der "single source of truth", die
-sowohl `apps/api` als auch `packages/agent-core` importieren.
-`DEFAULT_POLICY_CONFIG` legt pro Action den Werkskonfigurationsmodus fest;
-zwei Actions sind `locked` (ein Tenant-Admin kann sie nicht unter
-`REQUIRE_APPROVAL` absenken), `payment.execute` ist für den MVP hart auf
-`DISABLED` gesetzt (§60 Nicht-Ziele: keine automatische Bankzahlung).
+`PolicyEnforcementService.resolveMode()` schlägt den tatsächlich
+konfigurierten Modus in der `PolicyConfig`-Tabelle nach — **Fail-Safe:
+`REQUIRE_APPROVAL`, falls kein Eintrag existiert** (nicht der
+Code-Default aus `DEFAULT_POLICY_CONFIG`!). Das hat eine echte
+Betriebs-Konsequenz: eine neue `POLICY_ACTIONS`-Ergänzung wirkt für
+**bereits existierende** Tenants erst nach einem Reseed/Backfill ihrer
+`PolicyConfig`-Zeilen — live erlebt beim Hinzufügen der fünf neuen
+Actions in Phase 18 (ASSUMPTIONS #97).
 
-Das eigentliche **Nachschlagen**, welchen Modus ein Tenant für eine Action
-konfiguriert hat (`PolicyConfig`-Tabelle), gehört bewusst nicht zu
-agent-core — das ist DB-Zugriff und lebt in `apps/api`s
-`PolicyEnforcementService.resolveMode()` (Fail-Safe-Default
-`REQUIRE_APPROVAL`, falls kein Eintrag existiert). `AgentRuntime` nimmt
-diesen Lookup als injizierte `PolicyModeResolver`-Funktion entgegen, statt
-selbst zu wissen, wie eine Datenbank aussieht.
+**Wenn `AgentRuntime` einen Tool-Aufruf nicht mit `ALLOW` ausführt**
+(`SUGGEST_ONLY`/`REQUIRE_APPROVAL`/`DENY`), führt es das Tool nicht aus —
+das ist absichtlich der Aufrufer-Job (`AgentRuntime`s eigener
+Code-Kommentar). `IntakeService.createApprovalsForBlockedCalls()`
+übernimmt das: jeder nicht-`ALLOW`/nicht-`DENY`-Outcome erzeugt einen
+Eintrag im generischen Approval Center (`entityType: 'FOLLOW_UP'`), analog
+zu der in Phase 18 auch für die bestehenden menschlichen
+Freigabe-Workflows (Supplier/Invoice) nachgerüsteten Wiring (§37 im
+Master-Prompt).
 
 ### AgentRuntime (`packages/agent-core/src/runtime/`)
+
+Unverändert:
 
 ```ts
 class AgentRuntime {
@@ -118,38 +164,61 @@ class AgentRuntime {
 }
 ```
 
-`runTurn()` orchestriert die Schleife aus dem Grundprinzip (max. 5
-Iterationen, konfigurierbar): `llm.complete()` aufrufen, für jeden
-zurückgegebenen Tool-Call den Policy-Modus auflösen,
-`decidePolicyAction()` anwenden, das Tool **nur bei `ALLOW`** über
-`ToolRegistry.execute()` tatsächlich ausführen, und für `SUGGEST_ONLY`/
-`REQUIRE_APPROVAL`/`DENY` stattdessen eine entsprechend markierte
-Outcome zurückgeben statt das Tool anzufassen. Das Ergebnis
-(`AgentTurnResult`) trägt den finalen Text (falls das LLM einen
-zurückgab) plus die Liste aller Tool-Call-Outcomes.
+`AgentModule` verdrahtet **eine** gemeinsame `ToolRegistry`-Instanz (alle
+15 Tools, nicht pro Agent-Persona getrennt) und **eine**
+`AgentRuntime`-Instanz — der System-Prompt pro Aufruf (nicht ein
+gefilterter Tool-Satz) unterscheidet, welche "Persona" gerade spricht.
+Details/Begründung: Kommentar in `apps/api/src/agent/agent.module.ts`.
+
+## Der Orchestrator: `IntakeService`
+
+`apps/api/src/intake/intake.service.ts` ist der tatsächliche Einstiegspunkt:
+
+1. Speichert die eingehende Nachricht als `EmailMessage` (`direction:
+   INBOUND`), protokolliert `EMAIL_RECEIVED`.
+2. Lässt den Communication/Intake-Agent `classify_message` aufrufen
+   (eigener `AgentRun`, `agentType: COMMUNICATION`) → `FINANCE`/`SALES`/`OTHER`.
+3. Legt bei `FINANCE`/`SALES` einen `Case` an (schließt die in
+   `docs/MASTER_SPEC_GAP_ANALYSIS.md` §11 genannte Lücke — **nur für
+   diesen Pfad**; die bestehenden direkten Invoice-/Lead-Erstellungsrouten
+   bleiben unverändert ohne automatische Case-Anlage, siehe ASSUMPTIONS
+   #96) und verknüpft die `EmailMessage` damit.
+4. Bei `FINANCE` mit Anhang: lädt die Bytes direkt zu MinIO hoch
+   (`StorageService.putObjectBytes()`, server-seitig, kein
+   Presigned-URL-Client-Flow — siehe eigener Kommentar dort), berechnet
+   den SHA-256-Hash (`Document.checksum`, bisher nie befüllt), legt das
+   `Document` an, lässt den Finance-Agent `extract_invoice` und danach
+   `create_booking_proposal` aufrufen (zweiter Schritt reagiert auf das
+   echte Ergebnis des ersten).
+5. Bei `SALES`: lässt den Sales-Agent `create_company` →
+   `create_contact` → `create_lead` aufrufen (jeder Schritt reagiert auf
+   das reale Ergebnis des vorherigen) — `create_lead` erzeugt wie gehabt
+   automatisch eine Folgeaufgabe (Phase 8, unverändert).
+6. Persistiert `AgentRun`/`ToolInvocation` für jeden Lauf
+   (`AgentRunRecorderService`) und protokolliert `AGENT_RUN_STARTED/
+   COMPLETED/FAILED`, `TOOL_INVOKED`, `POLICY_DECISION_MADE`.
+
+## Bewusste Vereinfachungen
+
+- **Kein eigener Orchestrator-Agent-Typ mit eigenem LLM-Aufruf.** §12
+  beschreibt den Orchestrator als eigenständigen Agenten ("Case
+  erzeugen, zuständigen Agenten bestimmen, Workflow koordinieren"). Diese
+  Logik ist in `IntakeService` als normaler, deterministischer
+  TypeScript-Code umgesetzt, nicht als weiterer `AgentRuntime.runTurn()`-
+  Aufruf — Routing zwischen zwei Agenten braucht hier kein LLM, es folgt
+  direkt aus dem `classify_message`-Ergebnis. `AgentType.ORCHESTRATOR`
+  existiert im Schema, wird aber aktuell nirgends als `AgentRun.agentType`
+  geschrieben.
+- **`classify_message` ist eine Stichwort-Heuristik, kein ML-Modell.**
+  Bei `LLM_PROVIDER=mock` gibt es ohnehin keine "echte" Klassifikation zu
+  simulieren; bei `LLM_PROVIDER=anthropic` würde ein realer LLM-Aufruf
+  dieselbe Aufgabe übernehmen können, ohne dass sich am
+  Tool-Interface etwas ändert.
+- **Kein Trigger außer dem simulierten Endpunkt** — siehe "Status" oben.
 
 ## Datenmodell für Agent-Läufe
 
-`AgentRun` (ein Lauf, mit `agentType`, `triggerType`, `status`, `input`/
-`output` als JSON) und `ToolInvocation` (jeder einzelne Tool-Aufruf
-innerhalb eines Laufs, inkl. der getroffenen Policy-Entscheidung) sind
-bereits als Prisma-Modelle vorhanden (`packages/domain/prisma/schema.prisma`)
-— aber da kein Code sie aktuell beschreibt (kein `AgentModule`), sind
-beide Tabellen in der Praxis leer. Sie sind für genau den Moment
-vorbereitet, in dem `AgentRuntime` tatsächlich verdrahtet wird.
-
-## Nächste Schritte für eine echte Verdrahtung
-
-Nicht in dieser Phase umgesetzt, aber die logische Fortsetzung:
-
-1. Ein `AgentModule` in `apps/api`, das `AgentRuntime` mit einem echten
-   `LLMProvider` (per `LLM_PROVIDER`-Env-Var), einer `ToolRegistry` voller
-   konkreter Tools (je eins pro `POLICY_ACTIONS`-Eintrag, aufrufend in die
-   bestehenden Services wie `InvoicesService`/`LeadsService`) und einem
-   `PolicyModeResolver` (der bereits existierenden
-   `PolicyEnforcementService.resolveMode()`-Logik) zusammensetzt.
-2. Ein Trigger — z. B. ein Mail-Connector-Webhook oder ein BullMQ-Job im
-   Worker-Prozess (`apps/api/worker`, aktuell noch ohne Queue-Consumer) —,
-   der `AgentRuntime.runTurn()` tatsächlich aufruft.
-3. `AgentRun`/`ToolInvocation`-Persistenz an den entsprechenden Stellen in
-   `AgentRuntime` bzw. dem neuen `AgentModule` ergänzen.
+`AgentRun` und `ToolInvocation` (`packages/domain/prisma/schema.prisma`)
+werden seit Phase 18 tatsächlich beschrieben — vorher leer (§10 der
+Gap-Analyse), jetzt ein Datensatz pro `AgentRuntime.runTurn()`-Aufruf
+bzw. pro darin ausgeführtem/blockiertem Tool-Aufruf.

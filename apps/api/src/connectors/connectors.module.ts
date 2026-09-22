@@ -1,9 +1,15 @@
 import { Global, Module } from '@nestjs/common';
 import { IntegrationUnavailableError } from '@orbit/shared';
-import { MockCalendarConnector, MockCrmConnector, MockFinanceConnector, MockOcrProvider } from '@orbit/integration-core';
+import {
+  MockCalendarConnector,
+  MockCrmConnector,
+  MockFinanceConnector,
+  MockMailConnector,
+  MockOcrProvider,
+} from '@orbit/integration-core';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
-import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
+import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
 
 /**
  * Wires each *_CONNECTOR/*_PROVIDER env selection (@orbit/config) to a
@@ -63,7 +69,19 @@ import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, OCR_PROVIDER } fr
         return new MockCalendarConnector();
       },
     },
+    {
+      provide: MAIL_CONNECTOR,
+      inject: [ORBIT_ENV],
+      useFactory: (env: OrbitEnv) => {
+        if (env.MAIL_CONNECTOR !== 'mock') {
+          throw new IntegrationUnavailableError(
+            `MailConnector "${env.MAIL_CONNECTOR}" is not implemented yet — see docs/INTEGRATIONS.md.`,
+          );
+        }
+        return new MockMailConnector();
+      },
+    },
   ],
-  exports: [FINANCE_CONNECTOR, OCR_PROVIDER, CRM_CONNECTOR, CALENDAR_CONNECTOR],
+  exports: [FINANCE_CONNECTOR, OCR_PROVIDER, CRM_CONNECTOR, CALENDAR_CONNECTOR, MAIL_CONNECTOR],
 })
 export class ConnectorsModule {}

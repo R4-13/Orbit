@@ -1,0 +1,138 @@
+import { Inject, Injectable } from '@nestjs/common';
+import type { AgentTurnResult, ToolCallOutcome, ToolRegistry } from '@orbit/agent-core';
+import type { AgentRun, AgentRunTriggerType, AgentType, Prisma } from '@orbit/domain';
+import { AuditService } from '../audit/audit.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { TOOL_REGISTRY } from './agent.tokens';
+
+export interface StartAgentRunInput {
+  tenantId: string;
+  agentType: AgentType;
+  triggerType: AgentRunTriggerType;
+  caseId?: string;
+  input?: Record<string, unknown>;
+}
+
+/**
+ * Persists AgentRun/ToolInvocation (§10 — previously-modeled, never-
+ * written tables, see MASTER_SPEC_GAP_ANALYSIS.md §10) around an
+ * AgentRuntime.runTurn() call, and records the matching audit trail
+ * entries (AGENT_RUN_STARTED/COMPLETED/FAILED, TOOL_INVOKED,
+ * POLICY_DECISION_MADE — all already in AUDIT_EVENT_TYPES, just never
+ * emitted before Phase 18).
+ */
+@Injectable()
+export class AgentRunRecorderService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
+  ) {}
+
+  async start(input: StartAgentRunInput): Promise<AgentRun> {
+    const run = await this.prisma.forTenantId(input.tenantId).agentRun.create({
+      data: {
+        tenantId: input.tenantId,
+        caseId: input.caseId,
+        agentType: input.agentType,
+        triggerType: input.triggerType,
+        status: 'RUNNING',
+        input: input.input as Prisma.InputJsonValue | undefined,
+      },
+    });
+
+    await this.audit.record({
+      tenantId: input.tenantId,
+      eventType: 'AGENT_RUN_STARTED',
+      actorType: 'AGENT',
+      entityType: 'AgentRun',
+      entityId: run.id,
+      payload: { agentType: input.agentType, triggerType: input.triggerType },
+    });
+
+    return run;
+  }
+
+  /** Persists every tool call outcome from a completed AgentRuntime turn as a ToolInvocation row. */
+  async recordToolCalls(tenantId: string, agentRunId: string, outcomes: ToolCallOutcome[]): Promise<void> {
+    for (const outcome of outcomes) {
+      await this.prisma.forTenantId(tenantId).toolInvocation.create({
+        data: {
+          tenantId,
+          agentRunId,
+          toolName: outcome.toolName,
+          policyAction: this.tools.get(outcome.toolName)?.policyAction,
+          // ToolInvocationStatus only distinguishes SUCCESS/FAILED — a
+          // non-ALLOW policy decision (tool never executed) still counts
+          // as a successful *invocation attempt*; the decision itself is
+          // recorded in `output` and via the POLICY_DECISION_MADE audit
+          // event below. See docs/ASSUMPTIONS.md Phase 18.
+          status: outcome.error ? 'FAILED' : 'SUCCESS',
+          output: { decision: outcome.decision, output: outcome.output, error: outcome.error } as Prisma.InputJsonValue,
+        },
+      });
+
+      await this.audit.record({
+        tenantId,
+        eventType: 'TOOL_INVOKED',
+        actorType: 'AGENT',
+        entityType: 'ToolInvocation',
+        entityId: outcome.toolCallId,
+        payload: { toolName: outcome.toolName, decision: outcome.decision },
+      });
+
+      if (outcome.decision !== 'ALLOW') {
+        await this.audit.record({
+          tenantId,
+          eventType: 'POLICY_DECISION_MADE',
+          actorType: 'AGENT',
+          entityType: 'ToolInvocation',
+          entityId: outcome.toolCallId,
+          payload: { toolName: outcome.toolName, decision: outcome.decision },
+        });
+      }
+    }
+  }
+
+  async complete(tenantId: string, agentRunId: string, result: AgentTurnResult): Promise<void> {
+    const hasError = result.toolCallOutcomes.some((outcome) => outcome.error);
+
+    await this.prisma.forTenantId(tenantId).agentRun.update({
+      where: { id: agentRunId },
+      data: {
+        status: hasError ? 'FAILED' : 'COMPLETED',
+        output: {
+          finalText: result.finalText,
+          iterations: result.iterations,
+          toolCallOutcomes: result.toolCallOutcomes,
+        } as unknown as Prisma.InputJsonValue,
+        completedAt: new Date(),
+      },
+    });
+
+    await this.audit.record({
+      tenantId,
+      eventType: hasError ? 'AGENT_RUN_FAILED' : 'AGENT_RUN_COMPLETED',
+      actorType: 'AGENT',
+      entityType: 'AgentRun',
+      entityId: agentRunId,
+      payload: { iterations: result.iterations },
+    });
+  }
+
+  async fail(tenantId: string, agentRunId: string, errorMessage: string): Promise<void> {
+    await this.prisma.forTenantId(tenantId).agentRun.update({
+      where: { id: agentRunId },
+      data: { status: 'FAILED', errorMessage, completedAt: new Date() },
+    });
+
+    await this.audit.record({
+      tenantId,
+      eventType: 'AGENT_RUN_FAILED',
+      actorType: 'AGENT',
+      entityType: 'AgentRun',
+      entityId: agentRunId,
+      payload: { error: errorMessage },
+    });
+  }
+}

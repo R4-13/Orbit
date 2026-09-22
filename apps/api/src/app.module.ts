@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { findRepoRootEnvFile } from '@orbit/config';
+import { AgentModule } from './agent/agent.module';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -13,6 +14,7 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthModule } from './health/health.module';
+import { IntakeModule } from './intake/intake.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { LeadsModule } from './leads/leads.module';
 import { MeetingsModule } from './meetings/meetings.module';
@@ -69,6 +71,8 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     LeadsModule,
     OpportunitiesModule,
     MeetingsModule,
+    AgentModule,
+    IntakeModule,
     HealthModule,
   ],
   providers: [

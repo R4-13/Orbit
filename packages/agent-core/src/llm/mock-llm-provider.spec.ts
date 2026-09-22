@@ -33,6 +33,19 @@ describe('MockLLMProvider', () => {
     expect(provider.getRequests()[0]?.systemPrompt).toBe('be helpful');
   });
 
+  it('a scripted response may be a function that reacts to the actual request content', async () => {
+    const provider = new MockLLMProvider([
+      (request) => ({
+        toolCalls: [],
+        stopReason: 'end_turn',
+        text: `echo:${request.messages[0]?.content}`,
+      }),
+    ]);
+
+    const result = await provider.complete({ messages: [{ role: 'user', content: 'hi' }], tools: [] });
+    expect(result.text).toBe('echo:hi');
+  });
+
   it('seedResponse() appends to the queue of a long-lived instance', async () => {
     const provider = new MockLLMProvider();
     provider.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'seeded-1' });

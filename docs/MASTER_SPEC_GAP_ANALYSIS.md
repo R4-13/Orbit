@@ -19,28 +19,34 @@ aber nicht funktional · ❌ fehlt vollständig.
 Verteidigungslinien inkl. Postgres RLS), Auth/RBAC (§9), Tenant-Isolation-
 Tests, Fehlerbehandlung (§40, alle 7 geforderten Fehlerklassen existieren
 exakt), Ehrlichkeits-/Status-Kennzeichnung (§63), CI-Pipeline (§54),
-Nicht-Ziele-Einhaltung (§60).
+Nicht-Ziele-Einhaltung (§60) — und, neu seit Phase 18: die
+Agentenarchitektur (§12-17) läuft jetzt live über einen simulierten
+E-Mail-Intake-Endpunkt (18/18 API-E2E-Tests grün, siehe unten).
 
-**Die größte strukturelle Lücke:** Die komplette Agentenarchitektur
-(§12-17) — vier benannte Agenten (Orchestrator, Communication/Intake,
-Finance/AP, Sales/CRM), der Trigger "eingehende E-Mail", und die gesamte
-Kette Agent → Tool Registry → Policy Engine → Tool Gateway → Connector
-existieren nur als ungenutzte Infrastruktur (`packages/agent-core`). Kein
-Code-Pfad in `apps/api` ruft je ein LLM auf. Beide Kern-Workflows
-(Finance, Sales) laufen als direkte, formularbasierte RBAC-Aktionen, nicht
-als Agent-orchestrierte Automatisierung. Das ist die Kernidee des
-gesamten Produkts (§65) und aktuell nicht vorhanden.
+**~~Die größte strukturelle Lücke~~ Behoben in Phase 18 (mit Einschränkung):**
+Die Agentenarchitektur (§12-17) lief bis Phase 18 nur als ungenutzte
+Infrastruktur. Seit Phase 18 gibt es einen echten Endpunkt (`POST
+/api/v1/intake/emails`), der die volle Kette Agent → Tool Registry →
+Policy Engine → Tool Gateway → Connector tatsächlich ausführt — 15
+konkrete Tools, `AgentRun`/`ToolInvocation` werden befüllt, live gegen
+echte Postgres verifiziert. **Verbleibende Einschränkung**: kein echter
+Trigger — der Endpunkt *simuliert* eine eingehende E-Mail, es gibt
+keinen echten Mail-Connector-Webhook, der ihn automatisch aufruft (kein
+Microsoft Graph-/Gmail-Zugang). Details: `AGENT_ARCHITECTURE.md`.
 
-**Zweitgrößte Lücke:** Frontend-Seitenabdeckung (§32) — von 17 geforderten
-Routen existieren 9 nicht (`/inbox`, `/cases`, `/cases/[id]`, `/finance`,
-`/sales`, `/sales/opportunities`, `/activity`, `/integrations`,
-`/admin/*`). Kein Lead-Detail, kein Case-Konzept im UI sichtbar, keine
-Unified Inbox, kein Agent-Activity-Log, keine Integrations-Verwaltung.
+**Jetzt größte Lücke: Frontend-Seitenabdeckung** (§32) — von 17
+geforderten Routen existieren 9 nicht (`/inbox`, `/cases`, `/cases/[id]`,
+`/finance`, `/sales`, `/sales/opportunities`, `/activity`,
+`/integrations`, `/admin/*`). Kein Lead-Detail, kein Case-Konzept im UI
+sichtbar, keine Unified Inbox (die den neuen Intake-Endpunkt bedienen
+könnte), kein Agent-Activity-Log (der die neuen `AgentRun`-Daten zeigen
+könnte), keine Integrations-Verwaltung, keine Policy-Konfigurations-UI.
 
-**Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind nur
-2 vollständig erfüllt (Duplicate, Multi-Tenant); 2 nur teilweise (Finance,
-Sales — der jeweilige "E-Mail kommt herein"-Trigger fehlt); 2 vollständig
-unerfüllt (Bank-Change-Erkennung, Telefonie).
+**Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind 2
+vollständig erfüllt (Duplicate, Multi-Tenant), 2 seit Phase 18 deutlich
+näher am Soll aber nicht vollständig (Finance, Sales — der Trigger bleibt
+simuliert statt real), 2 vollständig unerfüllt (Bank-Change-Erkennung,
+Telefonie).
 
 **Dokumentation:** 8 von 16 geforderten Dateien fehlen komplett
 (`SECURITY.md`, `DOMAIN_MODEL.md`, `DEPLOYMENT.md`, `TESTING.md`,
@@ -156,17 +162,19 @@ Größte Lücken:
   `PaymentReference`, `FinanceTransaction` fehlen (letzteres teilweise
   durch `FinanceTransfer` funktional ersetzt).
 - **Kommunikation**: `Conversation`, `Message`, `Call`, `CallTranscript`
-  fehlen komplett; `EmailMessage` existiert als Modell, wird aber nirgends
-  befüllt.
+  fehlen komplett; `EmailMessage` wird seit Phase 18 für den
+  Agent-Intake-Pfad befüllt (`docs/ASSUMPTIONS.md` #100), für alle
+  anderen Pfade weiterhin ungenutzt.
 - **Dokumente**: `DocumentVersion`, `DocumentExtraction` fehlen (Extraktion
   liegt als JSON-Feld auf `Invoice.extractedData`, kein eigenes Modell).
 - **Sales**: `Activity`, `FollowUp` fehlen.
 - **Workflow**: `PolicyDecision` fehlt als eigenes Modell (Entscheidung
   wird nur inline angewendet, nicht persistiert).
 - **AI**: `AgentDefinition`, `AgentStep`, `LLMInteraction`,
-  `ConfidenceScore` (als eigenes Modell) fehlen; `AgentRun`/
-  `ToolInvocation` existieren als Modell, sind aber leer (kein Code
-  schreibt hinein).
+  `ConfidenceScore` (als eigenes Modell) fehlen weiterhin; `AgentRun`/
+  `ToolInvocation` werden seit Phase 18 tatsächlich beschrieben (ein
+  Datensatz pro Agent-Lauf bzw. Tool-Aufruf über den neuen
+  Intake-Endpunkt) — siehe `AGENT_ARCHITECTURE.md`.
 - **Integration**: `IntegrationCredential`, `IntegrationEvent`,
   `WebhookEvent`, `ConnectorSync` fehlen (Credentials liegen als
   ungenutztes `Bytes?`-Feld direkt auf `Integration`).
@@ -175,45 +183,46 @@ Größte Lücken:
 
 ⚠️ `Case` existiert mit `type`, `status`, `title`, `description`,
 `assigneeId` + Relationen zu `tasks`/`documents`/`emailMessages`/
-`invoices`/`leads`/`agentRuns`. **Fehlt**: `priority`-Feld, `source`-Feld.
-**Kritischer Funktionslücke**: Weder `InvoicesService.createFromDocument`
-noch `LeadsService.create` erzeugt automatisch einen `Case` — `caseId`
-bleibt, was der Aufrufer (optional) übergibt, standardmäßig leer. Das
-zentrale Versprechen "jeder Vorgang muss von Anfang bis Ende
-nachvollziehbar sein" ist dadurch nicht eingelöst — Rechnungen und Leads
-entstehen im Regelfall *ohne* zugehörigen Case.
+`invoices`/`leads`/`agentRuns`. **Fehlt weiterhin**: `priority`-Feld,
+`source`-Feld.
 
-## §12-17 — Agentenarchitektur (größte Einzellücke)
+⚠️ **Teilweise behoben in Phase 18**: Der neue Agent-Intake-Pfad (`POST
+/intake/emails`) erzeugt jetzt automatisch einen `Case` und verknüpft
+Invoice/Lead/EmailMessage damit — bewusst nur für diesen Pfad
+(`docs/ASSUMPTIONS.md` #96), nicht rückwirkend für die bestehenden
+direkten Routen (`POST /invoices`, `POST /leads`), um die dortigen
+bereits live-getesteten Phase-7/8-Services nicht anzufassen. Über die
+direkten Routen erstellte Rechnungen/Leads bleiben weiterhin ohne
+automatischen Case, `caseId` bleibt dort optional vom Aufrufer gesetzt.
 
-❌ Keiner der vier spezifizierten Agenten (Orchestrator,
-Communication/Intake, Finance/AP, Sales/CRM) existiert als laufender
-Code. `packages/agent-core` enthält die **Infrastruktur** dafür
-(`LLMProvider`-Interface + `MockLLMProvider` + `AnthropicLLMProvider`,
-`ToolRegistry` mit Zod-Validierung, `decidePolicyAction()`-Funktion,
-`AgentRuntime`-Orchestrierungsschleife) — vollständig unit-getestet, aber
-**es gibt kein `AgentModule` und keinen einzigen Aufruf von
-`AgentRuntime`/`ToolRegistry`/irgendeinem `LLMProvider` aus `apps/api`
-heraus.** Kein Tool aus der in §14 geforderten Liste
-(`classify_message`, `extract_invoice`, `find_supplier`, …) ist als
-konkretes, registriertes Tool implementiert.
+## §12-17 — Agentenarchitektur (war größte Einzellücke, seit Phase 18 verdrahtet)
 
-Die einzige Live-Verbindung zwischen `apps/api` und `agent-core` ist der
-Aufruf der reinen Funktion `decidePolicyAction()` über
-`PolicyEnforcementService`, und zwar für genau **eine** Policy-Action
-(`SUPPLIER_CREATE`, bei der automatischen Lieferantenanlage). Alle
-anderen zehn in §17 mit Default-Modus spezifizierten Policy-Actions
-(`email.classify`, `lead.create`, `followup.send`,
-`booking_proposal.create`, `invoice.transfer_to_fibu`,
-`supplier.bank_details.change`, `payment.execute`, `crm.activity.log`,
-`meeting.propose`, `meeting.create`) sind als Konstanten definiert, werden
-aber **nirgends im Code tatsächlich abgefragt** — die Policy Engine
-entscheidet nichts außer Lieferantenanlage.
+⚠️ **Update Phase 18**: Diese Lücke ist nicht mehr vollständig offen.
+Drei der vier spezifizierten Agenten (Communication/Intake, Finance/AP,
+Sales/CRM) laufen jetzt live über einen neuen Endpunkt (`POST
+/api/v1/intake/emails`, simuliert eine eingehende E-Mail mangels echtem
+Mail-Connector) durch die volle Kette **Agent → Tool Registry → Policy
+Engine → Tool Gateway → Connector** — verifiziert gegen echte Postgres in
+`apps/api/test/intake-workflow.e2e-spec.ts` (18/18 API-E2E-Tests grün,
+mehrfach wiederholt). 15 konkrete Tools aus §14 sind registriert (dünne,
+getestete Wrapper um die bereits live verifizierten Phase-7/8-Services),
+`AgentRun`/`ToolInvocation` werden erstmals tatsächlich beschrieben, und
+die Policy Engine entscheidet jetzt über alle 16 Actions, nicht mehr nur
+über `SUPPLIER_CREATE`.
 
-Das bedeutet: §13 (kein direkter LLM-Zugriff), §15/16 (AI Provider Layer,
-Trustworthiness-Prüfung), §51 (Prompt-Injection-Schutz) sind allesamt
-**gegenstandslos**, weil der Pfad, den sie absichern sollen, nie ausgeführt
-wird. Details und die drei konkreten nächsten Schritte für eine echte
-Verdrahtung: [`AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md).
+**Weiterhin offen**: Der **vierte** Agent (Orchestrator) existiert nicht
+als eigener `AgentRuntime`-Lauf mit eigenem LLM-Aufruf — das Routing
+zwischen Finance-/Sales-Agent ist deterministischer Code im neuen
+`IntakeService`, bewusst vereinfacht (siehe `AGENT_ARCHITECTURE.md`
+"Bewusste Vereinfachungen"). Es gibt weiterhin **keinen echten Trigger**
+— `/intake/emails` simuliert den E-Mail-Eingang, ruft ihn aber nicht
+selbst auf (kein Mail-Connector-Webhook, siehe §23/§29/§34). Telefonie
+(§28) ist unverändert nicht angebunden. `AnthropicLLMProvider` bleibt
+**REQUIRES PROVIDER CREDENTIALS** — derselbe Code-Pfad läuft strukturell
+identisch, nur nie gegen die echte API getestet.
+
+Volle Details, die 15 Tools im Einzelnen, und was genau noch fehlt:
+[`AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md).
 
 ## §18 — Dokumentenverarbeitung
 
@@ -294,14 +303,19 @@ Credentials überhaupt entgegennehmen würde.
 
 ⚠️ `AuditLog` deckt `tenant, user (actorUserId), agent (actorType),
 timestamp, objectType (entityType), objectId (entityId), action
-(eventType)` ab. **Fehlt**: `before`/`after`-Felder (kein State-Diff, nur
-ein generisches `payload`-JSON) und **`correlationId`** komplett — Events
-aus demselben Vorgang lassen sich nicht programmatisch verknüpfen. Von
-den 11 Beispiel-Event-Typen fehlen `EMAIL_RECEIVED`,
-`APPROVAL_REQUESTED`, `EMAIL_SENT`, `CRM_UPDATED` (konsequent aus den
-oben genannten Gründen: kein E-Mail-Eingang, keine generische
-Approval-Nutzung, kein E-Mail-Versand, kein explizites CRM-Update-Event).
-Kein Lese-Endpunkt für Audit-Daten (`GET /audit` fehlt).
+(eventType)` ab. **Fehlt weiterhin**: `before`/`after`-Felder (kein
+State-Diff, nur ein generisches `payload`-JSON) und **`correlationId`**
+komplett — Events aus demselben Vorgang lassen sich nicht programmatisch
+verknüpfen. Kein Lese-Endpunkt für Audit-Daten (`GET /audit` fehlt
+weiterhin).
+
+Von den 11 Beispiel-Event-Typen: `EMAIL_RECEIVED` und
+`APPROVAL_REQUESTED` werden seit Phase 18 tatsächlich emittiert (Agent-
+Intake-Pfad bzw. Approval-Center-Wiring, `docs/ASSUMPTIONS.md` #100/#102).
+`EMAIL_SENT`/`CRM_UPDATED` sind als Konstanten vorbereitet, aber weiterhin
+ungenutzt — es gibt zwar jetzt `send_email`/`log_crm_activity`-Tools,
+diese protokollieren aber (noch) nicht mit diesen spezifischen
+Event-Typen.
 
 ## §32 — Frontend-Seiten
 
@@ -366,14 +380,23 @@ Communication History) existiert als eigene Ansicht.
 
 ## §37 — Approval Center
 
-⚠️ Die Seite `/approvals` existiert technisch, zeigt aber laut
-`ASSUMPTIONS.md` #72 **strukturell immer eine leere Liste**: Weder
-`SuppliersService` noch `InvoicesService` schreiben in die generische
-`Approval`-Tabelle — sie nutzen stattdessen ihren eigenen
-`PENDING_APPROVAL`-Status direkt auf der Entität. Freigaben passieren
-faktisch *inline* auf der jeweiligen Invoice-/Supplier-Detailseite, nicht
-über die im Master-Prompt vorgesehene **zentrale** Ansicht mit
-Approve/Reject/Edit&Approve-Buttons und Risiko-/Confidence-Anzeige.
+⚠️ **Backend seit Phase 18 behoben, Frontend weiterhin offen.**
+`ASSUMPTIONS.md` #72 hatte live gefunden, dass `/approvals` strukturell
+immer leer blieb, weil weder `SuppliersService` noch `InvoicesService` je
+in die generische `Approval`-Tabelle schrieben. Beide tun das jetzt (bei
+Eintritt in `PENDING_APPROVAL` bzw. bei `approve()`/`reject()`,
+`docs/ASSUMPTIONS.md` #102) — ebenso jeder vom Agent Runtime blockierte
+(`SUGGEST_ONLY`/`REQUIRE_APPROVAL`) Tool-Aufruf aus dem neuen
+Agent-Intake-Pfad. Das Backend liefert über `GET /api/v1/approvals`
+jetzt also echte, aktuelle Einträge. **Die Frontend-Seite selbst wurde
+nicht angepasst** — sie ruft zwar bereits denselben Endpunkt auf, hat
+aber keine Approve/Reject/Edit&Approve-Buttons, die tatsächlich etwas
+auslösen (ein Klick müsste je nach `entityType` auf die richtige
+zugrundeliegende Aktion — `SuppliersService.approve()`,
+`InvoicesService.approve()`, o. Ä. — dispatchen; das existiert nicht).
+Freigaben passieren für Menschen weiterhin nur *inline* auf der
+jeweiligen Invoice-/Supplier-Detailseite, jetzt aber zusätzlich in der
+zentralen Liste sichtbar (nur lesend).
 
 ## §38 — Agent Activity
 
@@ -549,14 +572,16 @@ als Chat — sogar mit einem Code-Kommentar, der §58 direkt zitiert.
 
 | Szenario | Status |
 |---|---|
-| A — Finance (E-Mail → … → Transfer, 14 Schritte) | ⚠️ Kernkette (Extraktion→Dublettenprüfung→Buchungsvorschlag→Freigabe→Transfer→Audit) live verifiziert; Schritte 1-3 (E-Mail empfangen, Anhang speichern *aus* E-Mail, Case wird erzeugt) fehlen — Prozess beginnt bei direktem Upload, kein automatischer Case |
+| A — Finance (E-Mail → … → Transfer, 14 Schritte) | ⚠️ Seit Phase 18 deutlich näher am Soll: `POST /intake/emails` empfängt die E-Mail, speichert den Anhang, klassifiziert, erzeugt den Case automatisch, extrahiert (Agent-Tool `extract_invoice`), prüft auf Dublette, erzeugt den Buchungsvorschlag (`create_booking_proposal`, reagiert auf das echte Extraktions-Ergebnis) — live verifiziert. **Fehlt weiterhin**: Freigabe/Transfer laufen nach wie vor nur über die separate, menschliche RBAC-Route (nicht als Teil desselben Agent-Turns), und der Trigger ist simuliert, kein echter Mail-Connector. |
 | B — Duplicate | ✅ vollständig, live getestet |
 | C — Bank Change | ❌ vollständig fehlend (kein IBAN-Tracking, keine Risiko-Markierung) |
-| D — Sales Email | ⚠️ Lead+Task-Erzeugung funktioniert; Schritt 1 (E-Mail-Erkennung/Intent) fehlt, Lead entsteht per Formular; kein "Follow-up-Vorschlag" als eigene Entität, nur die Task selbst |
+| D — Sales Email | ⚠️ Seit Phase 18 deutlich näher am Soll: `POST /intake/emails` erkennt Sales-Intent (Klassifikation), identifiziert/legt Kontakt und Firma an (`create_company`→`create_contact`, reagieren auf echte Zwischenergebnisse), erzeugt Lead + Case + automatische Folgeaufgabe — live verifiziert. **Fehlt weiterhin**: kein separater "Follow-up-Vorschlag" als eigene Entität (nur die Task selbst), CRM-Sync-Bestätigung nicht im UI sichtbar. |
 | E — Phone/Twilio | ❌ vollständig fehlend (Telefonie-Connector in keinen Workflow eingebunden) |
 | F — Multi Tenant | ✅✅ vollständig, mehrfach und auf zwei Ebenen bewiesen |
 
-**Nur 2 von 6 benannten Abnahme-Szenarien sind vollständig erfüllt.**
+**2 von 6 Szenarien vollständig erfüllt (B, F), 2 deutlich verbessert aber
+nicht vollständig (A, D — echter Trigger fehlt weiterhin), 2 weiterhin
+vollständig offen (C, E).**
 
 ## §60 — Nicht-Ziele
 
@@ -614,19 +639,20 @@ Philosophie ist dokumentiert, aber nicht im Code eingelöst.
 
 ## Priorisierte Delta-Liste
 
-Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert:
+Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
+~~Durchgestrichene~~ Punkte sind seit Phase 18 erledigt.
 
-1. **Agentenarchitektur verdrahten** (§12-17, größte Einzellücke) —
-   `AgentModule` bauen, mindestens die Tools für Rechnungs- und
-   Lead-Verarbeitung real registrieren, `AgentRuntime` an einen Trigger
-   hängen. Ohne das bleibt das zentrale Produktversprechen unerfüllt.
-2. **E-Mail-Eingang simulieren** (Grundlage für §59 Szenario A/D) — ein
-   einfacher "E-Mail-Anhang hochladen"-Trigger würde bereits die
-   Kernlücke in beiden Hauptprozessen schließen, auch ohne echten
-   Mail-Connector.
+1. ~~**Agentenarchitektur verdrahten**~~ — erledigt in Phase 18
+   (`AgentModule`, 15 Tools, `POST /intake/emails`, live getestet).
+2. ~~**E-Mail-Eingang simulieren**~~ — erledigt in Phase 18, als Teil
+   desselben Endpunkts. Ein **echter** Mail-Connector-Trigger bleibt
+   offen (braucht Microsoft/Google-Credentials).
 3. **Fehlende Kern-Frontend-Seiten**: `/cases/[id]`, Lead-Detail,
-   `/activity`, `/admin/policies` (Policy Engine hat sonst keine UI) —
-   höchster Nutzen pro Aufwand, da Backend-Daten meist schon existieren.
+   `/activity` (kann jetzt echte `AgentRun`-Daten zeigen), `/inbox` (kann
+   jetzt den echten Intake-Endpunkt bedienen statt nur ihn zu simulieren),
+   `/admin/policies` (Policy Engine hat sonst keine UI, jetzt mit 16 statt
+   11 Actions umso relevanter) — höchster Nutzen pro Aufwand, da
+   Backend-Daten jetzt größtenteils existieren.
 4. **`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
    `docs/TESTING.md`** nachziehen — reine Dokumentationsarbeit, kein
    Coderisiko.
@@ -638,6 +664,9 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert:
 7. **Datenschutz/Security-Detailarbeit**: CREDENTIAL_ENCRYPTION_KEY
    tatsächlich nutzen, Datei-Upload-Limits serverseitig durchsetzen,
    Idempotency für künftige Webhooks vorbereiten.
+8. **Approval-Center-Frontend nachziehen** — Backend liefert seit Phase 18
+   echte Daten (§37), die Seite selbst hat aber noch keine
+   funktionierenden Approve/Reject-Buttons für die generische Ansicht.
 
 Diese Datei ergänzt, ersetzt aber nicht
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) (Komponentenstatus)

@@ -34,21 +34,24 @@ Eine falsch konfigurierte Provider-Auswahl scheitert beim Boot laut
 Implementierungsrückstand, ein echter Zugangsdaten-Blocker (§62 des
 Master-Spec).
 
-## Agent-Runtime: gebaut, aber nicht live verdrahtet
+## Agent-Runtime: live verdrahtet, aber ohne echten Trigger
 
-`packages/agent-core` (LLMProvider, Tool Registry, Policy-Engine-
-Entscheidungslogik, `AgentRuntime`-Orchestrierungsschleife) ist
-vollständig implementiert und unit-getestet — aber es gibt kein
-`AgentModule` in `apps/api` und keinen HTTP-Endpunkt, der die volle
-Schleife tatsächlich laufen lässt. Der Finance- und der Sales-Workflow
-laufen komplett als direkte, RBAC-gated Service-Aufrufe, ohne LLM- oder
-Tool-Registry-Beteiligung. Details und die logischen nächsten Schritte:
+Seit Phase 18 gibt es ein `AgentModule` + einen echten Endpunkt (`POST
+/api/v1/intake/emails`), der die volle Kette LLM → Tool Registry →
+Policy Engine → Tool Gateway → Connector live gegen echte Postgres
+ausführt (Communication/Intake-, Finance/AP- und Sales/CRM-Agent). Was
+weiterhin fehlt: ein **echter Trigger** — der Endpunkt *simuliert* eine
+eingehende E-Mail, es gibt keinen echten Mail-Connector-Webhook, der ihn
+automatisch aufruft (kein Microsoft Graph-/Gmail-Zugang), keine Unified-
+Inbox-UI, die ihn bedient, und keinen vierten Agenten-Typ (Orchestrator)
+als eigenen LLM-Lauf (das Routing ist deterministischer Code). Details:
 [`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md).
 
-Direkt daraus folgt: **echte OCR** (Tesseract) ist nicht implementiert
-(`OCR_PROVIDER=tesseract` scheitert beim Boot wie jeder andere
-nicht-mock-Connector) — die Finance-Demo nutzt ausschließlich
-`MockOcrProvider` mit vorgegebenen Ergebnissen.
+Direkt daraus folgt weiterhin: **echte OCR** (Tesseract) ist nicht
+implementiert (`OCR_PROVIDER=tesseract` scheitert beim Boot wie jeder
+andere nicht-mock-Connector) — die Finance-Demo nutzt ausschließlich
+`MockOcrProvider` mit vorgegebenen Ergebnissen, jetzt auch über den
+Agent-Intake-Pfad.
 
 ## E-Mail-Eingang (Inbox)
 

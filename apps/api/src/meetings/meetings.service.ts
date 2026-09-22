@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError } from '@orbit/shared';
 import { Prisma, type Meeting } from '@orbit/domain';
 import type { CalendarConnector } from '@orbit/integration-core';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CALENDAR_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -31,8 +31,9 @@ export class MeetingsService {
 
   async proposeSlots(
     tenantId: string,
-    actorUserId: string,
+    actorUserId: string | undefined,
     input: ProposeMeetingSlotsInput,
+    actorType: AuditActorType = 'USER',
   ): Promise<Meeting> {
     const slots = await this.calendarConnector.findAvailability({
       durationMinutes: input.durationMinutes,
@@ -53,7 +54,7 @@ export class MeetingsService {
     await this.audit.record({
       tenantId,
       eventType: 'MEETING_PROPOSED',
-      actorType: 'USER',
+      actorType,
       actorUserId,
       entityType: 'Meeting',
       entityId: meeting.id,
