@@ -392,23 +392,27 @@ gehört aktuell nur zur Case-Detailseite, nicht zur Lead-Seite selbst.
 
 ## §37 — Approval Center
 
-⚠️ **Backend seit Phase 18 behoben, Frontend weiterhin offen.**
-`ASSUMPTIONS.md` #72 hatte live gefunden, dass `/approvals` strukturell
-immer leer blieb, weil weder `SuppliersService` noch `InvoicesService` je
-in die generische `Approval`-Tabelle schrieben. Beide tun das jetzt (bei
-Eintritt in `PENDING_APPROVAL` bzw. bei `approve()`/`reject()`,
-`docs/ASSUMPTIONS.md` #102) — ebenso jeder vom Agent Runtime blockierte
-(`SUGGEST_ONLY`/`REQUIRE_APPROVAL`) Tool-Aufruf aus dem neuen
-Agent-Intake-Pfad. Das Backend liefert über `GET /api/v1/approvals`
-jetzt also echte, aktuelle Einträge. **Die Frontend-Seite selbst wurde
-nicht angepasst** — sie ruft zwar bereits denselben Endpunkt auf, hat
-aber keine Approve/Reject/Edit&Approve-Buttons, die tatsächlich etwas
-auslösen (ein Klick müsste je nach `entityType` auf die richtige
-zugrundeliegende Aktion — `SuppliersService.approve()`,
-`InvoicesService.approve()`, o. Ä. — dispatchen; das existiert nicht).
-Freigaben passieren für Menschen weiterhin nur *inline* auf der
-jeweiligen Invoice-/Supplier-Detailseite, jetzt aber zusätzlich in der
-zentralen Liste sichtbar (nur lesend).
+⚠️ **Backend seit Phase 18, Frontend-Aktionen seit Phase 19c — mit einer
+bewusst offenen Einschränkung.** `/approvals` hat jetzt echte
+Freigeben-/Ablehnen-Buttons, die pro `entityType` auf die richtige
+zugrundeliegende Aktion dispatchen (`PATCH /suppliers/:id/approve|reject`,
+`PATCH /invoices/:id/approve|reject` — Letzteres neu: `InvoicesService`
+hatte bisher nur `approve()`, kein `reject()`, obwohl `InvoiceStatus`
+`REJECTED` längst kennt). Live verifiziert: neuer Lieferant über
+`POST /suppliers` angelegt (→ `PENDING_APPROVAL`), über die
+`/approvals`-Seite als `approval@musterwerk.example` freigegeben, Status
+sowohl in der Freigaben-Liste als auch am Lieferanten selbst (`ACTIVE`)
+bestätigt. **Bewusst nicht gelöst**: `FOLLOW_UP`-Einträge (vom Agent
+Runtime blockierte Tool-Aufrufe, `SUGGEST_ONLY`/`REQUIRE_APPROVAL`)
+werden weiterhin nur lesend angezeigt — es gibt keinen Endpunkt, der
+einen blockierten Tool-Aufruf nachträglich ausführt, weil
+`AgentRuntime`/`IntakeService` dessen Argumente aktuell nirgends für
+einen späteren Resume persistieren (nur `toolCallId` + `toolName` landen
+in der `Approval`-Zeile). Das nachzurüsten wäre ein eigenständiges,
+größeres Feature (Tool-Aufruf-Persistenz + Resume-Mechanismus im
+`AgentRuntime`) und wurde bewusst nicht im Rahmen dieser Phase
+mitgezogen — ehrlich als Lücke gekennzeichnet statt stillschweigend
+weggelassen (§63).
 
 ## §38 — Agent Activity
 
@@ -692,9 +696,10 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
 7. **Datenschutz/Security-Detailarbeit**: CREDENTIAL_ENCRYPTION_KEY
    tatsächlich nutzen, Datei-Upload-Limits serverseitig durchsetzen,
    Idempotency für künftige Webhooks vorbereiten.
-8. **Approval-Center-Frontend nachziehen** — Backend liefert seit Phase 18
-   echte Daten (§37), die Seite selbst hat aber noch keine
-   funktionierenden Approve/Reject-Buttons für die generische Ansicht.
+8. ~~**Approval-Center-Frontend nachziehen**~~ — erledigt in Phase 19c:
+   funktionierende Freigeben-/Ablehnen-Buttons für `SUPPLIER`/`INVOICE`,
+   live verifiziert. Offen bleibt der Resume-Mechanismus für
+   `FOLLOW_UP`-Einträge (blockierte Agent-Tool-Aufrufe) — siehe §37.
 9. **`/admin/policies`-Backend** (Policy Engine hat sonst keine UI, jetzt
    mit 16 statt 11 Actions umso relevanter) — CRUD-Endpunkte für
    `PolicyConfig` fehlen komplett, `PolicyModule` hat aktuell nur

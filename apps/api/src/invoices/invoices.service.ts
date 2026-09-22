@@ -236,6 +236,34 @@ export class InvoicesService {
     return updated;
   }
 
+  async reject(tenantId: string, actorUserId: string, invoiceId: string): Promise<Invoice> {
+    const invoice = await this.findOne(tenantId, invoiceId);
+    if (invoice.status !== 'PENDING_APPROVAL') {
+      throw new PolicyViolationError('Invoice is not awaiting approval.', {
+        id: invoiceId,
+        status: invoice.status,
+      });
+    }
+
+    const updated = await this.prisma.forTenantId(tenantId).invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'REJECTED' },
+    });
+
+    await this.approvals.markDecided(tenantId, 'INVOICE', invoiceId, actorUserId, 'REJECTED');
+    await this.audit.record({
+      tenantId,
+      eventType: 'APPROVAL_REJECTED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Invoice',
+      entityId: invoiceId,
+      payload: { policyAction: 'invoice.approve' },
+    });
+
+    return updated;
+  }
+
   async transfer(
     tenantId: string,
     actorUserId: string | undefined,

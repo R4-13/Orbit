@@ -56,6 +56,12 @@ export class InvoicesController {
     return this.invoicesService.approve(user.tenantId, user.id, id);
   }
 
+  @Patch(':id/reject')
+  @RequirePermissions(PERMISSIONS.INVOICE_APPROVE)
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {
+    return this.invoicesService.reject(user.tenantId, user.id, id);
+  }
+
   @Post(':id/transfer')
   @RequirePermissions(PERMISSIONS.INVOICE_TRANSFER)
   transfer(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {

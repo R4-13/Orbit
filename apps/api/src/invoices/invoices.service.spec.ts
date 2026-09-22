@@ -159,6 +159,29 @@ describe('InvoicesService', () => {
     });
   });
 
+  describe('reject', () => {
+    it('rejects an invoice that is not PENDING_APPROVAL', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({ id: 'inv_1', status: 'RECEIVED' });
+      await expect(service.reject('tenant_1', 'user_1', 'inv_1')).rejects.toMatchObject({
+        code: 'POLICY_VIOLATION',
+      });
+    });
+
+    it('sets the invoice status to REJECTED and decides the approval', async () => {
+      scoped.invoice.findUnique.mockResolvedValue({ id: 'inv_1', status: 'PENDING_APPROVAL' });
+      scoped.invoice.update.mockResolvedValue({ id: 'inv_1', status: 'REJECTED' });
+
+      const result = await service.reject('tenant_1', 'user_1', 'inv_1');
+
+      expect(scoped.invoice.update).toHaveBeenCalledWith({
+        where: { id: 'inv_1' },
+        data: { status: 'REJECTED' },
+      });
+      expect(result.status).toBe('REJECTED');
+      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'REJECTED');
+    });
+  });
+
   describe('transfer', () => {
     const APPROVED_INVOICE = {
       id: 'inv_1',
