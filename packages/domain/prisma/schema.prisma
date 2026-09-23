@@ -271,6 +271,10 @@ model Tenant {
   webhookEvents           WebhookEvent[]
   agentDefinitions        AgentDefinition[]
   agentDefinitionVersions AgentDefinitionVersion[]
+  workflowDefinitions     WorkflowDefinition[]
+  workflowStepDefinitions WorkflowStepDefinition[]
+  workflowRuns            WorkflowRun[]
+  workflowStepRuns        WorkflowStepRun[]
 
   @@map("tenants")
 }
@@ -429,6 +433,7 @@ model Case {
   invoices      Invoice[]
   leads         Lead[]
   agentRuns     AgentRun[]
+  workflowRuns  WorkflowRun[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -808,7 +813,8 @@ model AgentRun {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
-  toolInvocations ToolInvocation[]
+  toolInvocations  ToolInvocation[]
+  workflowStepRuns WorkflowStepRun[]
 
   @@index([tenantId, status])
   @@map("agent_runs")
@@ -891,6 +897,105 @@ model AgentDefinitionVersion {
 
   @@index([agentDefinitionId])
   @@map("agent_definition_versions")
+}
+
+/// Orchestrierung (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 3): eine
+/// lineare Schrittfolge von AgentDefinitions mit optionaler
+/// Ein-Ebenen-Bedingung — bewusst keine generische Workflow-Engine
+/// (keine Parallel-Zweige, Schleifen, Wartezustände), siehe
+/// Begründung im Konzept-Dokument.
+enum WorkflowDefinitionStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+}
+
+model WorkflowDefinition {
+  id              String                   @id @default(uuid())
+  tenantId        String                   @map("tenant_id")
+  key             String
+  name            String
+  description     String?
+  /// Rein informativ in dieser Phase — kein Trigger ruft eine
+  /// WorkflowDefinition automatisch auf; siehe WorkflowRunnerService.
+  triggerType     AgentRunTriggerType      @map("trigger_type")
+  status          WorkflowDefinitionStatus @default(DRAFT)
+  createdByUserId String?                  @map("created_by_user_id")
+  updatedByUserId String?                  @map("updated_by_user_id")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  tenant Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  steps  WorkflowStepDefinition[]
+  runs   WorkflowRun[]
+
+  @@unique([tenantId, key])
+  @@map("workflow_definitions")
+}
+
+model WorkflowStepDefinition {
+  id                   String @id @default(uuid())
+  tenantId             String @map("tenant_id")
+  workflowDefinitionId String @map("workflow_definition_id")
+  order                Int
+  /// AgentDefinition.key — kein FK, weil Reihenfolge/Existenz erst beim
+  /// Ausführen geprüft wird (dieselbe Design-Entscheidung wie
+  /// PolicyConfig.action als String statt Enum, siehe Schema-Kopf).
+  agentDefinitionKey   String @map("agent_definition_key")
+  /// JSON-Path-artiges Mapping (WorkflowRunnerService), z. B.
+  /// { "companyName": "$.trigger.input.subject" }.
+  inputMapping         Json?  @map("input_mapping")
+  /// Optionale Bedingung gegen den Output eines vorherigen Schritts,
+  /// z. B. { "field": "$.steps[1].output.classify_message.category",
+  /// "equals": "SALES" }. Fehlt sie, läuft der Schritt immer.
+  condition            Json?
+
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowDefinitionId, order])
+  @@map("workflow_step_definitions")
+}
+
+model WorkflowRun {
+  id                   String         @id @default(uuid())
+  tenantId             String         @map("tenant_id")
+  workflowDefinitionId String         @map("workflow_definition_id")
+  caseId               String?        @map("case_id")
+  status               AgentRunStatus @default(RUNNING)
+  input                Json?
+  errorMessage         String?        @map("error_message")
+  startedAt            DateTime       @default(now()) @map("started_at")
+  completedAt          DateTime?      @map("completed_at")
+
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
+  case               Case?              @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  stepRuns           WorkflowStepRun[]
+
+  @@index([tenantId, status])
+  @@map("workflow_runs")
+}
+
+/// Verknüpft einen ausgeführten Schritt mit dem AgentRun, den er erzeugt
+/// hat — kein Duplikat der AgentRun/ToolInvocation-Daten, nur eine
+/// Zuordnungstabelle. `agentRunId` fehlt bei einem übersprungenen
+/// Schritt (`skipped: true`, Bedingung nicht erfüllt).
+model WorkflowStepRun {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  workflowRunId String   @map("workflow_run_id")
+  stepOrder     Int      @map("step_order")
+  agentRunId    String?  @map("agent_run_id")
+  skipped       Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+  agentRun    AgentRun?   @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+
+  @@index([workflowRunId])
+  @@map("workflow_step_runs")
 }
 
 // ============================================================================

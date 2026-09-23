@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "workflow_runs" ADD COLUMN     "error_message" TEXT;

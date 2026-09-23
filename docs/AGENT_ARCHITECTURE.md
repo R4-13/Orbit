@@ -3,12 +3,11 @@
 Diese Datei beschreibt `packages/agent-core` (LLM-/Tool-/Policy-
 Infrastruktur) und **wie sie seit Phase 18 tatsächlich verdrahtet ist**.
 Für RBAC/Auth (die andere, unabhängige Autorisierungsachse) siehe
-[`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Für ein Konzept, wie sich
-Tenant-konfigurierbare Agenten (Prompt/Tool-Zugriff), ein Agent Studio
-zum Anlegen neuer Agenten und eine Mehr-Agenten-Orchestrierung auf die
-hier beschriebene Runtime aufsetzen ließen, siehe
-[`docs/AGENT_STUDIO_CONCEPT.md`](AGENT_STUDIO_CONCEPT.md) (Konzept,
-nicht implementiert).
+[`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Tenant-konfigurierbare
+Agenten (Prompt/Tool-Zugriff, `apps/api/src/agent-definitions/`) und
+Mehr-Agenten-Orchestrierung (`apps/api/src/workflows/`) sind seit
+Phase 20/21 implementiert — Design-Herleitung und Abweichungen vom
+ursprünglichen Entwurf: [`docs/AGENT_STUDIO_CONCEPT.md`](AGENT_STUDIO_CONCEPT.md).
 
 ## Status
 
@@ -252,3 +251,37 @@ einen Literal-String zu verwenden:
 werden seit Phase 18 tatsächlich beschrieben — vorher leer (§10 der
 Gap-Analyse), jetzt ein Datensatz pro `AgentRuntime.runTurn()`-Aufruf
 bzw. pro darin ausgeführtem/blockiertem Tool-Aufruf.
+
+## Konfigurierbare Agenten & Orchestrierung (seit Phase 20/21)
+
+Zwei zusätzliche, additive Schichten über der oben beschriebenen
+Runtime — Details/Design-Herleitung in
+[`docs/AGENT_STUDIO_CONCEPT.md`](AGENT_STUDIO_CONCEPT.md):
+
+- **`apps/api/src/agent-definitions/`** — `AgentDefinition`/
+  `AgentDefinitionVersion` (Prompt + erlaubte Tool-Namen je Agent,
+  versioniert, Rollback-fähig). `AgentDefinitionResolverService.resolve()`
+  löst einen `key` (`communication-intake`/`finance-intake`/
+  `sales-intake`, oder ein selbst angelegter Agent) zu `{systemPrompt,
+  runtime}` auf — `runtime` ist eine frisch konstruierte, auf
+  `allowedTools` beschränkte `AgentRuntime`-Instanz (`ToolRegistry.subset()`).
+  `IntakeService`s drei Aufrufstellen nutzen das bereits produktiv
+  (verhaltenserhaltend gegenüber den vorherigen Literal-Prompts). Admin-UI:
+  `/admin/agents` (Bearbeiten, Versionshistorie, neue Agenten anlegen,
+  Testlauf gegen `DRAFT`/`ACTIVE`-Definitionen).
+- **`apps/api/src/workflows/`** — `WorkflowDefinition`/
+  `WorkflowStepDefinition`/`WorkflowRun`/`WorkflowStepRun`: eine lineare
+  Schrittfolge von `AgentDefinition`-Referenzen mit optionaler
+  Ein-Ebenen-Bedingung (`workflow-path.ts`, eine minimale JSON-Path-artige
+  Auflösung wie `$.steps[1].output.classify_message.category`) und
+  Werte-Weitergabe zwischen Schritten (`inputMapping`).
+  `WorkflowRunnerService.trigger()` läuft komplett **parallel** zu
+  `IntakeService` — nichts an `POST /intake/emails` wurde geändert, kein
+  automatischer Trigger liest `WorkflowDefinition.triggerType`, jeder
+  Lauf startet über den expliziten `POST
+  /workflow-definitions/:key/trigger`-Aufruf. Admin-UI: `/admin/workflows`.
+
+Beide Schichten sind über dieselbe `AGENT_MANAGE`-Permission gegated und
+lassen die Policy Engine als einzige Ausführungsfreigabe-Instanz
+unangetastet — ein Tool, das ein Agent sehen darf, kann trotzdem nur
+so autonom laufen, wie `/admin/policies` es erlaubt.

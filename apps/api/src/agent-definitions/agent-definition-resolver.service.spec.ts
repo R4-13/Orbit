@@ -93,4 +93,40 @@ describe('AgentDefinitionResolverService', () => {
     );
     expect(capturedRequest?.tools?.map((t) => t.name)).toEqual(['extract_invoice']);
   });
+
+  describe('resolveForTestRun', () => {
+    it('throws NotFoundError when no row exists for the key', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue(null);
+      await expect(service.resolveForTestRun('tenant_1', 'does-not-exist')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('throws NotFoundError when the row is DISABLED', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue({
+        key: 'sales-intake',
+        status: 'DISABLED',
+        systemPrompt: 'x',
+        allowedTools: ['classify_message'],
+      });
+      await expect(service.resolveForTestRun('tenant_1', 'sales-intake')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('resolves a DRAFT definition (unlike resolve(), which rejects it)', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue({
+        key: 'custom-agent',
+        status: 'DRAFT',
+        baseType: 'SALES',
+        systemPrompt: 'Du bist ein Entwurfs-Agent.',
+        allowedTools: ['classify_message'],
+      });
+
+      const resolved = await service.resolveForTestRun('tenant_1', 'custom-agent');
+      expect(resolved.systemPrompt).toBe('Du bist ein Entwurfs-Agent.');
+      expect(resolved.baseType).toBe('SALES');
+      expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
+    });
+  });
 });

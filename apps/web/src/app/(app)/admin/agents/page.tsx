@@ -10,10 +10,19 @@ import {
   useAgentDefinitionVersions,
   useCreateAgentDefinition,
   useRollbackAgentDefinition,
+  useTestRunAgentDefinition,
   useToolCatalog,
   useUpdateAgentDefinition,
+  type TestRunResult,
   type ToolCatalogEntry,
 } from '../../../../lib/hooks/use-agent-definitions';
+
+const DECISION_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
+  ALLOW: { label: 'Ausgeführt', tone: 'success' },
+  SUGGEST_ONLY: { label: 'Nur Vorschlag', tone: 'neutral' },
+  REQUIRE_APPROVAL: { label: 'Wartet auf Freigabe', tone: 'warning' },
+  DENY: { label: 'Verweigert', tone: 'danger' },
+};
 
 const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: 'Entwurf', tone: 'neutral' },
@@ -61,13 +70,18 @@ function ToolCheckboxList({
 function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinition; tools: ToolCatalogEntry[] }) {
   const update = useUpdateAgentDefinition();
   const rollback = useRollbackAgentDefinition();
+  const testRun = useTestRunAgentDefinition();
   const [editing, setEditing] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  const [showTestRun, setShowTestRun] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(definition.systemPrompt);
   const [allowedTools, setAllowedTools] = useState<string[]>(definition.allowedTools);
   const [status, setStatus] = useState(definition.status);
   const [changeNote, setChangeNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [testMessage, setTestMessage] = useState('');
+  const [testResult, setTestResult] = useState<TestRunResult | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
   const { data: versions } = useAgentDefinitionVersions(showVersions ? definition.key : undefined);
 
   function startEditing() {
@@ -108,6 +122,17 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
     }
   }
 
+  async function handleTestRun() {
+    setTestError(null);
+    setTestResult(null);
+    try {
+      const result = await testRun.mutateAsync({ key: definition.key, userMessage: testMessage });
+      setTestResult(result);
+    } catch (err) {
+      setTestError(err instanceof ApiError ? err.message : 'Der Testlauf ist fehlgeschlagen.');
+    }
+  }
+
   const statusInfo = STATUS_LABELS[definition.status] ?? { label: definition.status, tone: 'neutral' as const };
 
   return (
@@ -122,6 +147,13 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={statusInfo.tone}>{statusInfo.label}</Badge>
+          <Button
+            variant="ghost"
+            disabled={definition.status === 'DISABLED'}
+            onClick={() => setShowTestRun((prev) => !prev)}
+          >
+            {showTestRun ? 'Testlauf ausblenden' : 'Testlauf'}
+          </Button>
           <Button variant="ghost" onClick={() => setShowVersions((prev) => !prev)}>
             {showVersions ? 'Historie ausblenden' : 'Historie'}
           </Button>
@@ -231,6 +263,58 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
             ) : (
               <p className="text-xs text-slate-400">Wird geladen …</p>
             )}
+          </div>
+        ) : null}
+
+        {showTestRun ? (
+          <div className="border-t border-slate-100 pt-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              Testlauf — führt den Agenten echt aus (inkl. Policy-Engine-Prüfung), erzeugt einen normalen Agent-Lauf
+            </p>
+            <div className="space-y-2">
+              <textarea
+                rows={3}
+                className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                value={testMessage}
+                onChange={(event) => setTestMessage(event.target.value)}
+                placeholder="Nachricht, die als user-Eingabe an den Agenten geschickt wird …"
+              />
+              <Button onClick={handleTestRun} disabled={testRun.isPending || !testMessage}>
+                Testlauf starten
+              </Button>
+            </div>
+            {testError ? <p className="mt-2 text-sm text-red-600">{testError}</p> : null}
+            {testResult ? (
+              <div className="mt-3 space-y-1.5">
+                <p className="text-xs text-slate-500">
+                  Agent-Lauf <span className="font-mono">{testResult.agentRunId}</span> —{' '}
+                  <a className="underline" href={`/activity`}>
+                    in Activity ansehen
+                  </a>
+                </p>
+                {testResult.toolCallOutcomes.length === 0 ? (
+                  <p className="text-xs text-slate-400">Keine Tool-Aufrufe.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {testResult.toolCallOutcomes.map((outcome) => {
+                      const decision = DECISION_LABELS[outcome.decision] ?? {
+                        label: outcome.decision,
+                        tone: 'neutral' as const,
+                      };
+                      return (
+                        <li
+                          key={outcome.toolCallId}
+                          className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs"
+                        >
+                          <span className="font-mono">{outcome.toolName}</span>
+                          <Badge tone={decision.tone}>{decision.label}</Badge>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </CardContent>

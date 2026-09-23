@@ -31,6 +31,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 /**
  * Root module. Each backend module named in §7 of the master spec
@@ -82,6 +83,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     MeetingsModule,
     AgentModule,
     AgentDefinitionsModule,
+    WorkflowsModule,
     IntakeModule,
     IntegrationsModule,
     WebhooksModule,

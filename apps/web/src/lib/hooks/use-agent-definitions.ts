@@ -27,6 +27,19 @@ export interface UpdateAgentDefinitionInput {
   changeNote?: string;
 }
 
+export interface ToolCallOutcome {
+  toolCallId: string;
+  toolName: string;
+  decision: 'ALLOW' | 'SUGGEST_ONLY' | 'REQUIRE_APPROVAL' | 'DENY';
+  output?: unknown;
+  error?: string;
+}
+
+export interface TestRunResult {
+  agentRunId: string;
+  toolCallOutcomes: ToolCallOutcome[];
+}
+
 export function useAgentDefinitions() {
   return useQuery({
     queryKey: ['agent-definitions'],
@@ -78,6 +91,21 @@ export function useRollbackAgentDefinition() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agent-definitions'] });
       queryClient.invalidateQueries({ queryKey: ['agent-definitions', variables.key, 'versions'] });
+    },
+  });
+}
+
+export function useTestRunAgentDefinition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, userMessage }: { key: string; userMessage: string }) =>
+      apiFetch<TestRunResult>(`/v1/agent-definitions/${key}/test-run`, { method: 'POST', body: JSON.stringify({ userMessage }) }),
+    onSuccess: () => {
+      // A test run creates a completely ordinary AgentRun/ToolInvocation
+      // and, for a blocked tool call, an Approval — same records a real
+      // call produces (see AgentDefinitionTestRunService's own comment).
+      queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
     },
   });
 }

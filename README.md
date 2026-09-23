@@ -13,9 +13,9 @@ Follow-up). Siehe [`docs/PRODUCT_CONTEXT.md`](docs/PRODUCT_CONTEXT.md) für
 den vollständigen fachlichen Kontext. Architektur-Überblick:
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (System) und
 [`docs/AGENT_ARCHITECTURE.md`](docs/AGENT_ARCHITECTURE.md) (LLM/Tool
-Registry/Policy Engine). Konzept für Agenten-Konfiguration, Agent
-Studio und Orchestrierung (über den ursprünglichen Master-Prompt hinaus
-angefordert, noch nicht implementiert):
+Registry/Policy Engine, inkl. konfigurierbarer Agenten und
+Orchestrierung seit Phase 20/21). Design-Herleitung dieser beiden
+über den ursprünglichen Master-Prompt hinaus angeforderten Fähigkeiten:
 [`docs/AGENT_STUDIO_CONCEPT.md`](docs/AGENT_STUDIO_CONCEPT.md).
 
 ## Tech-Stack

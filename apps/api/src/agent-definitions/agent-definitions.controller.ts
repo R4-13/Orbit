@@ -6,8 +6,10 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { AgentDefinitionTestRunService } from './agent-definition-test-run.service';
 import { AgentDefinitionsService } from './agent-definitions.service';
 import { CreateAgentDefinitionDto } from './dto/create-agent-definition.dto';
+import { TestRunAgentDefinitionDto } from './dto/test-run-agent-definition.dto';
 import { UpdateAgentDefinitionDto } from './dto/update-agent-definition.dto';
 
 /**
@@ -23,7 +25,10 @@ import { UpdateAgentDefinitionDto } from './dto/update-agent-definition.dto';
 @RequirePermissions(PERMISSIONS.AGENT_MANAGE)
 @Controller({ path: 'agent-definitions' })
 export class AgentDefinitionsController {
-  constructor(private readonly agentDefinitions: AgentDefinitionsService) {}
+  constructor(
+    private readonly agentDefinitions: AgentDefinitionsService,
+    private readonly testRun: AgentDefinitionTestRunService,
+  ) {}
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
@@ -58,6 +63,12 @@ export class AgentDefinitionsController {
     @Param('version', ParseIntPipe) version: number,
   ) {
     return this.agentDefinitions.rollback(user.tenantId, user.id, key, version);
+  }
+
+  /** docs/AGENT_STUDIO_CONCEPT.md Abschnitt 2 — runs DRAFT or ACTIVE definitions for real, see AgentDefinitionTestRunService's own doc comment. */
+  @Post(':key/test-run')
+  runTest(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string, @Body() dto: TestRunAgentDefinitionDto) {
+    return this.testRun.run(user.tenantId, user.id, key, dto.userMessage);
   }
 }
 

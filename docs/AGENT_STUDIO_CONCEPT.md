@@ -1,28 +1,33 @@
 # Agent-Konfiguration, Agent Studio & Orchestrierung — Konzept
 
-**Update (Phase 20): Abschnitt 1 ("Agenten-Konfiguration") ist seit
-Phase 20 tatsächlich implementiert und live verifiziert** — inklusive
-des darunterliegenden CRUD, das laut Abschnitt 2 ("Agent Studio") auch
-schon "neue Agenten anlegen" abdeckt (dieselbe Datenstruktur, nur
-`status: DRAFT`). **Weiterhin nicht gebaut**: die in Abschnitt 2
-vorgeschlagene dedizierte Testlauf-Funktion (`POST
-/agent-definitions/:key/test-run`) und die komplette Orchestrierung
-(Abschnitt 3, `WorkflowDefinition` & Co.). Details zum tatsächlichen
-Implementierungsstand: `docs/IMPLEMENTATION_STATUS.md`. Der Rest dieser
-Datei ist unverändert das ursprüngliche Konzept-Dokument und beschreibt
-weiterhin auch, was in Abschnitt 1 *noch* fehlt (z. B. die dort
-vorgeschlagene `AgentDefinitionVersion`-Historie/Rollback — beides
-wurde bei der Umsetzung übernommen).
+**Update (Phase 21): Alle drei Abschnitte dieses Konzepts sind
+mittlerweile implementiert und live verifiziert.** Phase 20 setzte
+Abschnitt 1 ("Agenten-Konfiguration") um; Phase 21 ergänzte Abschnitt
+2s Testlauf-Funktion (`POST /agent-definitions/:key/test-run`) und die
+komplette Orchestrierung aus Abschnitt 3 (`WorkflowDefinition`,
+`WorkflowStepDefinition`, `WorkflowRun`, `WorkflowStepRun`,
+`WorkflowRunnerService`, `POST /workflow-definitions/:key/trigger`,
+Frontend `/admin/workflows`). Details zum tatsächlichen
+Implementierungsstand inkl. aller Abweichungen vom ursprünglichen
+Entwurf: `docs/IMPLEMENTATION_STATUS.md` und `docs/ASSUMPTIONS.md`
+Phase 20/21. Der Rest dieser Datei ist unverändert das ursprüngliche
+Konzept-Dokument — es bleibt die Design-Begründung hinter der
+Umsetzung, auch nachdem der "Konzept, keine Implementierung"-Status
+selbst überholt ist. Eine bewusst **nicht** übernommene Design-Idee aus
+Abschnitt 3: automatische Trigger (ein `WorkflowDefinition.triggerType:
+EMAIL` löst nichts automatisch aus) — jeder Lauf startet weiterhin
+über einen expliziten `POST .../trigger`-Aufruf, siehe
+`docs/ASSUMPTIONS.md` Phase 21 für die Begründung.
 
-**Status der ursprünglichen Fassung (weiterhin gültig für Abschnitt
-2/3): Konzept/Design.** Der Nutzer hatte zunächst explizit nach einem
+**Status der ursprünglichen Fassung (als Design-Dokument weiterhin
+gültig): Konzept.** Der Nutzer hatte zunächst explizit nach einem
 Konzept gefragt, nicht nach Code. Es beschreibt, wie sich die drei
 angeforderten Fähigkeiten sauber auf die bestehende, in
 [`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md) beschriebene
 Agent-Runtime aufsetzen lassen, ohne deren bereits bewährte Bausteine
 (`LLMProvider`, `ToolRegistry`, `PolicyEngine`, `AgentRuntime`) zu
 ersetzen. Referenzierte Datei-/Zeilenangaben beziehen sich auf den
-Stand nach Phase 19i (vor der Phase-20-Umsetzung von Abschnitt 1).
+Stand nach Phase 19i (vor der Phase-20/21-Umsetzung).
 
 ## Warum diese drei Lücken real sind
 
@@ -303,6 +308,16 @@ POST /agent-definitions/:key/test-run
 Body: { "input": { "subject": "...", "bodyText": "..." } }
 ```
 
+**Tatsächliche Umsetzung (Phase 21), eine kleine Abweichung:** der
+Request-Body ist `{ "userMessage": "<Freitext>" }`, nicht das oben
+skizzierte `{ subject, bodyText }` — ein selbst angelegter Agent im
+Studio ist nicht notwendigerweise e-mail-förmig (der `/inbox`-Vorschlag
+oben ging implizit von einem Kommunikations-Agenten aus). Ein einzelnes
+Freitextfeld ist die generischere, auch für nicht-e-mail-artige
+Agenten sinnvolle Eingabe; `AgentDefinitionResolverService.resolveForTestRun()`
+(anders als `resolve()`) lässt zusätzlich `DRAFT`-Definitionen zu, nicht
+nur `ACTIVE` — `DISABLED` bleibt gesperrt.
+
 - Läuft **immer** gegen `status: DRAFT`- oder `ACTIVE`-Definitionen,
   erzeugt einen ganz normalen `AgentRun`/`ToolInvocation`-Datensatz
   (keine Sonderbehandlung im Datenmodell — ein Testlauf unterscheidet
@@ -519,6 +534,30 @@ Dieser stufenweise Weg vermeidet das Risiko, den einzigen heute
 produktiv funktionierenden End-to-End-Agentenpfad des gesamten Systems
 in einem Schritt gegen einen neuen, noch unbewiesenen generischen
 Mechanismus einzutauschen.
+
+**Tatsächliche Umsetzung (Phase 21): nur Schritt 1 dieses Plans wurde
+gemacht — bewusst.** `WorkflowRunnerService` existiert zusätzlich zu
+`IntakeService`, unangetastet; `POST /intake/emails` läuft weiterhin
+ausschließlich über `IntakeService`. Der 1:1-Nachbau von Schritt 2
+(Finance-/Sales-Pfad als `WorkflowDefinition`) wurde **nicht**
+umgesetzt, aus einem beim Bauen entdeckten, hier ursprünglich nicht
+bedachten Grund: Der Finance-Pfad interleaved Agent-Turns mit echter
+Geschäftslogik zwischen den Schritten (Dokument-Upload zu MinIO,
+SHA-256-Checksumme, `Document`-Anlage — siehe `IntakeService.runFinanceAgent()`),
+die kein reiner `AgentRuntime.runTurn()`-Aufruf ist. Das aktuelle
+`WorkflowStepDefinition`-Datenmodell kennt nur Agent-Turn-Schritte,
+keine Business-Logik-Schritte — ein 1:1-Nachbau des Finance-Pfads hätte
+entweder das Datenmodell um einen neuen Schritt-Typ erweitern oder die
+Dokument-Handling-Logik in ein eigenes Tool verschieben müssen, beides
+über den Umfang von Phase 21 hinaus. Stattdessen wurde die
+Orchestrierungs-Fähigkeit selbst mit dem strukturell einfacheren
+Sales-Zweig demonstriert und per E2E-Test bewiesen (siehe
+`apps/api/test/workflow-orchestration.e2e-spec.ts`): ein
+`communication-intake`-Schritt, gefolgt von einem bedingten
+Sales-Folgeschritt, der nur bei `category: SALES` läuft. Schritt 3
+(`POST /intake/emails` auf `WorkflowRunner` umstellen) ist damit auch
+strukturell noch nicht erreichbar, nicht nur aus Vorsicht
+zurückgestellt.
 
 ---
 

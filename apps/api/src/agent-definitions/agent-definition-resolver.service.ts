@@ -1,18 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AgentRuntime, type LLMProvider, type ToolRegistry } from '@orbit/agent-core';
-import { IntegrationUnavailableError } from '@orbit/shared';
+import type { AgentType } from '@orbit/domain';
+import { IntegrationUnavailableError, NotFoundError } from '@orbit/shared';
 import { LLM_PROVIDER, TOOL_REGISTRY } from '../agent/agent.tokens';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface ResolvedAgent {
   systemPrompt: string;
+  baseType: AgentType;
   runtime: AgentRuntime;
 }
 
 /**
  * The runtime counterpart to AgentDefinitionsService (admin CRUD): looks
- * up an ACTIVE AgentDefinition by its stable `key` and builds a *scoped*
+ * up an AgentDefinition by its stable `key` and builds a *scoped*
  * AgentRuntime for it — docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1's
  * "additive, ToolRegistry.subset() is the only new primitive"
  * extension point.
@@ -34,28 +36,52 @@ export class AgentDefinitionResolverService {
     private readonly policy: PolicyEnforcementService,
   ) {}
 
+  private buildRuntime(allowedTools: string[]): AgentRuntime {
+    const scopedTools = this.toolRegistry.subset(allowedTools);
+    return new AgentRuntime(this.llm, scopedTools, (action, context) => this.policy.resolveMode(context.tenantId, action));
+  }
+
+  /**
+   * Used by production entry points (IntakeService, WorkflowRunnerService)
+   * — only an ACTIVE definition is a valid target. Not a NotFoundError: an
+   * inactive/missing AgentDefinition for a built-in flow means the
+   * tenant's configuration is in a state the live pipeline genuinely
+   * cannot run in — same "environment isn't ready" category as a missing
+   * provider credential, not a client mistake.
+   */
   async resolve(tenantId: string, key: string): Promise<ResolvedAgent> {
     const definition = await this.prisma
       .forTenantId(tenantId)
       .agentDefinition.findUnique({ where: { tenantId_key: { tenantId, key } } });
 
     if (!definition || definition.status !== 'ACTIVE') {
-      // Not a NotFoundError: an inactive/missing AgentDefinition for a
-      // built-in flow (communication-intake/finance-intake/sales-intake)
-      // means the tenant's configuration is in a state the live intake
-      // pipeline genuinely cannot run in — same "environment isn't ready"
-      // category as a missing provider credential, not a client mistake.
       throw new IntegrationUnavailableError(
         `No ACTIVE AgentDefinition "${key}" configured for this tenant — see /admin/agents.`,
         { key },
       );
     }
 
-    const scopedTools = this.toolRegistry.subset(definition.allowedTools);
-    const runtime = new AgentRuntime(this.llm, scopedTools, (action, context) =>
-      this.policy.resolveMode(context.tenantId, action),
-    );
+    return { systemPrompt: definition.systemPrompt, baseType: definition.baseType, runtime: this.buildRuntime(definition.allowedTools) };
+  }
 
-    return { systemPrompt: definition.systemPrompt, runtime };
+  /**
+   * Used only by Agent Studio's test-run (docs/AGENT_STUDIO_CONCEPT.md
+   * Abschnitt 2) — a DRAFT agent must be runnable *before* it's activated,
+   * that's the whole point of testing it first. DISABLED is still
+   * rejected (a deliberately turned-off agent shouldn't be testable
+   * around that decision). This IS a client mistake (an unknown/disabled
+   * key was requested), so NotFoundError (404) is correct here, unlike
+   * `resolve()`.
+   */
+  async resolveForTestRun(tenantId: string, key: string): Promise<ResolvedAgent> {
+    const definition = await this.prisma
+      .forTenantId(tenantId)
+      .agentDefinition.findUnique({ where: { tenantId_key: { tenantId, key } } });
+
+    if (!definition || definition.status === 'DISABLED') {
+      throw new NotFoundError('No testable agent definition found for this key.', { key });
+    }
+
+    return { systemPrompt: definition.systemPrompt, baseType: definition.baseType, runtime: this.buildRuntime(definition.allowedTools) };
   }
 }
