@@ -170,14 +170,39 @@ class AgentRuntime {
 ```
 
 `AgentModule` verdrahtet **eine** gemeinsame `ToolRegistry`-Instanz (alle
-15 Tools, nicht pro Agent-Persona getrennt) und **eine**
-`AgentRuntime`-Instanz — der System-Prompt pro Aufruf (nicht ein
-gefilterter Tool-Satz) unterscheidet, welche "Persona" gerade spricht.
-Details/Begründung: Kommentar in `apps/api/src/agent/agent.module.ts`.
+15 Tools) und **eine** App-weite `AgentRuntime`-Singleton-Instanz —
+diese unveränderte Vollausstattung wird aber seit Phase 20 von
+`IntakeService` nicht mehr direkt für die drei Live-Aufrufstellen
+verwendet, siehe nächster Abschnitt.
+
+**Seit Phase 20: `AgentDefinitionResolverService` baut pro Aufruf eine
+eigene, tool-eingeschränkte `AgentRuntime`-Instanz.**
+(`apps/api/src/agent-definitions/agent-definition-resolver.service.ts`) —
+die konkrete Umsetzung von docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1
+("Agenten-Konfiguration"). `AgentRuntime`s Konstruktor-Signatur selbst
+ist unverändert (`llm`, `tools`, `resolvePolicyMode`); was sich ändert,
+ist *welche* Instanz ein Aufrufer benutzt: `resolve(tenantId, key)`
+schlägt die zum `key` gehörige, `ACTIVE` `AgentDefinition`-Zeile nach,
+baut über die neue `ToolRegistry.subset(allowedTools)`-Methode
+(packages/agent-core) eine gefilterte Registry und konstruiert daraus
+eine frische `AgentRuntime` (billig — drei Referenzen, kein I/O). Der
+System-Prompt kommt ebenfalls aus dieser Zeile statt aus einem
+Literal-String. Admin-CRUD für diese Zeilen (Prompt/Tools/Status
+ändern, neue Agenten anlegen, Versionshistorie, Rollback) läuft über
+`AgentDefinitionsService` + `/admin/agents` — gated über die neue
+`AGENT_MANAGE`-Permission.
 
 ## Der Orchestrator: `IntakeService`
 
-`apps/api/src/intake/intake.service.ts` ist der tatsächliche Einstiegspunkt:
+`apps/api/src/intake/intake.service.ts` ist der tatsächliche Einstiegspunkt.
+Die *Orchestrierung* selbst (welcher Agent als Nächstes läuft) ist
+weiterhin dieser hart kodierte if/else-Ablauf — docs/AGENT_STUDIO_CONCEPT.md
+Abschnitt 3 (`WorkflowDefinition`) verallgemeinert das erst in einer
+späteren Phase. Was seit Phase 20 konfigurierbar ist: jede der drei
+Aufrufstellen unten (`classify`/Finance-Agent/Sales-Agent) löst ihren
+System-Prompt + erlaubten Tool-Satz über `AgentDefinitionResolverService`
+auf (Keys `communication-intake`/`finance-intake`/`sales-intake`) statt
+einen Literal-String zu verwenden:
 
 1. Speichert die eingehende Nachricht als `EmailMessage` (`direction:
    INBOUND`), protokolliert `EMAIL_RECEIVED`.

@@ -12,6 +12,14 @@ const ECHO_TOOL: ToolDefinition<{ message: string }, { echoed: string }> = {
   execute: async (input) => ({ echoed: input.message }),
 };
 
+const SHOUT_TOOL: ToolDefinition<{ message: string }, { shouted: string }> = {
+  name: 'shout',
+  description: 'Shouts the given message back.',
+  inputSchema: z.object({ message: z.string().min(1) }),
+  policyAction: 'crm.activity.log',
+  execute: async (input) => ({ shouted: input.message.toUpperCase() }),
+};
+
 describe('ToolRegistry', () => {
   it('register() rejects a duplicate tool name', () => {
     const registry = new ToolRegistry();
@@ -59,5 +67,38 @@ describe('ToolRegistry', () => {
     await expect(
       registry.execute('does-not-exist', {}, { tenantId: 't1', agentRunId: 'r1' }),
     ).rejects.toThrow(/unknown tool/i);
+  });
+
+  describe('subset()', () => {
+    it('returns a new registry containing only the named tools', () => {
+      const registry = new ToolRegistry();
+      registry.register(ECHO_TOOL);
+      registry.register(SHOUT_TOOL);
+
+      const scoped = registry.subset(['echo']);
+      expect(scoped.list().map((t) => t.name)).toEqual(['echo']);
+      expect(scoped.get('shout')).toBeUndefined();
+    });
+
+    it('does not mutate the original registry', () => {
+      const registry = new ToolRegistry();
+      registry.register(ECHO_TOOL);
+      registry.register(SHOUT_TOOL);
+
+      registry.subset(['echo']);
+      expect(registry.list().map((t) => t.name).sort()).toEqual(['echo', 'shout']);
+    });
+
+    it('throws on an unknown tool name', () => {
+      const registry = new ToolRegistry();
+      registry.register(ECHO_TOOL);
+      expect(() => registry.subset(['echo', 'does-not-exist'])).toThrow(/unknown tool/i);
+    });
+
+    it('returns an empty registry for an empty name list', () => {
+      const registry = new ToolRegistry();
+      registry.register(ECHO_TOOL);
+      expect(registry.subset([]).list()).toEqual([]);
+    });
   });
 });

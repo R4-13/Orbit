@@ -25,6 +25,7 @@ import * as argon2 from 'argon2';
 import { PrismaClient, type Prisma } from '@prisma/client';
 import { MockCrmConnector, MockFinanceConnector } from '@orbit/integration-core';
 import {
+  DEFAULT_AGENT_DEFINITIONS,
   DEFAULT_POLICY_CONFIG,
   DEFAULT_ROLE_PERMISSIONS,
   ROLES,
@@ -106,6 +107,33 @@ async function main(): Promise<void> {
         locked: config.locked ?? false,
       })),
     });
+
+    // Agenten-Konfiguration (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1) —
+    // mirrors TenantsService.bootstrapTenant(), see the comment there.
+    for (const def of DEFAULT_AGENT_DEFINITIONS) {
+      const agentDefinition = await tx.agentDefinition.create({
+        data: {
+          tenantId: tenant.id,
+          key: def.key,
+          name: def.name,
+          description: def.description,
+          baseType: def.baseType,
+          systemPrompt: def.systemPrompt,
+          allowedTools: [...def.allowedTools],
+          status: 'ACTIVE',
+        },
+      });
+      await tx.agentDefinitionVersion.create({
+        data: {
+          tenantId: tenant.id,
+          agentDefinitionId: agentDefinition.id,
+          version: 1,
+          systemPrompt: def.systemPrompt,
+          allowedTools: [...def.allowedTools],
+          changeNote: 'Initiale Konfiguration bei Tenant-Bootstrap.',
+        },
+      });
+    }
 
     // --- Users ---
     const passwordHash = await argon2.hash(DEMO_PASSWORD);

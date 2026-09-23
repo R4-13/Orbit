@@ -38,6 +38,25 @@ export class ToolRegistry {
     return Array.from(this.tools.values());
   }
 
+  /**
+   * Returns a new registry containing only the named tools — the
+   * additive extension point docs/AGENT_STUDIO_CONCEPT.md builds
+   * per-agent tool scoping on (AgentDefinition.allowedTools). Fails
+   * fast on an unknown name so a bad configuration is caught when it's
+   * saved, not silently dropped at agent-run time.
+   */
+  subset(toolNames: readonly string[]): ToolRegistry {
+    const scoped = new ToolRegistry();
+    for (const name of toolNames) {
+      const tool = this.tools.get(name);
+      if (!tool) {
+        throw new Error(`Unknown tool "${name}" — cannot build a subset registry.`);
+      }
+      scoped.register(tool);
+    }
+    return scoped;
+  }
+
   toLLMToolDefinitions(): LLMToolDefinition[] {
     return this.list().map((tool) => ({
       name: tool.name,
@@ -45,6 +64,22 @@ export class ToolRegistry {
       // No `name` argument: that switches zod-to-json-schema into "named"
       // mode ($ref + definitions), but Anthropic's tool `input_schema`
       // needs the flat, inlined schema.
+      inputSchema: zodToJsonSchemaUntyped(tool.inputSchema) as Record<string, unknown>,
+    }));
+  }
+
+  /**
+   * Like `toLLMToolDefinitions()`, but also includes `policyAction` — the
+   * capability catalog docs/AGENT_STUDIO_CONCEPT.md's Agent Studio reads
+   * to build its tool-selection UI (apps/api's AgentDefinitionsService).
+   * Kept here rather than duplicating the zod-to-json-schema workaround
+   * above in apps/api.
+   */
+  describe(): Array<{ name: string; description: string; policyAction: string; inputSchema: Record<string, unknown> }> {
+    return this.list().map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      policyAction: tool.policyAction,
       inputSchema: zodToJsonSchemaUntyped(tool.inputSchema) as Record<string, unknown>,
     }));
   }

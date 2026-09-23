@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as argon2 from 'argon2';
-import { DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, NotFoundError, PolicyViolationError, ROLES } from '@orbit/shared';
+import {
+  DEFAULT_AGENT_DEFINITIONS,
+  DEFAULT_POLICY_CONFIG,
+  DEFAULT_ROLE_PERMISSIONS,
+  NotFoundError,
+  PolicyViolationError,
+  ROLES,
+} from '@orbit/shared';
 import type {
   AgentRun,
   Approval,
@@ -156,6 +163,37 @@ export class TenantsService {
           locked: config.locked ?? false,
         })),
       });
+
+      // Agenten-Konfiguration (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1):
+      // seeds the three built-in agents as ACTIVE, editable rows —
+      // IntakeService resolves them by `key` at runtime instead of using
+      // literal prompt strings. A loop (not createMany) because each row
+      // also needs its own first AgentDefinitionVersion for the rollback
+      // history, which needs the generated id back.
+      for (const def of DEFAULT_AGENT_DEFINITIONS) {
+        const agentDefinition = await tx.agentDefinition.create({
+          data: {
+            tenantId: tenant.id,
+            key: def.key,
+            name: def.name,
+            description: def.description,
+            baseType: def.baseType,
+            systemPrompt: def.systemPrompt,
+            allowedTools: [...def.allowedTools],
+            status: 'ACTIVE',
+          },
+        });
+        await tx.agentDefinitionVersion.create({
+          data: {
+            tenantId: tenant.id,
+            agentDefinitionId: agentDefinition.id,
+            version: 1,
+            systemPrompt: def.systemPrompt,
+            allowedTools: [...def.allowedTools],
+            changeNote: 'Initiale Konfiguration bei Tenant-Bootstrap.',
+          },
+        });
+      }
 
       const passwordHash = await argon2.hash(input.adminPassword);
       const adminUser = await tx.user.create({

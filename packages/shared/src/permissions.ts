@@ -39,6 +39,14 @@ export const PERMISSIONS = {
   USER_MANAGE: 'user.manage',
   TENANT_MANAGE: 'tenant.manage',
   AUDIT_READ: 'audit.read',
+  /**
+   * Gates AgentDefinition CRUD (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1)
+   * — editing a system prompt or a tool capability grant is at least as
+   * security-relevant as a policy mode change, so this sits at the same
+   * TENANT_ADMIN-reachable sensitivity as POLICY_MANAGE, not restricted
+   * to SYSTEM_ADMIN like TENANT_MANAGE.
+   */
+  AGENT_MANAGE: 'agent.manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

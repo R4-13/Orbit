@@ -1,14 +1,28 @@
 # Agent-Konfiguration, Agent Studio & Orchestrierung — Konzept
 
-**Status dieser Datei: Konzept/Design, keine Implementierung.** Der
-Nutzer hat explizit nach einem Konzept gefragt, nicht nach Code — nichts
-in diesem Dokument ist gebaut. Es beschreibt, wie sich die drei
+**Update (Phase 20): Abschnitt 1 ("Agenten-Konfiguration") ist seit
+Phase 20 tatsächlich implementiert und live verifiziert** — inklusive
+des darunterliegenden CRUD, das laut Abschnitt 2 ("Agent Studio") auch
+schon "neue Agenten anlegen" abdeckt (dieselbe Datenstruktur, nur
+`status: DRAFT`). **Weiterhin nicht gebaut**: die in Abschnitt 2
+vorgeschlagene dedizierte Testlauf-Funktion (`POST
+/agent-definitions/:key/test-run`) und die komplette Orchestrierung
+(Abschnitt 3, `WorkflowDefinition` & Co.). Details zum tatsächlichen
+Implementierungsstand: `docs/IMPLEMENTATION_STATUS.md`. Der Rest dieser
+Datei ist unverändert das ursprüngliche Konzept-Dokument und beschreibt
+weiterhin auch, was in Abschnitt 1 *noch* fehlt (z. B. die dort
+vorgeschlagene `AgentDefinitionVersion`-Historie/Rollback — beides
+wurde bei der Umsetzung übernommen).
+
+**Status der ursprünglichen Fassung (weiterhin gültig für Abschnitt
+2/3): Konzept/Design.** Der Nutzer hatte zunächst explizit nach einem
+Konzept gefragt, nicht nach Code. Es beschreibt, wie sich die drei
 angeforderten Fähigkeiten sauber auf die bestehende, in
 [`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md) beschriebene
 Agent-Runtime aufsetzen lassen, ohne deren bereits bewährte Bausteine
 (`LLMProvider`, `ToolRegistry`, `PolicyEngine`, `AgentRuntime`) zu
 ersetzen. Referenzierte Datei-/Zeilenangaben beziehen sich auf den
-Stand nach Phase 19i.
+Stand nach Phase 19i (vor der Phase-20-Umsetzung von Abschnitt 1).
 
 ## Warum diese drei Lücken real sind
 
@@ -229,6 +243,20 @@ statt der bisher immer vollständigen. Das ist exakt die Erweiterung, auf
 die der bestehende Code-Kommentar in `agent.module.ts` bereits
 hinweist ("per-persona filtering would need its own mechanism this MVP
 doesn't need yet").
+
+**Tatsächliche Umsetzung (Phase 20), eine Abweichung von diesem
+Vorschlag:** `AgentDefinitionResolverService.resolve()` gibt nicht nur
+eine gefilterte `ToolRegistry` zurück, sondern gleich eine fertige,
+eigene `AgentRuntime`-Instanz (`{ systemPrompt, runtime }`) — weil
+`AgentRuntime` seine `ToolRegistry` im Konstruktor bindet, nicht pro
+`runTurn()`-Aufruf entgegennimmt (siehe `packages/agent-core/src/runtime/agent-runtime.ts`).
+`IntakeService` kann die App-weite `AGENT_RUNTIME`-Singleton-Instanz
+(mit der *vollen* Registry) für die drei Aufrufstellen also nicht mehr
+wiederverwenden und ruft stattdessen `resolved.runtime.runTurn(...)`
+auf der pro Aufruf frisch (aber günstig, keine I/O) konstruierten
+Instanz auf. `AgentRuntime.runTurn()` selbst musste dafür trotzdem nicht
+geändert werden — die Abweichung liegt nur darin, *welche*
+`AgentRuntime`-Instanz aufgerufen wird, nicht in deren Signatur.
 
 ### API-Oberfläche (Vorschlag)
 

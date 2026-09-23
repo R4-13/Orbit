@@ -190,6 +190,7 @@ enum IntegrationStatus {
   ERROR
 }
 
+/// Muss mit AgentBaseType in packages/shared/src/agent-definitions.ts synchron gehalten werden.
 enum AgentType {
   ORCHESTRATOR
   COMMUNICATION
@@ -217,47 +218,59 @@ enum ToolInvocationStatus {
   DENIED
 }
 
+/// Agenten-Konfiguration (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1).
+/// DRAFT: wird bearbeitet, läuft in keinem echten Aufruf. ACTIVE: von
+/// IntakeService (siehe apps/api/src/intake/) tatsächlich auflösbar.
+/// DISABLED: vorübergehend deaktiviert, Historie bleibt erhalten.
+enum AgentDefinitionStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+}
+
 // ============================================================================
 // Tenant & Auth (RBAC)
 // ============================================================================
 
 model Tenant {
-  id        String       @id @default(uuid())
-  name      String
-  slug      String       @unique
-  status    TenantStatus @default(ACTIVE)
-  locale    String       @default("de-DE")
-  timezone  String       @default("Europe/Berlin")
+  id                        String       @id @default(uuid())
+  name                      String
+  slug                      String       @unique
+  status                    TenantStatus @default(ACTIVE)
+  locale                    String       @default("de-DE")
+  timezone                  String       @default("Europe/Berlin")
   /// §52 DSGVO-Löschworkflow: gesetzt durch POST /tenants/me/deletion-request,
   /// Voraussetzung für POST /tenants/me/deletion-confirm. Zwei getrennte
   /// Aufrufe als bewusste Sicherheitshürde gegen versehentliche Löschung.
-  deletionRequestedAt       DateTime? @map("deletion_requested_at")
-  deletionRequestedByUserId String?   @map("deletion_requested_by_user_id")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  deletionRequestedAt       DateTime?    @map("deletion_requested_at")
+  deletionRequestedByUserId String?      @map("deletion_requested_by_user_id")
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
 
-  users            User[]
-  roles            Role[]
-  policyConfigs    PolicyConfig[]
-  auditLogs        AuditLog[]
-  cases            Case[]
-  tasks            Task[]
-  documents        Document[]
-  emailMessages    EmailMessage[]
-  suppliers        Supplier[]
-  invoices         Invoice[]
-  bookingProposals BookingProposal[]
-  financeTransfers FinanceTransfer[]
-  approvals        Approval[]
-  companies        Company[]
-  contacts         Contact[]
-  leads            Lead[]
-  opportunities    Opportunity[]
-  meetings         Meeting[]
-  integrations     Integration[]
-  agentRuns        AgentRun[]
-  toolInvocations  ToolInvocation[]
-  webhookEvents    WebhookEvent[]
+  users                   User[]
+  roles                   Role[]
+  policyConfigs           PolicyConfig[]
+  auditLogs               AuditLog[]
+  cases                   Case[]
+  tasks                   Task[]
+  documents               Document[]
+  emailMessages           EmailMessage[]
+  suppliers               Supplier[]
+  invoices                Invoice[]
+  bookingProposals        BookingProposal[]
+  financeTransfers        FinanceTransfer[]
+  approvals               Approval[]
+  companies               Company[]
+  contacts                Contact[]
+  leads                   Lead[]
+  opportunities           Opportunity[]
+  meetings                Meeting[]
+  integrations            Integration[]
+  agentRuns               AgentRun[]
+  toolInvocations         ToolInvocation[]
+  webhookEvents           WebhookEvent[]
+  agentDefinitions        AgentDefinition[]
+  agentDefinitionVersions AgentDefinitionVersion[]
 
   @@map("tenants")
 }
@@ -824,6 +837,62 @@ model ToolInvocation {
   @@map("tool_invocations")
 }
 
+/// Konfigurierbarer Agent (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1):
+/// System-Prompt + erlaubte Tool-Namen, editierbar über /admin/agents.
+/// Ersetzt (sobald ACTIVE und von IntakeService aufgelöst) die bis
+/// Phase 19 hart im Code verankerten Literal-Prompts. `allowedTools`
+/// referenziert Tool-**Namen** aus der ToolRegistry (nicht Policy-
+/// Actions) — die Policy Engine bleibt unabhängig davon die einzige
+/// Instanz, die einen Tool-Aufruf tatsächlich freigibt (Sicherheitsmodell
+/// im Konzept-Dokument).
+model AgentDefinition {
+  id              String                @id @default(uuid())
+  tenantId        String                @map("tenant_id")
+  /// Stabiler Slug, z. B. "communication-intake" — von IntakeService zur
+  /// Laufzeit aufgelöst.
+  key             String
+  name            String
+  description     String?
+  baseType        AgentType             @map("base_type")
+  systemPrompt    String                @map("system_prompt")
+  allowedTools    String[]              @map("allowed_tools")
+  status          AgentDefinitionStatus @default(DRAFT)
+  version         Int                   @default(1)
+  createdByUserId String?               @map("created_by_user_id")
+  updatedByUserId String?               @map("updated_by_user_id")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  tenant   Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions AgentDefinitionVersion[]
+
+  @@unique([tenantId, key])
+  @@map("agent_definitions")
+}
+
+/// Append-only Änderungshistorie — jede Änderung an Prompt/Tools erzeugt
+/// eine neue Zeile statt eines In-Place-Updates, analog zum bereits
+/// etablierten Audit-Muster für PolicyConfig-Änderungen (Phase 19h,
+/// POLICY_CONFIG_UPDATED). Ermöglicht Rollback und eine nachvollziehbare
+/// Historie im Frontend.
+model AgentDefinitionVersion {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  agentDefinitionId String   @map("agent_definition_id")
+  version           Int
+  systemPrompt      String   @map("system_prompt")
+  allowedTools      String[] @map("allowed_tools")
+  changeNote        String?  @map("change_note")
+  changedByUserId   String?  @map("changed_by_user_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agentDefinition AgentDefinition @relation(fields: [agentDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([agentDefinitionId])
+  @@map("agent_definition_versions")
+}
+
 // ============================================================================
 // Webhook-Idempotenz (vorbereitet für künftige echte Connector-Webhooks —
 // aktuell existiert kein einziger echter Webhook-Empfänger, jeder Connector
@@ -840,10 +909,10 @@ model ToolInvocation {
 /// selbst "erst lesen, dann schreiben" zu machen (klassische TOCTOU-Lücke
 /// bei parallelen Zustellungen desselben Ereignisses).
 model WebhookEvent {
-  id       String @id @default(uuid())
-  tenantId String @map("tenant_id")
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
   /// Provider-Name, analog zu den *_CONNECTOR-Werten (@orbit/config/env.ts), z. B. "microsoft", "hubspot", "twilio".
-  source String
+  source          String
   /// Die vom Provider selbst vergebene Ereignis-/Nachrichten-ID.
   externalEventId String   @map("external_event_id")
   receivedAt      DateTime @default(now()) @map("received_at")

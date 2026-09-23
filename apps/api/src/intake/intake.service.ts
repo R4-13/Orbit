@@ -1,10 +1,11 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { AgentRuntime, LLMCompletionRequest, LLMProvider, ToolCallOutcome } from '@orbit/agent-core';
+import type { LLMCompletionRequest, LLMProvider, ToolCallOutcome } from '@orbit/agent-core';
 import { MockLLMProvider } from '@orbit/agent-core';
 import type { Case } from '@orbit/domain';
-import { AGENT_RUNTIME, LLM_PROVIDER } from '../agent/agent.tokens';
+import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
+import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
@@ -40,12 +41,23 @@ function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T 
  * invoice/lead creation is deliberately left unchanged, see
  * docs/ASSUMPTIONS.md Phase 18), and dispatches to the Finance or Sales
  * agent turn.
+ *
+ * The *orchestration* itself (which agent runs next, in what order) is
+ * still this hard-coded if/else — docs/AGENT_STUDIO_CONCEPT.md Abschnitt 3
+ * explicitly defers generalizing that into a configurable
+ * WorkflowDefinition to its own, later phase. What *is* wired up (Abschnitt
+ * 1, "Agenten-Konfiguration"): each of the three `runAgentTurn`/`classify`
+ * call sites resolves its system prompt + allowed tool set from a stored
+ * `AgentDefinition` (via AgentDefinitionResolverService, key
+ * "communication-intake"/"finance-intake"/"sales-intake") instead of a
+ * literal string — editing an agent's prompt or tool grants at
+ * /admin/agents changes what these calls actually do on the next request.
  */
 @Injectable()
 export class IntakeService {
   constructor(
-    @Inject(AGENT_RUNTIME) private readonly agentRuntime: AgentRuntime,
     @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
+    private readonly agentDefinitions: AgentDefinitionResolverService,
     private readonly runs: AgentRunRecorderService,
     private readonly cases: CasesService,
     private readonly approvals: ApprovalsService,
@@ -140,11 +152,11 @@ export class IntakeService {
       input: { subject: input.subject },
     });
 
-    const result = await this.agentRuntime.runTurn(
+    const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, 'communication-intake');
+    const result = await runtime.runTurn(
       { tenantId, agentRunId: run.id, actorUserId },
       {
-        systemPrompt:
-          'Du bist der Communication/Intake-Agent. Klassifiziere die eingehende Nachricht mit classify_message.',
+        systemPrompt,
         messages: [{ role: 'user', content: `Betreff: ${input.subject}\n\n${input.bodyText}` }],
         maxToolIterations: 2,
       },
@@ -231,7 +243,7 @@ export class IntakeService {
       actorUserId,
       'FINANCE',
       businessCase.id,
-      'Du bist der Finance/AP-Agent. Lies die angehängte Rechnung aus (extract_invoice) und erstelle danach, sofern ein Bruttobetrag ermittelt wurde, einen Buchungsvorschlag (create_booking_proposal).',
+      'finance-intake',
       `Neue Rechnung eingegangen: ${input.subject}. Dokument-ID: ${document.id}.`,
       3,
     );
@@ -300,7 +312,7 @@ export class IntakeService {
       actorUserId,
       'SALES',
       businessCase.id,
-      'Du bist der Sales/CRM-Agent. Lege für den Absender Unternehmen (create_company) und Kontakt (create_contact) an, sofern nötig, und erzeuge anschließend einen Lead (create_lead).',
+      'sales-intake',
       `Neue Interessenten-E-Mail: ${input.subject}\n\n${input.bodyText}`,
       4,
     );
@@ -311,7 +323,7 @@ export class IntakeService {
     actorUserId: string | undefined,
     agentType: 'FINANCE' | 'SALES',
     caseId: string,
-    systemPrompt: string,
+    agentDefinitionKey: string,
     userMessage: string,
     maxToolIterations: number,
   ): Promise<string> {
@@ -319,7 +331,8 @@ export class IntakeService {
 
     let outcomes: ToolCallOutcome[] = [];
     try {
-      const result = await this.agentRuntime.runTurn(
+      const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, agentDefinitionKey);
+      const result = await runtime.runTurn(
         { tenantId, agentRunId: run.id, actorUserId },
         { systemPrompt, messages: [{ role: 'user', content: userMessage }], maxToolIterations },
       );

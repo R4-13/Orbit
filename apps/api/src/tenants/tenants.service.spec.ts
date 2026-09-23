@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, POLICY_ACTIONS, ROLES } from '@orbit/shared';
+import { DEFAULT_AGENT_DEFINITIONS, DEFAULT_POLICY_CONFIG, DEFAULT_ROLE_PERMISSIONS, POLICY_ACTIONS, ROLES } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantsService } from './tenants.service';
@@ -12,6 +12,8 @@ describe('TenantsService', () => {
     role: { create: jest.Mock };
     rolePermission: { createMany: jest.Mock };
     policyConfig: { createMany: jest.Mock };
+    agentDefinition: { create: jest.Mock };
+    agentDefinitionVersion: { create: jest.Mock };
     user: { create: jest.Mock };
     userRole: { create: jest.Mock };
     auditLog: { create: jest.Mock };
@@ -55,6 +57,12 @@ describe('TenantsService', () => {
       },
       rolePermission: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       policyConfig: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      agentDefinition: {
+        create: jest.fn().mockImplementation(({ data }: { data: { key: string } }) =>
+          Promise.resolve({ id: `agent_def_${data.key}`, ...data }),
+        ),
+      },
+      agentDefinitionVersion: { create: jest.fn().mockResolvedValue({ id: 'agent_def_version_1' }) },
       user: {
         create: jest.fn().mockResolvedValue({ id: 'user_1', email: 'admin@musterwerk.example' }),
       },
@@ -157,6 +165,39 @@ describe('TenantsService', () => {
       mode: DEFAULT_POLICY_CONFIG[POLICY_ACTIONS.PAYMENT_EXECUTE].mode,
       locked: true,
     });
+  });
+
+  it('seeds one ACTIVE AgentDefinition per DEFAULT_AGENT_DEFINITIONS entry with a matching v1 version row', async () => {
+    await service.bootstrapTenant({
+      name: 'Musterwerk GmbH',
+      slug: 'musterwerk',
+      adminEmail: 'admin@musterwerk.example',
+      adminPassword: 'correct horse battery staple',
+      adminFirstName: 'Admina',
+      adminLastName: 'Musterfrau',
+    });
+
+    expect(tx.agentDefinition.create).toHaveBeenCalledTimes(DEFAULT_AGENT_DEFINITIONS.length);
+    for (const def of DEFAULT_AGENT_DEFINITIONS) {
+      expect(tx.agentDefinition.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tenantId: 'tenant_1',
+          key: def.key,
+          systemPrompt: def.systemPrompt,
+          allowedTools: [...def.allowedTools],
+          status: 'ACTIVE',
+        }),
+      });
+      expect(tx.agentDefinitionVersion.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          tenantId: 'tenant_1',
+          agentDefinitionId: `agent_def_${def.key}`,
+          version: 1,
+          systemPrompt: def.systemPrompt,
+          allowedTools: [...def.allowedTools],
+        }),
+      });
+    }
   });
 
   it('hashes the admin password (never stores it in plaintext) and assigns the TENANT_ADMIN role', async () => {
