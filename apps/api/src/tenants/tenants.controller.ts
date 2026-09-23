@@ -1,6 +1,7 @@
 import { Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
+import type { Tenant } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -24,6 +25,11 @@ import { TenantsService, type TenantDataExport } from './tenants.service';
 @Controller({ path: 'tenants/me' })
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
+
+  @Get()
+  getOwnTenant(@CurrentUser() user: AuthenticatedUser): Promise<Tenant> {
+    return this.tenantsService.getOwnTenant(user.tenantId);
+  }
 
   @Get('export')
   export(@CurrentUser() user: AuthenticatedUser): Promise<TenantDataExport> {

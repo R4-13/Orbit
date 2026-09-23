@@ -199,6 +199,19 @@ describe('TenantsService', () => {
     });
   });
 
+  describe('getOwnTenant', () => {
+    it('throws NotFoundError when the tenant does not exist', async () => {
+      scoped.tenant.findUnique.mockResolvedValue(null);
+      await expect(service.getOwnTenant('tenant_1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it('returns the plain tenant row', async () => {
+      scoped.tenant.findUnique.mockResolvedValue({ id: 'tenant_1', name: 'Musterwerk GmbH', locale: 'de-DE' });
+      const result = await service.getOwnTenant('tenant_1');
+      expect(result).toEqual({ id: 'tenant_1', name: 'Musterwerk GmbH', locale: 'de-DE' });
+    });
+  });
+
   describe('exportTenantData', () => {
     it('throws NotFoundError when the tenant does not exist', async () => {
       scoped.tenant.findUnique.mockResolvedValue(null);

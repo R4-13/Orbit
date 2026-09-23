@@ -188,6 +188,15 @@ export class TenantsService {
     });
   }
 
+  /** Lightweight tenant self-view for /admin/settings — avoids pulling the full §52 export bundle (and its audit event) just to render a name/locale. */
+  async getOwnTenant(tenantId: string): Promise<Tenant> {
+    const tenant = await this.prisma.forTenantId(tenantId).tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) {
+      throw new NotFoundError('Tenant not found.', { id: tenantId });
+    }
+    return tenant;
+  }
+
   /**
    * §52 Datenexport: a single JSON bundle of everything this tenant owns,
    * for the "right to data portability" — every collection queried through

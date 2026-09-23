@@ -98,6 +98,13 @@ Sicherheitsübersicht: [`docs/SECURITY.md`](docs/SECURITY.md).
 Datenmodell (mit Diagrammen): [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md).
 Deployment: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 Test-Strategie: [`docs/TESTING.md`](docs/TESTING.md).
+Provider-Integrationen (Status je Connector, was bis zur echten Anbindung
+fehlt): [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md),
+[`docs/DATEV_INTEGRATION.md`](docs/DATEV_INTEGRATION.md),
+[`docs/MICROSOFT_INTEGRATION.md`](docs/MICROSOFT_INTEGRATION.md),
+[`docs/GOOGLE_INTEGRATION.md`](docs/GOOGLE_INTEGRATION.md),
+[`docs/HUBSPOT_INTEGRATION.md`](docs/HUBSPOT_INTEGRATION.md),
+[`docs/TELEPHONY.md`](docs/TELEPHONY.md).
 
 ## Lizenz
 

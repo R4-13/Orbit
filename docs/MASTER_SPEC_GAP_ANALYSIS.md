@@ -34,15 +34,16 @@ Trigger — der Endpunkt *simuliert* eine eingehende E-Mail, es gibt
 keinen echten Mail-Connector-Webhook, der ihn automatisch aufruft (kein
 Microsoft Graph-/Gmail-Zugang). Details: `AGENT_ARCHITECTURE.md`.
 
-**~~Zweitgrößte Lücke: Frontend-Seitenabdeckung~~ Größtenteils behoben
-in Phase 19a/19h** (§32) — `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
-`/sales/opportunities` + `/sales/opportunities/[id]`, `/activity` und
-`/admin/policies` existieren jetzt, mit den passenden neuen
+**~~Zweitgrößte Lücke: Frontend-Seitenabdeckung~~ Vollständig behoben
+in Phase 19a/19h/19i** (§32) — `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+`/sales/opportunities` + `/sales/opportunities/[id]`, `/activity`,
+`/admin/policies`, `/inbox`, `/integrations`, `/admin/users` und
+`/admin/settings` existieren jetzt alle, mit den passenden neuen
 Backend-Endpunkten (`GET /api/v1/agent-runs`, angereicherte
 `CasesService.findOne()`/`LeadsService.findOne()`, neues
-`PolicyController`-CRUD). **Weiterhin offen**: `/inbox` (Unified Inbox
-für den Intake-Endpunkt), die `/integrations`-Frontend-Seite (Backend
-seit Phase 19g fertig), `/admin/users`, `/admin/settings`.
+`PolicyController`-CRUD, neues `EmailMessagesModule`, `GET
+/tenants/me`). Alle live im Browser gegen echte Postgres/MinIO
+verifiziert.
 
 **Drittgrößte Lücke:** Von 6 benannten Abnahme-Szenarien (§59) sind seit
 Phase 19e 3 vollständig erfüllt (Duplicate, ~~Bank-Change~~, Multi-Tenant),
@@ -50,14 +51,17 @@ Phase 19e 3 vollständig erfüllt (Duplicate, ~~Bank-Change~~, Multi-Tenant),
 Sales — der Trigger bleibt simuliert statt real), 1 vollständig unerfüllt
 (Telefonie, braucht Twilio-Credentials).
 
-**Dokumentation:** ~~8~~ 4 von 16 geforderten Dateien fehlen noch
-(nur die vier Provider-spezifischen Integrationsdokumente
+**Dokumentation:** ~~8~~ ~~4~~ 0 von 16 geforderten Dateien fehlen noch.
+`SECURITY.md`, `DOMAIN_MODEL.md`, `DEPLOYMENT.md`, `TESTING.md` seit
+Phase 19d geschrieben, inkl. der zuvor komplett fehlenden
+Mermaid-Diagramme (§56: System Context, Internal Architecture, beide
+Sequenzdiagramme Finance/Sales — jetzt alle in `ARCHITECTURE.md`). Die
+vier Provider-spezifischen Integrationsdokumente
 `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
-`HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`). `SECURITY.md`,
-`DOMAIN_MODEL.md`, `DEPLOYMENT.md`, `TESTING.md` seit Phase 19d
-geschrieben, inkl. der zuvor komplett fehlenden Mermaid-Diagramme (§56:
-System Context, Internal Architecture, beide Sequenzdiagramme
-Finance/Sales — jetzt alle in `ARCHITECTURE.md`).
+`HUBSPOT_INTEGRATION.md`, `TELEPHONY.md` seit Phase 19i geschrieben —
+sie dokumentieren ehrlich, was für eine echte Anbindung fehlt
+(Credentials/App-Registrierung, bei Telefonie zusätzlich der komplett
+fehlende Anruf-Workflow), ohne Drittanbieter-API-Endpunkte zu erfinden.
 
 ---
 
@@ -328,7 +332,7 @@ Event-Typen.
 |---|---|
 | `/login` | ✅ |
 | `/dashboard` | ✅ |
-| `/inbox` | ❌ |
+| `/inbox` | ✅ seit Phase 19i — siehe §34 |
 | `/cases`, `/cases/[id]` | ✅ seit Phase 19a — Liste (mit Finance/Sales-Filter) + Detailseite mit allen verknüpften Datensätzen (Tasks, Dokumente, E-Mails, Rechnungen, Leads, Agent-Läufe inkl. Tool-Aufrufe) |
 | `/finance` | ❌ (nur `/finance/invoices`, `/finance/suppliers` direkt) |
 | `/finance/invoices`, `/finance/invoices/[id]` | ✅ |
@@ -338,15 +342,15 @@ Event-Typen.
 | `/approvals` | ✅ seit Phase 19c — funktionierende Freigeben-/Ablehnen-Buttons, korrekt dispatchend je Entitätstyp (siehe §37) |
 | `/tasks` | ✅ |
 | `/activity` | ✅ seit Phase 19a — Agent-Run-Feed mit Tool-Aufrufen, Filter nach Agent-Typ, Link zum zugehörigen Vorgang |
-| `/integrations` | ⚠️ Backend seit Phase 19g fertig (`GET/PUT/DELETE /integrations`), Frontend-Seite fehlt weiterhin |
+| `/integrations` | ✅ seit Phase 19i — Frontend über neue `use-integrations.ts`-Hooks gegen das seit Phase 19g fertige Backend (`GET/PUT/DELETE /integrations`), alle 7 Connector-Typen, live verifiziert inkl. Credential-Verschlüsselung in der DB |
 | `/admin/policies` | ✅ seit Phase 19h — Liste aller 16 Policy-Actions mit Modus-Dropdown je Zeile, live gegen echtes Backend, respektiert gesperrte Ober­grenzen |
-| `/admin/users`, `/admin/settings` | ❌ (beide) |
+| `/admin/users` | ✅ seit Phase 19i — Liste aller Tenant-Nutzer mit Status-Badge, Deaktivieren-Aktion (eigenes Konto geschützt), live verifiziert |
+| `/admin/settings` | ✅ seit Phase 19i — Tenant-Stammdaten, DSGVO-Datenexport-Download, zweistufiger Lösch-Workflow (Beantragen → Name-Bestätigung → Löschen), live bis vor dem irreversiblen letzten Schritt verifiziert |
 
-**3 von 17 spezifizierten Routen fehlen noch vollständig** (`/inbox`,
-`/admin/users`, `/admin/settings`) plus `/integrations` mit Backend aber
-ohne Frontend. `/finance` und `/sales` als reine Übersichtsseiten
-(ohne eigene Funktion über die Unterrouten hinaus) bleiben ebenfalls
-offen, sind aber niedrige Priorität.
+**Alle spezifizierten Detail-/Funktionsrouten sind vorhanden.** Nur
+`/finance` und `/sales` als reine Übersichtsseiten (ohne eigene Funktion
+über die Unterrouten hinaus) bleiben offen — niedrige Priorität, da
+jede Unterroute direkt erreichbar und voll funktional ist.
 
 ## §33 — Dashboard
 
@@ -363,8 +367,16 @@ Funktion.
 
 ## §34 — Unified Inbox
 
-❌ Vollständig fehlend (keine `/inbox`-Seite, konsistent mit dem Fehlen
-von `EmailMessage`-Nutzung und Communication Agent).
+✅ seit Phase 19i: `/inbox` zeigt jede `EmailMessage` (Richtung, Von/An,
+Betreff, Klassifikation, verknüpfter Vorgang) über einen neuen,
+lesenden `GET /email-messages`-Endpunkt (neues `EmailMessagesModule`).
+Enthält zusätzlich ein Formular, das eine eingehende E-Mail direkt aus
+dem UI simuliert (ruft denselben `POST /intake/emails`-Endpunkt wie
+zuvor nur per curl/Test erreichbar auf) — der Agent-Lauf dahinter ist
+dabei vollständig echt, nur der Auslöser bleibt manuell (kein echter
+Mail-Connector-Webhook, siehe §23/§29). Live verifiziert: E-Mail
+simuliert, als „Sales" klassifiziert, Case automatisch angelegt, in der
+Liste sichtbar mit funktionierendem Link zum Vorgang.
 
 ## §35 — Finance UI (Invoice Detail)
 
@@ -431,22 +443,23 @@ aber nicht extra gerendert.
 
 ## §39 — Integration Administration
 
-⚠️ **Backend seit Phase 19g, Frontend weiterhin offen.** Neues
-`IntegrationsModule`: `GET /integrations` (Status je Connector-Typ,
-inkl. `hasCredentials`, nie die Credentials selbst),
-`PUT /integrations/:connectorType/credentials` (verschlüsselt
-speichern, siehe §52/`docs/SECURITY.md` Abschnitt 4),
-`DELETE /integrations/:connectorType` (trennen). Live verifiziert.
-**Weiterhin fehlend**: die `/integrations`-Frontend-Seite selbst (kein
-Connected/Disconnected-Status im UI, kein Formular zum Eintragen von
-Zugangsdaten), sowie ein Test-Connection-Button — `testConnection()`
-existiert zwar auf jeder Connector-Ebene, ist aber bewusst noch nicht
-an die neuen Endpunkte angebunden (der `IntegrationConnectorType`-Enum
-ordnet z. B. `MICROSOFT` sowohl Mail als auch Kalender zu, eine
-eindeutige Zuordnung zu genau einem der fünf `*_CONNECTOR`-DI-Tokens
-bräuchte eine eigene Design-Entscheidung, die hier bewusst nicht
-mitgezogen wurde, um den Scope nicht auf die volle Admin-UI
-auszudehnen).
+⚠️ **Backend seit Phase 19g, Frontend seit Phase 19i.** `IntegrationsModule`:
+`GET /integrations` (Status je Connector-Typ, inkl. `hasCredentials`,
+nie die Credentials selbst), `PUT /integrations/:connectorType/credentials`
+(verschlüsselt speichern, siehe §52/`docs/SECURITY.md` Abschnitt 4),
+`DELETE /integrations/:connectorType` (trennen). `/integrations` zeigt
+jetzt alle 7 Connector-Typen (DATEV, Lexware, Microsoft, Gmail, Google
+Calendar, HubSpot, Twilio) mit Status-Badge und einem
+Credentials-Formular (JSON-Textarea) je Zeile. Live verifiziert: DATEV
+mit Test-Credentials verbunden, `encrypted_credentials` in der DB per
+`psql`-Hexdump als echtes Chiffrat bestätigt (kein Klartext), danach
+erfolgreich wieder getrennt. **Weiterhin bewusst fehlend**: ein
+Test-Connection-Button — `testConnection()` existiert zwar auf jeder
+Connector-Ebene, ist aber bewusst noch nicht an die neuen Endpunkte
+angebunden (der `IntegrationConnectorType`-Enum ordnet z. B.
+`MICROSOFT` sowohl Mail als auch Kalender zu, eine eindeutige Zuordnung
+zu genau einem der fünf `*_CONNECTOR`-DI-Tokens bräuchte eine eigene
+Design-Entscheidung, die hier bewusst nicht mitgezogen wurde).
 
 ## §40 — Fehlerbehandlung
 
@@ -622,25 +635,33 @@ Umgebung).
 | `SECURITY.md` | ✅ (Phase 19d) |
 | `INTEGRATIONS.md` | ✅ |
 | `DATEV_INTEGRATION.md` | ⚠️ existiert, nur Platzhalter-Tiefe |
-| `MICROSOFT_INTEGRATION.md` | ❌ |
-| `GOOGLE_INTEGRATION.md` | ❌ |
-| `HUBSPOT_INTEGRATION.md` | ❌ |
-| `TELEPHONY.md` | ❌ |
+| `MICROSOFT_INTEGRATION.md` | ✅ (Phase 19i) |
+| `GOOGLE_INTEGRATION.md` | ✅ (Phase 19i) |
+| `HUBSPOT_INTEGRATION.md` | ✅ (Phase 19i) |
+| `TELEPHONY.md` | ✅ (Phase 19i) |
 | `LOCAL_DEVELOPMENT.md` | ✅ (Phase 16) |
 | `DEPLOYMENT.md` | ✅ (Phase 19d) |
 | `TESTING.md` | ✅ (Phase 19d) |
 | `ASSUMPTIONS.md` | ✅ |
 | `KNOWN_LIMITATIONS.md` | ✅ (Phase 16) |
 
-**4 von 16 geforderten Dateien fehlen noch** (die vier Provider-
+**0 von 16 geforderten Dateien fehlen noch.** Die vier Provider-
 spezifischen Integrationsdokumente `MICROSOFT_INTEGRATION.md`,
-`GOOGLE_INTEGRATION.md`, `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md` —
-niedrigste Priorität, da inhaltlich stark redundant mit dem bereits
-vorhandenen `DATEV_INTEGRATION.md`-Muster und ohne echte
-Provider-Credentials ohnehin nicht verifizierbar). ✅ **Mermaid-
-Diagramme** seit Phase 19d: System-Context- und Internal-Architecture-
-Diagramm in `ARCHITECTURE.md`, die beiden geforderten
-Sequenzdiagramme (Finance/Sales) ebenfalls dort, plus sechs
+`GOOGLE_INTEGRATION.md`, `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md` sind
+seit Phase 19i geschrieben — jede dokumentiert ehrlich, was für eine
+echte Anbindung fehlt (Credentials/App-Registrierung/OAuth-Consent), was
+bereits als providerunabhängige Schnittstelle steht (`MailConnector`,
+`CalendarConnector`, `CrmConnector`, `TelephonyConnector` + ihre
+Mock-Implementierungen) und welche konkreten Provider-API-Endpunkte erst
+bei Vorliegen echter Credentials aus der jeweiligen offiziellen
+Dokumentation ergänzt werden (nie erfunden, siehe CLAUDE.md).
+`TELEPHONY.md` hält zusätzlich fest, dass dort — anders als bei den
+anderen drei — nicht nur Credentials fehlen, sondern auch der komplette
+fachliche Anruf-Workflow (kein `Call`-Modell, kein Intake-Endpunkt, kein
+Klassifikations-Tool), was eine eigene Implementierungsphase wäre. ✅
+**Mermaid-Diagramme** seit Phase 19d: System-Context- und
+Internal-Architecture-Diagramm in `ARCHITECTURE.md`, die beiden
+geforderten Sequenzdiagramme (Finance/Sales) ebenfalls dort, plus sechs
 ER-Diagramme (nach fachlichem Cluster gruppiert) in `DOMAIN_MODEL.md`
 und je ein Architektur-/Test-Pyramide-Diagramm in `DEPLOYMENT.md`/
 `TESTING.md`.
@@ -731,20 +752,23 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
 2. ~~**E-Mail-Eingang simulieren**~~ — erledigt in Phase 18, als Teil
    desselben Endpunkts. Ein **echter** Mail-Connector-Trigger bleibt
    offen (braucht Microsoft/Google-Credentials).
-3. ~~**Fehlende Kern-Frontend-Seiten**~~ — größtenteils erledigt in
-   Phase 19a/19h: `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
+3. ~~**Fehlende Kern-Frontend-Seiten**~~ — vollständig erledigt in
+   Phase 19a/19h/19i: `/cases` + `/cases/[id]`, `/sales/leads/[id]`,
    `/sales/opportunities` + `/sales/opportunities/[id]`, `/activity`
    (zeigt echte `AgentRun`-Daten inkl. Tool-Aufrufe), `/admin/policies`
    (16 Policy-Actions, Modus-Dropdown, respektiert gesperrte
-   Obergrenzen), neue Endpunkte `GET /api/v1/agent-runs` +
-   `GET/PATCH /api/v1/policies`. **Noch offen**: `/inbox` (kann den
-   echten Intake-Endpunkt bedienen statt nur simulieren),
-   `/integrations` (Backend seit Phase 19g fertig, nur die Seite
-   fehlt), `/admin/users`, `/admin/settings`.
+   Obergrenzen), `/inbox` (echte `EmailMessage`-Liste + Simulations-
+   Formular gegen den echten Intake-Endpunkt), `/integrations` (alle 7
+   Connector-Typen, Credentials-Formular), `/admin/users`
+   (Nutzerliste + Deaktivieren), `/admin/settings` (Stammdaten,
+   DSGVO-Export, zweistufige Tenant-Löschung), neue Endpunkte
+   `GET /api/v1/agent-runs`, `GET/PATCH /api/v1/policies`,
+   `GET /email-messages(/:id)`, `GET /tenants/me`. Alle live im Browser
+   verifiziert.
 4. ~~**`docs/SECURITY.md`, `docs/DOMAIN_MODEL.md`, `docs/DEPLOYMENT.md`,
    `docs/TESTING.md`**~~ — erledigt in Phase 19d, inkl. der zuvor
-   fehlenden Mermaid-Diagramme (§56). Verbleibend, niedrigste Priorität:
-   `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
+   fehlenden Mermaid-Diagramme (§56). ~~Verbleibend~~ Ebenfalls erledigt
+   in Phase 19i: `MICROSOFT_INTEGRATION.md`, `GOOGLE_INTEGRATION.md`,
    `HUBSPOT_INTEGRATION.md`, `TELEPHONY.md`.
 5. ~~**IBAN-Tracking + Bank-Change-Erkennung**~~ (§59 Szenario C) —
    erledigt in Phase 19e: neuer `InvoiceStatus.BANK_CHANGE_SUSPECTED`,
@@ -781,6 +805,25 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    Actions (z. B. `payment.execute` kann nie über `DISABLED` hinaus
    geändert werden), neue `/admin/policies`-Seite. Live verifiziert,
    inkl. Audit-Trail (neuer Event-Typ `POLICY_CONFIG_UPDATED`).
+10. ~~**Verbleibende Frontend-Lücken + Provider-Doku**~~ — erledigt in
+    Phase 19i: `/inbox`, `/integrations`, `/admin/users`,
+    `/admin/settings` (samt `EmailMessagesModule` und `GET /tenants/me`
+    als neue, dafür nötige Backend-Bausteine) sowie die vier
+    verbliebenen Provider-Integrationsdokumente. Damit sind — nach
+    bestem Wissen, Stand dieser Datei — **alle im Master-Prompt
+    geforderten und ohne externe Provider-Credentials umsetzbaren
+    Punkte abgeschlossen.** Die verbleibenden offenen Punkte in dieser
+    Datei sind ausnahmslos entweder (a) explizit als niedrige Priorität
+    gekennzeichnete Detailtiefe (z. B. Rechnungspositionen,
+    Dokumenten-Viewer, Lead-Summary/Meetings-Abschnitt, `/finance`-
+    und `/sales`-Übersichtsseiten), (b) bewusste, dokumentierte
+    Scope-Entscheidungen (z. B. Tool-Aufruf-Resume-Mechanismus für
+    `FOLLOW_UP`, Test-Connection-Button), oder (c) echte externe
+    Blocker, die reale Zugangsdaten/Registrierungen bei Drittanbietern
+    voraussetzen (Microsoft/Google/HubSpot/Twilio/DATEV-Live-Connectoren,
+    echter Mail-Connector-Webhook-Trigger, der komplett fehlende
+    Telefonie-Workflow) — siehe §62/§63 sowie die jeweiligen
+    `*_INTEGRATION.md`/`TELEPHONY.md`-Dateien.
 
 Diese Datei ergänzt, ersetzt aber nicht
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) (Komponentenstatus)

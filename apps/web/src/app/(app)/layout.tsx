@@ -20,6 +20,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     title: '',
     items: [
       { href: '/dashboard', label: 'Übersicht' },
+      { href: '/inbox', label: 'Posteingang', permission: PERMISSIONS.EMAIL_READ },
       { href: '/cases', label: 'Vorgänge', permission: PERMISSIONS.CASE_READ },
       { href: '/activity', label: 'Activity', permission: PERMISSIONS.CASE_READ },
     ],
@@ -48,7 +49,12 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   },
   {
     title: 'Administration',
-    items: [{ href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE }],
+    items: [
+      { href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE },
+      { href: '/integrations', label: 'Integrationen', permission: PERMISSIONS.INTEGRATION_CONFIGURE },
+      { href: '/admin/users', label: 'Nutzerverwaltung', permission: PERMISSIONS.USER_MANAGE },
+      { href: '/admin/settings', label: 'Einstellungen', permission: PERMISSIONS.TENANT_MANAGE },
+    ],
   },
 ];
 

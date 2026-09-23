@@ -13,6 +13,7 @@ import { EnvModule } from './config/env.module';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
+import { EmailMessagesModule } from './email-messages/email-messages.module';
 import { HealthModule } from './health/health.module';
 import { IntakeModule } from './intake/intake.module';
 import { IntegrationsModule } from './integrations/integrations.module';
@@ -69,6 +70,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     CasesModule,
     TasksModule,
     DocumentsModule,
+    EmailMessagesModule,
     ApprovalsModule,
     SuppliersModule,
     InvoicesModule,
