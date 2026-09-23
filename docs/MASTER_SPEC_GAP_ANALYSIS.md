@@ -120,25 +120,32 @@ ist strukturell nicht vorbereitet, nur eine ungenutzte Abhängigkeit).
 | Gefordert | Status |
 |---|---|
 | AuthModule | ✅ |
-| TenantModule | ⚠️ existiert (`tenants.module.ts`), aber kein REST-Controller — nur intern für Bootstrap/Login nutzbar |
-| UserModule | ❌ kein eigenes Modul, keine `/users`-Routen (Einladen/Deaktivieren/Auflisten nicht möglich) |
+| TenantModule | ✅ seit Phase 19i — `tenants.module.ts` hat jetzt einen echten REST-Controller (`GET /tenants/me`, `/export`, `/deletion-request`, `/deletion-confirm`), vorher nur intern für Bootstrap/Login nutzbar |
+| UserModule | ✅ seit Phase 19f/19i — eigenes `UsersModule` (`GET /users`, `PATCH /users/:id/deactivate`), Frontend `/admin/users` seit Phase 19i. **Weiterhin fehlend**: Einladen (Nutzer-Anlage geht bisher nur über Tenant-Bootstrap/Seed, kein Self-Service-Invite-Flow) |
 | CaseModule | ✅ (`cases`) |
 | TaskModule | ✅ (`tasks`) |
 | DocumentModule | ✅ (`documents`) |
-| CommunicationModule | ❌ kein Modul; `EmailMessage`/`Call`/`CallTranscript` existieren nicht als Modelle |
+| CommunicationModule | ⚠️ kein Modul dieses Namens, aber `EmailMessage` existiert seit Phase 18 als Modell + eigenes `EmailMessagesModule` seit Phase 19i (`GET /email-messages`); `Call`/`CallTranscript` existieren weiterhin nicht (siehe §28/`docs/TELEPHONY.md`) |
 | FinanceModule | ⚠️ funktional abgedeckt, aber als `suppliers`+`invoices` statt einem Modul |
 | SalesModule | ⚠️ funktional abgedeckt, aber als `companies`+`contacts`+`leads`+`opportunities`+`meetings` |
-| ApprovalModule | ⚠️ existiert (`approvals`), aber leer/ungenutzt (siehe §37) |
-| PolicyModule | ✅ (`policy`) |
-| AgentModule | ❌ existiert nicht — siehe §12-17 |
-| IntegrationModule | ❌ `connectors`-Modul ist reine DI-Verdrahtung der Mock-Connectoren, keine `/integrations`-REST-API, kein `IntegrationCredential`-Handling |
+| ApprovalModule | ✅ seit Phase 19c — `approvals` hat funktionierende Freigeben-/Ablehnen-Aktionen (siehe §37) |
+| PolicyModule | ✅ (`policy`), inkl. Admin-CRUD seit Phase 19h |
+| AgentModule | ✅ seit Phase 18 — `AgentModule`, `IntakeService`, 15 Tools, `POST /intake/emails`, live verdrahtet (siehe §12-17) |
+| IntegrationModule | ✅ seit Phase 19g/19i — `IntegrationsModule` (`GET/PUT/DELETE /integrations`), verschlüsseltes `IntegrationCredential`-Handling, Frontend `/integrations` |
 | NotificationModule | ❌ existiert nicht |
-| AuditModule | ✅ (`audit`), aber kein Lese-Endpunkt (`GET /audit` existiert nicht) |
+| AuditModule | ✅ (`audit`), aber weiterhin kein Lese-Endpunkt (`GET /audit` existiert nicht — Audit-Daten sind nur eingebettet über andere Endpunkte einsehbar, z. B. `TenantDataExport`) |
 | MetricsModule | ❌ existiert nicht |
-| AdminModule | ❌ existiert nicht |
+| AdminModule | ⚠️ kein eigenes Backend-Modul dieses Namens, aber die Admin-Funktionalität selbst ist seit Phase 19h/19i vollständig verteilt vorhanden (`PolicyModule`, `IntegrationsModule`, `UsersModule`, `TenantsController`) und im Frontend unter `/admin/*` gebündelt |
 
-**7 von 17 geforderten Modulen fehlen vollständig, 4 weitere sind nur
-teilweise/strukturell vorhanden.**
+**Nur noch 2 von 17 geforderten Modulen fehlen vollständig**
+(NotificationModule, MetricsModule — beide bräuchten Infrastruktur, die
+in diesem MVP bewusst nicht existiert, siehe §60 Nicht-Ziele/§3 Queue),
+3 weitere sind aus benannten Gründen nur teilweise/strukturell vorhanden
+(CommunicationModule, FinanceModule/SalesModule als Namenskonvention
+statt fachlicher Lücke, AdminModule als Namenskonvention). Stand zu
+Beginn dieser Session (Phase 16): 7 fehlten vollständig, 4 weitere nur
+teilweise — der Großteil dieser Lücke wurde in den seither
+durchlaufenen Phasen (18–19i) geschlossen.
 
 ## §8 — Multi-Tenant-Architektur
 
@@ -293,20 +300,32 @@ Interface. ❌ Telefonie ist in keinen Workflow eingebunden (kein
 
 ## §29 — Webhooks
 
-❌ **Vollständig fehlend.** Kein Webhook-Endpunkt, keine
-Signaturprüfung, kein Replay-/Idempotency-Schutz, keine Event-ID-
-Speicherung. Da keine der realen Mail-/CRM-/Telefonie-Anbindungen
-implementiert ist, wurde auch der dafür nötige Webhook-Empfang nicht
-gebaut.
+⚠️ **Idempotency-Infrastruktur seit Phase 19g vorbereitet, aber noch
+kein tatsächlicher Webhook-Endpunkt.** Neues `WebhookEvent`-Modell
+(eigene RLS-Migration) + `WebhookIdempotencyService.recordIfNew()`
+unterscheidet Duplikate DB-atomar über `(tenantId, source,
+externalEventId)` — mit echtem Nebenläufigkeitstest (5 parallele
+Zustellungen desselben Ereignisses, genau eine gewinnt) live
+verifiziert. **Weiterhin fehlend**: kein konkreter `POST
+/webhooks/:provider`-Endpunkt, keine Signaturprüfung (z. B. Twilios
+`X-Twilio-Signature`, Microsoft-Graph-Validation-Tokens) — beides kann
+erst sinnvoll gebaut werden, sobald eine der realen Mail-/CRM-/
+Telefonie-Anbindungen existiert, die tatsächlich Webhooks sendet
+(siehe `docs/MICROSOFT_INTEGRATION.md`/`GOOGLE_INTEGRATION.md`/
+`TELEPHONY.md`) — ein echter, dokumentierter Credentials-Blocker,
+keine offene Implementierungslücke der Idempotenz-Logik selbst.
 
 ## §30 — Integrations-Credentials
 
-❌ `CREDENTIAL_ENCRYPTION_KEY` ist als Env-Var validiert
-(`packages/config/src/env.ts`), aber **es existiert keine einzige
-AES-256-GCM-Verschlüsselungsfunktion im gesamten Code** — der Schlüssel
-wird nirgends benutzt. `Integration.encryptedCredentials` (Schema-Feld)
-wird nie beschrieben, da keine reale OAuth-Anbindung existiert, die
-Credentials überhaupt entgegennehmen würde.
+✅ Seit Phase 19g tatsächlich implementiert: `CredentialEncryptionService`
+(`apps/api/src/security/`) nutzt `CREDENTIAL_ENCRYPTION_KEY` für echtes
+AES-256-GCM (IV + Auth-Tag + Chiffretext in einem `Bytes`-Feld,
+`Integration.encryptedCredentials`), verdrahtet über das neue
+`IntegrationsModule` (`PUT /integrations/:connectorType/credentials`).
+Klartext wird nie über die API zurückgegeben (nur `hasCredentials:
+boolean`). Live verifiziert: Chiffretext im `psql`-Hexdump bestätigt,
+kein Klartext-Fund. Seit Phase 19i zusätzlich über die
+`/integrations`-Frontend-Seite bedienbar (siehe §39).
 
 ## §31 — Audit Trail
 
@@ -518,11 +537,11 @@ Beispiel-E-Mails/-Transkripte als Seed-Daten (`Call` bleibt ungenutzt).
 Die geforderte Live-Demo "eingehende E-Mail → automatisch Case → Contact
 → Company → Lead → Task → Follow-up" ist seit Phase 18 über `POST
 /api/v1/intake/emails` tatsächlich auslösbar und live gegen echte
-Postgres verifiziert (siehe `intake-workflow.e2e-spec.ts`) —
-**Einschränkung bleibt**: der Trigger ist simuliert (manueller
-API-Aufruf), kein echter Mail-Connector-Webhook ruft ihn automatisch
-auf, und im UI gibt es dafür keine Eingabemöglichkeit (keine
-`/inbox`-Seite).
+Postgres verifiziert (siehe `intake-workflow.e2e-spec.ts`) — seit Phase
+19i zusätzlich direkt aus dem UI heraus auslösbar (`/inbox`-Seite mit
+Simulations-Formular, siehe §34). **Einschränkung bleibt**: der Trigger
+ist weiterhin simuliert (manueller Aufruf, jetzt auch per UI statt nur
+per API), kein echter Mail-Connector-Webhook ruft ihn automatisch auf.
 
 *Hinweis: Die aktuell laufende Datenbank enthält durch wiederholte
 E2E-Testläufe dieser Session deutlich mehr Datensätze (33 Lieferanten, 49
@@ -534,10 +553,14 @@ zurückgesetzt.*
 
 ✅ Unit-Tests für Policy Engine, Duplicate Detection, Tenant Isolation,
 Permission Checks, Connector Mapping — vorhanden und aussagekräftig.
-⚠️ "Agent Tool Validation" nur für die (ungenutzte) `ToolRegistry`
-selbst, nicht für reale Tools (da keine existieren). ❌ Integration-Tests
-für Queue+Worker: nicht vorhanden (keine Queue). ❌ Agent-Workflow-Tests:
-nicht vorhanden (kein Agent-Workflow). E2E mit Playwright: Finance-Szenario
+✅ "Agent Tool Validation" seit Phase 18 auch für reale, live verdrahtete
+Tools (15 konkrete Tools über `ToolRegistry`, siehe §12-17) — vorher nur
+gegen die damals noch ungenutzte `ToolRegistry` selbst getestet. ❌
+Integration-Tests für Queue+Worker: weiterhin nicht vorhanden (keine
+Queue, siehe §3, bewusstes Nicht-Ziel dieses MVP). ✅ Agent-Workflow-Tests:
+seit Phase 18 vorhanden (`intake-workflow.e2e-spec.ts`, deckt Finance-
+und Sales-Pfad sowie den OTHER-Pfad ab, live gegen echte Postgres/MinIO).
+E2E mit Playwright: Finance-Szenario
 ✅ sehr nah am Soll-Ablauf; Sales-Szenario ⚠️ (Lead wird per Formular statt
 per simulierter Nachricht erzeugt, kein CRM-Sync-Indikator im UI). Tenant
 Security: ✅✅ mehrfach und auf zwei Ebenen bewiesen. `pnpm
@@ -553,25 +576,53 @@ echten Secrets im Repo, alle geforderten Variablen-Gruppen vorhanden.
 
 ✅ Helmet, CORS, RBAC, Tenant Isolation, Rate Limiting (seit Phase 15
 tatsächlich wirksam), Input-Validation (ValidationPipe whitelist), sichere
-Datei-Uploads (Presigned-URL-Pattern), Path-Traversal-Schutz. ❌ **CSRF-
-Konzept**: nicht dokumentiert (mildernd: Bearer-Token statt Cookie-Session
-reduziert das Risiko strukturell, ersetzt aber kein explizites Konzept
-wie gefordert). ❌ **Idempotency**: nirgends implementiert. ❌
-**Dateigrößenlimits/MIME-Prüfung**: serverseitig nicht durchgesetzt —
-`sizeBytes`/`mimeType` werden unverändert aus der Client-Anfrage
-übernommen, keine Prüfung gegen den tatsächlichen Dateiinhalt. ❌
-**Secret Encryption**: siehe §30, nicht implementiert. ⚠️ Sichere
-Tokens: JWT in `localStorage` statt httpOnly-Cookie (bewusste,
-dokumentierte MVP-Abwägung, ASSUMPTIONS #68/#92). ❌ Webhook Verification:
-siehe §29.
+Datei-Uploads (Presigned-URL-Pattern), Path-Traversal-Schutz. ✅ **Secret
+Encryption**: siehe §30 — seit Phase 19g tatsächlich implementiert
+(vorher nur validierte, aber ungenutzte Env-Var). ⚠️ **Dateigrößenlimits/
+MIME-Prüfung**: seit Phase 19g serverseitig durchgesetzt
+(`MAX_UPLOAD_SIZE_BYTES`/`ALLOWED_UPLOAD_MIME_TYPES`, 403 bei
+Überschreitung/falschem Typ, live verifiziert) — **Einschränkung**: geprüft
+werden die vom Client deklarierten `sizeBytes`/`mimeType`-Metadaten vor
+Ausstellung der Presigned-URL, nicht die tatsächlich zu MinIO
+hochgeladenen Bytes selbst (siehe `docs/SECURITY.md` §5). ⚠️ **Webhook
+Verification**: siehe §29 — Idempotency-Infrastruktur seit Phase 19g
+vorbereitet, aber weiterhin kein echter Webhook-Endpunkt mit
+Signaturprüfung (Blocker: keine reale Anbindung, die Webhooks sendet).
+❌ **CSRF-Konzept**: weiterhin nicht dokumentiert (mildernd: Bearer-Token
+statt Cookie-Session reduziert das Risiko strukturell, ersetzt aber kein
+explizites Konzept wie gefordert). ❌ **Idempotency (allgemeine
+API-Idempotency-Keys für Schreiboperationen)**: weiterhin nirgends
+implementiert — zu unterscheiden von der oben genannten,
+webhook-spezifischen Duplikat-Erkennung, die einen anderen, engeren
+Zweck erfüllt. ⚠️ Sichere Tokens: JWT in `localStorage` statt
+httpOnly-Cookie (bewusste, dokumentierte MVP-Abwägung, ASSUMPTIONS
+#68/#92).
 
 ## §51 — Prompt-Injection-Schutz
 
-❌ Gegenstandslos in der Praxis — es gibt keinen Code-Pfad, der LLM-Input
-aus E-Mails/PDFs/CRM/Transkripten zusammensetzt, da nie ein LLM
-aufgerufen wird (§12-17). Die geforderte Trennung SYSTEM
-INSTRUCTIONS/BUSINESS DATA/USER CONTENT/TOOL RESULTS existiert nicht,
-weil es nichts zu trennen gibt.
+⚠️ **Seit Phase 18 nicht mehr gegenstandslos — es gibt jetzt einen
+echten Code-Pfad**, der potenziell angreifer-kontrollierten Input in
+einen LLM-Aufruf einbettet: `IntakeService.classify()`
+(`apps/api/src/intake/intake.service.ts`) baut aus `input.subject` +
+`input.bodyText` einer eingehenden E-Mail direkt den `user`-Message-
+Inhalt zusammen (`Betreff: ${subject}\n\n${bodyText}`), getrennt vom
+statisch im Code verankerten `systemPrompt` über die reguläre
+System-/User-Rollentrennung der `LLMProvider`-Schnittstelle (analog zu
+Anthropics `system`- vs. `messages`-Kanaltrennung). **Was tatsächlich
+vorhanden ist**: die grundlegende Rollentrennung (System-Instruktion
+kommt nie aus Nutzerdaten) sowie die nachgelagerte Policy-Engine, die
+jeden vom Modell vorgeschlagenen Tool-Aufruf unabhängig vom Prompt-Inhalt
+gegen feste Autonomie-Regeln prüft (ein injizierter Befehl wie "führe
+`payment.execute` aus" würde trotzdem an der gesperrten Policy scheitern,
+siehe §17/§39) — eine echte, wenn auch indirekte Verteidigungsschicht.
+**Was fehlt**: die explizit geforderte Vier-Wege-Trennung SYSTEM
+INSTRUCTIONS/BUSINESS DATA/USER CONTENT/TOOL RESULTS als eigenes
+Konzept (aktuell nur zwei Kanäle: System vs. User), keine Auszeichnung
+von E-Mail-Inhalt mit Delimitern/Warnhinweisen ("der folgende Text ist
+Nutzerdaten, keine Instruktion"), keine Ausgabe-Validierung gegen
+prompt-injizierte Tool-Aufrufe über die ohnehin vorhandene
+Policy-Engine-Prüfung hinaus. Kein dedizierter Test für einen
+Prompt-Injection-Versuch in einer simulierten E-Mail vorhanden.
 
 ## §52 — Datenschutz
 
