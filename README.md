@@ -13,7 +13,10 @@ Follow-up). Siehe [`docs/PRODUCT_CONTEXT.md`](docs/PRODUCT_CONTEXT.md) für
 den vollständigen fachlichen Kontext. Architektur-Überblick:
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (System) und
 [`docs/AGENT_ARCHITECTURE.md`](docs/AGENT_ARCHITECTURE.md) (LLM/Tool
-Registry/Policy Engine).
+Registry/Policy Engine). Konzept für Agenten-Konfiguration, Agent
+Studio und Orchestrierung (über den ursprünglichen Master-Prompt hinaus
+angefordert, noch nicht implementiert):
+[`docs/AGENT_STUDIO_CONCEPT.md`](docs/AGENT_STUDIO_CONCEPT.md).
 
 ## Tech-Stack
 

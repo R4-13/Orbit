@@ -3,7 +3,12 @@
 Diese Datei beschreibt `packages/agent-core` (LLM-/Tool-/Policy-
 Infrastruktur) und **wie sie seit Phase 18 tatsächlich verdrahtet ist**.
 Für RBAC/Auth (die andere, unabhängige Autorisierungsachse) siehe
-[`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
+[`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Für ein Konzept, wie sich
+Tenant-konfigurierbare Agenten (Prompt/Tool-Zugriff), ein Agent Studio
+zum Anlegen neuer Agenten und eine Mehr-Agenten-Orchestrierung auf die
+hier beschriebene Runtime aufsetzen ließen, siehe
+[`docs/AGENT_STUDIO_CONCEPT.md`](AGENT_STUDIO_CONCEPT.md) (Konzept,
+nicht implementiert).
 
 ## Status
 
