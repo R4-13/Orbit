@@ -1,3 +1,7 @@
+import { startTracing } from './tracing';
+
+startTracing('orbit-api');
+
 import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';

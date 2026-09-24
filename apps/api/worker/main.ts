@@ -1,3 +1,7 @@
+import { startTracing } from '../src/tracing';
+
+startTracing('orbit-worker');
+
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { WorkerModule } from './worker.module';

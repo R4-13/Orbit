@@ -71,6 +71,18 @@ services:
       exit 0
       "
 
+  jaeger:
+    # Jaeger v2's all-in-one image (collector+query+in-memory storage in
+    # one process); OTLP receivers on 4317/4318 are enabled by default,
+    # no config needed (docs.jaegertracing.io/2.21/getting-started).
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.21.0
+    container_name: orbit-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+
   api:
     build:
       context: .
@@ -84,6 +96,7 @@ services:
       DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
       REDIS_URL: "redis://redis:6379"
       S3_ENDPOINT: "http://minio:9000"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - "3001:3001"
     depends_on:
@@ -113,6 +126,7 @@ services:
       DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
       REDIS_URL: "redis://redis:6379"
       S3_ENDPOINT: "http://minio:9000"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     depends_on:
       postgres:
         condition: service_healthy

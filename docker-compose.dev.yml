@@ -56,6 +56,18 @@ services:
       timeout: 5s
       retries: 10
 
+  jaeger:
+    # Jaeger v2's all-in-one image (collector+query+in-memory storage in
+    # one process); OTLP receivers on 4317/4318 are enabled by default,
+    # no config needed (docs.jaegertracing.io/2.21/getting-started).
+    image: cr.jaegertracing.io/jaegertracing/jaeger:2.21.0
+    container_name: orbit-jaeger-dev
+    restart: unless-stopped
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+
 volumes:
   orbit_postgres_dev_data:
   orbit_minio_dev_data:

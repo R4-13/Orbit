@@ -495,13 +495,27 @@ Ansicht**: nicht implementiert, aus demselben Grund.
 
 ## §41 — Observability
 
-✅ Strukturiertes Logging (`pino`/`pino-http`), Health-/Readiness-
-Endpunkte. ⚠️ Correlation-/Request-IDs: `pino-http` generiert
-Request-IDs automatisch, aber sie werden nicht in Audit-Logs oder
-Cross-Service-Aufrufen mitgeführt (kein `correlationId`, siehe §31). ❌
-Queue-Job-IDs (keine Queue). ❌ Keine Metrics (`MetricsModule` fehlt,
-kein `/metrics`-Endpunkt). ❌ OpenTelemetry: nur `OTEL_ENABLED`-Env-Flag,
-nicht verdrahtet.
+✅ Health-/Readiness-Endpunkte (`/health`, `/health/ready` inkl. echtem
+Postgres- und Redis-Check seit Phase 23). ✅ **Distributed Tracing**
+(OpenTelemetry, seit Phase 25, siehe `docs/OBSERVABILITY.md`) — HTTP-,
+NestJS-Controller- und ioredis-Spans, Export an einen selbst gehosteten
+Jaeger-Container, `OTEL_ENABLED`-Flag (seit Phase 1 im Schema) jetzt
+tatsächlich verdrahtet. **Korrektur einer vorherigen, falschen Aussage
+in dieser Datei**: "✅ Strukturiertes Logging (`pino`/`pino-http`)" war
+nicht zutreffend — beim Verdrahten von OTEL in Phase 25 wurde gefunden,
+dass `pino`/`pino-http` zwar seit Phase 1 als Dependencies in
+`apps/api/package.json` stehen, aber nirgends im Code tatsächlich als
+Logger verwendet werden; sämtliche bisherigen Logs laufen über NestJS'
+eingebauten Standard-`Logger`. ⚠️ Correlation-/Request-IDs (§31): damit
+weiterhin **nicht** vorhanden — pino-http's automatische Request-IDs
+griffen ohnehin nie (pino ungenutzt), und die für Trace-ID-basierte
+Log-Korrelation vorbereitete `@opentelemetry/instrumentation-pino`
+bleibt bis zum tatsächlichen Verdrahten von pino wirkungslos (siehe
+`docs/OBSERVABILITY.md`, "Scope-Grenzen"). ❌ Queue-Job-IDs (Traces
+erfassen zwar BullMQ-nahe ioredis-Aufrufe, aber keine expliziten
+Job-ID-Spans). ❌ Keine Metrics (`MetricsModule` fehlt, kein
+`/metrics`-Endpunkt — bewusst nicht Teil von Phase 25, siehe
+`docs/OBSERVABILITY.md`).
 
 ## §42 — API
 
