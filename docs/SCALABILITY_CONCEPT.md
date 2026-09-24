@@ -11,8 +11,19 @@ dort auch eine wichtige **Korrektur** an diesem Dokument: die
 ursprünglich vorgeschlagene Pro-Tenant-Concurrency-Begrenzung über
 BullMQ-Job-Gruppen ist eine kostenpflichtige BullMQ-Pro-Funktion, nicht
 im hier verwendeten Open-Source-Paket verfügbar (siehe eigener
-Abschnitt unten). Schritt 3-5 (Frontend-Polling, Migration von `POST
-/intake/emails`, `/health/ready`-Redis-Check) bleiben offen.
+Abschnitt unten).
+
+**Update (Phase 23): Migrationsschritt 5 (`/health/ready`-Redis-Check)
+und der erste der "Weiteren Skalierungsbausteine"
+(Redis-gestütztes Rate-Limiting) sind implementiert und live
+verifiziert** — Details: `docs/IMPLEMENTATION_STATUS.md` und
+`docs/ASSUMPTIONS.md` Phase 23. **Weitere Korrektur** an diesem
+Dokument: der unten ursprünglich genannte `ThrottlerStorageRedisService`
+aus `@nestjs/throttler` **existiert nicht** — das Paket liefert kein
+eingebautes Redis-`ThrottlerStorage`; verifiziert gegen die
+tatsächlichen `.d.ts`-Exporte der installierten Version
+(`@nestjs/throttler@^6.3.0`, siehe eigener Abschnitt unten). Schritt 3+4
+(Frontend-Polling, Migration von `POST /intake/emails`) bleiben offen.
 
 **Status der übrigen Abschnitte: Konzept.** Ausgelöst durch die
 Entscheidung, Project ORBIT als Cloud-SaaS für viele gleichzeitige
@@ -238,19 +249,41 @@ Dieselbe Vorsicht wie im Migrationsabschnitt von
    größte Vorsicht — dieselbe Begründung, aus der
    `docs/AGENT_STUDIO_CONCEPT.md` einen 1:1-Nachbau des Finance-Pfads
    als eigene `WorkflowDefinition` bislang zurückgestellt hat.
-5. **`/health/ready`** um einen echten Redis-Konnektivitäts-Check
-   erweitern (`@nestjs/terminus`s `MicroserviceHealthIndicator` oder ein
-   einfacher `redis.ping()`) — aktuell ein reiner Platzhalter
-   (`apps/api/src/health/health.controller.ts`, Kommentar "will be
-   extended... once those clients exist").
+5. ✅ **`/health/ready`** um einen echten Redis-Konnektivitäts-Check
+   erweitern — **umgesetzt (Phase 23)**:
+   [`health.controller.ts`](../apps/api/src/health/health.controller.ts)
+   nutzt den ohnehin injizierten BullMQ-Queue-Client
+   (`(await this.queue.client).status === 'ready'`) statt eines
+   separaten `redis.ping()` — BullMQs `IRedisClient`-Abstraktion
+   exponiert bewusst kein `.ping()`/`.eval()`, `status` ist der
+   dokumentierte, adapter-unabhängige Konnektivitäts-Indikator (siehe
+   `docs/ASSUMPTIONS.md` Phase 23). Live per `docker stop/start
+   orbit-redis` gegen den echten `/health/ready`-Endpunkt verifiziert
+   (503 mit `redis: {status: "down", ...}` während gestopptem Redis,
+   200 nach Neustart).
 
 ## Weitere Skalierungsbausteine (nach der Queue, absteigende Priorität)
 
-1. **Redis-gestütztes Rate-Limiting** — `ThrottlerGuard` ist aktuell
-   In-Memory pro Prozess; bei mehreren API-Replicas hat jede Instanz
-   ihr eigenes, unabhängiges Limit-Budget statt eines gemeinsamen.
-   `@nestjs/throttler`'s `ThrottlerStorageRedisService` löst das direkt
-   mit dem ohnehin schon vorhandenen Redis.
+1. ✅ **Redis-gestütztes Rate-Limiting** — `ThrottlerGuard` war zuvor
+   In-Memory pro Prozess; bei mehreren API-Replicas hätte jede Instanz
+   ihr eigenes, unabhängiges Limit-Budget statt eines gemeinsamen
+   gehabt. **Umgesetzt (Phase 23) mit einer Korrektur gegenüber diesem
+   Konzept**: `@nestjs/throttler` liefert **kein** eingebautes
+   Redis-`ThrottlerStorage` (der hier ursprünglich genannte
+   `ThrottlerStorageRedisService` existiert nicht — geprüft gegen die
+   tatsächlichen Typ-Exporte der installierten Version). Stattdessen:
+   [`ThrottlerRedisStorageService`](../apps/api/src/throttler/throttler-redis-storage.service.ts),
+   eine eigene, Lua-Script-basierte Implementierung des
+   `ThrottlerStorage`-Interfaces, die exakt die Semantik des
+   In-Memory-Referenzcodes repliziert (inkl. der Eigenheit, dass der
+   Trefferzähler eines bereits blockierten Schlüssels einfriert statt
+   weiterzuzählen). Ein einzelnes `EVAL` pro Anfrage macht
+   Inkrement+Block-Entscheidung atomar über alle Replicas hinweg —
+   verifiziert durch reale Nebenläufigkeits-Integrationstests
+   (`apps/api/test/throttler-redis-storage.e2e-spec.ts`, 10 parallele
+   Anfragen gegen ein Limit von 5) und durch Beobachtung echter
+   `throttler:*`-Schlüssel in Redis während laufendem API-Traffic. Details:
+   `docs/ASSUMPTIONS.md` Phase 23.
 2. **Connection-Pooler (PgBouncer)** zwischen App-Instanzen und
    Postgres — `DATABASE_URL_APP` trägt bereits `connection_limit=20`
    pro Instanz (`docs/DEPLOYMENT.md`); bei mehreren Replicas plus

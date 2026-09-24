@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { findRepoRootEnvFile } from '@orbit/config';
+import { findRepoRootEnvFile, type OrbitEnv } from '@orbit/config';
 import { AgentModule } from './agent/agent.module';
 import { AgentDefinitionsModule } from './agent-definitions/agent-definitions.module';
 import { ApprovalsModule } from './approvals/approvals.module';
@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
 import { CompaniesModule } from './companies/companies.module';
 import { EnvModule } from './config/env.module';
+import { ORBIT_ENV } from './config/env.token';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
@@ -29,6 +30,8 @@ import { StorageModule } from './storage/storage.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { ThrottlerRedisStorageService } from './throttler/throttler-redis-storage.service';
+import { ThrottlerStorageModule } from './throttler/throttler-storage.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WorkflowsModule } from './workflows/workflows.module';
@@ -52,13 +55,24 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: rootEnvFile ? [rootEnvFile] : undefined }),
     EnvModule,
-    ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 60000),
-          limit: Number(process.env.RATE_LIMIT_MAX ?? 120),
-        },
-      ],
+    ThrottlerStorageModule,
+    // docs/SCALABILITY_CONCEPT.md — Redis-backed storage instead of the
+    // library default (an in-memory Map, correct only within a single
+    // process): with multiple API replicas behind a load balancer, each
+    // replica's in-memory counter would be independently wrong — a
+    // client could get `RATE_LIMIT_MAX` requests *per replica* instead
+    // of in total. `forRootAsync` (not `forRoot`) is required here
+    // because the storage instance needs DI (ORBIT_ENV) to exist before
+    // ThrottlerModule can use it; this also switches the two rate-limit
+    // env vars from a raw, duplicated-default `process.env` read to the
+    // same Zod-validated `OrbitEnv` every other module already uses.
+    ThrottlerModule.forRootAsync({
+      imports: [ThrottlerStorageModule],
+      inject: [ORBIT_ENV, ThrottlerRedisStorageService],
+      useFactory: (env: OrbitEnv, storage: ThrottlerRedisStorageService) => ({
+        throttlers: [{ ttl: env.RATE_LIMIT_WINDOW_MS, limit: env.RATE_LIMIT_MAX }],
+        storage,
+      }),
     }),
     PrismaModule,
     AuditModule,

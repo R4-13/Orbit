@@ -27,6 +27,7 @@
     "@nestjs/throttler": "^6.3.0",
     "@nestjs/bullmq": "^10.2.3",
     "bullmq": "^5.34.4",
+    "ioredis": "^5.11.1",
     "@aws-sdk/client-s3": "^3.716.0",
     "@aws-sdk/s3-request-presigner": "^3.716.0",
     "@orbit/domain": "workspace:*",
