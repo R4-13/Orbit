@@ -136,7 +136,7 @@ gemocktem HTTP-Client (kein echter API-Call).
 | Phase | Inhalt | Klassifikation | In dieser Session umsetzbar? |
 |---|---|---|---|
 | 0 | Gap-Analyse (dieses Dokument) | — | ✅ erledigt |
-| 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | MISSING → wird umgesetzt | ✅ Ja |
+| 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | ✅ erledigt (Approval-Resume + Pause-Semantik; generische Connector-Idempotenz-Keys bewusst nicht Teil dieser Stufe) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | MISSING/PARTIAL | ✅ Ja (Metrics als Fortsetzung von Phase 26; Rest neu) |
 | 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | PARTIAL/MISSING | ✅ Ja |
 | 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | MISSING | ✅ Ja (strukturell, ohne Live-Test) |
@@ -156,9 +156,12 @@ vorgeschlagen — keine Umstellung nötig, nur bestätigt.
 
 ## Nächste Schritte
 
-Beginne sofort mit **Phase 1 (Durable Orchestration)** — höchste
-Priorität laut Konzept, bereits detailliert analysiert, kein externer
-Blocker. Danach Phase 2-10 der Reihe nach, jeweils mit vollständiger
+**Phase 1 (Durable Orchestration) ist abgeschlossen** — siehe
+`docs/IMPLEMENTATION_STATUS.md` (neue Zeile "Durable Workflow +
+Approval Resume") und `docs/ASSUMPTIONS.md` #200-209 für die getroffenen
+Detailentscheidungen. Weiter mit Phase 2 (Operational Hardening:
+Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-
+Grundlage), danach Phase 3-10 der Reihe nach, jeweils mit vollständiger
 Verifikation (Lint/Typecheck/Unit/E2E) und Dokumentations-Update nach
 jeder Phase, exakt wie bei jeder vorherigen Phase dieses Projekts.
 Phase 11 bleibt dauerhaft offen (externe Zugangsdaten), Phase 12 wird

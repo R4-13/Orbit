@@ -34,11 +34,14 @@ function detailLink(entityType: string, entityId: string): string | null {
  * normal approve endpoint (which requires PENDING_APPROVAL and would
  * 403) — `policyAction` is what the backend already uses to tag that
  * case, so it's the signal used here too, no extra fetch needed.
- * FOLLOW_UP entries (agent tool calls blocked by the Policy Engine) have
- * no endpoint at all yet: the Agent Runtime never persists the blocked
- * call's arguments for a later resume, so there is nothing to actually
- * execute on approval — see docs/MASTER_SPEC_GAP_ANALYSIS.md §37. Shown
- * read-only.
+ *
+ * FOLLOW_UP entries (agent tool calls blocked by the Policy Engine) now
+ * have a real resume path (docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md,
+ * Phase 1 — previously read-only, see the historical note in
+ * docs/MASTER_SPEC_GAP_ANALYSIS.md §37). Unlike SUPPLIER/INVOICE, the
+ * new `FollowUpsController` is scoped by `Approval.id` itself, not
+ * `entityId` (which holds the blocked call's `toolCallId`, not a
+ * resource with its own endpoint).
  */
 function resolveDecisionPath(approval: Approval, decision: 'approve' | 'reject'): string | null {
   if (approval.entityType === 'SUPPLIER') {
@@ -49,6 +52,9 @@ function resolveDecisionPath(approval: Approval, decision: 'approve' | 'reject')
       return `/v1/invoices/${approval.entityId}/confirm-bank-change`;
     }
     return `/v1/invoices/${approval.entityId}/${decision}`;
+  }
+  if (approval.entityType === 'FOLLOW_UP') {
+    return `/v1/follow-ups/${approval.id}/${decision}`;
   }
   return null;
 }

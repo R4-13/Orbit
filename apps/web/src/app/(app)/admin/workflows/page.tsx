@@ -36,8 +36,10 @@ const TRIGGER_TYPE_LABELS: Record<string, string> = {
 
 const RUN_STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   RUNNING: { label: 'Läuft', tone: 'info' },
+  WAITING_FOR_APPROVAL: { label: 'Wartet auf Freigabe', tone: 'warning' },
   COMPLETED: { label: 'Abgeschlossen', tone: 'success' },
   FAILED: { label: 'Fehlgeschlagen', tone: 'danger' },
+  REJECTED: { label: 'Abgelehnt', tone: 'danger' },
 };
 
 interface StepDraft {
@@ -350,7 +352,18 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
             {triggerError ? <p className="mt-2 text-sm text-red-600">{triggerError}</p> : null}
             {trigger.data ? (
               <div className="mt-3 space-y-1.5">
-                <Badge tone={trigger.data.status === 'COMPLETED' ? 'success' : 'danger'}>{trigger.data.status}</Badge>
+                <Badge tone={(RUN_STATUS_LABELS[trigger.data.status] ?? { tone: 'neutral' as const }).tone}>
+                  {(RUN_STATUS_LABELS[trigger.data.status] ?? { label: trigger.data.status }).label}
+                </Badge>
+                {trigger.data.status === 'WAITING_FOR_APPROVAL' ? (
+                  <p className="text-xs text-slate-500">
+                    Ein Tool-Aufruf wartet auf Freigabe — siehe{' '}
+                    <a className="underline" href="/approvals">
+                      Freigaben
+                    </a>
+                    . Der Lauf wird nach der Entscheidung automatisch fortgesetzt.
+                  </p>
+                ) : null}
                 <ul className="space-y-1">
                   {trigger.data.steps.map((s) => (
                     <li key={s.order} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs">

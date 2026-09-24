@@ -16,6 +16,7 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EmailMessagesModule } from './email-messages/email-messages.module';
+import { FollowUpsModule } from './follow-ups/follow-ups.module';
 import { HealthModule } from './health/health.module';
 import { IntakeModule } from './intake/intake.module';
 import { IntegrationsModule } from './integrations/integrations.module';
@@ -98,6 +99,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     AgentModule,
     AgentDefinitionsModule,
     WorkflowsModule,
+    FollowUpsModule,
     IntakeModule,
     IntegrationsModule,
     WebhooksModule,

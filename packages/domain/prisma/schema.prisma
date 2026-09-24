@@ -205,10 +205,20 @@ enum AgentRunTriggerType {
   MANUAL
 }
 
+/// WAITING_FOR_APPROVAL/REJECTED (docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md
+/// §5-6, "Durable Orchestration") sind seit Phase 1 dieses Konzepts nur
+/// für WorkflowRun.status in Gebrauch, nicht für AgentRun.status — ein
+/// AgentRun schließt synchron mit runTurn() ab, auch wenn einer seiner
+/// Tool-Aufrufe blockiert wurde (siehe FollowUpsModule); "wartend" ist
+/// dort ein Zustand des umgebenden WorkflowRun/Approval, nicht des
+/// AgentRun selbst. Geteiltes Enum trotzdem beibehalten statt eines
+/// separaten WorkflowRunStatus, um keine Parallelstruktur einzuführen.
 enum AgentRunStatus {
   RUNNING
+  WAITING_FOR_APPROVAL
   COMPLETED
   FAILED
+  REJECTED
 }
 
 enum ToolInvocationStatus {
@@ -827,6 +837,12 @@ model ToolInvocation {
   id           String               @id @default(uuid())
   tenantId     String               @map("tenant_id")
   agentRunId   String               @map("agent_run_id")
+  /// = ToolCallOutcome.toolCallId (packages/agent-core) — ermöglicht
+  /// FollowUpResumeService, die für eine blockierte Approval ursprünglich
+  /// erzeugten Tool-Eingabeargumente wiederzufinden (Approval.entityId
+  /// trägt denselben Wert). Kein @unique: von einer LLM/Mock-Provider
+  /// erzeugte ID, keine harte DB-Garantie über Aufrufe hinweg erzwingen.
+  toolCallId   String?              @map("tool_call_id")
   toolName     String               @map("tool_name")
   policyAction String?              @map("policy_action")
   policyMode   PolicyMode?          @map("policy_mode")
@@ -840,6 +856,7 @@ model ToolInvocation {
 
   @@index([agentRunId])
   @@index([tenantId, toolName])
+  @@index([tenantId, toolCallId])
   @@map("tool_invocations")
 }
 
@@ -964,6 +981,12 @@ model WorkflowRun {
   caseId               String?        @map("case_id")
   status               AgentRunStatus @default(RUNNING)
   input                Json?
+  /// Snapshot von WorkflowPathContext.steps im Moment des Pausierens
+  /// (status: WAITING_FOR_APPROVAL) — hält Input-Mapping/Bedingungs-
+  /// relevante Vorschritt-Outputs fest, damit FollowUpResumeService die
+  /// verbleibenden Schritte fortsetzen kann, ohne bereits ausgeführte
+  /// Schritte erneut laufen zu lassen. Siehe docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §5.
+  contextSnapshot Json? @map("context_snapshot")
   errorMessage         String?        @map("error_message")
   startedAt            DateTime       @default(now()) @map("started_at")
   completedAt          DateTime?      @map("completed_at")
@@ -995,6 +1018,7 @@ model WorkflowStepRun {
   agentRun    AgentRun?   @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
 
   @@index([workflowRunId])
+  @@index([agentRunId])
   @@map("workflow_step_runs")
 }
 

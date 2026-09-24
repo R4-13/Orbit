@@ -29,7 +29,7 @@ export interface UpdateWorkflowDefinitionInput {
 
 export interface WorkflowRunResult {
   workflowRunId: string;
-  status: 'COMPLETED' | 'FAILED';
+  status: 'COMPLETED' | 'FAILED' | 'WAITING_FOR_APPROVAL' | 'REJECTED';
   steps: Array<{ order: number; agentDefinitionKey: string; skipped: boolean; agentRunId?: string }>;
 }
 

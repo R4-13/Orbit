@@ -66,14 +66,24 @@ export class AgentRunRecorderService {
         data: {
           tenantId,
           agentRunId,
+          toolCallId: outcome.toolCallId,
           toolName: outcome.toolName,
           policyAction: this.tools.get(outcome.toolName)?.policyAction,
-          // ToolInvocationStatus only distinguishes SUCCESS/FAILED — a
-          // non-ALLOW policy decision (tool never executed) still counts
-          // as a successful *invocation attempt*; the decision itself is
-          // recorded in `output` and via the POLICY_DECISION_MADE audit
-          // event below. See docs/ASSUMPTIONS.md Phase 18.
-          status: outcome.error ? 'FAILED' : 'SUCCESS',
+          input: outcome.input as Prisma.InputJsonValue | undefined,
+          // Previously always SUCCESS/FAILED regardless of `decision` —
+          // BLOCKED_AWAITING_APPROVAL/DENIED existed in the enum since
+          // Phase 1 but were never written. Now correctly reflects
+          // whether the tool actually ran; FollowUpsModule relies on
+          // finding BLOCKED_AWAITING_APPROVAL rows to resume, see
+          // docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md.
+          status:
+            outcome.decision === 'DENY'
+              ? 'DENIED'
+              : outcome.decision !== 'ALLOW'
+                ? 'BLOCKED_AWAITING_APPROVAL'
+                : outcome.error
+                  ? 'FAILED'
+                  : 'SUCCESS',
           output: { decision: outcome.decision, output: outcome.output, error: outcome.error } as Prisma.InputJsonValue,
         },
       });

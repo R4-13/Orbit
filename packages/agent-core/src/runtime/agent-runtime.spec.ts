@@ -48,7 +48,7 @@ describe('AgentRuntime.runTurn', () => {
 
     expect(execute).toHaveBeenCalledWith({ summary: 'Anruf erledigt' }, CONTEXT);
     expect(result.toolCallOutcomes).toEqual([
-      { toolCallId: 'call_1', toolName: 'log_activity', decision: 'ALLOW', output: { logged: true } },
+      { toolCallId: 'call_1', toolName: 'log_activity', decision: 'ALLOW', input: { summary: 'Anruf erledigt' }, output: { logged: true } },
     ]);
     expect(result.finalText).toBe('Fertig.');
     expect(result.iterations).toBe(2);
@@ -72,7 +72,7 @@ describe('AgentRuntime.runTurn', () => {
 
     expect(execute).not.toHaveBeenCalled();
     expect(result.toolCallOutcomes).toEqual([
-      { toolCallId: 'call_1', toolName: 'log_activity', decision: 'REQUIRE_APPROVAL' },
+      { toolCallId: 'call_1', toolName: 'log_activity', decision: 'REQUIRE_APPROVAL', input: { summary: 'x' } },
     ]);
   });
 

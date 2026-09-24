@@ -15,7 +15,7 @@ describe('WorkflowRunnerService', () => {
   let scoped: {
     workflowDefinition: { findUnique: jest.Mock };
     workflowRun: { create: jest.Mock; update: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
-    workflowStepRun: { create: jest.Mock };
+    workflowStepRun: { create: jest.Mock; findMany: jest.Mock };
   };
   let prisma: { forTenantId: jest.Mock };
   let resolver: { resolve: jest.Mock };
@@ -31,7 +31,7 @@ describe('WorkflowRunnerService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
-      workflowStepRun: { create: jest.fn().mockResolvedValue(undefined) },
+      workflowStepRun: { create: jest.fn().mockResolvedValue(undefined), findMany: jest.fn().mockResolvedValue([]) },
     };
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
     resolver = { resolve: jest.fn() };
@@ -159,6 +159,78 @@ describe('WorkflowRunnerService', () => {
       'tenant_1',
       expect.objectContaining({ entityType: 'FOLLOW_UP', entityId: 'tc_1', policyAction: 'transfer_invoice_to_finance' }),
     );
+  });
+
+  // docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md, Phase 1 ("Durable Orchestration") —
+  // the previously-broken behavior this replaces: a REQUIRE_APPROVAL outcome used
+  // to leave the approval as a side note while the run silently continued to the
+  // next step regardless. These three tests are the ones that would have failed
+  // against the old code (the pre-existing "creates a FOLLOW_UP approval" test
+  // above never asserted on `result.status` or on step 2 not running at all).
+  it('pauses (WAITING_FOR_APPROVAL) and never runs the next step when a step produces a blocked outcome', async () => {
+    scoped.workflowDefinition.findUnique.mockResolvedValue({
+      id: 'wfd_1',
+      status: 'ACTIVE',
+      steps: [
+        { order: 1, agentDefinitionKey: 'finance-intake', inputMapping: null, condition: null },
+        { order: 2, agentDefinitionKey: 'sales-intake', inputMapping: null, condition: null },
+      ],
+    });
+    resolver.resolve.mockResolvedValue({
+      systemPrompt: 'x',
+      baseType: 'FINANCE',
+      runtime: fakeRuntime([{ toolCallId: 'tc_1', toolName: 'transfer_invoice_to_finance', decision: 'REQUIRE_APPROVAL' }]),
+    });
+
+    const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+    expect(result.status).toBe('WAITING_FOR_APPROVAL');
+    expect(result.steps).toEqual([{ order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1' }]);
+    // step 2 must never run while step 1's call is still pending approval
+    expect(resolver.resolve).toHaveBeenCalledTimes(1);
+    expect(scoped.workflowRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'WAITING_FOR_APPROVAL', completedAt: null, contextSnapshot: expect.anything() }),
+      }),
+    );
+  });
+
+  it('resumeFromStep() reconstructs prior steps from WorkflowStepRun rows and completes the remaining steps', async () => {
+    scoped.workflowRun.findUnique.mockResolvedValue({ id: 'wfr_1', workflowDefinitionId: 'wfd_1' });
+    scoped.workflowDefinition.findUnique.mockResolvedValue({
+      id: 'wfd_1',
+      status: 'ACTIVE',
+      steps: [
+        { order: 1, agentDefinitionKey: 'finance-intake', inputMapping: null, condition: null },
+        { order: 2, agentDefinitionKey: 'sales-intake', inputMapping: null, condition: null },
+      ],
+    });
+    scoped.workflowStepRun.findMany.mockResolvedValue([{ stepOrder: 1, skipped: false, agentRunId: 'run_1' }]);
+    resolver.resolve.mockResolvedValue({
+      systemPrompt: 'y',
+      baseType: 'SALES',
+      runtime: fakeRuntime([{ toolCallId: 'tc_2', toolName: 'create_lead', decision: 'ALLOW', output: { id: 'lead_1' } }]),
+    });
+
+    const result = await service.resumeFromStep('tenant_1', 'user_1', 'wfr_1', 2, { trigger: { input: {} }, steps: {} });
+
+    expect(result.status).toBe('COMPLETED');
+    expect(result.steps).toEqual([
+      { order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1' },
+      { order: 2, agentDefinitionKey: 'sales-intake', skipped: false, agentRunId: 'run_1' },
+    ]);
+    // only step 2 actually re-runs an agent turn — step 1 is not replayed
+    expect(resolver.resolve).toHaveBeenCalledTimes(1);
+    expect(resolver.resolve).toHaveBeenCalledWith('tenant_1', 'sales-intake');
+  });
+
+  it('markRejected() sets the run to REJECTED', async () => {
+    await service.markRejected('tenant_1', 'wfr_1');
+
+    expect(scoped.workflowRun.update).toHaveBeenCalledWith({
+      where: { id: 'wfr_1' },
+      data: { status: 'REJECTED', completedAt: expect.any(Date) },
+    });
   });
 
   it('marks the run FAILED (and stops) when a step cannot be resolved', async () => {

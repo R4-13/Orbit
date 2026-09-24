@@ -425,27 +425,36 @@ gehört aktuell nur zur Case-Detailseite, nicht zur Lead-Seite selbst.
 
 ## §37 — Approval Center
 
-⚠️ **Backend seit Phase 18, Frontend-Aktionen seit Phase 19c — mit einer
-bewusst offenen Einschränkung.** `/approvals` hat jetzt echte
-Freigeben-/Ablehnen-Buttons, die pro `entityType` auf die richtige
+✅ **Backend seit Phase 18, Frontend-Aktionen seit Phase 19c, `FOLLOW_UP`-
+Resume seit docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 1 — die
+zuvor hier dokumentierte Einschränkung ist behoben.** `/approvals` hat
+echte Freigeben-/Ablehnen-Buttons, die pro `entityType` auf die richtige
 zugrundeliegende Aktion dispatchen (`PATCH /suppliers/:id/approve|reject`,
-`PATCH /invoices/:id/approve|reject` — Letzteres neu: `InvoicesService`
-hatte bisher nur `approve()`, kein `reject()`, obwohl `InvoiceStatus`
-`REJECTED` längst kennt). Live verifiziert: neuer Lieferant über
-`POST /suppliers` angelegt (→ `PENDING_APPROVAL`), über die
-`/approvals`-Seite als `approval@musterwerk.example` freigegeben, Status
-sowohl in der Freigaben-Liste als auch am Lieferanten selbst (`ACTIVE`)
-bestätigt. **Bewusst nicht gelöst**: `FOLLOW_UP`-Einträge (vom Agent
-Runtime blockierte Tool-Aufrufe, `SUGGEST_ONLY`/`REQUIRE_APPROVAL`)
-werden weiterhin nur lesend angezeigt — es gibt keinen Endpunkt, der
-einen blockierten Tool-Aufruf nachträglich ausführt, weil
-`AgentRuntime`/`IntakeService` dessen Argumente aktuell nirgends für
-einen späteren Resume persistieren (nur `toolCallId` + `toolName` landen
-in der `Approval`-Zeile). Das nachzurüsten wäre ein eigenständiges,
-größeres Feature (Tool-Aufruf-Persistenz + Resume-Mechanismus im
-`AgentRuntime`) und wurde bewusst nicht im Rahmen dieser Phase
-mitgezogen — ehrlich als Lücke gekennzeichnet statt stillschweigend
-weggelassen (§63).
+`PATCH /invoices/:id/approve|reject`, seit Phase 1 zusätzlich
+`PATCH /follow-ups/:approvalId/approve|reject` für `FOLLOW_UP`-Einträge).
+Live verifiziert (Lieferant): neuer Lieferant über `POST /suppliers`
+angelegt (→ `PENDING_APPROVAL`), über die `/approvals`-Seite als
+`approval@musterwerk.example` freigegeben, Status sowohl in der
+Freigaben-Liste als auch am Lieferanten selbst (`ACTIVE`) bestätigt.
+
+**`FOLLOW_UP`-Einträge (vom Agent Runtime blockierte Tool-Aufrufe)
+können jetzt tatsächlich ausgeführt werden**: `ToolCallOutcome` trägt
+seit Phase 1 die vom LLM erzeugten Eingabeargumente
+(`packages/agent-core/src/runtime/agent-runtime.ts`), `ToolInvocation`
+speichert sie korrekt (`toolCallId`, `input`, korrektes
+`ToolInvocationStatus` inkl. `BLOCKED_AWAITING_APPROVAL`/`DENIED` — beide
+Werte existierten im Enum, wurden aber nie geschrieben, ein weiterer
+echter Fund dieser Phase). Neues `FollowUpsModule`
+(`apps/api/src/follow-ups/`) führt den Tool-Aufruf bei Genehmigung direkt
+aus und setzt — falls der Aufruf Teil eines `WorkflowRun`-Schritts war —
+die verbleibenden Schritte fort (`WorkflowRunnerService.resumeFromStep()`).
+Ein `WorkflowRun`, dessen Schritt einen blockierten Aufruf produziert,
+pausiert jetzt korrekt (`status: WAITING_FOR_APPROVAL`,
+`contextSnapshot` persistiert) statt — wie zuvor unbemerkt fehlerhaft —
+einfach mit dem nächsten Schritt weiterzulaufen. Live per E2E-Test gegen
+echte Postgres bewiesen (`apps/api/test/workflow-approval-resume.e2e-spec.ts`):
+zweistufiger Workflow pausiert nach Schritt 1, Schritt 2 läuft nachweislich
+erst nach der Freigabe. Details: `docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`.
 
 ## §38 — Agent Activity
 
