@@ -33,6 +33,10 @@ export interface WorkflowRunResult {
   steps: Array<{ order: number; agentDefinitionKey: string; skipped: boolean; agentRunId?: string }>;
 }
 
+export interface TriggerWorkflowAsyncResult {
+  workflowRunId: string;
+}
+
 export function useWorkflowDefinitions() {
   return useQuery({
     queryKey: ['workflow-definitions'],
@@ -40,11 +44,12 @@ export function useWorkflowDefinitions() {
   });
 }
 
-export function useWorkflowRuns(key: string | undefined) {
+export function useWorkflowRuns(key: string | undefined, options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: ['workflow-definitions', key, 'runs'],
     queryFn: () => apiFetch<WorkflowRunWithStepRuns[]>(`/v1/workflow-definitions/${key}/runs`),
     enabled: Boolean(key),
+    refetchInterval: options?.refetchInterval,
   });
 }
 
@@ -75,6 +80,30 @@ export function useTriggerWorkflowDefinition() {
       queryClient.invalidateQueries({ queryKey: ['workflow-definitions', variables.key, 'runs'] });
       queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
+  });
+}
+
+/**
+ * docs/SCALABILITY_CONCEPT.md, Migrationsschritt 3 — nur der Enqueue-Call
+ * selbst (202 + WorkflowRun.id, bevor irgendein Schritt gelaufen ist).
+ * Anders als `useTriggerWorkflowDefinition()` invalidiert dieser Hook noch
+ * NICHT `agent-runs`/`approvals` — das würde zu diesem Zeitpunkt nichts
+ * Neues zeigen, weil der Worker-Prozess den Lauf noch gar nicht begonnen
+ * hat. Der aufrufende Code muss stattdessen die zurückgegebene
+ * `workflowRunId` per Polling gegen `useWorkflowRuns(key, { refetchInterval })`
+ * beobachten und erst beim Erreichen von COMPLETED/FAILED invalidieren.
+ */
+export function useTriggerWorkflowDefinitionAsync() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, input }: { key: string; input: Record<string, unknown> }) =>
+      apiFetch<TriggerWorkflowAsyncResult>(`/v1/workflow-definitions/${key}/trigger-async`, {
+        method: 'POST',
+        body: JSON.stringify({ input }),
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-definitions', variables.key, 'runs'] });
     },
   });
 }

@@ -22,8 +22,17 @@ Dokument: der unten ursprünglich genannte `ThrottlerStorageRedisService`
 aus `@nestjs/throttler` **existiert nicht** — das Paket liefert kein
 eingebautes Redis-`ThrottlerStorage`; verifiziert gegen die
 tatsächlichen `.d.ts`-Exporte der installierten Version
-(`@nestjs/throttler@^6.3.0`, siehe eigener Abschnitt unten). Schritt 3+4
-(Frontend-Polling, Migration von `POST /intake/emails`) bleiben offen.
+(`@nestjs/throttler@^6.3.0`, siehe eigener Abschnitt unten).
+
+**Update (Phase 24): Migrationsschritt 3 (Frontend-Polling für den
+asynchronen Workflow-Trigger) ist implementiert und live verifiziert**
+— `/admin/workflows` bietet jetzt neben "Workflow ausführen" (synchron)
+auch "Asynchron ausführen" (ruft `trigger-async` auf, pollt danach
+`GET .../runs` alle 1,5s bis zu einem Endzustand, zeigt währenddessen
+eine "Läuft..."-Anzeige). Details: `docs/IMPLEMENTATION_STATUS.md` und
+`docs/ASSUMPTIONS.md` Phase 24. Schritt 4 (Migration von `POST
+/intake/emails`) bleibt offen — bewusst zurückgestellt, siehe
+Begründung unten.
 
 **Status der übrigen Abschnitte: Konzept.** Ausgelöst durch die
 Entscheidung, Project ORBIT als Cloud-SaaS für viele gleichzeitige
@@ -238,9 +247,18 @@ Dieselbe Vorsicht wie im Migrationsabschnitt von
    `WorkerModule` als echten zweiten, separaten
    NestJS-Application-Context neben der API — derselbe Aufbau wie in
    Produktion, nur beide Prozesse im selben Testlauf).
-3. **Frontend um einen asynchronen Modus ergänzen** (Polling gegen
-   `GET .../runs`, "Läuft..."-Anzeige) — erst nachdem Schritt 2 bewiesen
-   ist.
+3. ✅ **Frontend um einen asynchronen Modus ergänzen** (Polling gegen
+   `GET .../runs`, "Läuft..."-Anzeige) — **umgesetzt (Phase 24)**:
+   neuer "Asynchron ausführen"-Button auf `/admin/workflows` neben dem
+   bestehenden, synchronen "Workflow ausführen" — Letzterer bleibt
+   unverändert. `useWorkflowRuns()` bekam einen optionalen
+   `refetchInterval`, kein neuer Endpunkt nötig (die bestehende
+   `GET .../runs`-Route liefert bereits alles Nötige). Live verifiziert
+   inkl. eines echten Lücken-Funds: der lokale API-Dev-Server läuft ohne
+   begleitenden Worker-Prozess, ein ausgelöster Lauf blieb entsprechend
+   in `RUNNING` hängen, bis der Worker manuell gestartet wurde — danach
+   lief er automatisch zu `COMPLETED` durch und das Polling stoppte
+   korrekt von selbst (siehe `docs/ASSUMPTIONS.md` #191).
 4. **`POST /intake/emails` erst danach migrieren**, wenn Schritt 2/3
    produktionsreif sind — dieser Endpunkt ist der am stärksten
    getestete, am längsten laufende Pfad im System

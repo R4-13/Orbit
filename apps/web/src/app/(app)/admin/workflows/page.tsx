@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { AgentDefinition } from '@orbit/domain';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeTone } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
@@ -9,12 +10,16 @@ import { useAgentDefinitions } from '../../../../lib/hooks/use-agent-definitions
 import {
   useCreateWorkflowDefinition,
   useTriggerWorkflowDefinition,
+  useTriggerWorkflowDefinitionAsync,
   useUpdateWorkflowDefinition,
   useWorkflowDefinitions,
   useWorkflowRuns,
   type WorkflowDefinitionWithSteps,
   type WorkflowStepInput,
 } from '../../../../lib/hooks/use-workflow-definitions';
+
+/** Polling-Intervall für den asynchronen Trigger-Modus (Millisekunden). */
+const ASYNC_RUN_POLL_INTERVAL_MS = 1500;
 
 const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   DRAFT: { label: 'Entwurf', tone: 'neutral' },
@@ -177,8 +182,10 @@ function StepEditor({
 }
 
 function WorkflowDefinitionCard({ definition, agentOptions }: { definition: WorkflowDefinitionWithSteps; agentOptions: AgentDefinition[] }) {
+  const queryClient = useQueryClient();
   const update = useUpdateWorkflowDefinition();
   const trigger = useTriggerWorkflowDefinition();
+  const triggerAsync = useTriggerWorkflowDefinitionAsync();
   const [editing, setEditing] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [showTrigger, setShowTrigger] = useState(false);
@@ -187,7 +194,23 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
   const [error, setError] = useState<string | null>(null);
   const [triggerInputJson, setTriggerInputJson] = useState('{}');
   const [triggerError, setTriggerError] = useState<string | null>(null);
-  const { data: runs } = useWorkflowRuns(showRuns ? definition.key : undefined);
+  const [pendingAsyncRunId, setPendingAsyncRunId] = useState<string | null>(null);
+  const { data: runs } = useWorkflowRuns(showRuns ? definition.key : undefined, {
+    refetchInterval: pendingAsyncRunId ? ASYNC_RUN_POLL_INTERVAL_MS : false,
+  });
+  const pendingAsyncRun = pendingAsyncRunId ? runs?.find((r) => r.id === pendingAsyncRunId) : undefined;
+
+  // Sobald der beobachtete Lauf einen Endzustand erreicht (COMPLETED/FAILED),
+  // Polling stoppen und dieselben Folgedaten invalidieren, die der
+  // synchrone Trigger direkt nach Abschluss invalidiert (agent-runs/approvals
+  // können erst jetzt tatsächlich etwas Neues enthalten, siehe Hook-Kommentar).
+  useEffect(() => {
+    if (pendingAsyncRun && pendingAsyncRun.status !== 'RUNNING') {
+      setPendingAsyncRunId(null);
+      queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    }
+  }, [pendingAsyncRun, queryClient]);
 
   function startEditing() {
     setDrafts(stepsToDraft(definition.steps));
@@ -212,6 +235,18 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
     try {
       const input = JSON.parse(triggerInputJson) as Record<string, unknown>;
       await trigger.mutateAsync({ key: definition.key, input });
+      setShowRuns(true);
+    } catch (err) {
+      setTriggerError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Ausführung fehlgeschlagen.');
+    }
+  }
+
+  async function handleTriggerAsync() {
+    setTriggerError(null);
+    try {
+      const input = JSON.parse(triggerInputJson) as Record<string, unknown>;
+      const result = await triggerAsync.mutateAsync({ key: definition.key, input });
+      setPendingAsyncRunId(result.workflowRunId);
       setShowRuns(true);
     } catch (err) {
       setTriggerError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Ausführung fehlgeschlagen.');
@@ -299,9 +334,19 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
               value={triggerInputJson}
               onChange={(event) => setTriggerInputJson(event.target.value)}
             />
-            <Button className="mt-2" onClick={handleTrigger} disabled={trigger.isPending}>
-              Workflow ausführen
-            </Button>
+            <div className="mt-2 flex items-center gap-2">
+              <Button onClick={handleTrigger} disabled={trigger.isPending || Boolean(pendingAsyncRunId)}>
+                Workflow ausführen
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleTriggerAsync}
+                disabled={triggerAsync.isPending || Boolean(pendingAsyncRunId)}
+                title="Reiht den Lauf über die Redis-Queue ein und antwortet sofort — Fortschritt wird per Polling beobachtet (docs/SCALABILITY_CONCEPT.md)"
+              >
+                Asynchron ausführen
+              </Button>
+            </div>
             {triggerError ? <p className="mt-2 text-sm text-red-600">{triggerError}</p> : null}
             {trigger.data ? (
               <div className="mt-3 space-y-1.5">
@@ -316,6 +361,15 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
                     </li>
                   ))}
                 </ul>
+              </div>
+            ) : null}
+            {pendingAsyncRunId ? (
+              <div className="mt-3 flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-xs">
+                <Badge tone="info">Läuft …</Badge>
+                <span className="text-slate-500">
+                  Lauf <span className="font-mono">{pendingAsyncRunId}</span> wird alle {ASYNC_RUN_POLL_INTERVAL_MS / 1000}s per Polling
+                  (<span className="font-mono">GET .../runs</span>) abgefragt.
+                </span>
               </div>
             ) : null}
           </div>
