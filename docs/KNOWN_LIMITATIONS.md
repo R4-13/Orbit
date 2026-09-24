@@ -90,9 +90,13 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 - **`next build` (Windows)**: schlägt lokal ohne aktivierten
   Windows-Entwicklermodus mit `EPERM: symlink` fehl (Docker-Build
   unbetroffen) — `docs/ASSUMPTIONS.md` #17.
-- **Worker-Prozess** (`apps/api/worker`) bootet und beendet sich sofort
-  wieder — noch kein BullMQ-Queue-Consumer registriert (folgt mit der
-  Agent-Verdrahtung, siehe oben).
+- **Worker-Prozess** (`apps/api/worker`) verarbeitet seit Phase 22
+  tatsächlich Jobs (`WorkflowRunProcessor`, siehe
+  `docs/SCALABILITY_CONCEPT.md`) — bisher aber nur für den einen neuen,
+  additiven `POST .../trigger-async`-Pfad; `POST /intake/emails` läuft
+  weiterhin synchron, keine Pro-Tenant-Concurrency-Begrenzung (BullMQs
+  Job-Gruppen sind eine kostenpflichtige Pro-Funktion, siehe
+  `docs/ASSUMPTIONS.md` #176).
 - **OpenTelemetry** ist als Env-Flag (`OTEL_ENABLED`) vorgesehen, aber
   nicht verdrahtet.
 - **Dokument-Upload**: keine Antiviren-/Malware-Prüfung hochgeladener

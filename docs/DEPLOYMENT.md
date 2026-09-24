@@ -141,10 +141,15 @@ Kategorien:
   `DATABASE_URL_APP` trägt bereits `connection_limit=20` pro Instanz —
   bei mehreren Replicas gegen Postgres' `max_connections` (Default 100)
   im Blick behalten.
-- **Worker**: bootet aktuell und beendet sich sofort wieder — **kein
-  BullMQ-Queue-Consumer ist bisher registriert** (`docs/KNOWN_LIMITATIONS.md`).
-  Mehrere Worker-Replicas wären technisch möglich, sobald ein echter
-  Consumer existiert, sind aber aktuell bedeutungslos.
+- **Worker**: verarbeitet seit Phase 22 tatsächlich Jobs
+  (`WorkflowRunProcessor`, siehe `docs/SCALABILITY_CONCEPT.md`) —
+  bisher nur für den asynchronen `POST
+  /workflow-definitions/:key/trigger-async`-Pfad, `POST /intake/emails`
+  bleibt synchron. Mehrere Worker-Replicas sind technisch möglich (jede
+  Instanz zieht Jobs von derselben Redis-Queue), aber es gibt noch
+  **keine Pro-Tenant-Concurrency-Begrenzung** — BullMQs Job-Gruppen
+  wären dafür die naheliegende Lösung, sind aber eine kostenpflichtige
+  BullMQ-Pro-Funktion (`docs/ASSUMPTIONS.md` #176).
 - **Web**: zustandslos, horizontal skalierbar wie jede Next.js-App.
 - **Postgres/Redis/MinIO**: Einzelinstanzen im Compose-Setup — für
   echten Produktivbetrieb i. d. R. durch verwaltete Dienste

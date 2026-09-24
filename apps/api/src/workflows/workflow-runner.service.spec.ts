@@ -14,7 +14,7 @@ describe('WorkflowRunnerService', () => {
   let service: WorkflowRunnerService;
   let scoped: {
     workflowDefinition: { findUnique: jest.Mock };
-    workflowRun: { create: jest.Mock; update: jest.Mock; findMany: jest.Mock };
+    workflowRun: { create: jest.Mock; update: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock };
     workflowStepRun: { create: jest.Mock };
   };
   let prisma: { forTenantId: jest.Mock };
@@ -25,7 +25,12 @@ describe('WorkflowRunnerService', () => {
   beforeEach(async () => {
     scoped = {
       workflowDefinition: { findUnique: jest.fn() },
-      workflowRun: { create: jest.fn().mockResolvedValue({ id: 'wfr_1' }), update: jest.fn().mockResolvedValue(undefined), findMany: jest.fn() },
+      workflowRun: {
+        create: jest.fn().mockResolvedValue({ id: 'wfr_1' }),
+        update: jest.fn().mockResolvedValue(undefined),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+      },
       workflowStepRun: { create: jest.fn().mockResolvedValue(undefined) },
     };
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
@@ -189,5 +194,80 @@ describe('WorkflowRunnerService', () => {
 
     expect(result.status).toBe('FAILED');
     expect(runs.fail).toHaveBeenCalledWith('tenant_1', 'run_1', 'boom');
+  });
+
+  describe('createQueuedRun / executeQueuedRun (docs/SCALABILITY_CONCEPT.md)', () => {
+    it('createQueuedRun() creates the run but never resolves an agent or runs a turn', async () => {
+      scoped.workflowDefinition.findUnique.mockResolvedValue({
+        id: 'wfd_1',
+        status: 'ACTIVE',
+        steps: [{ order: 1, agentDefinitionKey: 'communication-intake', inputMapping: null, condition: null }],
+      });
+
+      const result = await service.createQueuedRun('tenant_1', 'wf-1', { subject: 'x' });
+
+      expect(result).toEqual({ workflowRunId: 'wfr_1' });
+      expect(resolver.resolve).not.toHaveBeenCalled();
+      expect(runs.start).not.toHaveBeenCalled();
+    });
+
+    it('createQueuedRun() rejects the same way trigger() does for an unrunnable definition', async () => {
+      scoped.workflowDefinition.findUnique.mockResolvedValue(null);
+      await expect(service.createQueuedRun('tenant_1', 'does-not-exist', {})).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('executeQueuedRun() throws NotFoundError when the run id does not exist', async () => {
+      scoped.workflowRun.findUnique.mockResolvedValue(null);
+      await expect(service.executeQueuedRun('tenant_1', 'user_1', 'does-not-exist')).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    });
+
+    it('executeQueuedRun() loads the already-created run + its definition and executes it to completion', async () => {
+      scoped.workflowRun.findUnique.mockResolvedValue({
+        id: 'wfr_1',
+        workflowDefinitionId: 'wfd_1',
+        input: { subject: 'Angebot' },
+      });
+      scoped.workflowDefinition.findUnique.mockResolvedValue({
+        id: 'wfd_1',
+        steps: [{ order: 1, agentDefinitionKey: 'communication-intake', inputMapping: null, condition: null }],
+      });
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'COMMUNICATION',
+        runtime: fakeRuntime([{ toolCallId: 'tc_1', toolName: 'classify_message', decision: 'ALLOW', output: { category: 'SALES' } }]),
+      });
+
+      const result = await service.executeQueuedRun('tenant_1', 'user_1', 'wfr_1');
+
+      expect(result.status).toBe('COMPLETED');
+      expect(scoped.workflowRun.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'wfr_1' }, data: expect.objectContaining({ status: 'COMPLETED' }) }),
+      );
+    });
+
+    it('trigger() still produces the exact same result as createQueuedRun()+executeQueuedRun() (behavior-preserving split)', async () => {
+      scoped.workflowDefinition.findUnique.mockResolvedValue({
+        id: 'wfd_1',
+        status: 'ACTIVE',
+        steps: [{ order: 1, agentDefinitionKey: 'communication-intake', inputMapping: null, condition: null }],
+      });
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'COMMUNICATION',
+        runtime: fakeRuntime([{ toolCallId: 'tc_1', toolName: 'classify_message', decision: 'ALLOW', output: {} }]),
+      });
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', { subject: 'x' });
+
+      expect(result.status).toBe('COMPLETED');
+      expect(result.workflowRunId).toBe('wfr_1');
+      expect(result.steps).toEqual([
+        { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: 'run_1' },
+      ]);
+    });
   });
 });

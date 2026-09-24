@@ -18,7 +18,6 @@ async function bootstrap() {
     bufferLogs: true,
   });
   await app.init();
-  // eslint-disable-next-line no-console
   console.log(`[${branding.appName}] Worker process started`);
 }
 

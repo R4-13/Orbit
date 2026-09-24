@@ -16,7 +16,9 @@ den vollständigen fachlichen Kontext. Architektur-Überblick:
 Registry/Policy Engine, inkl. konfigurierbarer Agenten und
 Orchestrierung seit Phase 20/21). Design-Herleitung dieser beiden
 über den ursprünglichen Master-Prompt hinaus angeforderten Fähigkeiten:
-[`docs/AGENT_STUDIO_CONCEPT.md`](docs/AGENT_STUDIO_CONCEPT.md).
+[`docs/AGENT_STUDIO_CONCEPT.md`](docs/AGENT_STUDIO_CONCEPT.md). Konzept
+und erste Umsetzungsstufe für Cloud-Skalierbarkeit (Queue/Worker,
+Rate-Limiting, Connection-Pooling): [`docs/SCALABILITY_CONCEPT.md`](docs/SCALABILITY_CONCEPT.md).
 
 ## Tech-Stack
 

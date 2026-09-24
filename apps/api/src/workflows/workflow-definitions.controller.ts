@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -10,6 +10,7 @@ import { CreateWorkflowDefinitionDto } from './dto/create-workflow-definition.dt
 import { TriggerWorkflowDto } from './dto/trigger-workflow.dto';
 import { UpdateWorkflowDefinitionDto } from './dto/update-workflow-definition.dto';
 import { WorkflowDefinitionsService } from './workflow-definitions.service';
+import { WorkflowRunQueueService } from './workflow-run-queue.service';
 import { WorkflowRunnerService } from './workflow-runner.service';
 
 /**
@@ -32,6 +33,7 @@ export class WorkflowDefinitionsController {
   constructor(
     private readonly workflowDefinitions: WorkflowDefinitionsService,
     private readonly runner: WorkflowRunnerService,
+    private readonly runQueue: WorkflowRunQueueService,
   ) {}
 
   @Get()
@@ -57,6 +59,20 @@ export class WorkflowDefinitionsController {
   @Post(':key/trigger')
   trigger(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string, @Body() dto: TriggerWorkflowDto) {
     return this.runner.trigger(user.tenantId, user.id, key, dto.input);
+  }
+
+  /**
+   * docs/SCALABILITY_CONCEPT.md — the queue-backed counterpart to
+   * `trigger()` above. Returns as soon as the WorkflowRun row exists
+   * (202, before any step has actually run) instead of blocking the
+   * request for the whole workflow — poll `GET :key/runs` for the
+   * result. Deliberately additive: `trigger()` is untouched and remains
+   * the default `/admin/workflows` "Ausführen" button's behavior.
+   */
+  @Post(':key/trigger-async')
+  @HttpCode(202)
+  triggerAsync(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string, @Body() dto: TriggerWorkflowDto) {
+    return this.runQueue.enqueueTrigger(user.tenantId, user.id, key, dto.input);
   }
 
   @Get(':key/runs')
