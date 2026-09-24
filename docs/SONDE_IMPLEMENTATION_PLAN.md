@@ -1,6 +1,14 @@
 # Sonde — Implementierungsplan (Gap-Analyse)
 
-**Status: Analyse abgeschlossen, Umsetzung noch nicht begonnen.** Dies ist
+**⚠️ ÜBERHOLT — durch [`docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md)
+ersetzt (Nutzer-Anweisung, 2026-09-24).** Der kritische Befund unten
+(kein Workflow-/Approval-Resume) bleibt gültig und wurde dort als
+"Phase 1: Durable Orchestration" übernommen — dieses Dokument selbst
+ist nur noch historischer Zwischenstand.
+
+---
+
+**Status (historisch): Analyse abgeschlossen, Umsetzung noch nicht begonnen.** Dies ist
 die in [`docs/SONDE_CONCEPT.md`](SONDE_CONCEPT.md) §52 ("Required
 Implementation Approach") geforderte Gap-Analyse gegen den tatsächlichen
 Code-Stand (Phase 25, Commit `84da518`), bevor irgendein Sonde-Code

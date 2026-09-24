@@ -1,9 +1,17 @@
-**Status: Konzept, keine Umsetzung begonnen.** Extern (ChatGPT) erarbeitet,
-auf Basis einer Zusammenstellung des aktuellen ORBIT-Implementierungsstands
-durch Claude Code (2026-09-24). Bewusst im englischen Original belassen
-(keine Übersetzung — reiner Statustext hier). Die im Dokument selbst unter
-§52 geforderte Gap-Analyse gegen den tatsächlichen Code-Stand:
-[`docs/SONDE_IMPLEMENTATION_PLAN.md`](SONDE_IMPLEMENTATION_PLAN.md).
+**⚠️ ÜBERHOLT — durch [`docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md`](ORBIT_UNIFIED_EVOLUTION_CONCEPT.md)
+ersetzt (Nutzer-Anweisung, 2026-09-24: "ignoriere das letzte Konzept").**
+Nur noch als historischer Zwischenstand erhalten, nicht mehr maßgeblich.
+Die hier geleistete Workflow-/Approval-Resume-Analyse bleibt inhaltlich
+gültig und wurde in `docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`
+übernommen.
+
+---
+
+**Status (historisch): Konzept, keine Umsetzung begonnen.** Extern
+(ChatGPT) erarbeitet, auf Basis einer Zusammenstellung des aktuellen
+ORBIT-Implementierungsstands durch Claude Code (2026-09-24). Bewusst im
+englischen Original belassen (keine Übersetzung — reiner Statustext
+hier).
 
 ---
 
