@@ -193,15 +193,21 @@ Tenant. **Beim Implementieren verifiziert und korrigiert**: Job-Gruppen
 sind eine **BullMQ-Pro-Funktion (kostenpflichtig)** — das installierte
 Open-Source-`bullmq`-Paket (`package.json`: `"bullmq": "^5.34.4"`) kennt
 kein `group`-Feld in seinen `JobsOptions` (geprüft gegen die
-tatsächlichen Typdefinitionen der installierten Version). Der
-"lauter Nachbar"-Schutz ist damit **weiterhin ein offener Punkt**, nicht
-Teil dieser ersten Umsetzungsstufe. Mit reinem Open-Source-BullMQ
-verfügbare Alternativen, keine davon bisher umgesetzt:
+tatsächlichen Typdefinitionen der installierten Version).
+
+**Update (docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2): der
+"lauter Nachbar"-Schutz ist umgesetzt** — die unten als zweite
+Alternative genannte Idee (selbst gebauter Redis-Zähler pro `tenantId`)
+wurde als `TenantConcurrencyService` gebaut, siehe
+`docs/IMPLEMENTATION_STATUS.md`. Mit reinem Open-Source-BullMQ
+verfügbare Alternativen:
 
 - `Worker`s `limiter`-Option begrenzt den **gesamten** Durchsatz eines
   Workers (Jobs pro Zeitfenster), nicht pro Tenant — ein grober, aber
   sofort verfügbarer Schutz gegen eine komplett überlastete Instanz.
-- Ein selbst gebauter Zähler (z. B. ein Redis-`INCR`/`EXPIRE`-Schlüssel
+  Weiterhin nicht genutzt — durch die Pro-Tenant-Lösung nicht mehr
+  nötig, um das ursprüngliche Problem zu lösen.
+- ✅ Ein selbst gebauter Zähler (z. B. ein Redis-`INCR`/`EXPIRE`-Schlüssel
   pro `tenantId`, im Processor vor der Ausführung geprüft, Job bei
   Überschreitung mit `Worker.rateLimit()`/manuellem Re-Queue
   zurückgestellt) — mehr Aufwand, aber echte Pro-Tenant-Grenze ohne

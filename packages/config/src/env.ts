@@ -139,6 +139,11 @@ export const envSchema = z.object({
   // Rate limiting
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
+
+  // Tenant concurrency fairness (docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §62) — caps how many
+  // WorkflowRuns a single tenant may have executing at once in the worker pool, so one tenant
+  // can't exhaust all worker capacity for every other tenant.
+  TENANT_MAX_CONCURRENT_WORKFLOW_RUNS: z.coerce.number().int().positive().default(5),
 });
 
 export type OrbitEnv = z.infer<typeof envSchema>;

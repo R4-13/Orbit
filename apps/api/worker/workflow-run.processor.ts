@@ -1,9 +1,13 @@
 import { Logger } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import type { Job } from 'bullmq';
+import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import type { Job, Queue } from 'bullmq';
+import { TenantConcurrencyService } from '../src/queue/tenant-concurrency.service';
 import { WORKFLOW_RUNS_QUEUE } from '../src/queue/queue.tokens';
 import { WorkflowRunnerService } from '../src/workflows/workflow-runner.service';
 import type { WorkflowRunJobData } from '../src/workflows/workflow-run-queue.service';
+
+/** How long a job waits before re-checking a tenant's concurrency slot — short enough that a freed slot is picked up quickly, long enough not to hammer Redis when a tenant is genuinely at its limit. */
+const REQUEUE_DELAY_MS = 2000;
 
 /**
  * docs/SCALABILITY_CONCEPT.md — consumes the `workflow-runs` queue that
@@ -18,18 +22,46 @@ import type { WorkflowRunJobData } from '../src/workflows/workflow-run-queue.ser
  * so a job failure here only matters for BullMQ's own bookkeeping
  * (`attempts`, dashboards), not for what the client eventually reads via
  * `GET /workflow-definitions/:key/runs`.
+ *
+ * docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2 ("Tenant Concurrency
+ * Fairness"): before actually executing, tries to acquire a per-tenant
+ * concurrency slot (`TenantConcurrencyService`). If the tenant is
+ * already at `TENANT_MAX_CONCURRENT_WORKFLOW_RUNS`, this job
+ * deliberately does **not** execute anything and does **not** fail —
+ * failing would count against `attempts: 1` (see
+ * `WorkflowRunQueueService`'s own doc comment on why retries are
+ * deliberately not enabled generally) and looks like a real error on
+ * dashboards. Instead it self-requeues an identical job a couple
+ * seconds later and returns cleanly — an explicit, visible "deferred",
+ * not a disguised retry.
  */
 @Processor(WORKFLOW_RUNS_QUEUE)
 export class WorkflowRunProcessor extends WorkerHost {
   private readonly logger = new Logger(WorkflowRunProcessor.name);
 
-  constructor(private readonly runner: WorkflowRunnerService) {
+  constructor(
+    private readonly runner: WorkflowRunnerService,
+    private readonly concurrency: TenantConcurrencyService,
+    @InjectQueue(WORKFLOW_RUNS_QUEUE) private readonly queue: Queue<WorkflowRunJobData>,
+  ) {
     super();
   }
 
   async process(job: Job<WorkflowRunJobData>): Promise<void> {
     const { tenantId, actorUserId, workflowRunId } = job.data;
-    this.logger.log(`Executing queued workflow run ${workflowRunId} (tenant ${tenantId})`);
-    await this.runner.executeQueuedRun(tenantId, actorUserId, workflowRunId);
+
+    const acquired = await this.concurrency.acquireWorkflowRunSlot(tenantId, workflowRunId);
+    if (!acquired) {
+      this.logger.log(`Tenant ${tenantId} at its concurrency limit — deferring workflow run ${workflowRunId} by ${REQUEUE_DELAY_MS}ms`);
+      await this.queue.add('run', job.data, { attempts: 1, delay: REQUEUE_DELAY_MS });
+      return;
+    }
+
+    try {
+      this.logger.log(`Executing queued workflow run ${workflowRunId} (tenant ${tenantId})`);
+      await this.runner.executeQueuedRun(tenantId, actorUserId, workflowRunId);
+    } finally {
+      await this.concurrency.releaseWorkflowRunSlot(tenantId, workflowRunId);
+    }
   }
 }

@@ -22,15 +22,17 @@ export interface WorkflowRunJobData {
  * doesn't yet support resuming a partially-run workflow from a specific
  * step — a naive retry would start the whole run over).
  *
- * No per-tenant concurrency grouping here: BullMQ's job `group` option
+ * No per-tenant concurrency grouping *here*: BullMQ's job `group` option
  * (docs/SCALABILITY_CONCEPT.md's original "noisy neighbor" idea) is a
  * BullMQ **Pro** (paid) feature, not available in the open-source
  * `bullmq` package this project depends on — verified against the
  * installed version's `JobsOptions` type, which has no `group` field.
- * The open-source equivalent (`Worker`'s `limiter` option,
- * `WorkflowRunProcessor`) only caps *total* worker throughput, not
- * per-tenant — a real, currently open gap, corrected in
- * docs/SCALABILITY_CONCEPT.md rather than left as a false claim.
+ * The "noisy neighbor" protection itself is **not** missing anymore —
+ * `WorkflowRunProcessor` enforces a per-tenant concurrency ceiling
+ * (`TenantConcurrencyService`, docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md
+ * Phase 2) on the consumer side instead, since the producer side (this
+ * file) has no way to know how many of a tenant's other runs are
+ * currently executing elsewhere in the worker pool.
  */
 @Injectable()
 export class WorkflowRunQueueService {

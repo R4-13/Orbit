@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
 import { WORKFLOW_RUNS_QUEUE } from './queue.tokens';
+import { TenantConcurrencyService } from './tenant-concurrency.service';
 
 /**
  * docs/SCALABILITY_CONCEPT.md — BullMQ/Redis wiring that the codebase has
@@ -23,6 +24,7 @@ import { WORKFLOW_RUNS_QUEUE } from './queue.tokens';
     }),
     BullModule.registerQueue({ name: WORKFLOW_RUNS_QUEUE }),
   ],
-  exports: [BullModule],
+  providers: [TenantConcurrencyService],
+  exports: [BullModule, TenantConcurrencyService],
 })
 export class QueueModule {}
