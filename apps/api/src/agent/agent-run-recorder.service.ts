@@ -3,6 +3,7 @@ import type { AgentTurnResult, ToolCallOutcome, ToolRegistry } from '@orbit/agen
 import type { AgentRun, AgentRunTriggerType, AgentType, Prisma, ToolInvocation } from '@orbit/domain';
 import { NotFoundError } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TOOL_REGISTRY } from './agent.tokens';
 
@@ -32,6 +33,7 @@ export class AgentRunRecorderService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly metrics: MetricsService,
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
   ) {}
 
@@ -62,6 +64,15 @@ export class AgentRunRecorderService {
   /** Persists every tool call outcome from a completed AgentRuntime turn as a ToolInvocation row. */
   async recordToolCalls(tenantId: string, agentRunId: string, outcomes: ToolCallOutcome[]): Promise<void> {
     for (const outcome of outcomes) {
+      const status =
+        outcome.decision === 'DENY'
+          ? 'DENIED'
+          : outcome.decision !== 'ALLOW'
+            ? 'BLOCKED_AWAITING_APPROVAL'
+            : outcome.error
+              ? 'FAILED'
+              : 'SUCCESS';
+
       await this.prisma.forTenantId(tenantId).toolInvocation.create({
         data: {
           tenantId,
@@ -76,17 +87,17 @@ export class AgentRunRecorderService {
           // whether the tool actually ran; FollowUpsModule relies on
           // finding BLOCKED_AWAITING_APPROVAL rows to resume, see
           // docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md.
-          status:
-            outcome.decision === 'DENY'
-              ? 'DENIED'
-              : outcome.decision !== 'ALLOW'
-                ? 'BLOCKED_AWAITING_APPROVAL'
-                : outcome.error
-                  ? 'FAILED'
-                  : 'SUCCESS',
+          status,
           output: { decision: outcome.decision, output: outcome.output, error: outcome.error } as Prisma.InputJsonValue,
         },
       });
+
+      // Only ALLOW decisions ever reach ToolRegistry.execute() — durationMs
+      // is undefined for blocked/denied calls (see ToolCallOutcome's own
+      // doc comment, packages/agent-core).
+      if (outcome.durationMs !== undefined) {
+        this.metrics.toolInvocationDuration.observe({ tool_name: outcome.toolName, status }, outcome.durationMs / 1000);
+      }
 
       await this.audit.record({
         tenantId,
@@ -113,7 +124,7 @@ export class AgentRunRecorderService {
   async complete(tenantId: string, agentRunId: string, result: AgentTurnResult): Promise<void> {
     const hasError = result.toolCallOutcomes.some((outcome) => outcome.error);
 
-    await this.prisma.forTenantId(tenantId).agentRun.update({
+    const updated = await this.prisma.forTenantId(tenantId).agentRun.update({
       where: { id: agentRunId },
       data: {
         status: hasError ? 'FAILED' : 'COMPLETED',
@@ -125,6 +136,7 @@ export class AgentRunRecorderService {
         completedAt: new Date(),
       },
     });
+    this.recordAgentRunMetrics(updated);
 
     await this.audit.record({
       tenantId,
@@ -161,10 +173,11 @@ export class AgentRunRecorderService {
   }
 
   async fail(tenantId: string, agentRunId: string, errorMessage: string): Promise<void> {
-    await this.prisma.forTenantId(tenantId).agentRun.update({
+    const updated = await this.prisma.forTenantId(tenantId).agentRun.update({
       where: { id: agentRunId },
       data: { status: 'FAILED', errorMessage, completedAt: new Date() },
     });
+    this.recordAgentRunMetrics(updated);
 
     await this.audit.record({
       tenantId,
@@ -174,5 +187,11 @@ export class AgentRunRecorderService {
       entityId: agentRunId,
       payload: { error: errorMessage },
     });
+  }
+
+  private recordAgentRunMetrics(run: AgentRun): void {
+    const durationSeconds = (Date.now() - run.startedAt.getTime()) / 1000;
+    this.metrics.agentRunDuration.observe({ agent_type: run.agentType, status: run.status }, durationSeconds);
+    if (run.status === 'FAILED') this.metrics.agentRunFailures.inc({ agent_type: run.agentType });
   }
 }

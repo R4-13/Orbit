@@ -48,7 +48,14 @@ describe('AgentRuntime.runTurn', () => {
 
     expect(execute).toHaveBeenCalledWith({ summary: 'Anruf erledigt' }, CONTEXT);
     expect(result.toolCallOutcomes).toEqual([
-      { toolCallId: 'call_1', toolName: 'log_activity', decision: 'ALLOW', input: { summary: 'Anruf erledigt' }, output: { logged: true } },
+      {
+        toolCallId: 'call_1',
+        toolName: 'log_activity',
+        decision: 'ALLOW',
+        input: { summary: 'Anruf erledigt' },
+        output: { logged: true },
+        durationMs: expect.any(Number),
+      },
     ]);
     expect(result.finalText).toBe('Fertig.');
     expect(result.iterations).toBe(2);

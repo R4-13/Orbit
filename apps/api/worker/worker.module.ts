@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { findRepoRootEnvFile } from '@orbit/config';
 import { AuditModule } from '../src/audit/audit.module';
 import { EnvModule } from '../src/config/env.module';
+import { MetricsModule } from '../src/metrics/metrics.module';
 import { PolicyModule } from '../src/policy/policy.module';
 import { PrismaModule } from '../src/prisma/prisma.module';
 import { QueueModule } from '../src/queue/queue.module';
@@ -31,6 +32,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     EnvModule,
     PrismaModule,
     AuditModule,
+    MetricsModule,
     PolicyModule,
     QueueModule,
     WorkflowsModule,

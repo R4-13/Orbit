@@ -137,7 +137,7 @@ gemocktem HTTP-Client (kein echter API-Call).
 |---|---|---|---|
 | 0 | Gap-Analyse (dieses Dokument) | — | ✅ erledigt |
 | 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | ✅ erledigt (Approval-Resume + Pause-Semantik; generische Connector-Idempotenz-Keys bewusst nicht Teil dieser Stufe) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
-| 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | MISSING/PARTIAL | ✅ Ja (Metrics als Fortsetzung von Phase 26; Rest neu) |
+| 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | Metrics ✅ erledigt; Logging/Failed-Jobs-UI/Tenant-Concurrency/Retention noch offen | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | PARTIAL/MISSING | ✅ Ja |
 | 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | MISSING | ✅ Ja (strukturell, ohne Live-Test) |
 | 5 | Sonde Conversation Foundation | MISSING | ✅ Ja |

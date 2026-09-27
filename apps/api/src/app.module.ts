@@ -23,6 +23,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { LeadsModule } from './leads/leads.module';
 import { MeetingsModule } from './meetings/meetings.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -77,6 +78,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     }),
     PrismaModule,
     AuditModule,
+    MetricsModule,
     SecurityModule,
     StorageModule,
     ConnectorsModule,

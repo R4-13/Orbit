@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import type { ToolCallOutcome } from '@orbit/agent-core';
 import { AuditService } from '../audit/audit.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TOOL_REGISTRY } from './agent.tokens';
 import { AgentRunRecorderService } from './agent-run-recorder.service';
@@ -30,6 +31,7 @@ describe('AgentRunRecorderService.recordToolCalls', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
         { provide: TOOL_REGISTRY, useValue: toolRegistry },
+        MetricsService,
       ],
     }).compile();
 

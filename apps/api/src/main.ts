@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { loadEnv, loadBrandingConfig } from '@orbit/config';
 import { OrbitExceptionFilter } from './common/filters/orbit-exception.filter';
+import { MetricsService } from './metrics/metrics.service';
 
 async function bootstrap() {
   const env = loadEnv();
@@ -22,7 +23,7 @@ async function bootstrap() {
   app.use(helmet());
 
   const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter));
+  app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter, app.get(MetricsService)));
   app.enableCors({
     origin: env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
     credentials: true,

@@ -34,6 +34,8 @@ export interface ToolCallOutcome {
   input?: Record<string, unknown>;
   output?: unknown;
   error?: string;
+  /** Wall-clock time spent inside `ToolRegistry.execute()` — undefined for non-ALLOW decisions (the tool never ran). Feeds `tool_invocation_duration_seconds`, docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2. */
+  durationMs?: number;
 }
 
 export interface AgentTurnResult {
@@ -120,9 +122,10 @@ export class AgentRuntime {
       return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision, input: toolCall.input };
     }
 
+    const startedAt = Date.now();
     try {
       const output = await this.tools.execute(tool.name, toolCall.input, context);
-      return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision, input: toolCall.input, output };
+      return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision, input: toolCall.input, output, durationMs: Date.now() - startedAt };
     } catch (error) {
       return {
         toolCallId: toolCall.toolCallId,
@@ -130,6 +133,7 @@ export class AgentRuntime {
         decision,
         input: toolCall.input,
         error: error instanceof Error ? error.message : String(error),
+        durationMs: Date.now() - startedAt,
       };
     }
   }

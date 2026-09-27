@@ -522,9 +522,11 @@ Log-Korrelation vorbereitete `@opentelemetry/instrumentation-pino`
 bleibt bis zum tatsächlichen Verdrahten von pino wirkungslos (siehe
 `docs/OBSERVABILITY.md`, "Scope-Grenzen"). ❌ Queue-Job-IDs (Traces
 erfassen zwar BullMQ-nahe ioredis-Aufrufe, aber keine expliziten
-Job-ID-Spans). ❌ Keine Metrics (`MetricsModule` fehlt, kein
-`/metrics`-Endpunkt — bewusst nicht Teil von Phase 25, siehe
-`docs/OBSERVABILITY.md`).
+Job-ID-Spans). ✅ **Metrics** (`docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`
+Phase 2): neues `MetricsModule`, `GET /api/v1/metrics` (Prometheus-
+Format), deckt HTTP-, Workflow-, Agent-Run-, Tool-Invocation-, Approval-
+Wartezeit- und Queue-Tiefe-Metriken ab — siehe
+`docs/IMPLEMENTATION_STATUS.md` für den vollständigen Katalog.
 
 ## §42 — API
 

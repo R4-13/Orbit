@@ -5,6 +5,7 @@ import { NotFoundError, ValidationFailedError } from '@orbit/shared';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
 import { ApprovalsService } from '../approvals/approvals.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildWorkflowStepMessage, evaluateWorkflowCondition, type WorkflowPathContext, type WorkflowStepConditionExpr } from './workflow-path';
 import type { WorkflowDefinitionWithSteps } from './workflow-definitions.service';
@@ -61,6 +62,7 @@ export class WorkflowRunnerService {
     private readonly resolver: AgentDefinitionResolverService,
     private readonly runs: AgentRunRecorderService,
     private readonly approvals: ApprovalsService,
+    private readonly metrics: MetricsService,
   ) {}
 
   /** Synchronous execution (existing behavior, unchanged) — validates, creates the run, and walks it to completion (or a pause) before returning. */
@@ -151,9 +153,10 @@ export class WorkflowRunnerService {
 
   /** Marks a paused run as REJECTED — called by FollowUpsModule when the blocking approval is rejected rather than approved. No further steps run. */
   async markRejected(tenantId: string, workflowRunId: string): Promise<void> {
-    await this.prisma
+    const updated = await this.prisma
       .forTenantId(tenantId)
       .workflowRun.update({ where: { id: workflowRunId }, data: { status: 'REJECTED', completedAt: new Date() } });
+    this.metrics.workflowRunDuration.observe({ status: 'REJECTED' }, (Date.now() - updated.startedAt.getTime()) / 1000);
   }
 
   private async createRun(
@@ -277,6 +280,9 @@ export class WorkflowRunnerService {
         contextSnapshot: (finalStatus === 'WAITING_FOR_APPROVAL' ? (context as unknown as Prisma.InputJsonValue) : null) as Prisma.InputJsonValue,
       },
     });
+
+    this.metrics.workflowRunDuration.observe({ status: finalStatus }, (Date.now() - workflowRun.startedAt.getTime()) / 1000);
+    if (finalStatus === 'FAILED') this.metrics.workflowRunFailures.inc();
 
     return { workflowRunId: workflowRun.id, status: finalStatus, steps: stepResults };
   }

@@ -4,7 +4,11 @@ import request from 'supertest';
 import { MockLLMProvider } from '@orbit/agent-core';
 import { POLICY_ACTIONS } from '@orbit/shared';
 import { LLM_PROVIDER } from '../src/agent/agent.tokens';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+
+const PASSWORD = 'Test#Password2026!';
 
 /**
  * docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md, Phase 1 ("Durable Workflow
@@ -16,34 +20,57 @@ import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
  * (`WAITING_FOR_APPROVAL`, step 2 never runs), and approving the
  * resulting FOLLOW_UP approval via `PATCH /follow-ups/:id/approve`
  * actually executes the tool and resumes step 2 to completion — proven
- * against the real HTTP layer, real Postgres, real Policy Engine
- * (temporarily forcing `task.create` to REQUIRE_APPROVAL for this test's
- * duration, restored in `afterEach`), not just the mocked unit tests in
- * `apps/api/src/follow-ups/follow-up-resume.service.spec.ts` and
- * `apps/api/src/workflows/workflow-runner.service.spec.ts`.
+ * against the real HTTP layer, real Postgres, real Policy Engine.
+ *
+ * Uses a fresh, throwaway tenant (same pattern as
+ * `tenant-admin.e2e-spec.ts`) rather than the shared "Musterwerk GmbH"
+ * demo tenant — **real, live-found bug this fixed**: an earlier version
+ * of this suite forced `task.create` to REQUIRE_APPROVAL against
+ * Musterwerk directly, which intermittently broke
+ * `workflow-orchestration.e2e-spec.ts` (also uses `create_task`, also
+ * against Musterwerk) whenever Jest ran both files' workers concurrently
+ * — a real cross-suite test-isolation bug, not a flaky test. An isolated
+ * tenant means this suite's policy mutation can never collide with
+ * another file's assumptions about the shared tenant's policy config.
  */
 describe('Workflow approval resume (e2e)', () => {
   let app: INestApplication;
   let llm: MockLLMProvider;
+  let tenantsService: TenantsService;
+  let prisma: PrismaService;
   let adminToken: string;
-  const blockedAgentKey = `e2e-resume-blocked-${randomUUID().slice(0, 8)}`;
-  const followUpAgentKey = `e2e-resume-followup-${randomUUID().slice(0, 8)}`;
-  const workflowKey = `e2e-resume-workflow-${randomUUID().slice(0, 8)}`;
-  const rejectWorkflowKey = `e2e-resume-reject-${randomUUID().slice(0, 8)}`;
+  let tenantId: string;
+  const blockedAgentKey = 'e2e-resume-blocked';
+  const followUpAgentKey = 'e2e-resume-followup';
+  const workflowKey = 'e2e-resume-workflow';
+  const rejectWorkflowKey = 'e2e-resume-reject';
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
     llm = app.get(LLM_PROVIDER);
+    tenantsService = app.get(TenantsService);
+    prisma = app.get(PrismaService);
+
+    const suffix = randomUUID();
+    const { tenant, adminUser } = await tenantsService.bootstrapTenant({
+      name: `E2E Approval Resume Test ${suffix}`,
+      slug: `e2e-approval-resume-${suffix}`,
+      adminEmail: `admin-${suffix}@e2e-approval-resume.example`,
+      adminPassword: PASSWORD,
+      adminFirstName: 'E2E',
+      adminLastName: 'Admin',
+    });
+    tenantId = tenant.id;
 
     const login = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
-      .send({ email: 'admin@musterwerk.example', password: 'Musterwerk#2026!' })
+      .send({ email: adminUser.email, password: PASSWORD })
       .expect(200);
     adminToken = login.body.accessToken as string;
 
     // `task.create` has no autonomy ceiling (unlike payment.execute/
-    // supplier.*), so it's safe to force into REQUIRE_APPROVAL for this
-    // suite's duration.
+    // supplier.*), so it's safe to force into REQUIRE_APPROVAL — scoped
+    // to this throwaway tenant only, never the shared Musterwerk tenant.
     await request(app.getHttpServer())
       .patch(`/api/v1/policies/${POLICY_ACTIONS.TASK_CREATE}`)
       .set('Authorization', `Bearer ${adminToken}`)
@@ -97,11 +124,7 @@ describe('Workflow approval resume (e2e)', () => {
   });
 
   afterAll(async () => {
-    await request(app.getHttpServer())
-      .patch(`/api/v1/policies/${POLICY_ACTIONS.TASK_CREATE}`)
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ mode: 'AUTONOMOUS' })
-      .expect(200);
+    await prisma.tenant.delete({ where: { id: tenantId } }).catch(() => undefined);
     await app.close();
   });
 

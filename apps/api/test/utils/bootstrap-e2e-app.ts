@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { AppModule } from '../../src/app.module';
 import { OrbitExceptionFilter } from '../../src/common/filters/orbit-exception.filter';
+import { MetricsService } from '../../src/metrics/metrics.service';
 
 /**
  * Boots a full Nest application against the real (Testing)Module the same
@@ -24,7 +25,7 @@ export async function bootstrapE2eApp(): Promise<INestApplication> {
   const app = moduleRef.createNestApplication();
 
   const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter));
+  app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter, app.get(MetricsService)));
 
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.setGlobalPrefix('api');

@@ -4,8 +4,14 @@
 verifiziert.** Schließt den in `docs/MASTER_SPEC_GAP_ANALYSIS.md` §41
 vermerkten Punkt "❌ OpenTelemetry: nur `OTEL_ENABLED`-Env-Flag, nicht
 verdrahtet" — das Flag existierte seit Phase 1, wurde aber bis hierhin
-nirgends gelesen. Metriken (`/metrics`-Endpunkt) sind **bewusst nicht**
-Teil dieser Phase, siehe "Scope-Grenzen" unten.
+nirgends gelesen.
+
+**Update (docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2): der unten
+als offen benannte `/metrics`-Endpunkt ist implementiert und live
+verifiziert.** `GET /api/v1/metrics` (Prometheus-Format, `prom-client`)
+— siehe `docs/IMPLEMENTATION_STATUS.md` für den vollständigen
+Metrik-Katalog. `llm_request_duration`/`copilot_response_latency`
+bleiben weiterhin bewusst offen (siehe `docs/ASSUMPTIONS.md` #217).
 
 ## Warum jetzt
 
@@ -68,10 +74,9 @@ zu stören):
 
 ## Scope-Grenzen (bewusst, nicht vergessen)
 
-- **Kein `/metrics`-Endpunkt/Prometheus.** Eigener, klar abgrenzbarer
-  nächster Schritt (§41 nennt ihn separat: "Keine Metrics
-  (`MetricsModule` fehlt)") — nicht mit in diese Phase gezogen, um die
-  Änderung überschaubar zu halten.
+- ~~Kein `/metrics`-Endpunkt/Prometheus.~~ **Umgesetzt in
+  docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2** — siehe Update-
+  Hinweis oben.
 - **Keine Prisma-Query-Spans.** Prisma 6.x bräuchte dafür
   `previewFeatures = ["tracing"]` im Schema + Client-Neugenerierung —
   ein eigener, migrationsrelevanter Schritt mit eigenem Risiko, bewusst

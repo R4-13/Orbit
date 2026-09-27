@@ -3,6 +3,7 @@ import type { AgentRuntime } from '@orbit/agent-core';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
 import { ApprovalsService } from '../approvals/approvals.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRunnerService } from './workflow-runner.service';
 
@@ -26,8 +27,8 @@ describe('WorkflowRunnerService', () => {
     scoped = {
       workflowDefinition: { findUnique: jest.fn() },
       workflowRun: {
-        create: jest.fn().mockResolvedValue({ id: 'wfr_1' }),
-        update: jest.fn().mockResolvedValue(undefined),
+        create: jest.fn().mockResolvedValue({ id: 'wfr_1', startedAt: new Date() }),
+        update: jest.fn().mockResolvedValue({ startedAt: new Date() }),
         findMany: jest.fn(),
         findUnique: jest.fn(),
       },
@@ -50,6 +51,7 @@ describe('WorkflowRunnerService', () => {
         { provide: AgentDefinitionResolverService, useValue: resolver },
         { provide: AgentRunRecorderService, useValue: runs },
         { provide: ApprovalsService, useValue: approvals },
+        MetricsService,
       ],
     }).compile();
 
@@ -196,7 +198,7 @@ describe('WorkflowRunnerService', () => {
   });
 
   it('resumeFromStep() reconstructs prior steps from WorkflowStepRun rows and completes the remaining steps', async () => {
-    scoped.workflowRun.findUnique.mockResolvedValue({ id: 'wfr_1', workflowDefinitionId: 'wfd_1' });
+    scoped.workflowRun.findUnique.mockResolvedValue({ id: 'wfr_1', workflowDefinitionId: 'wfd_1', startedAt: new Date() });
     scoped.workflowDefinition.findUnique.mockResolvedValue({
       id: 'wfd_1',
       status: 'ACTIVE',
@@ -302,6 +304,7 @@ describe('WorkflowRunnerService', () => {
         id: 'wfr_1',
         workflowDefinitionId: 'wfd_1',
         input: { subject: 'Angebot' },
+        startedAt: new Date(),
       });
       scoped.workflowDefinition.findUnique.mockResolvedValue({
         id: 'wfd_1',
