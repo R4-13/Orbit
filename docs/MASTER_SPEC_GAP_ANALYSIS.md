@@ -515,12 +515,14 @@ nicht zutreffend — beim Verdrahten von OTEL in Phase 25 wurde gefunden,
 dass `pino`/`pino-http` zwar seit Phase 1 als Dependencies in
 `apps/api/package.json` stehen, aber nirgends im Code tatsächlich als
 Logger verwendet werden; sämtliche bisherigen Logs laufen über NestJS'
-eingebauten Standard-`Logger`. ⚠️ Correlation-/Request-IDs (§31): damit
-weiterhin **nicht** vorhanden — pino-http's automatische Request-IDs
-griffen ohnehin nie (pino ungenutzt), und die für Trace-ID-basierte
-Log-Korrelation vorbereitete `@opentelemetry/instrumentation-pino`
-bleibt bis zum tatsächlichen Verdrahten von pino wirkungslos (siehe
-`docs/OBSERVABILITY.md`, "Scope-Grenzen"). ❌ Queue-Job-IDs (Traces
+eingebauten Standard-`Logger` — **seit `docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`
+Phase 2 ebenfalls behoben**: pino ist jetzt tatsächlich als
+NestJS-Logger verdrahtet (`apps/api/src/logging/`). ✅
+Correlation-/Request-IDs (§31): `pino-http` generiert jetzt echte
+Request-IDs, und die bereits seit Phase 25 vorbereitete Trace-ID-
+Log-Korrelation (`@opentelemetry/instrumentation-pino`) greift jetzt
+tatsächlich — live bestätigt, `trace_id`/`span_id`/`trace_flags`
+erscheinen in jeder Logzeile bei aktiviertem Tracing. ❌ Queue-Job-IDs (Traces
 erfassen zwar BullMQ-nahe ioredis-Aufrufe, aber keine expliziten
 Job-ID-Spans). ✅ **Metrics** (`docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`
 Phase 2): neues `MetricsModule`, `GET /api/v1/metrics` (Prometheus-

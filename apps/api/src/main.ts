@@ -7,20 +7,30 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import pinoHttp from 'pino-http';
 import { AppModule } from './app.module';
 import { loadEnv, loadBrandingConfig } from '@orbit/config';
 import { OrbitExceptionFilter } from './common/filters/orbit-exception.filter';
+import { createPinoLogger } from './logging/create-pino-logger';
+import { OrbitPinoLogger } from './logging/pino-nest-logger';
 import { MetricsService } from './metrics/metrics.service';
 
 async function bootstrap() {
   const env = loadEnv();
   const branding = loadBrandingConfig();
+  const pino = createPinoLogger(env);
 
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+  // As early as possible — `bufferLogs: true` holds every Nest bootstrap
+  // log (module init, route mapping) until this call, so they render
+  // through pino too instead of Nest's default console Logger. See
+  // docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §63.
+  app.useLogger(new OrbitPinoLogger(pino));
 
   app.use(helmet());
+  app.use(pinoHttp({ logger: pino }));
 
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new OrbitExceptionFilter(httpAdapter, app.get(MetricsService)));
@@ -55,7 +65,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(env.API_PORT);
-  console.log(`[${branding.appName}] API listening on port ${env.API_PORT}`);
+  pino.info(`[${branding.appName}] API listening on port ${env.API_PORT}`);
 }
 
 bootstrap();

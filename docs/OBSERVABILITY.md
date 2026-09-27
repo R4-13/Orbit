@@ -84,23 +84,13 @@ zu stören):
   `pg`-Treiber (im Bundle enthalten) greifen hier ohnehin nicht:
   Prisma spricht mit seiner eigenen Query-Engine, nicht über das
   npm-Paket `pg`.
-- **Log-Korrelation (Trace-IDs in Logs, §31) ist NICHT aktiv** — **echter
-  Fund** beim Verifizieren dieser Phase: `pino`/`pino-http` stehen zwar
-  seit Phase 1 als Dependencies in `apps/api/package.json`
-  (`docs/MASTER_SPEC_GAP_ANALYSIS.md` §41 behauptete bisher
-  fälschlich "✅ Strukturiertes Logging (pino/pino-http)"), werden aber
-  nirgends im Code tatsächlich verwendet — alle bisherigen Logs laufen
-  über NestJS' eingebauten Standard-`Logger`, nicht über pino. Die
-  enthaltene `@opentelemetry/instrumentation-pino`-Konfiguration in
-  `tracing.ts` ist deshalb aktuell wirkungslos (kein `require('pino')`
-  im Prozess, nichts zum Patchen) — bewusst trotzdem drin gelassen
-  (kein Overhead, keine Nebenwirkung), damit sie sofort greift, sobald
-  `pino`/`pino-http` tatsächlich als Logger verdrahtet werden. Das
-  eigentliche Verdrahten von pino als Nest-Logger ist ein eigener,
-  nicht-trivialer Schritt (betrifft die Logger-Bootstrapping in
-  `main.ts`/`worker/main.ts` und potenziell jede Log-Ausgabe im
-  System) — bewusst nicht Teil dieser Phase, `docs/MASTER_SPEC_GAP_ANALYSIS.md`
-  §41 entsprechend korrigiert.
+- ~~Log-Korrelation (Trace-IDs in Logs, §31) ist NICHT aktiv.~~
+  **Umgesetzt in docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2**:
+  pino ist jetzt tatsächlich als NestJS-Logger verdrahtet
+  (`apps/api/src/logging/`), die bereits hier vorbereitete
+  `@opentelemetry/instrumentation-pino`-Konfiguration griff sofort ohne
+  weitere Änderung — live bestätigt: `trace_id`/`span_id`/`trace_flags`
+  erscheinen jetzt in jeder Logzeile bei `OTEL_ENABLED=true`.
 - **Metrics-Instrumentierung im NodeSDK ist nicht konfiguriert** (kein
   `metricReader`) — nur Tracing.
 
