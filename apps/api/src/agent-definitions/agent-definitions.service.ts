@@ -6,6 +6,7 @@ import { NotFoundError, ValidationFailedError } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgentEvaluationService } from './agent-evaluation.service';
 import type { AgentBaseTypeDto } from './dto/create-agent-definition.dto';
 import type { AgentDefinitionStatusDto } from './dto/update-agent-definition.dto';
 
@@ -42,6 +43,7 @@ export class AgentDefinitionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly evaluation: AgentEvaluationService,
     @Inject(TOOL_REGISTRY) private readonly toolRegistry: ToolRegistry,
   ) {}
 
@@ -135,6 +137,13 @@ export class AgentDefinitionsService {
    * new AgentDefinitionVersion row rather than updating in place — same
    * append-only audit pattern as PolicyConfigService, so a prompt change
    * can always be rolled back and diffed later.
+   *
+   * §17 publish gate: whenever the *resulting* status is ACTIVE (not only
+   * on an explicit DRAFT→ACTIVE transition — editing the prompt/tools of
+   * an already-ACTIVE definition in place must not bypass the gate), every
+   * `critical: true` AgentEvaluationCase for this key is run against the
+   * candidate prompt/tools *before* anything is persisted. A failure
+   * throws and the update never happens — see AgentEvaluationService.
    */
   async update(
     tenantId: string,
@@ -148,15 +157,27 @@ export class AgentDefinitionsService {
       this.assertKnownTools(input.allowedTools);
     }
 
+    const nextStatus = input.status ?? existing.status;
+    const candidateSystemPrompt = input.systemPrompt ?? existing.systemPrompt;
+    const candidateAllowedTools = input.allowedTools ?? existing.allowedTools;
+
+    if (nextStatus === 'ACTIVE') {
+      await this.evaluation.assertCriticalCasesPass(tenantId, actorUserId, key, {
+        systemPrompt: candidateSystemPrompt,
+        allowedTools: candidateAllowedTools,
+        baseType: existing.baseType,
+      });
+    }
+
     const nextVersion = existing.version + 1;
     const updated = await this.prisma.forTenantId(tenantId).agentDefinition.update({
       where: { tenantId_key: { tenantId, key } },
       data: {
         name: input.name ?? existing.name,
         description: input.description ?? existing.description,
-        systemPrompt: input.systemPrompt ?? existing.systemPrompt,
-        allowedTools: input.allowedTools ?? existing.allowedTools,
-        status: input.status ?? existing.status,
+        systemPrompt: candidateSystemPrompt,
+        allowedTools: candidateAllowedTools,
+        status: nextStatus,
         version: nextVersion,
         updatedByUserId: actorUserId,
       },

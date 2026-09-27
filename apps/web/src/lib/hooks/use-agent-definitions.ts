@@ -40,6 +40,37 @@ export interface TestRunResult {
   toolCallOutcomes: ToolCallOutcome[];
 }
 
+export interface EvaluationCase {
+  id: string;
+  agentDefinitionKey: string;
+  name: string;
+  userMessage: string;
+  expectedTools: string[];
+  forbiddenTools: string[];
+  expectedApprovalRequired: boolean | null;
+  critical: boolean;
+  createdAt: string;
+}
+
+export interface CreateEvaluationCaseInput {
+  name: string;
+  userMessage: string;
+  expectedTools?: string[];
+  forbiddenTools?: string[];
+  expectedApprovalRequired?: boolean;
+  critical?: boolean;
+}
+
+export interface EvaluationCaseResult {
+  evaluationCaseId: string;
+  name: string;
+  critical: boolean;
+  agentRunId: string;
+  passed: boolean;
+  failures: string[];
+  toolCallOutcomes: ToolCallOutcome[];
+}
+
 export function useAgentDefinitions() {
   return useQuery({
     queryKey: ['agent-definitions'],
@@ -104,6 +135,52 @@ export function useTestRunAgentDefinition() {
       // A test run creates a completely ordinary AgentRun/ToolInvocation
       // and, for a blocked tool call, an Approval — same records a real
       // call produces (see AgentDefinitionTestRunService's own comment).
+      queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    },
+  });
+}
+
+export function useEvaluationCases(key: string | undefined) {
+  return useQuery({
+    queryKey: ['agent-definitions', key, 'evaluation-cases'],
+    queryFn: () => apiFetch<EvaluationCase[]>(`/v1/agent-definitions/${key}/evaluation-cases`),
+    enabled: Boolean(key),
+  });
+}
+
+export function useCreateEvaluationCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, ...input }: CreateEvaluationCaseInput & { key: string }) =>
+      apiFetch<EvaluationCase>(`/v1/agent-definitions/${key}/evaluation-cases`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['agent-definitions', variables.key, 'evaluation-cases'] }),
+  });
+}
+
+export function useDeleteEvaluationCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, caseId }: { key: string; caseId: string }) =>
+      apiFetch<void>(`/v1/agent-definitions/${key}/evaluation-cases/${caseId}`, { method: 'DELETE' }),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['agent-definitions', variables.key, 'evaluation-cases'] }),
+  });
+}
+
+export function useRunEvaluationSuite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) =>
+      apiFetch<EvaluationCaseResult[]>(`/v1/agent-definitions/${key}/evaluate`, { method: 'POST' }),
+    onSuccess: () => {
+      // Same real-side-effect rationale as useTestRunAgentDefinition — an
+      // evaluation run is a real AgentRun/ToolInvocation, and a blocked
+      // outcome creates a real Approval.
       queryClient.invalidateQueries({ queryKey: ['agent-runs'] });
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
     },

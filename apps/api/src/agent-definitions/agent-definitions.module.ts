@@ -5,6 +5,7 @@ import { AgentDefinitionResolverService } from './agent-definition-resolver.serv
 import { AgentDefinitionTestRunService } from './agent-definition-test-run.service';
 import { AgentDefinitionsController, ToolsController } from './agent-definitions.controller';
 import { AgentDefinitionsService } from './agent-definitions.service';
+import { AgentEvaluationService } from './agent-evaluation.service';
 
 /**
  * docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1/2. Imports AgentModule for its
@@ -16,7 +17,7 @@ import { AgentDefinitionsService } from './agent-definitions.service';
 @Module({
   imports: [AgentModule, ApprovalsModule],
   controllers: [AgentDefinitionsController, ToolsController],
-  providers: [AgentDefinitionsService, AgentDefinitionResolverService, AgentDefinitionTestRunService],
+  providers: [AgentDefinitionsService, AgentDefinitionResolverService, AgentDefinitionTestRunService, AgentEvaluationService],
   exports: [AgentDefinitionResolverService],
 })
 export class AgentDefinitionsModule {}

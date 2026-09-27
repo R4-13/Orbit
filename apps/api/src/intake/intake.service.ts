@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { LLMCompletionRequest, LLMProvider, ToolCallOutcome } from '@orbit/agent-core';
-import { MockLLMProvider } from '@orbit/agent-core';
+import { MockLLMProvider, wrapUntrustedContent } from '@orbit/agent-core';
 import type { Case } from '@orbit/domain';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -157,7 +157,7 @@ export class IntakeService {
       { tenantId, agentRunId: run.id, actorUserId },
       {
         systemPrompt,
-        messages: [{ role: 'user', content: `Betreff: ${input.subject}\n\n${input.bodyText}` }],
+        messages: [{ role: 'user', content: wrapUntrustedContent(`Betreff: ${input.subject}\n\n${input.bodyText}`) }],
         maxToolIterations: 2,
       },
     );
@@ -244,7 +244,7 @@ export class IntakeService {
       'FINANCE',
       businessCase.id,
       'finance-intake',
-      `Neue Rechnung eingegangen: ${input.subject}. Dokument-ID: ${document.id}.`,
+      `Neue Rechnung eingegangen: ${wrapUntrustedContent(input.subject)}. Dokument-ID: ${document.id}.`,
       3,
     );
   }
@@ -313,7 +313,7 @@ export class IntakeService {
       'SALES',
       businessCase.id,
       'sales-intake',
-      `Neue Interessenten-E-Mail: ${input.subject}\n\n${input.bodyText}`,
+      `Neue Interessenten-E-Mail: ${wrapUntrustedContent(`${input.subject}\n\n${input.bodyText}`)}`,
       4,
     );
   }

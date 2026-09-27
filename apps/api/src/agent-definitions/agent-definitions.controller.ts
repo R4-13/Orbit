@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -8,7 +8,9 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { AgentDefinitionTestRunService } from './agent-definition-test-run.service';
 import { AgentDefinitionsService } from './agent-definitions.service';
+import { AgentEvaluationService } from './agent-evaluation.service';
 import { CreateAgentDefinitionDto } from './dto/create-agent-definition.dto';
+import { CreateEvaluationCaseDto } from './dto/create-evaluation-case.dto';
 import { TestRunAgentDefinitionDto } from './dto/test-run-agent-definition.dto';
 import { UpdateAgentDefinitionDto } from './dto/update-agent-definition.dto';
 
@@ -28,6 +30,7 @@ export class AgentDefinitionsController {
   constructor(
     private readonly agentDefinitions: AgentDefinitionsService,
     private readonly testRun: AgentDefinitionTestRunService,
+    private readonly evaluation: AgentEvaluationService,
   ) {}
 
   @Get()
@@ -69,6 +72,41 @@ export class AgentDefinitionsController {
   @Post(':key/test-run')
   runTest(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string, @Body() dto: TestRunAgentDefinitionDto) {
     return this.testRun.run(user.tenantId, user.id, key, dto.userMessage);
+  }
+
+  /** §17 des Unified-Evolution-Konzepts — gespeicherte Regressionsfälle je AgentDefinition-Key. */
+  @Get(':key/evaluation-cases')
+  listEvaluationCases(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string) {
+    return this.evaluation.listCases(user.tenantId, key);
+  }
+
+  @Post(':key/evaluation-cases')
+  createEvaluationCase(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('key') key: string,
+    @Body() dto: CreateEvaluationCaseDto,
+  ) {
+    return this.evaluation.createCase(user.tenantId, user.id, key, dto);
+  }
+
+  @Delete(':key/evaluation-cases/:caseId')
+  deleteEvaluationCase(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('key') key: string,
+    @Param('caseId') caseId: string,
+  ) {
+    return this.evaluation.deleteCase(user.tenantId, user.id, key, caseId);
+  }
+
+  /** Runs every saved case for this key against the currently stored prompt/tools (not a pending, unsaved edit). */
+  @Post(':key/evaluate')
+  async runEvaluationSuite(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string) {
+    const definition = await this.agentDefinitions.findOne(user.tenantId, key);
+    return this.evaluation.runSuite(user.tenantId, user.id, key, {
+      systemPrompt: definition.systemPrompt,
+      allowedTools: definition.allowedTools,
+      baseType: definition.baseType,
+    });
   }
 }
 

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AgentRuntime, type LLMProvider, type ToolRegistry } from '@orbit/agent-core';
+import { AgentRuntime, buildLayeredSystemPrompt, type LLMProvider, type ToolRegistry } from '@orbit/agent-core';
 import type { AgentType } from '@orbit/domain';
 import { IntegrationUnavailableError, NotFoundError } from '@orbit/shared';
 import { LLM_PROVIDER, TOOL_REGISTRY } from '../agent/agent.tokens';
@@ -10,6 +10,12 @@ export interface ResolvedAgent {
   systemPrompt: string;
   baseType: AgentType;
   runtime: AgentRuntime;
+}
+
+export interface AgentCandidate {
+  systemPrompt: string;
+  allowedTools: string[];
+  baseType: AgentType;
 }
 
 /**
@@ -61,7 +67,11 @@ export class AgentDefinitionResolverService {
       );
     }
 
-    return { systemPrompt: definition.systemPrompt, baseType: definition.baseType, runtime: this.buildRuntime(definition.allowedTools) };
+    return {
+      systemPrompt: buildLayeredSystemPrompt(definition.systemPrompt),
+      baseType: definition.baseType,
+      runtime: this.buildRuntime(definition.allowedTools),
+    };
   }
 
   /**
@@ -82,6 +92,27 @@ export class AgentDefinitionResolverService {
       throw new NotFoundError('No testable agent definition found for this key.', { key });
     }
 
-    return { systemPrompt: definition.systemPrompt, baseType: definition.baseType, runtime: this.buildRuntime(definition.allowedTools) };
+    return {
+      systemPrompt: buildLayeredSystemPrompt(definition.systemPrompt),
+      baseType: definition.baseType,
+      runtime: this.buildRuntime(definition.allowedTools),
+    };
+  }
+
+  /**
+   * Builds a runtime directly from an in-memory candidate prompt/tools —
+   * no DB lookup, no status gate. Used by AgentEvaluationService to test a
+   * *pending* edit (the prompt/tools about to be saved by
+   * AgentDefinitionsService.update()) before it's ever persisted, so a
+   * critical evaluation failure can block the save outright instead of
+   * requiring a save-then-rollback (see §17 of the concept doc: "Critical
+   * evaluations should run before publishing a new agent version").
+   */
+  resolveCandidate(candidate: AgentCandidate): ResolvedAgent {
+    return {
+      systemPrompt: buildLayeredSystemPrompt(candidate.systemPrompt),
+      baseType: candidate.baseType,
+      runtime: this.buildRuntime(candidate.allowedTools),
+    };
   }
 }

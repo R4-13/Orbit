@@ -282,6 +282,7 @@ model Tenant {
   retentionPolicies       RetentionPolicy[]
   agentDefinitions        AgentDefinition[]
   agentDefinitionVersions AgentDefinitionVersion[]
+  agentEvaluationCases    AgentEvaluationCase[]
   workflowDefinitions     WorkflowDefinition[]
   workflowStepDefinitions WorkflowStepDefinition[]
   workflowRuns            WorkflowRun[]
@@ -915,6 +916,38 @@ model AgentDefinitionVersion {
 
   @@index([agentDefinitionId])
   @@map("agent_definition_versions")
+}
+
+/// §17 des Unified-Evolution-Konzepts ("Agent Evaluation Framework") — ein
+/// gespeicherter, wiederholbarer Regressionsfall für ein AgentDefinition
+/// (per `agentDefinitionKey`, kein FK — dieselbe Design-Entscheidung wie
+/// WorkflowStepDefinition.agentDefinitionKey, siehe dortigen Kommentar).
+/// `critical: true` gated die Aktivierung (siehe AgentDefinitionsService.update()):
+/// eine Definition kann nicht auf ACTIVE wechseln, solange ein kritischer
+/// Fall für ihren Key fehlschlägt.
+model AgentEvaluationCase {
+  id                       String   @id @default(uuid())
+  tenantId                 String   @map("tenant_id")
+  agentDefinitionKey       String   @map("agent_definition_key")
+  name                     String
+  userMessage              String   @map("user_message")
+  /// Tool-Namen, die beim Lauf aufgerufen worden sein müssen, damit der Fall besteht.
+  expectedTools            String[] @map("expected_tools")
+  /// Tool-Namen, die beim Lauf NICHT aufgerufen worden sein dürfen.
+  forbiddenTools           String[] @map("forbidden_tools")
+  /// null = nicht geprüft. true = mindestens ein Tool-Aufruf muss eine
+  /// Freigabe erfordern (Decision != ALLOW). false = alle Tool-Aufrufe
+  /// müssen ALLOW sein.
+  expectedApprovalRequired Boolean? @map("expected_approval_required")
+  critical                 Boolean  @default(false)
+  createdByUserId          String?  @map("created_by_user_id")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, agentDefinitionKey])
+  @@map("agent_evaluation_cases")
 }
 
 /// Orchestrierung (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 3): eine

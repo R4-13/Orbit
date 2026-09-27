@@ -9,10 +9,15 @@ import {
   useAgentDefinitions,
   useAgentDefinitionVersions,
   useCreateAgentDefinition,
+  useCreateEvaluationCase,
+  useDeleteEvaluationCase,
+  useEvaluationCases,
   useRollbackAgentDefinition,
+  useRunEvaluationSuite,
   useTestRunAgentDefinition,
   useToolCatalog,
   useUpdateAgentDefinition,
+  type EvaluationCaseResult,
   type TestRunResult,
   type ToolCatalogEntry,
 } from '../../../../lib/hooks/use-agent-definitions';
@@ -67,6 +72,177 @@ function ToolCheckboxList({
   );
 }
 
+function parseCommaList(value: string): string[] {
+  return value
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
+function EvaluationPanel({ agentKey }: { agentKey: string }) {
+  const { data: cases, isLoading } = useEvaluationCases(agentKey);
+  const createCase = useCreateEvaluationCase();
+  const deleteCase = useDeleteEvaluationCase();
+  const runSuite = useRunEvaluationSuite();
+  const [expanded, setExpanded] = useState(false);
+  const [name, setName] = useState('');
+  const [userMessage, setUserMessage] = useState('');
+  const [expectedTools, setExpectedTools] = useState('');
+  const [forbiddenTools, setForbiddenTools] = useState('');
+  const [approvalExpectation, setApprovalExpectation] = useState<'unspecified' | 'true' | 'false'>('unspecified');
+  const [critical, setCritical] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<EvaluationCaseResult[] | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+
+  function reset() {
+    setName('');
+    setUserMessage('');
+    setExpectedTools('');
+    setForbiddenTools('');
+    setApprovalExpectation('unspecified');
+    setCritical(false);
+    setError(null);
+  }
+
+  async function handleCreate() {
+    setError(null);
+    try {
+      await createCase.mutateAsync({
+        key: agentKey,
+        name,
+        userMessage,
+        expectedTools: parseCommaList(expectedTools),
+        forbiddenTools: parseCommaList(forbiddenTools),
+        expectedApprovalRequired: approvalExpectation === 'unspecified' ? undefined : approvalExpectation === 'true',
+        critical,
+      });
+      reset();
+      setExpanded(false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Der Evaluationsfall konnte nicht angelegt werden.');
+    }
+  }
+
+  async function handleRunSuite() {
+    setRunError(null);
+    setResults(null);
+    try {
+      setResults(await runSuite.mutateAsync(agentKey));
+    } catch (err) {
+      setRunError(err instanceof ApiError ? err.message : 'Die Evaluation ist fehlgeschlagen.');
+    }
+  }
+
+  return (
+    <div className="border-t border-slate-100 pt-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Evaluationsfälle — kritische Fälle blockieren die Aktivierung, solange sie fehlschlagen
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" className="text-xs" onClick={handleRunSuite} disabled={runSuite.isPending || !cases?.length}>
+            Suite ausführen
+          </Button>
+          <Button variant="ghost" className="text-xs" onClick={() => setExpanded((prev) => !prev)}>
+            {expanded ? 'Abbrechen' : 'Fall hinzufügen'}
+          </Button>
+        </div>
+      </div>
+
+      {runError ? <p className="mb-2 text-xs text-red-600">{runError}</p> : null}
+
+      {isLoading ? (
+        <p className="text-xs text-slate-400">Wird geladen …</p>
+      ) : cases && cases.length > 0 ? (
+        <ul className="space-y-1.5">
+          {cases.map((evaluationCase) => {
+            const result = results?.find((r) => r.evaluationCaseId === evaluationCase.id);
+            return (
+              <li key={evaluationCase.id} className="rounded-md bg-slate-50 px-3 py-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-900">
+                    {evaluationCase.name}
+                    {evaluationCase.critical ? <Badge tone="warning" className="ml-2">kritisch</Badge> : null}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {result ? (
+                      <Badge tone={result.passed ? 'success' : 'danger'}>{result.passed ? 'Bestanden' : 'Fehlgeschlagen'}</Badge>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      className="text-xs"
+                      onClick={() => deleteCase.mutate({ key: agentKey, caseId: evaluationCase.id })}
+                    >
+                      Löschen
+                    </Button>
+                  </div>
+                </div>
+                {result && !result.passed ? (
+                  <ul className="mt-1 list-disc pl-4 text-red-600">
+                    {result.failures.map((failure, idx) => (
+                      <li key={idx}>{failure}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-xs text-slate-400">Noch keine Evaluationsfälle für diesen Agenten.</p>
+      )}
+
+      {expanded ? (
+        <div className="mt-3 space-y-2 rounded-md border border-slate-200 p-3">
+          <Input placeholder="Name des Falls" value={name} onChange={(event) => setName(event.target.value)} />
+          <textarea
+            rows={2}
+            className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            placeholder="Nachricht, die als user-Eingabe an den Agenten geschickt wird …"
+            value={userMessage}
+            onChange={(event) => setUserMessage(event.target.value)}
+          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Input
+              placeholder="Erwartete Tools (Komma-getrennt)"
+              value={expectedTools}
+              onChange={(event) => setExpectedTools(event.target.value)}
+            />
+            <Input
+              placeholder="Verbotene Tools (Komma-getrennt)"
+              value={forbiddenTools}
+              onChange={(event) => setForbiddenTools(event.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-1.5 text-xs">
+              Freigabe erwartet:
+              <select
+                className="rounded-md border border-slate-300 px-1.5 py-1 text-xs"
+                value={approvalExpectation}
+                onChange={(event) => setApprovalExpectation(event.target.value as typeof approvalExpectation)}
+              >
+                <option value="unspecified">Nicht geprüft</option>
+                <option value="true">Ja</option>
+                <option value="false">Nein</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-1.5 text-xs">
+              <input type="checkbox" checked={critical} onChange={(event) => setCritical(event.target.checked)} />
+              Kritisch (blockiert Aktivierung)
+            </label>
+          </div>
+          {error ? <p className="text-xs text-red-600">{error}</p> : null}
+          <Button className="text-xs" onClick={handleCreate} disabled={createCase.isPending || !name || !userMessage}>
+            Fall speichern
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinition; tools: ToolCatalogEntry[] }) {
   const update = useUpdateAgentDefinition();
   const rollback = useRollbackAgentDefinition();
@@ -74,6 +250,7 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
   const [editing, setEditing] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [showTestRun, setShowTestRun] = useState(false);
+  const [showEvaluation, setShowEvaluation] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(definition.systemPrompt);
   const [allowedTools, setAllowedTools] = useState<string[]>(definition.allowedTools);
   const [status, setStatus] = useState(definition.status);
@@ -156,6 +333,9 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
           </Button>
           <Button variant="ghost" onClick={() => setShowVersions((prev) => !prev)}>
             {showVersions ? 'Historie ausblenden' : 'Historie'}
+          </Button>
+          <Button variant="ghost" onClick={() => setShowEvaluation((prev) => !prev)}>
+            {showEvaluation ? 'Evaluation ausblenden' : 'Evaluation'}
           </Button>
           <Button variant="secondary" onClick={editing ? () => setEditing(false) : startEditing}>
             {editing ? 'Abbrechen' : 'Bearbeiten'}
@@ -317,6 +497,8 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
             ) : null}
           </div>
         ) : null}
+
+        {showEvaluation ? <EvaluationPanel agentKey={definition.key} /> : null}
       </CardContent>
     </Card>
   );

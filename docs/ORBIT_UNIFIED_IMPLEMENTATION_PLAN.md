@@ -138,7 +138,7 @@ gemocktem HTTP-Client (kein echter API-Call).
 | 0 | Gap-Analyse (dieses Dokument) | — | ✅ erledigt |
 | 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | ✅ erledigt (Approval-Resume + Pause-Semantik; generische Connector-Idempotenz-Keys bewusst nicht Teil dieser Stufe) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | ✅ erledigt (Metrics + Logging + Tenant-Concurrency + Failed-Work-Retry + Retention-Grundlage) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
-| 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | PARTIAL/MISSING | ✅ Ja |
+| 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | Prompt-Layering ✅ + Injection-Boundary ✅ + Evaluationsframework ✅ erledigt; Lifecycle bewusst nicht auf das volle 8-Zustands-Modell erweitert (siehe `docs/ASSUMPTIONS.md` #244-253) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | MISSING | ✅ Ja (strukturell, ohne Live-Test) |
 | 5 | Sonde Conversation Foundation | MISSING | ✅ Ja |
 | 6 | Sonde Read Mode | MISSING | ✅ Ja |
@@ -156,14 +156,16 @@ vorgeschlagen — keine Umstellung nötig, nur bestätigt.
 
 ## Nächste Schritte
 
-**Phase 1 (Durable Orchestration) und Phase 2 (Operational Hardening)
-sind abgeschlossen** — siehe `docs/IMPLEMENTATION_STATUS.md` und
-`docs/ASSUMPTIONS.md` #200-243 für die getroffenen Detailentscheidungen
-(Retention-Grundlage zuletzt: #237-243, konservativer Scope ohne
-automatischen Scheduler, siehe dort). Weiter mit Phase 3 (Agent
-Governance: Lifecycle, Prompt-Layering, Evaluationsframework), danach
-Phase 4-10 der Reihe nach, jeweils mit vollständiger Verifikation
-(Lint/Typecheck/Unit/E2E) und Dokumentations-Update nach jeder Phase,
-exakt wie bei jeder vorherigen Phase dieses Projekts. Phase 11 bleibt
-dauerhaft offen (externe Zugangsdaten), Phase 12 wird so weit
-umgesetzt, wie ohne Produktionsinfrastruktur sinnvoll möglich.
+**Phase 1 (Durable Orchestration), Phase 2 (Operational Hardening) und
+Phase 3 (Agent Governance) sind abgeschlossen** — siehe
+`docs/IMPLEMENTATION_STATUS.md` und `docs/ASSUMPTIONS.md` #200-253 für
+die getroffenen Detailentscheidungen (Phase 3 zuletzt: #244-253 —
+Prompt-Layering + Injection-Boundary + Evaluation Framework umgesetzt;
+das volle Acht-Zustands-Lifecycle-Modell bewusst nicht, siehe #253).
+Weiter mit Phase 4 (LLM Provider Platform: OpenAI-Adapter,
+Provider-Registry, BYOK-Modell, Admin-UI), danach Phase 5-10 der Reihe
+nach, jeweils mit vollständiger Verifikation (Lint/Typecheck/Unit/E2E)
+und Dokumentations-Update nach jeder Phase, exakt wie bei jeder
+vorherigen Phase dieses Projekts. Phase 11 bleibt dauerhaft offen
+(externe Zugangsdaten), Phase 12 wird so weit umgesetzt, wie ohne
+Produktionsinfrastruktur sinnvoll möglich.

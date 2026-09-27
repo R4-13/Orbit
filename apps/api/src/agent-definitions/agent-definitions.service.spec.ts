@@ -5,7 +5,9 @@ import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentDefinitionsService } from './agent-definitions.service';
+import { AgentEvaluationService } from './agent-evaluation.service';
 import { AgentBaseTypeDto } from './dto/create-agent-definition.dto';
+import { AgentDefinitionStatusDto } from './dto/update-agent-definition.dto';
 
 function uniqueViolation(): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
@@ -22,6 +24,7 @@ describe('AgentDefinitionsService', () => {
   };
   let prisma: { forTenantId: jest.Mock };
   let audit: { record: jest.Mock };
+  let evaluation: { assertCriticalCasesPass: jest.Mock };
   let toolRegistry: { list: jest.Mock; describe: jest.Mock };
 
   beforeEach(async () => {
@@ -31,6 +34,7 @@ describe('AgentDefinitionsService', () => {
     };
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    evaluation = { assertCriticalCasesPass: jest.fn().mockResolvedValue(undefined) };
     toolRegistry = {
       list: jest.fn().mockReturnValue([
         { name: 'classify_message', description: 'Classifies a message.', policyAction: 'email.classify', inputSchema: z.object({}) },
@@ -47,6 +51,7 @@ describe('AgentDefinitionsService', () => {
         AgentDefinitionsService,
         { provide: PrismaService, useValue: prisma },
         { provide: AuditService, useValue: audit },
+        { provide: AgentEvaluationService, useValue: evaluation },
         { provide: TOOL_REGISTRY, useValue: toolRegistry },
       ],
     }).compile();
@@ -185,6 +190,69 @@ describe('AgentDefinitionsService', () => {
         service.update('tenant_1', 'user_1', 'sales-intake', { allowedTools: ['does-not-exist'] }),
       ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
       expect(scoped.agentDefinition.update).not.toHaveBeenCalled();
+    });
+
+    it('gates a DRAFT→ACTIVE transition on critical evaluation cases and persists nothing when they fail', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue({
+        id: 'def_1',
+        key: 'sales-intake',
+        systemPrompt: 'p',
+        allowedTools: ['classify_message'],
+        baseType: 'SALES',
+        status: 'DRAFT',
+        version: 1,
+      });
+      evaluation.assertCriticalCasesPass.mockRejectedValue(
+        Object.assign(new Error('blocked'), { code: 'VALIDATION_FAILED' }),
+      );
+
+      await expect(
+        service.update('tenant_1', 'user_1', 'sales-intake', { status: AgentDefinitionStatusDto.ACTIVE }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect(evaluation.assertCriticalCasesPass).toHaveBeenCalledWith('tenant_1', 'user_1', 'sales-intake', {
+        systemPrompt: 'p',
+        allowedTools: ['classify_message'],
+        baseType: 'SALES',
+      });
+      expect(scoped.agentDefinition.update).not.toHaveBeenCalled();
+    });
+
+    it('gates editing the prompt of an already-ACTIVE definition in place, not only an explicit status transition', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue({
+        id: 'def_1',
+        key: 'sales-intake',
+        systemPrompt: 'old prompt',
+        allowedTools: ['classify_message'],
+        baseType: 'SALES',
+        status: 'ACTIVE',
+        version: 1,
+      });
+      scoped.agentDefinition.update.mockResolvedValue({ id: 'def_1', key: 'sales-intake', version: 2 });
+
+      await service.update('tenant_1', 'user_1', 'sales-intake', { systemPrompt: 'new prompt' });
+
+      expect(evaluation.assertCriticalCasesPass).toHaveBeenCalledWith('tenant_1', 'user_1', 'sales-intake', {
+        systemPrompt: 'new prompt',
+        allowedTools: ['classify_message'],
+        baseType: 'SALES',
+      });
+    });
+
+    it('does not gate a transition that does not result in ACTIVE (e.g. DRAFT→DISABLED)', async () => {
+      scoped.agentDefinition.findUnique.mockResolvedValue({
+        id: 'def_1',
+        key: 'sales-intake',
+        systemPrompt: 'p',
+        allowedTools: [],
+        baseType: 'SALES',
+        status: 'DRAFT',
+        version: 1,
+      });
+      scoped.agentDefinition.update.mockResolvedValue({ id: 'def_1', key: 'sales-intake', version: 2 });
+
+      await service.update('tenant_1', 'user_1', 'sales-intake', { status: AgentDefinitionStatusDto.DISABLED });
+
+      expect(evaluation.assertCriticalCasesPass).not.toHaveBeenCalled();
     });
   });
 

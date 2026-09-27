@@ -82,7 +82,10 @@ describe('AgentDefinitionResolverService', () => {
     });
 
     const resolved = await service.resolve('tenant_1', 'finance-intake');
-    expect(resolved.systemPrompt).toBe('Du bist der Finance-Agent.');
+    // Layered with immutable platform/security preambles (prompt-layers.ts) — the
+    // agent's own prompt is still in there verbatim, just no longer the whole string.
+    expect(resolved.systemPrompt).toContain('Du bist der Finance-Agent.');
+    expect(resolved.systemPrompt).toContain('# Platform Instructions');
     expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
 
     // The real proof of scoping: the LLM only ever sees the one tool this
@@ -124,9 +127,25 @@ describe('AgentDefinitionResolverService', () => {
       });
 
       const resolved = await service.resolveForTestRun('tenant_1', 'custom-agent');
-      expect(resolved.systemPrompt).toBe('Du bist ein Entwurfs-Agent.');
+      expect(resolved.systemPrompt).toContain('Du bist ein Entwurfs-Agent.');
       expect(resolved.baseType).toBe('SALES');
       expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
+    });
+  });
+
+  describe('resolveCandidate', () => {
+    it('builds a scoped, layered runtime from an in-memory candidate without touching the database', () => {
+      const resolved = service.resolveCandidate({
+        systemPrompt: 'Du bist ein Kandidaten-Agent.',
+        allowedTools: ['classify_message'],
+        baseType: 'SALES',
+      });
+
+      expect(resolved.systemPrompt).toContain('Du bist ein Kandidaten-Agent.');
+      expect(resolved.systemPrompt).toContain('# Platform Instructions');
+      expect(resolved.baseType).toBe('SALES');
+      expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
+      expect(prisma.forTenantId).not.toHaveBeenCalled();
     });
   });
 });

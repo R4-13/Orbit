@@ -46,6 +46,7 @@ export const TENANT_SCOPED_MODELS = [
   'WebhookEvent',
   'AgentDefinition',
   'AgentDefinitionVersion',
+  'AgentEvaluationCase',
   'WorkflowDefinition',
   'WorkflowStepDefinition',
   'WorkflowRun',
