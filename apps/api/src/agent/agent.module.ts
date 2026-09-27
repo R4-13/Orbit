@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AgentRuntime, AnthropicLLMProvider, MockLLMProvider, ToolRegistry } from '@orbit/agent-core';
+import { AgentRuntime, AnthropicLLMProvider, MockLLMProvider, OpenAILLMProvider, ToolRegistry } from '@orbit/agent-core';
 import type { LLMProvider } from '@orbit/agent-core';
 import { IntegrationUnavailableError } from '@orbit/shared';
 import type { OrbitEnv } from '@orbit/config';
@@ -64,6 +64,14 @@ import { SalesAgentTools } from './tools/sales.tools';
             );
           }
           return new AnthropicLLMProvider(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL);
+        }
+        if (env.LLM_PROVIDER === 'openai') {
+          if (!env.OPENAI_API_KEY) {
+            throw new IntegrationUnavailableError(
+              'LLM_PROVIDER=openai requires OPENAI_API_KEY — see docs/AGENT_ARCHITECTURE.md.',
+            );
+          }
+          return new OpenAILLMProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL);
         }
         throw new IntegrationUnavailableError(`LLMProvider "${env.LLM_PROVIDER}" is not implemented yet.`);
       },

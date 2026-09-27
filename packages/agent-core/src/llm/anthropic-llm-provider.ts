@@ -1,6 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ExternalSystemError } from '@orbit/shared';
-import type { LLMCompletionRequest, LLMCompletionResult, LLMProvider, LLMStopReason, LLMToolCall } from './types';
+import type {
+  LLMCompletionRequest,
+  LLMCompletionResult,
+  LLMProvider,
+  LLMStopReason,
+  LLMToolCall,
+  ProviderValidationResult,
+} from './types';
 
 function toStopReason(reason: string | null): LLMStopReason {
   if (reason === 'tool_use') return 'tool_use';
@@ -66,5 +73,19 @@ export class AnthropicLLMProvider implements LLMProvider {
       toolCalls,
       stopReason: toStopReason(response.stop_reason),
     };
+  }
+
+  /** Cheapest real call that proves the key/model actually work: a 1-token completion, no tools. */
+  async validateConfiguration(): Promise<ProviderValidationResult> {
+    try {
+      await this.client.messages.create({
+        model: this.model,
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }],
+      });
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: error instanceof Error ? error.message : String(error) };
+    }
   }
 }

@@ -276,6 +276,7 @@ model Tenant {
   opportunities           Opportunity[]
   meetings                Meeting[]
   integrations            Integration[]
+  aiProviderConnection    AIProviderConnection?
   agentRuns               AgentRun[]
   toolInvocations         ToolInvocation[]
   webhookEvents           WebhookEvent[]
@@ -803,6 +804,49 @@ model Integration {
 
   @@unique([tenantId, connectorType])
   @@map("integrations")
+}
+
+/// §35-44 des Unified-Evolution-Konzepts ("LLM Provider Strategy") — BYOK-
+/// Override für einen Tenant. Bewusst getrennt von `Integration`/
+/// `IntegrationConnectorType` (die dortige Header-Notiz verlangt Sync mit
+/// den `*_CONNECTOR`-Env-Enums für Finance/Mail/Calendar/CRM/Telephony —
+/// LLM-Provider sind kein Business-Connector, sondern eine eigene
+/// Kategorie, gesteuert über `LLM_PROVIDER`/`ANTHROPIC_API_KEY`/
+/// `OPENAI_API_KEY`). Höchstens eine Zeile pro Tenant (`@@unique(tenantId)`,
+/// nicht pro Provider) — ein Tenant konfiguriert genau einen aktiven BYOK-
+/// Provider zur Zeit, kein gleichzeitiges Mehrfach-Setup. Fehlt die Zeile
+/// komplett, läuft der Tenant im ORBIT-Managed-Modus (Standard: die
+/// plattformweite, envgesteuerte LLM_PROVIDER-Konfiguration) — siehe
+/// docs/ASSUMPTIONS.md.
+enum AIProviderKey {
+  ANTHROPIC
+  OPENAI
+}
+
+enum AIProviderConnectionStatus {
+  NOT_CONFIGURED
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+model AIProviderConnection {
+  id                   String                      @id @default(uuid())
+  tenantId             String                      @unique @map("tenant_id")
+  providerKey          AIProviderKey               @map("provider_key")
+  status               AIProviderConnectionStatus  @default(NOT_CONFIGURED)
+  encryptedCredentials Bytes?                       @map("encrypted_credentials")
+  /// Optionales Modell-Override (z. B. "gpt-4o" statt des Plattform-Defaults) — leer = Provider-Default aus @orbit/config verwenden.
+  model                String?
+  lastTestedAt         DateTime?                    @map("last_tested_at")
+  lastTestStatus       String?                      @map("last_test_status")
+  createdByUserId      String?                      @map("created_by_user_id")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("ai_provider_connections")
 }
 
 // ============================================================================

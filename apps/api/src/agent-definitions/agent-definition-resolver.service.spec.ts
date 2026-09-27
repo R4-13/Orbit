@@ -1,7 +1,8 @@
 import { Test } from '@nestjs/testing';
 import { AgentRuntime, ToolRegistry, type LLMCompletionRequest, type LLMCompletionResult } from '@orbit/agent-core';
 import { z } from 'zod';
-import { LLM_PROVIDER, TOOL_REGISTRY } from '../agent/agent.tokens';
+import { TOOL_REGISTRY } from '../agent/agent.tokens';
+import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentDefinitionResolverService } from './agent-definition-resolver.service';
@@ -11,6 +12,7 @@ describe('AgentDefinitionResolverService', () => {
   let scoped: { agentDefinition: { findUnique: jest.Mock } };
   let prisma: { forTenantId: jest.Mock };
   let toolRegistry: ToolRegistry;
+  let aiProviders: { resolveForTenant: jest.Mock };
   let capturedRequest: LLMCompletionRequest | undefined;
   const fakeLlm = {
     providerName: 'fake',
@@ -24,6 +26,7 @@ describe('AgentDefinitionResolverService', () => {
     capturedRequest = undefined;
     scoped = { agentDefinition: { findUnique: jest.fn() } };
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
+    aiProviders = { resolveForTenant: jest.fn().mockResolvedValue(fakeLlm) };
 
     toolRegistry = new ToolRegistry();
     toolRegistry.register({
@@ -45,7 +48,7 @@ describe('AgentDefinitionResolverService', () => {
       providers: [
         AgentDefinitionResolverService,
         { provide: PrismaService, useValue: prisma },
-        { provide: LLM_PROVIDER, useValue: fakeLlm },
+        { provide: AiProviderResolverService, useValue: aiProviders },
         { provide: TOOL_REGISTRY, useValue: toolRegistry },
         { provide: PolicyEnforcementService, useValue: { resolveMode: jest.fn() } },
       ],
@@ -134,8 +137,8 @@ describe('AgentDefinitionResolverService', () => {
   });
 
   describe('resolveCandidate', () => {
-    it('builds a scoped, layered runtime from an in-memory candidate without touching the database', () => {
-      const resolved = service.resolveCandidate({
+    it('builds a scoped, layered runtime from an in-memory candidate without an AgentDefinition lookup', async () => {
+      const resolved = await service.resolveCandidate('tenant_1', {
         systemPrompt: 'Du bist ein Kandidaten-Agent.',
         allowedTools: ['classify_message'],
         baseType: 'SALES',
@@ -146,6 +149,7 @@ describe('AgentDefinitionResolverService', () => {
       expect(resolved.baseType).toBe('SALES');
       expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
       expect(prisma.forTenantId).not.toHaveBeenCalled();
+      expect(aiProviders.resolveForTenant).toHaveBeenCalledWith('tenant_1');
     });
   });
 });

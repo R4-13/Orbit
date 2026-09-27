@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { findRepoRootEnvFile, type OrbitEnv } from '@orbit/config';
 import { AgentModule } from './agent/agent.module';
 import { AgentDefinitionsModule } from './agent-definitions/agent-definitions.module';
+import { AiProvidersModule } from './ai-providers/ai-providers.module';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -100,6 +101,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     OpportunitiesModule,
     MeetingsModule,
     AgentModule,
+    AiProvidersModule,
     AgentDefinitionsModule,
     WorkflowsModule,
     RetentionModule,

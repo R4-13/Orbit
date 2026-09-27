@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AgentRuntime, buildLayeredSystemPrompt, type LLMProvider, type ToolRegistry } from '@orbit/agent-core';
+import { AgentRuntime, buildLayeredSystemPrompt, type ToolRegistry } from '@orbit/agent-core';
 import type { AgentType } from '@orbit/domain';
 import { IntegrationUnavailableError, NotFoundError } from '@orbit/shared';
-import { LLM_PROVIDER, TOOL_REGISTRY } from '../agent/agent.tokens';
+import { TOOL_REGISTRY } from '../agent/agent.tokens';
+import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -32,19 +33,27 @@ export interface AgentCandidate {
  * takes one per call), so per-agent scoping has no other extension point
  * without changing AgentRuntime itself. Constructing one is cheap (three
  * references, no I/O) — see packages/agent-core/src/runtime/agent-runtime.ts.
+ *
+ * Since Phase 4 (LLM Provider Platform), the LLMProvider itself is also
+ * resolved per tenant here (AiProviderResolverService: a tenant's BYOK
+ * connection if one is CONNECTED, otherwise the platform-managed default)
+ * instead of the single, process-wide LLM_PROVIDER token — this is the
+ * one choke point every production/test-run/evaluation path already goes
+ * through, so no caller needs to know which provider a given tenant uses.
  */
 @Injectable()
 export class AgentDefinitionResolverService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
+    private readonly aiProviders: AiProviderResolverService,
     @Inject(TOOL_REGISTRY) private readonly toolRegistry: ToolRegistry,
     private readonly policy: PolicyEnforcementService,
   ) {}
 
-  private buildRuntime(allowedTools: string[]): AgentRuntime {
+  private async buildRuntime(tenantId: string, allowedTools: string[]): Promise<AgentRuntime> {
     const scopedTools = this.toolRegistry.subset(allowedTools);
-    return new AgentRuntime(this.llm, scopedTools, (action, context) => this.policy.resolveMode(context.tenantId, action));
+    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    return new AgentRuntime(llm, scopedTools, (action, context) => this.policy.resolveMode(context.tenantId, action));
   }
 
   /**
@@ -70,7 +79,7 @@ export class AgentDefinitionResolverService {
     return {
       systemPrompt: buildLayeredSystemPrompt(definition.systemPrompt),
       baseType: definition.baseType,
-      runtime: this.buildRuntime(definition.allowedTools),
+      runtime: await this.buildRuntime(tenantId, definition.allowedTools),
     };
   }
 
@@ -95,24 +104,26 @@ export class AgentDefinitionResolverService {
     return {
       systemPrompt: buildLayeredSystemPrompt(definition.systemPrompt),
       baseType: definition.baseType,
-      runtime: this.buildRuntime(definition.allowedTools),
+      runtime: await this.buildRuntime(tenantId, definition.allowedTools),
     };
   }
 
   /**
    * Builds a runtime directly from an in-memory candidate prompt/tools —
-   * no DB lookup, no status gate. Used by AgentEvaluationService to test a
-   * *pending* edit (the prompt/tools about to be saved by
-   * AgentDefinitionsService.update()) before it's ever persisted, so a
-   * critical evaluation failure can block the save outright instead of
-   * requiring a save-then-rollback (see §17 of the concept doc: "Critical
-   * evaluations should run before publishing a new agent version").
+   * no AgentDefinition DB lookup, no status gate (the provider connection
+   * lookup inside buildRuntime() is a separate, unrelated read). Used by
+   * AgentEvaluationService to test a *pending* edit (the prompt/tools
+   * about to be saved by AgentDefinitionsService.update()) before it's
+   * ever persisted, so a critical evaluation failure can block the save
+   * outright instead of requiring a save-then-rollback (see §17 of the
+   * concept doc: "Critical evaluations should run before publishing a new
+   * agent version").
    */
-  resolveCandidate(candidate: AgentCandidate): ResolvedAgent {
+  async resolveCandidate(tenantId: string, candidate: AgentCandidate): Promise<ResolvedAgent> {
     return {
       systemPrompt: buildLayeredSystemPrompt(candidate.systemPrompt),
       baseType: candidate.baseType,
-      runtime: this.buildRuntime(candidate.allowedTools),
+      runtime: await this.buildRuntime(tenantId, candidate.allowedTools),
     };
   }
 }

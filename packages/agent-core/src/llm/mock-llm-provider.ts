@@ -1,4 +1,4 @@
-import type { LLMCompletionRequest, LLMCompletionResult, LLMProvider } from './types';
+import type { LLMCompletionRequest, LLMCompletionResult, LLMProvider, ProviderValidationResult } from './types';
 
 /**
  * A scripted response is either a fixed result, or a function of the
@@ -61,5 +61,10 @@ export class MockLLMProvider implements LLMProvider {
   /** Test/dev helper — not part of the LLMProvider contract. */
   getCallCount(): number {
     return this.callCount;
+  }
+
+  /** Nothing to validate — there's no real credential behind the mock. */
+  async validateConfiguration(): Promise<ProviderValidationResult> {
+    return { valid: true };
   }
 }

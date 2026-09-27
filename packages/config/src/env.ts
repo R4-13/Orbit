@@ -84,10 +84,14 @@ export const envSchema = z.object({
   COOKIE_SECURE: booleanEnvVar(false),
   CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
 
-  // AI provider layer
-  LLM_PROVIDER: z.enum(['anthropic', 'mock']).default('mock'),
+  // AI provider layer — platform-managed default (§35 "ORBIT-Managed AI").
+  // A tenant's own BYOK override (§41 AIProviderConnection) is resolved at
+  // runtime, not via env vars — see apps/api/src/ai-providers/.
+  LLM_PROVIDER: z.enum(['anthropic', 'openai', 'mock']).default('mock'),
   ANTHROPIC_API_KEY: z.string().optional().default(''),
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-5'),
+  OPENAI_API_KEY: z.string().optional().default(''),
+  OPENAI_MODEL: z.string().default('gpt-4o'),
 
   // OCR / STT
   OCR_PROVIDER: z.enum(['mock', 'tesseract']).default('mock'),

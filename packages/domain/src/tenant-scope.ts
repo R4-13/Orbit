@@ -52,6 +52,7 @@ export const TENANT_SCOPED_MODELS = [
   'WorkflowRun',
   'WorkflowStepRun',
   'RetentionPolicy',
+  'AIProviderConnection',
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);

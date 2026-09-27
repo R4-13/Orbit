@@ -139,7 +139,7 @@ gemocktem HTTP-Client (kein echter API-Call).
 | 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | ✅ erledigt (Approval-Resume + Pause-Semantik; generische Connector-Idempotenz-Keys bewusst nicht Teil dieser Stufe) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | ✅ erledigt (Metrics + Logging + Tenant-Concurrency + Failed-Work-Retry + Retention-Grundlage) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | Prompt-Layering ✅ + Injection-Boundary ✅ + Evaluationsframework ✅ erledigt; Lifecycle bewusst nicht auf das volle 8-Zustands-Modell erweitert (siehe `docs/ASSUMPTIONS.md` #244-253) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
-| 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | MISSING | ✅ Ja (strukturell, ohne Live-Test) |
+| 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | ✅ erledigt (strukturell — Provider-Adapter/BYOK-Routing/Admin-UI live gegen echte Postgres bewiesen, Live-Aufruf eines echten Anthropic/OpenAI-Keys mangels Credentials nicht möglich; Model-Profile/Lifecycle-Registry/Usage-Metering bewusst nicht Teil dieser Stufe, siehe `docs/ASSUMPTIONS.md` #254-262) | ✅ Ja (strukturell, ohne Live-Test) |
 | 5 | Sonde Conversation Foundation | MISSING | ✅ Ja |
 | 6 | Sonde Read Mode | MISSING | ✅ Ja |
 | 7 | Sonde Streaming UX | MISSING | ✅ Ja (SSE-Infrastruktur ja; echtes Streaming von `AnthropicLLMProvider`/`OpenAILLMProvider` nur strukturell, da kein Live-Provider) |
@@ -156,16 +156,17 @@ vorgeschlagen — keine Umstellung nötig, nur bestätigt.
 
 ## Nächste Schritte
 
-**Phase 1 (Durable Orchestration), Phase 2 (Operational Hardening) und
-Phase 3 (Agent Governance) sind abgeschlossen** — siehe
-`docs/IMPLEMENTATION_STATUS.md` und `docs/ASSUMPTIONS.md` #200-253 für
-die getroffenen Detailentscheidungen (Phase 3 zuletzt: #244-253 —
-Prompt-Layering + Injection-Boundary + Evaluation Framework umgesetzt;
-das volle Acht-Zustands-Lifecycle-Modell bewusst nicht, siehe #253).
-Weiter mit Phase 4 (LLM Provider Platform: OpenAI-Adapter,
-Provider-Registry, BYOK-Modell, Admin-UI), danach Phase 5-10 der Reihe
-nach, jeweils mit vollständiger Verifikation (Lint/Typecheck/Unit/E2E)
-und Dokumentations-Update nach jeder Phase, exakt wie bei jeder
-vorherigen Phase dieses Projekts. Phase 11 bleibt dauerhaft offen
-(externe Zugangsdaten), Phase 12 wird so weit umgesetzt, wie ohne
+**Phase 1 (Durable Orchestration), Phase 2 (Operational Hardening),
+Phase 3 (Agent Governance) und Phase 4 (LLM Provider Platform) sind
+abgeschlossen** — siehe `docs/IMPLEMENTATION_STATUS.md` und
+`docs/ASSUMPTIONS.md` #200-262 für die getroffenen Detailentscheidungen
+(Phase 4 zuletzt: #254-262 — OpenAI-Adapter, `AIProviderConnection`-
+BYOK-Modell, Provider-Registry/-Resolver, Admin-UI `/admin/ai-providers`;
+Model-Profile/Lifecycle-Registry/Usage-Metering/Platform-Admin-Ansicht
+bewusst nicht Teil dieser Stufe, siehe #262). Weiter mit Phase 5 (Sonde
+Conversation Foundation), danach Phase 6-10 der Reihe nach, jeweils mit
+vollständiger Verifikation (Lint/Typecheck/Unit/E2E) und
+Dokumentations-Update nach jeder Phase, exakt wie bei jeder vorherigen
+Phase dieses Projekts. Phase 11 bleibt dauerhaft offen (externe
+Zugangsdaten), Phase 12 wird so weit umgesetzt, wie ohne
 Produktionsinfrastruktur sinnvoll möglich.

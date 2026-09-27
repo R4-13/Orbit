@@ -39,7 +39,22 @@ export interface LLMCompletionRequest {
   maxTokens?: number;
 }
 
+export interface ProviderValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
 export interface LLMProvider {
   readonly providerName: string;
   complete(request: LLMCompletionRequest): Promise<LLMCompletionResult>;
+  /**
+   * §38 of docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md ("LLM Provider
+   * Abstraction") — a cheap, real call against the provider (e.g. listing
+   * models) to confirm a credential actually works, used by the BYOK "Test
+   * Connection" flow (apps/api/src/ai-providers/). Optional: MockLLMProvider
+   * has nothing to validate, and making this required would force every
+   * existing test double across the codebase that builds a bare `{
+   * providerName, complete }` object to also implement it.
+   */
+  validateConfiguration?(): Promise<ProviderValidationResult>;
 }

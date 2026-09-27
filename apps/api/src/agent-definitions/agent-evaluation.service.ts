@@ -157,7 +157,7 @@ export class AgentEvaluationService {
     evaluationCase: AgentEvaluationCase,
     candidate: AgentCandidate,
   ): Promise<EvaluationCaseResult> {
-    const resolved = this.resolver.resolveCandidate(candidate);
+    const resolved = await this.resolver.resolveCandidate(tenantId, candidate);
     const run = await this.runs.start({
       tenantId,
       agentType: candidate.baseType,
