@@ -9,9 +9,31 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#2563eb',
-          foreground: '#ffffff',
+          DEFAULT: 'var(--brand-primary)',
+          foreground: 'var(--brand-primary-foreground)',
         },
+        secondary: {
+          DEFAULT: 'var(--brand-secondary)',
+          foreground: 'var(--brand-secondary-foreground)',
+        },
+        accent: {
+          DEFAULT: 'var(--brand-accent)',
+          foreground: 'var(--brand-accent-foreground)',
+        },
+        nav: {
+          DEFAULT: 'var(--nav-background)',
+          foreground: 'var(--nav-foreground)',
+          active: 'var(--nav-active-background)',
+          'active-foreground': 'var(--nav-active-foreground)',
+        },
+        surface: {
+          page: 'var(--surface-page)',
+          card: 'var(--surface-card)',
+          muted: 'var(--surface-muted)',
+        },
+      },
+      borderRadius: {
+        card: 'var(--radius-card)',
       },
     },
   },

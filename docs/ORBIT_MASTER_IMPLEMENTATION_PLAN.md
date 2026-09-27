@@ -1,0 +1,131 @@
+# ORBIT Master Implementation Plan — Delta gegen ORBIT_MASTER_SPECIFICATION (V3, 2026-09-27)
+
+Dieses Dokument ist die von `docs/ORBIT_MASTER_SPECIFICATION.md` §0/§63/§68 geforderte
+Gap-Analyse: für jede Anforderung der neuen, jetzt maßgeblichen Master-Spezifikation
+(die `docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md` und ältere Konzeptdokumente laut deren
+eigenem §0 ablöst) wird der tatsächliche Ist-Zustand des Repositories klassifiziert.
+
+Klassifikation (§63 des Master-Dokuments):
+
+- `ALREADY_COMPLETE` — erfüllt, live/E2E verifiziert
+- `PARTIAL` — teilweise vorhanden, konkrete Lücke benannt
+- `MISSING` — nicht vorhanden
+- `BLOCKED_BY_EXTERNAL_CREDENTIALS` — strukturell vorhanden, echter Live-Test fehlt mangels Zugangsdaten
+
+Erstellt autonom am 2026-09-27, direkt im Anschluss an die eigenständig abgeschlossenen
+Phasen "Retention-Grundlage", "Agent Governance" (Prompt-Layering/Injection-Boundary/
+Evaluation Framework) und "LLM Provider Platform" (siehe `docs/IMPLEMENTATION_STATUS.md`
+und `docs/ASSUMPTIONS.md` #200-262) — diese drei Phasen erfüllen bereits große Teile der
+Backend-Anforderungen §63 Phase 1-5 dieser neuen Spezifikation, siehe unten.
+
+## Zuordnung: bereits erledigte Phasen (diese Session) → §63-Phasen der neuen Spezifikation
+
+| §63-Phase (neu) | Inhalt | Status | Nachweis |
+|---|---|---|---|
+| Phase 1 — Durable Workflow Engine | Persistierter Workflow-State, Versionierung, Approval-Resume, Workflow-Events, idempotente Schritte, Retry, Restart-Recovery | `ALREADY_COMPLETE` (Restart-Recovery via BullMQ-Persistenz, kein expliziter "Prozess-Crash-mitten-im-Schritt"-Idempotenz-Key-Mechanismus über reine Approval-Resume-Fälle hinaus — siehe unten) | `docs/IMPLEMENTATION_STATUS.md` Phase 1 (ORBIT Unified Evolution), `docs/ASSUMPTIONS.md` #200-209 |
+| Phase 2 — Approval Integration | Genehmigung → automatische Fortsetzung; Ablehnung → Reject-Zweig | `ALREADY_COMPLETE` | `workflow-approval-resume.e2e-spec.ts`, ASSUMPTIONS #200-209 |
+| Phase 3 — Operational Hardening | Strukturiertes Logging, Metriken, Failed-Job-Operationen, Tenant-Concurrency, Retention-Grundlage | `ALREADY_COMPLETE` | `docs/IMPLEMENTATION_STATUS.md` "Operational Hardening: …" (4 Teile + Retention-Grundlage), ASSUMPTIONS #210-243 |
+| Phase 4 — Agent Governance | Lifecycle, Published-Immutability, Prompt-Layering, Evaluation-Framework, Regressionssuiten | `PARTIAL` — Prompt-Layering ✅, Injection-Boundary ✅, Evaluation-Framework ✅; das volle 8-Zustands-Lifecycle (`VALIDATING/TESTING/STAGED/PUBLISHED/SUSPENDED/DEPRECATED/ARCHIVED`) bewusst **nicht** umgesetzt (bestehendes DRAFT/ACTIVE/DISABLED-Tripel + Evaluation-Gate als funktionaler Ersatz) | `docs/IMPLEMENTATION_STATUS.md` "Agent Governance: …", ASSUMPTIONS #244-253 |
+| Phase 5 — Multi-Provider AI Platform | Provider-Registry, Anthropic-/OpenAI-Adapter, Mock, Connection-Modell, Credential-Typ-Modell, ORBIT-Managed, BYOK, Admin-UI, Connection-Test, Model-Profile, Usage-Metering, Provider-Health, Fallback-Policy | `PARTIAL` — Registry/Anthropic/OpenAI/Mock-Adapter ✅, `AIProviderConnection`+BYOK+Admin-UI+Connection-Test ✅ (live gegen echten Anthropic-Endpunkt bewiesen); Model-Profile-Registry, Usage-Metering, Provider-Health-Historie, explizite Fallback-Policy-Engine **fehlen** | `docs/IMPLEMENTATION_STATUS.md` "LLM Provider Platform", ASSUMPTIONS #254-262 |
+
+**Ergebnis:** §63 Phase 1-5 sind im Kern bereits erledigt. Der Rest dieses Dokuments
+fokussiert auf die tatsächlich offenen Bereiche: den Feinschliff von Phase 4/5, und —
+das mit Abstand größte neue Delta — **Phase 6-11 (Sonde) und die komplette
+UI/UX-Spezifikation**, die beide bisher nicht existieren.
+
+## Bekannte, bereits dokumentierte Lücken innerhalb Phase 1-5 (nicht neu, aber hier zur Vollständigkeit aufgeführt)
+
+| # | Lücke | Klassifikation | Referenz |
+|---|---|---|---|
+| 1 | Generische Connector-Idempotenz-Keys (jenseits des bereits gelösten Approval-Resume-Falls) | `PARTIAL` | ASSUMPTIONS (Phase 1, ursprüngliche Einschränkung) |
+| 2 | Agent-Lifecycle: volles 8-Zustands-Modell | `MISSING` (bewusst) | ASSUMPTIONS #253 |
+| 3 | `WorkflowRunnerService.buildWorkflowStepMessage()` — Untrusted-Content-Wrapping | `PARTIAL` | ASSUMPTIONS #246 |
+| 4 | Evaluationslauf-Historie (nur Fall-Definitionen persistiert, keine Lauf-Ergebnisse über Zeit) | `MISSING` (bewusst) | ASSUMPTIONS #252 |
+| 5 | `AIModelProfile`/Model-Lifecycle-Registry, `AIUsageRecord`, `AIProviderHealth`, Fallback-Policy-Engine | `MISSING` (bewusst) | ASSUMPTIONS #262 |
+| 6 | Separate Plattform-Admin-Ansicht `/admin/platform/ai` | `MISSING` (bewusst) | ASSUMPTIONS #262 |
+
+Diese sechs Punkte bleiben offen, sind aber jeweils klein und in sich abgeschlossen —
+niedrigere Priorität als die beiden folgenden großen Blöcke.
+
+---
+
+## A. Backend-Delta: Sonde (§25-33 des Master-Dokuments, §63 Phase 6-11)
+
+Vollständig `MISSING`. Kein `CopilotModule`, `ConversationModule`, `ContextModule`,
+keine `Conversation`/`ConversationMessage`/`ConversationSummary`/`ConversationContext`/
+`ConversationAction`/`ConversationReference`-Modelle, keine `/api/v1/copilot/*`-Routen,
+kein SSE-Streaming. Bestätigt per Repository-Grep (keine Treffer für „Sonde"/„Copilot"/
+„Conversation" in `apps/api/src` oder `packages/domain/prisma/schema.prisma` außerhalb
+unabhängiger Zufallstreffer).
+
+| Baustein | Status | Priorität diese Session |
+|---|---|---|
+| `Conversation`/`ConversationMessage`-Datenmodell (§29) | `MISSING` | Hoch — Fundament für alles Weitere |
+| `POST/GET /copilot/conversations`, `.../messages` (§33) | `MISSING` | Hoch |
+| Streaming (SSE, `message.delta`/`tool.started`/…) (§33) | `MISSING` | Mittel — nach synchronem Pfad |
+| Context Providers (`InvoiceContextProvider` etc.) (§30) | `MISSING` | Mittel |
+| ASK-Modus (reine Lesefähigkeiten) (§26) | `MISSING` | Hoch — kleinster sicherer erster Schnitt |
+| PREPARE/ACT/DELEGATE-Modi (§26) | `MISSING` | Niedrig diese Session (baut auf ASK auf) |
+| Sonde-Tool-Zugriffsschnitt (§32) | `MISSING` | Mittel |
+
+**Entscheidung dieser Session:** Phase 6 (Conversation-Fundament) + ein funktionsfähiger,
+echter ASK-Modus (nicht simuliert) werden begonnen, sofern nach dem UI/UX-Block B Budget
+verbleibt — siehe Priorisierung unten. Ein Sonde-Panel ohne echtes Backend wäre nach §33
+der UI/UX-Spezifikation ausdrücklich unzulässig ("must not simulate functionality that
+does not exist" / Klassifikation `MOCK/DEMO` darf nie als `LIVE` erscheinen).
+
+---
+
+## B. UI/UX-Delta (ORION_UI_UX_DEVELOPMENT_SPECIFICATION v1)
+
+Audit-Ergebnis (Phase UI-0, durchgeführt): aktueller Zustand geprüft in
+`apps/web/src/app/(app)/layout.tsx`, `.../dashboard/page.tsx`, `apps/web/tailwind.config.ts`,
+`apps/web/src/app/globals.css`, `packages/config/src/branding.ts`, `packages/domain/prisma/schema.prisma`.
+
+| Baustein | Ist-Zustand | Status |
+|---|---|---|
+| Design-Tokens (`--brand-primary`, `--status-*`, …) | Nur ein einzelner hartkodierter `brand`-Tailwind-Farbwert (`#2563eb`), keine CSS-Custom-Properties, keine Status-Token, keine Nav-Token | `MISSING` |
+| Tenant-Branding (Logo/Farben pro Tenant, DB-persistiert) | `packages/config/src/branding.ts` existiert, ist aber **prozessweit envgesteuert, nicht pro Tenant, nicht laufzeit-/DB-konfigurierbar** — erfüllt nicht §5/§27 (kein `TenantBranding`-Modell, keine Admin-UI, keine Live-Vorschau) | `PARTIAL` (Basis-Branding-Konzept ✅, Tenant-Persistenz+Admin-UI ✅ fehlt) |
+| Application Shell (3-Regionen-Layout, dunkle Navy-Sidebar, Header mit Suche/Profil) | Aktuelle Sidebar ist weiß, ohne Icons, ohne Logo-Bild, ohne Header-Leiste; keine Sonde-Panel-Region überhaupt vorhanden | `MISSING` |
+| Navigationsreihenfolge exakt wie §2 der UI-Spec (`Home/Inbox/Finance/Sales/Approvals/Tasks/Cases/Activity/Integrations/Administration`) | Aktuelle Reihenfolge weicht ab (`Übersicht/Posteingang/Vorgänge/Activity/Finance…/Sales…/Aufgaben/Freigaben/Administration…`), Finance/Sales sind Untergruppen mit Unterpunkten statt einzelner Top-Level-Einträge | `PARTIAL` |
+| Home-Dashboard exakte Komposition (5 KPI-Karten, Unified-Inbox-Karte, Finance-/Sales-Übersicht, Approvals-/Activity-Vorschau) | Aktuelles `/dashboard` zeigt nur 3 schlichte Zähler-Karten ohne Icons/Trends, keine Unified-Inbox-Karte, keine Finance-/Sales-Übersichtskarten, keine Approvals-/Activity-Vorschau | `MISSING` |
+| Sonde-Panel (rechte Spalte, Modus-Auswahl, Action Cards, Composer) | Nicht vorhanden (folgt aus Backend-Delta A) | `MISSING` |
+| Responsive/Accessibility-Härtung, visuelle Regressionstests | Nicht geprüft/nicht vorhanden | `MISSING` |
+
+**Wichtiger Hinweis gemäß UI-Spec §0:** Das mitgelieferte Referenz-Mockup enthält
+Demo-Zeilen (z. B. „HR System — Mitarbeiterdokument", „Personal"-Badge), die **keine**
+Entsprechung im Master-Dokument haben. Per ausdrücklicher Anweisung der UI-Spec
+("Do not create an HR module… Replace such sample content with Finance, Sales, Approval,
+Task, Case or Activity examples") werden solche Zeilen bei der Umsetzung durch
+unterstützte Domänen ersetzt, nicht wörtlich übernommen.
+
+---
+
+## Priorisierung dieser Session (eigenständig, in Abarbeitungsreihenfolge)
+
+Kriterium: größter demonstrierbarer Nutzen pro investiertem Aufwand, kleinste Blast-Radius
+pro Schritt, jede Stufe einzeln lint-/typecheck-/testverifiziert und committet — exakt das
+in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS.md`).
+
+1. **UI-1 — Design-Tokens & Standard-ORION-Theme.** Fundament für alles Weitere; ohne
+   Tokens ist jede spätere Komponente wieder hartkodiert. Kleiner, risikoarmer Schnitt.
+2. **UI-2 — Tenant-Branding (Datenmodell + API + Admin-UI, ohne Datei-Upload-Pipeline).**
+   Logo als URL-Feld statt Objektspeicher-Upload (bewusste Vereinfachung, siehe
+   `docs/ASSUMPTIONS.md`-Eintrag nach Umsetzung) — reduziert Umfang, erfüllt aber den
+   Kern der Anforderung (Farbe/Logo pro Tenant ohne Code-Änderung, DB-persistiert,
+   überlebt Login/Logout, nie Tenant-übergreifend sichtbar).
+3. **UI-3 — Application Shell.** Dunkle Navy-Sidebar mit echten Icons, exakte
+   Navigationsreihenfolge, Header-Leiste (Begrüßung/Suche-Platzhalter/Profilmenü).
+   Sonde-Panel-Region als strukturell ehrlicher Platzhalter (klar als „in Kürze
+   verfügbar" gekennzeichnet, keine simulierte Funktionalität — §33 der UI-Spec).
+4. **UI-4 — Home-Dashboard.** 5 KPI-Karten (echte Daten aus bestehenden Endpunkten),
+   Unified-Inbox-Karte, Finance-/Sales-Übersichtskarten, Approvals-/Activity-Vorschau —
+   der sichtbarste, wertvollste Teil der UI-Spec.
+5. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus**, falls danach noch Budget
+   verbleibt — kein UI-Panel ohne dieses Fundament (siehe Begründung oben).
+
+Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
+Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
+Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
+visuelle Regressionstests, PREPARE/ACT/DELEGATE-Sonde-Modi, Model-Profile-Registry,
+Usage-Metering, separate Plattform-Admin-Ansicht.

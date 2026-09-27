@@ -66,6 +66,8 @@ export const AUDIT_EVENT_TYPES = [
   'AI_PROVIDER_CONNECTED',
   'AI_PROVIDER_DISCONNECTED',
   'AI_PROVIDER_TEST_FAILED',
+  'TENANT_BRANDING_UPDATED',
+  'TENANT_BRANDING_RESET',
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

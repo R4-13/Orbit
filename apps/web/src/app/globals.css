@@ -1,3 +1,48 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Design tokens (docs/ORION_UI_UX_DEVELOPMENT_SPECIFICATION_v1.md §5.4/§24) —
+ * the default ORION theme baseline. A tenant's own branding (apps/api/src/branding)
+ * overrides the --brand-*/--nav-* subset at runtime via inline styles set on
+ * :root by the theme hook (see lib/hooks/use-tenant-theme.ts); everything else
+ * (surfaces, text, status colors) stays constant across tenants on purpose —
+ * status colors must never be replaced by a tenant's corporate color (§5.4).
+ */
+:root {
+  --brand-primary: #1d4ed8;
+  --brand-primary-foreground: #ffffff;
+
+  --brand-secondary: #0f172a;
+  --brand-secondary-foreground: #ffffff;
+
+  --brand-accent: #0891b2;
+  --brand-accent-foreground: #ecfeff;
+
+  --nav-background: #0f172a;
+  --nav-foreground: #94a3b8;
+  --nav-active-background: rgba(255, 255, 255, 0.08);
+  --nav-active-foreground: #ffffff;
+
+  --surface-page: #f8fafc;
+  --surface-card: #ffffff;
+  --surface-muted: #f1f5f9;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --border-default: #e2e8f0;
+
+  --status-success: #16a34a;
+  --status-success-bg: #f0fdf4;
+  --status-warning: #d97706;
+  --status-warning-bg: #fffbeb;
+  --status-error: #dc2626;
+  --status-error-bg: #fef2f2;
+  --status-info: #2563eb;
+  --status-info-bg: #eff6ff;
+
+  --radius-card: 16px;
+}

@@ -277,6 +277,7 @@ model Tenant {
   meetings                Meeting[]
   integrations            Integration[]
   aiProviderConnection    AIProviderConnection?
+  branding                TenantBranding?
   agentRuns               AgentRun[]
   toolInvocations         ToolInvocation[]
   webhookEvents           WebhookEvent[]
@@ -847,6 +848,43 @@ model AIProviderConnection {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("ai_provider_connections")
+}
+
+/// §5/§27 der UI/UX-Spezifikation ("Tenant/Company Branding and CI Theming") — pro
+/// Tenant konfigurierbares Erscheinungsbild, ohne Code-Änderung wirksam (siehe
+/// `apps/web/src/app/(app)/admin/branding/page.tsx`). `logoUrl` ist bewusst ein
+/// einfaches URL-Feld statt einer Objektspeicher-Upload-Pipeline (MVP-Vereinfachung,
+/// siehe docs/ASSUMPTIONS.md) — erfüllt trotzdem "Logo ohne Code-Änderung ersetzbar".
+/// Höchstens eine Zeile pro Tenant; fehlt sie, gilt das in
+/// apps/web/src/app/globals.css gebackene Standard-ORION-Theme.
+enum BrandingBorderRadiusPreset {
+  COMPACT
+  STANDARD
+  SOFT
+}
+
+model TenantBranding {
+  id                    String                     @id @default(uuid())
+  tenantId              String                     @unique @map("tenant_id")
+  companyDisplayName    String?                    @map("company_display_name")
+  logoUrl               String?                    @map("logo_url")
+  logoMarkUrl           String?                    @map("logo_mark_url")
+  primaryColor          String?                    @map("primary_color")
+  primaryForeground     String?                    @map("primary_foreground")
+  secondaryColor        String?                    @map("secondary_color")
+  secondaryForeground   String?                    @map("secondary_foreground")
+  accentColor           String?                    @map("accent_color")
+  accentForeground      String?                    @map("accent_foreground")
+  navigationBackground  String?                    @map("navigation_background")
+  navigationForeground  String?                    @map("navigation_foreground")
+  borderRadiusPreset    BrandingBorderRadiusPreset? @map("border_radius_preset")
+  updatedByUserId       String?                    @map("updated_by_user_id")
+  createdAt             DateTime                   @default(now()) @map("created_at")
+  updatedAt             DateTime                   @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_brandings")
 }
 
 // ============================================================================

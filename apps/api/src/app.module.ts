@@ -7,6 +7,7 @@ import { AgentModule } from './agent/agent.module';
 import { AgentDefinitionsModule } from './agent-definitions/agent-definitions.module';
 import { AiProvidersModule } from './ai-providers/ai-providers.module';
 import { ApprovalsModule } from './approvals/approvals.module';
+import { BrandingModule } from './branding/branding.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
@@ -86,6 +87,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     ConnectorsModule,
     PolicyModule,
     TenantsModule,
+    BrandingModule,
     UsersModule,
     AuthModule,
     CasesModule,
