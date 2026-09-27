@@ -79,4 +79,18 @@ export class WorkflowDefinitionsController {
   listRuns(@CurrentUser() user: AuthenticatedUser, @Param('key') key: string): ReturnType<WorkflowRunnerService['listRuns']> {
     return this.runner.listRuns(user.tenantId, key);
   }
+
+  /**
+   * docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §65 ("Failed Work
+   * Operations") — `:key` is accepted for REST-path consistency with
+   * every other route here but not actually used for the lookup
+   * (`workflowRunId` alone already uniquely identifies the run); kept so
+   * the URL structure matches `GET :key/runs` and the frontend doesn't
+   * need a second, differently-shaped client call.
+   */
+  @Post(':key/runs/:runId/retry')
+  @HttpCode(202)
+  retryRun(@CurrentUser() user: AuthenticatedUser, @Param('runId') runId: string) {
+    return this.runQueue.retryFailedRun(user.tenantId, user.id, runId);
+  }
 }

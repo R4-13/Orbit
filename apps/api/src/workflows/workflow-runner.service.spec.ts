@@ -235,6 +235,30 @@ describe('WorkflowRunnerService', () => {
     });
   });
 
+  describe('getRetryableFailedRun() (docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §65)', () => {
+    it('returns the definition key + original input for a FAILED run', async () => {
+      scoped.workflowRun.findUnique.mockResolvedValue({ id: 'wfr_1', workflowDefinitionId: 'wfd_1', status: 'FAILED', input: { subject: 'x' } });
+      scoped.workflowDefinition.findUnique.mockResolvedValue({ id: 'wfd_1', key: 'wf-1' });
+
+      const result = await service.getRetryableFailedRun('tenant_1', 'wfr_1');
+
+      expect(result).toEqual({ key: 'wf-1', input: { subject: 'x' } });
+    });
+
+    it('throws NotFoundError when the run does not exist', async () => {
+      scoped.workflowRun.findUnique.mockResolvedValue(null);
+      await expect(service.getRetryableFailedRun('tenant_1', 'does-not-exist')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    });
+
+    it.each(['RUNNING', 'COMPLETED', 'WAITING_FOR_APPROVAL', 'REJECTED'] as const)(
+      'throws ValidationFailedError when the run status is %s, not FAILED',
+      async (status) => {
+        scoped.workflowRun.findUnique.mockResolvedValue({ id: 'wfr_1', workflowDefinitionId: 'wfd_1', status, input: {} });
+        await expect(service.getRetryableFailedRun('tenant_1', 'wfr_1')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      },
+    );
+  });
+
   it('marks the run FAILED (and stops) when a step cannot be resolved', async () => {
     scoped.workflowDefinition.findUnique.mockResolvedValue({
       id: 'wfd_1',

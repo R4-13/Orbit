@@ -151,6 +151,36 @@ export class WorkflowRunnerService {
     return this.runStepsFrom(tenantId, actorUserId, definition, workflowRun, context, fromStepOrder, priorStepResults);
   }
 
+  /**
+   * Loads a `FAILED` run's definition key + original input — used by
+   * `WorkflowRunQueueService.retryFailedRun()` (docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md
+   * §65, "Failed Work Operations") to re-enqueue a fresh run with the
+   * same input. Lives here (not in `WorkflowRunQueueService` itself)
+   * because it needs read access to `WorkflowRun`/`WorkflowDefinition`,
+   * which this service already has; `WorkflowRunQueueService` is the one
+   * with `@InjectQueue()` access to actually enqueue the retry, so the
+   * two pieces of the operation split across the same producer/consumer
+   * boundary as every other queue-backed trigger.
+   */
+  async getRetryableFailedRun(tenantId: string, workflowRunId: string): Promise<{ key: string; input: Record<string, unknown> }> {
+    const failedRun = await this.prisma.forTenantId(tenantId).workflowRun.findUnique({ where: { id: workflowRunId } });
+    if (!failedRun) {
+      throw new NotFoundError('Workflow run not found.', { workflowRunId });
+    }
+    if (failedRun.status !== 'FAILED') {
+      throw new ValidationFailedError('Only a FAILED run can be retried.', { workflowRunId, status: failedRun.status });
+    }
+
+    const definition = await this.prisma.forTenantId(tenantId).workflowDefinition.findUnique({
+      where: { id: failedRun.workflowDefinitionId },
+    });
+    if (!definition) {
+      throw new NotFoundError('Workflow definition not found for this run.', { workflowRunId });
+    }
+
+    return { key: definition.key, input: (failedRun.input as Record<string, unknown>) ?? {} };
+  }
+
   /** Marks a paused run as REJECTED — called by FollowUpsModule when the blocking approval is rejected rather than approved. No further steps run. */
   async markRejected(tenantId: string, workflowRunId: string): Promise<void> {
     const updated = await this.prisma

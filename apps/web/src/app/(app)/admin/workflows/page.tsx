@@ -9,6 +9,7 @@ import { formatDateTime } from '../../../../lib/format';
 import { useAgentDefinitions } from '../../../../lib/hooks/use-agent-definitions';
 import {
   useCreateWorkflowDefinition,
+  useRetryWorkflowRun,
   useTriggerWorkflowDefinition,
   useTriggerWorkflowDefinitionAsync,
   useUpdateWorkflowDefinition,
@@ -188,6 +189,8 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
   const update = useUpdateWorkflowDefinition();
   const trigger = useTriggerWorkflowDefinition();
   const triggerAsync = useTriggerWorkflowDefinitionAsync();
+  const retryRun = useRetryWorkflowRun();
+  const [retryError, setRetryError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [showRuns, setShowRuns] = useState(false);
   const [showTrigger, setShowTrigger] = useState(false);
@@ -252,6 +255,15 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
       setShowRuns(true);
     } catch (err) {
       setTriggerError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Ausführung fehlgeschlagen.');
+    }
+  }
+
+  async function handleRetry(runId: string) {
+    setRetryError(null);
+    try {
+      await retryRun.mutateAsync({ key: definition.key, runId });
+    } catch (err) {
+      setRetryError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Wiederholen fehlgeschlagen.');
     }
   }
 
@@ -391,16 +403,25 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
         {showRuns ? (
           <div className="border-t border-slate-100 pt-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Bisherige Läufe</p>
+            {retryError ? <p className="mb-2 text-xs text-red-600">{retryError}</p> : null}
             {runs && runs.length > 0 ? (
               <ul className="space-y-1.5">
                 {runs.map((run) => {
                   const info = RUN_STATUS_LABELS[run.status] ?? { label: run.status, tone: 'neutral' as const };
+                  const isRetryingThis = retryRun.isPending && retryRun.variables?.runId === run.id;
                   return (
                     <li key={run.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs">
                       <span>
                         {formatDateTime(run.startedAt)} — {run.stepRuns.length} Schritt{run.stepRuns.length === 1 ? '' : 'e'}
                       </span>
-                      <Badge tone={info.tone}>{info.label}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge tone={info.tone}>{info.label}</Badge>
+                        {run.status === 'FAILED' ? (
+                          <Button variant="ghost" className="!px-2 !py-1 text-xs" disabled={isRetryingThis} onClick={() => handleRetry(run.id)}>
+                            {isRetryingThis ? 'Wird wiederholt …' : 'Wiederholen'}
+                          </Button>
+                        ) : null}
+                      </div>
                     </li>
                   );
                 })}

@@ -7,11 +7,14 @@ import { WorkflowRunQueueService } from './workflow-run-queue.service';
 describe('WorkflowRunQueueService', () => {
   let service: WorkflowRunQueueService;
   let queue: { add: jest.Mock };
-  let runner: { createQueuedRun: jest.Mock };
+  let runner: { createQueuedRun: jest.Mock; getRetryableFailedRun: jest.Mock };
 
   beforeEach(async () => {
     queue = { add: jest.fn().mockResolvedValue({ id: 'job_1' }) };
-    runner = { createQueuedRun: jest.fn().mockResolvedValue({ workflowRunId: 'wfr_1' }) };
+    runner = {
+      createQueuedRun: jest.fn().mockResolvedValue({ workflowRunId: 'wfr_1' }),
+      getRetryableFailedRun: jest.fn().mockResolvedValue({ key: 'wf-1', input: { subject: 'x' } }),
+    };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -59,5 +62,23 @@ describe('WorkflowRunQueueService', () => {
       code: 'NOT_FOUND',
     });
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  describe('retryFailedRun() (docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §65)', () => {
+    it('looks up the failed run\'s definition key + original input, then enqueues a fresh run with it', async () => {
+      const result = await service.retryFailedRun('tenant_1', 'user_1', 'wfr_failed');
+
+      expect(runner.getRetryableFailedRun).toHaveBeenCalledWith('tenant_1', 'wfr_failed');
+      expect(runner.createQueuedRun).toHaveBeenCalledWith('tenant_1', 'wf-1', { subject: 'x' });
+      expect(queue.add).toHaveBeenCalledWith('run', { tenantId: 'tenant_1', actorUserId: 'user_1', workflowRunId: 'wfr_1' }, { attempts: 1 });
+      expect(result).toEqual({ workflowRunId: 'wfr_1' });
+    });
+
+    it('propagates a ValidationFailedError when the run is not FAILED, without enqueuing anything', async () => {
+      runner.getRetryableFailedRun.mockRejectedValue(Object.assign(new Error('not failed'), { code: 'VALIDATION_FAILED' }));
+
+      await expect(service.retryFailedRun('tenant_1', 'user_1', 'wfr_running')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect(queue.add).not.toHaveBeenCalled();
+    });
   });
 });

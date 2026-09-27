@@ -51,4 +51,18 @@ export class WorkflowRunQueueService {
     await this.queue.add('run', { tenantId, actorUserId, workflowRunId }, { attempts: 1 });
     return { workflowRunId };
   }
+
+  /**
+   * docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §65 ("Failed Work
+   * Operations", "manual retry"). Not a resume of the failed run itself
+   * — a brand new `WorkflowRun` with the same definition + original
+   * input, exactly as if the user triggered it again by hand. See
+   * `WorkflowRunnerService.getRetryableFailedRun()`'s own doc comment
+   * for why this is deliberately simple rather than resuming from the
+   * failed step.
+   */
+  async retryFailedRun(tenantId: string, actorUserId: string, workflowRunId: string): Promise<{ workflowRunId: string }> {
+    const { key, input } = await this.runner.getRetryableFailedRun(tenantId, workflowRunId);
+    return this.enqueueTrigger(tenantId, actorUserId, key, input);
+  }
 }

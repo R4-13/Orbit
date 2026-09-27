@@ -107,3 +107,23 @@ export function useTriggerWorkflowDefinitionAsync() {
     },
   });
 }
+
+/**
+ * docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §65 ("Failed Work
+ * Operations") — retries a FAILED WorkflowRun by creating a fresh run
+ * with the same original input (see
+ * `WorkflowRunnerService.getRetryableFailedRun()`'s own doc comment for
+ * why this is not a resume-from-the-failed-step). Queued (202), not
+ * synchronous — the runs list is invalidated so the new run appears in
+ * the history immediately, even though it hasn't finished yet.
+ */
+export function useRetryWorkflowRun() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, runId }: { key: string; runId: string }) =>
+      apiFetch<TriggerWorkflowAsyncResult>(`/v1/workflow-definitions/${key}/runs/${runId}/retry`, { method: 'POST' }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['workflow-definitions', variables.key, 'runs'] });
+    },
+  });
+}
