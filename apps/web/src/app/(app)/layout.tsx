@@ -53,6 +53,7 @@ const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
       { href: '/admin/agents', label: 'Agenten-Konfiguration', permission: PERMISSIONS.AGENT_MANAGE },
       { href: '/admin/workflows', label: 'Orchestrierung', permission: PERMISSIONS.AGENT_MANAGE },
       { href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE },
+      { href: '/admin/retention', label: 'Datenaufbewahrung', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/integrations', label: 'Integrationen', permission: PERMISSIONS.INTEGRATION_CONFIGURE },
       { href: '/admin/users', label: 'Nutzerverwaltung', permission: PERMISSIONS.USER_MANAGE },
       { href: '/admin/settings', label: 'Einstellungen', permission: PERMISSIONS.TENANT_MANAGE },

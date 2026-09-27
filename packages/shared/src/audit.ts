@@ -59,6 +59,8 @@ export const AUDIT_EVENT_TYPES = [
   'TENANT_DATA_EXPORTED',
   'TENANT_DELETE_REQUESTED',
   'TENANT_DELETE_COMPLETED',
+  'RETENTION_POLICY_UPDATED',
+  'RETENTION_APPLIED',
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

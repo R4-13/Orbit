@@ -279,6 +279,7 @@ model Tenant {
   agentRuns               AgentRun[]
   toolInvocations         ToolInvocation[]
   webhookEvents           WebhookEvent[]
+  retentionPolicies       RetentionPolicy[]
   agentDefinitions        AgentDefinition[]
   agentDefinitionVersions AgentDefinitionVersion[]
   workflowDefinitions     WorkflowDefinition[]
@@ -1051,4 +1052,50 @@ model WebhookEvent {
   @@unique([tenantId, source, externalEventId])
   @@index([tenantId, receivedAt])
   @@map("webhook_events")
+}
+
+// ============================================================================
+// Retention-Grundlage (docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2,
+// docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §66) — bewusst nur die zwei
+// operativen/Debug-Datenkategorien, nicht Audit-/Finanzdaten (die keiner
+// rein technischen Aufbewahrungsentscheidung unterliegen sollten, siehe
+// RetentionCategory-Kommentar). Kein automatischer Lösch-Scheduler in
+// dieser Phase — nur die konfigurierbare Grundlage + eine manuell
+// ausgelöste Anwendung, siehe RetentionService (apps/api).
+// ============================================================================
+
+/// Bewusst nur diese zwei Kategorien: reine Betriebs-/Debug-Daten ohne
+/// gesetzliche Mindestaufbewahrungspflicht. Rechnungs-/Buchungsdaten,
+/// Audit-Log, Nutzerkonten etc. sind hier absichtlich NICHT wählbar — für
+/// die würde "wie lange aufbewahren" eine echte rechtliche Prüfung
+/// brauchen, keine rein technische Entscheidung (§66 des Konzepts warnt
+/// selbst davor: "Do not apply simplistic deletion to legally relevant
+/// finance records").
+enum RetentionCategory {
+  /// AgentRun-Zeilen (+ per Kaskade deren ToolInvocation-Kindzeilen).
+  AGENT_RUNS
+  /// ToolInvocation-Zeilen einzeln, unabhängig vom Elternteil-AgentRun —
+  /// z. B. um Tool-Ein-/Ausgabe-Nutzlasten (potenziell sensiblere Detail-
+  /// daten) früher zu löschen als den bloßen Nachweis, dass ein Agentenlauf
+  /// stattfand.
+  TOOL_INVOCATIONS
+}
+
+/// Pro Tenant und Kategorie konfigurierbar. **Keine Zeile = unbegrenzte
+/// Aufbewahrung** (sicherer Standard) — ein Tenant muss aktiv eine Police
+/// anlegen, bevor überhaupt etwas als löschbar gilt. Wird nicht bei
+/// `TenantsService.bootstrapTenant()` vorbefüllt (anders als
+/// `PolicyConfig`), genau aus diesem Grund.
+model RetentionPolicy {
+  id                String            @id @default(uuid())
+  tenantId          String            @map("tenant_id")
+  category          RetentionCategory
+  retentionDays     Int               @map("retention_days")
+  updatedByUserId   String?           @map("updated_by_user_id")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, category])
+  @@map("retention_policies")
 }

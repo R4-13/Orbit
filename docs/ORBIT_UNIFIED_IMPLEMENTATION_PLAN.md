@@ -137,7 +137,7 @@ gemocktem HTTP-Client (kein echter API-Call).
 |---|---|---|---|
 | 0 | Gap-Analyse (dieses Dokument) | — | ✅ erledigt |
 | 1 | Durable Orchestration (Workflow-State, Approval-Resume, Idempotenz) | ✅ erledigt (Approval-Resume + Pause-Semantik; generische Connector-Idempotenz-Keys bewusst nicht Teil dieser Stufe) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
-| 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | Metrics ✅ + Logging ✅ + Tenant-Concurrency ✅ + Failed-Work-Retry ✅ erledigt; nur Retention noch offen | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
+| 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | ✅ erledigt (Metrics + Logging + Tenant-Concurrency + Failed-Work-Retry + Retention-Grundlage) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | PARTIAL/MISSING | ✅ Ja |
 | 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | MISSING | ✅ Ja (strukturell, ohne Live-Test) |
 | 5 | Sonde Conversation Foundation | MISSING | ✅ Ja |
@@ -156,13 +156,14 @@ vorgeschlagen — keine Umstellung nötig, nur bestätigt.
 
 ## Nächste Schritte
 
-**Phase 1 (Durable Orchestration) ist abgeschlossen** — siehe
-`docs/IMPLEMENTATION_STATUS.md` (neue Zeile "Durable Workflow +
-Approval Resume") und `docs/ASSUMPTIONS.md` #200-209 für die getroffenen
-Detailentscheidungen. Weiter mit Phase 2 (Operational Hardening:
-Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-
-Grundlage), danach Phase 3-10 der Reihe nach, jeweils mit vollständiger
-Verifikation (Lint/Typecheck/Unit/E2E) und Dokumentations-Update nach
-jeder Phase, exakt wie bei jeder vorherigen Phase dieses Projekts.
-Phase 11 bleibt dauerhaft offen (externe Zugangsdaten), Phase 12 wird
-so weit umgesetzt, wie ohne Produktionsinfrastruktur sinnvoll möglich.
+**Phase 1 (Durable Orchestration) und Phase 2 (Operational Hardening)
+sind abgeschlossen** — siehe `docs/IMPLEMENTATION_STATUS.md` und
+`docs/ASSUMPTIONS.md` #200-243 für die getroffenen Detailentscheidungen
+(Retention-Grundlage zuletzt: #237-243, konservativer Scope ohne
+automatischen Scheduler, siehe dort). Weiter mit Phase 3 (Agent
+Governance: Lifecycle, Prompt-Layering, Evaluationsframework), danach
+Phase 4-10 der Reihe nach, jeweils mit vollständiger Verifikation
+(Lint/Typecheck/Unit/E2E) und Dokumentations-Update nach jeder Phase,
+exakt wie bei jeder vorherigen Phase dieses Projekts. Phase 11 bleibt
+dauerhaft offen (externe Zugangsdaten), Phase 12 wird so weit
+umgesetzt, wie ohne Produktionsinfrastruktur sinnvoll möglich.

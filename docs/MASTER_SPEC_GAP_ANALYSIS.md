@@ -673,18 +673,19 @@ zurückgestellt.** Neu:
   — live gegen einen frisch angelegten Wegwerf-Tenant verifiziert, nie
   gegen den Musterwerk-Demo-Mandanten.
 
-**Bewusst nicht umgesetzt**: Retention-Settings (keine
-Aufbewahrungsfristen-Konfiguration und kein automatisierter
-Lösch-/Anonymisierungs-Job nach Ablauf einer Frist) — dafür gibt es
-im Schema keinerlei Grundlage (kein Retention-Policy-Feld auf Tenant
-oder einzelnen Entitäten) und kein Scheduler/Cron-Mechanismus im
-MVP; ein unvollständiger Konfigurations-Stub ohne tatsächliche
-Durchsetzung wäre schlechter als eine ehrlich offene Lücke gewesen
-(§63). Alle drei umgesetzten Endpunkte sind zudem nur für Mitglieder
-der (pro Tenant seedbaren) `SYSTEM_ADMIN`-Rolle erreichbar
-(`TENANT_MANAGE`), nicht für `TENANT_ADMIN` — konsistent mit der
-bereits bestehenden `DEFAULT_ROLE_PERMISSIONS`-Entscheidung, siehe
-`docs/ASSUMPTIONS.md` #126.
+**Nachträglich umgesetzt** (docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md
+Phase 2, Retention-Grundlage): eine konfigurierbare Aufbewahrungsfristen-
+Grundlage existiert jetzt (`RetentionPolicy`-Modell, `RetentionModule`,
+`/admin/retention`) — pro Tenant/Kategorie (`AGENT_RUNS`,
+`TOOL_INVOCATIONS`) einstellbar, mit Vorschau vor jedem Löschen. Bewusst
+weiterhin **nicht** umgesetzt: ein automatisierter, zeitgesteuerter
+Lösch-/Anonymisierungs-Job (Scheduler/Cron) — `apply()` ist ausschließlich
+manuell auslösbar, siehe `docs/ASSUMPTIONS.md` #238 für die Begründung
+(sicherste erste Ausbaustufe gegen unbeaufsichtigten Datenverlust). Anders
+als die drei Datenschutz-Admin-Funktionen oben ist die Retention-Grundlage
+bewusst über `POLICY_MANAGE` gegated, nicht `TENANT_MANAGE` — sie ist eine
+tenant-eigene Konfiguration, keine plattformweite Operation, siehe
+`docs/ASSUMPTIONS.md` #237.
 
 Nebenbei gefunden und behoben: ein echter, bis dahin nie ausgelöster
 Bug in `packages/domain/src/tenant-scope.ts` (`RefreshToken`,
@@ -857,8 +858,11 @@ Für eine Umsetzung über diesen Stand hinaus, nach Hebelwirkung sortiert.
    Datenexport, Nutzer-Deaktivierung (inkl. Session-Widerruf),
    zweistufiger Tenant-Löschungsworkflow, alle live verifiziert. Dabei
    nebenbei einen echten, bis dahin nie ausgelösten Bug in
-   `tenant-scope.ts` gefunden und behoben. Bewusst offen gelassen:
-   Retention-Settings (keine Schema-/Scheduler-Grundlage vorhanden).
+   `tenant-scope.ts` gefunden und behoben. Retention-Settings damals
+   bewusst offen gelassen — inzwischen als eigene Retention-Grundlage
+   in Phase 2 der ORBIT-Unified-Evolution nachgeliefert (manuelle
+   Vorschau + manuelles Löschen pro Kategorie, kein Scheduler; siehe
+   `docs/IMPLEMENTATION_STATUS.md`).
 7. ~~**Datenschutz/Security-Detailarbeit**~~ — erledigt in Phase 19g:
    CREDENTIAL_ENCRYPTION_KEY tatsächlich genutzt (neues
    `IntegrationsModule` + `CredentialEncryptionService`, AES-256-GCM,
