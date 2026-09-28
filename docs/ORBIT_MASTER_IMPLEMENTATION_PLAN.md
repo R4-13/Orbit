@@ -136,9 +136,16 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    (zeigt weiterhin den ehrlichen Platzhalter aus UI-3 — kein UI-Panel ohne dieses
    Fundament, siehe Begründung oben). Details: `docs/IMPLEMENTATION_STATUS.md`,
    `docs/ASSUMPTIONS.md` #276-283.
-7. **`SondePanel`-Frontend-Wiring** (als Nächstes) — den bestehenden Platzhalter aus
-   UI-3 durch eine echte Konversations-UI gegen das neue `/copilot/*`-Backend
-   ersetzen (Liste/Anlegen/Senden/Löschen, kein Streaming in diesem Schritt).
+7. ✅ **`SondePanel`-Frontend-Wiring.** Erledigt — der Platzhalter aus UI-3 ist durch
+   eine echte Konversations-UI gegen `/copilot/*` ersetzt (Liste/Anlegen/Senden/
+   Löschen, kein Streaming). Live im Browser (echter Roundtrip über den Musterwerk-
+   Demo-Tenant, History übersteht Reload) + per Playwright-E2E-Suite verifiziert
+   (9/10, derselbe vorbestehende `ENOTFOUND minio`-Fehlschlag). Dabei zwei echte,
+   live gefundene Bugs behoben (React-Query-Key-Präfixkollision, Lösch-Race).
+   Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #284-286.
+8. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/UI-7/
+   UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), Sonde Phase 8
+   (SSE-Streaming), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
