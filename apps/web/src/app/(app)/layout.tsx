@@ -79,6 +79,7 @@ const NAV: NavEntry[] = [
       { href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/retention', label: 'Datenaufbewahrung', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/ai-providers', label: 'KI-Provider', permission: PERMISSIONS.INTEGRATION_CONFIGURE },
+      { href: '/admin/branding', label: 'Branding', permission: PERMISSIONS.TENANT_BRANDING_CONFIGURE },
       { href: '/admin/users', label: 'Nutzerverwaltung', permission: PERMISSIONS.USER_MANAGE },
       { href: '/admin/settings', label: 'Einstellungen', permission: PERMISSIONS.TENANT_MANAGE },
     ],

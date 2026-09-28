@@ -121,10 +121,12 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    Activity-Vorschau. Live im Browser + per Playwright-E2E-Suite verifiziert (eine
    echte Regression in `auth.spec.ts` dabei gefunden und behoben). Details:
    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #269-273.
-5. **Branding-Admin-Seite** (`/admin/branding`, Rest von UI-2, als Nächstes) —
-   Backend steht bereits vollständig, nur noch die Formular-/Vorschau-UI fehlt.
-6. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus**, falls danach noch Budget
-   verbleibt — kein UI-Panel ohne dieses Fundament (siehe Begründung oben).
+5. ✅ **Branding-Admin-Seite** (`/admin/branding`, Rest von UI-2). Erledigt — damit
+   ist UI-2 vollständig abgeschlossen. Live verifiziert, inkl. einer echten,
+   dokumentierten Permission-Provisionierungslücke (siehe `docs/ASSUMPTIONS.md`
+   #275). Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #274-275.
+6. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus** (als Nächstes) — kein
+   UI-Panel ohne dieses Fundament (siehe Begründung oben).
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
