@@ -3,7 +3,7 @@ import type { Conversation, ConversationMessage } from '@orbit/domain';
 import { ApiError, apiFetch, apiFetchStream } from '../api-client';
 
 export interface CopilotCapabilities {
-  mode: 'ASK';
+  modes: Array<'ASK' | 'PREPARE'>;
   tools: string[];
 }
 

@@ -9,7 +9,7 @@ import { CopilotRuntimeService } from './copilot-runtime.service';
 import type { CopilotStreamEvent } from './copilot-stream-event';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
-import { SONDE_ASK_TOOL_NAMES } from './tools/sonde.tools';
+import { SONDE_ASK_TOOL_NAMES, SONDE_PREPARE_TOOL_NAMES } from './tools/sonde.tools';
 
 /**
  * §33 des Master-Dokuments ("Sonde action cards, streaming and API") —
@@ -18,9 +18,9 @@ import { SONDE_ASK_TOOL_NAMES } from './tools/sonde.tools';
  * Nur `JwtAuthGuard`, keine zusätzliche `RequirePermissions` — Sonde ist
  * laut §25 global für jeden authentifizierten Nutzer verfügbar; welche
  * Tools ein Tool-Aufruf tatsächlich ausführen darf, entscheidet weiterhin
- * die Policy Engine (`COPILOT_READ`), nicht diese Route. Siehe
- * docs/ASSUMPTIONS.md für die bewusst noch nicht umgesetzte volle
- * §32-Berechtigungs-Schnittmenge.
+ * die Policy Engine (`COPILOT_READ`/`EMAIL_DRAFT`/`MEETING_PROPOSE`/
+ * `BOOKING_PROPOSAL_CREATE`), nicht diese Route. Siehe docs/ASSUMPTIONS.md
+ * für die bewusst noch nicht umgesetzte volle §32-Berechtigungs-Schnittmenge.
  *
  * Der Streaming-Endpunkt nutzt bewusst **nicht** Nests eingebauten
  * `@Sse()`-Dekorator: dieser erzwingt intern immer `RequestMethod.GET`
@@ -42,8 +42,8 @@ export class CopilotController {
 
   @Get('capabilities')
   getCapabilities() {
-    // §32: nur READ/ASK in dieser Phase — PREPARE/ACT/DELEGATE/NAVIGATE folgen mit späteren Phasen.
-    return { mode: 'ASK', tools: SONDE_ASK_TOOL_NAMES };
+    // §32: READ (ASK) + PREPARE in dieser Phase — ACT/DELEGATE/NAVIGATE folgen mit späteren Phasen.
+    return { modes: ['ASK', 'PREPARE'], tools: [...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES] };
   }
 
   @Post('conversations')

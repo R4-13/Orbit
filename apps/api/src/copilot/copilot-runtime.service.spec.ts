@@ -82,7 +82,14 @@ describe('CopilotRuntimeService', () => {
 
     const result = await service.sendMessage('tenant_1', 'user_1', 'conv_1', 'Wie viele Freigaben stehen aus?');
 
-    expect(toolRegistry.subset).toHaveBeenCalledWith(['get_dashboard_summary', 'list_open_approvals', 'get_case']);
+    expect(toolRegistry.subset).toHaveBeenCalledWith([
+      'get_dashboard_summary',
+      'list_open_approvals',
+      'get_case',
+      'draft_email',
+      'create_meeting',
+      'create_booking_proposal',
+    ]);
     expect(scoped.conversationMessage.create).toHaveBeenNthCalledWith(1, {
       data: { tenantId: 'tenant_1', conversationId: 'conv_1', userId: 'user_1', role: 'USER', content: 'Wie viele Freigaben stehen aus?' },
     });

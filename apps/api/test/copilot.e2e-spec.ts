@@ -31,6 +31,7 @@ describe('Copilot / Sonde (e2e)', () => {
   let tenantsService: TenantsService;
   let prisma: PrismaService;
   let llm: MockLLMProvider;
+  let tenantAId: string;
   let tokenA: string;
   let tokenAOtherUser: string;
   let tokenB: string;
@@ -55,6 +56,7 @@ describe('Copilot / Sonde (e2e)', () => {
       .send({ email: adminA.email, password: PASSWORD })
       .expect(200);
     tokenA = loginA.body.accessToken as string;
+    tenantAId = tenantA.id;
 
     // A second, genuinely distinct user in the SAME tenant (not just a
     // second tenant) — used to prove conversations are personal per §29,
@@ -101,12 +103,15 @@ describe('Copilot / Sonde (e2e)', () => {
     await app.close();
   });
 
-  it('GET /copilot/capabilities lists the ASK-mode read tools', async () => {
+  it('GET /copilot/capabilities lists the ASK read tools and the PREPARE proposal tools', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/copilot/capabilities')
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
-    expect(response.body).toEqual({ mode: 'ASK', tools: ['get_dashboard_summary', 'list_open_approvals', 'get_case'] });
+    expect(response.body).toEqual({
+      modes: ['ASK', 'PREPARE'],
+      tools: ['get_dashboard_summary', 'list_open_approvals', 'get_case', 'draft_email', 'create_meeting', 'create_booking_proposal'],
+    });
   });
 
   it('rejects every /copilot route without a valid token', async () => {
@@ -221,5 +226,82 @@ describe('Copilot / Sonde (e2e)', () => {
       .get(`/api/v1/copilot/conversations/${conversationId}`)
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(404);
+  });
+
+  /**
+   * §26/§32 Phase 9 ("Sonde Prepare Mode") — beide Tools sind bewusst
+   * dieselben, bereits an anderer Stelle getesteten Domain-Agent-Tools
+   * (`SalesAgentTools`/`FinanceAgentTools`, siehe Kopfkommentar in
+   * tools/sonde.tools.ts), hier über den echten Sonde-Pfad aufgerufen —
+   * nicht ihre eigene Geschäftslogik wird erneut bewiesen, sondern dass
+   * Sonde sie überhaupt erreichen und real ausführen kann.
+   */
+  describe('PREPARE mode', () => {
+    let prepareConversationId: string;
+
+    beforeAll(async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/copilot/conversations')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Prepare-Test' })
+        .expect(201);
+      prepareConversationId = response.body.id;
+    });
+
+    it('draft_email really persists an OUTBOUND EmailMessage as a draft (never sent)', async () => {
+      llm.seedResponse({
+        toolCalls: [
+          {
+            toolCallId: randomUUID(),
+            toolName: 'draft_email',
+            input: { toAddress: 'kunde@example.com', subject: 'Ihre Anfrage', bodyText: 'Vielen Dank für Ihre Anfrage.' },
+          },
+        ],
+        stopReason: 'tool_use',
+      });
+      llm.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'Ich habe einen Antwortentwurf gespeichert.' });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${prepareConversationId}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Schreib eine Antwort an kunde@example.com.' })
+        .expect(201);
+      expect(response.body.content).toBe('Ich habe einen Antwortentwurf gespeichert.');
+
+      const drafts = await prisma
+        .forTenantId(tenantAId)
+        .emailMessage.findMany({ where: { toAddresses: { has: 'kunde@example.com' } } });
+      expect(drafts).toHaveLength(1);
+      expect(drafts[0]).toMatchObject({ direction: 'OUTBOUND', subject: 'Ihre Anfrage' });
+    });
+
+    it('create_booking_proposal really creates a BookingProposal for a real PENDING_APPROVAL invoice via Sonde', async () => {
+      const invoice = await prisma.forTenantId(tenantAId).invoice.create({
+        data: { tenantId: tenantAId, status: 'PENDING_APPROVAL', amountGross: 119, currency: 'EUR' },
+      });
+
+      llm.seedResponse({
+        toolCalls: [
+          {
+            toolCallId: randomUUID(),
+            toolName: 'create_booking_proposal',
+            input: { invoiceId: invoice.id, accountCode: '4200', description: 'Büromaterial', amount: 119 },
+          },
+        ],
+        stopReason: 'tool_use',
+      });
+      llm.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'Ich habe einen Buchungsvorschlag erstellt.' });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${prepareConversationId}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: `Erstelle einen Buchungsvorschlag für Rechnung ${invoice.id}.` })
+        .expect(201);
+      expect(response.body.content).toBe('Ich habe einen Buchungsvorschlag erstellt.');
+
+      const proposals = await prisma.forTenantId(tenantAId).bookingProposal.findMany({ where: { invoiceId: invoice.id } });
+      expect(proposals).toHaveLength(1);
+      expect(proposals[0]).toMatchObject({ accountCode: '4200', description: 'Büromaterial' });
+    });
   });
 });

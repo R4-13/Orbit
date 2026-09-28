@@ -10,6 +10,31 @@ import { TasksService } from '../../tasks/tasks.service';
 export const SONDE_ASK_TOOL_NAMES = ['get_dashboard_summary', 'list_open_approvals', 'get_case'] as const;
 
 /**
+ * §26/§32 ("PREPARE" capability category) — "creates a proposal", never
+ * executes anything final. Deliberately **not** new tools: `draft_email`
+ * (`SalesAgentTools`, §17 "Follow-up versenden" precursor — persists an
+ * `EmailMessage` with `direction: OUTBOUND` but never sends it),
+ * `create_meeting` (`SalesAgentTools` — despite its name, proposes
+ * candidate slots via `MeetingsService.proposeSlots()`; its own
+ * description already states "die endgültige Bestätigung erfolgt
+ * weiterhin durch einen Menschen"), and `create_booking_proposal`
+ * (`FinanceAgentTools` — creates a `BookingProposal` row that still
+ * needs a human to approve/transfer the invoice) already exist,
+ * already have their own test coverage, and already run through the
+ * exact same Tool Registry → Policy Engine path any domain agent uses.
+ * Reusing them by name here is the direct application of §25 ("must
+ * reuse... Tool Registry, do not duplicate") to PREPARE mode — the same
+ * principle ASK mode's own tools already followed.
+ *
+ * `prepare_follow_up` (the fourth capability §32 lists) has no existing
+ * equivalent — `FOLLOW_UP_SEND` is about *sending* an already-drafted
+ * follow-up (REQUIRE_APPROVAL by default), not proposing one — and is
+ * deliberately left out of this first PREPARE-mode cut; see
+ * docs/ASSUMPTIONS.md.
+ */
+export const SONDE_PREPARE_TOOL_NAMES = ['draft_email', 'create_meeting', 'create_booking_proposal'] as const;
+
+/**
  * §26/§32 des Master-Dokuments ("Sonde modes" / "READ" capability
  * category) — die ersten drei, namentlich im Master-Dokument genannten
  * READ-Tools (`get_dashboard_summary`, `list_open_approvals`, `get_case`).

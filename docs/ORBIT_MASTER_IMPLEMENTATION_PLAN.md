@@ -152,12 +152,24 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    (9/10, derselbe vorbestehende `ENOTFOUND minio`-Fehlschlag). Ein echter,
    live gefundener Bug behoben (Default-Statuscode 201 statt 200 bei `@Res()`).
    Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #287-293.
-9. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/UI-7/
-   UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), PREPARE-Modus
-   (Sonde Phase 9), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
+9. ✅ **Sonde Phase 9 — PREPARE-Modus.** Erledigt — drei PREPARE-Tools
+   (`draft_email`/`create_meeting`/`create_booking_proposal`) in Sondes
+   Tool-Subset, bewusst **wiederverwendet** statt neu geschrieben (dieselben,
+   bereits getesteten `SalesAgentTools`/`FinanceAgentTools`-Objekte, keine
+   neue Policy-Action nötig). `GET /copilot/capabilities` liefert jetzt
+   `{ modes: ['ASK','PREPARE'], tools: [...] }`. Live gegen den laufenden
+   Docker-Stack + Musterwerk-Demo-Tenant verifiziert, 3 neue/aktualisierte
+   Tests (2 davon E2E mit echten, über Sonde erzeugten `EmailMessage`/
+   `BookingProposal`-Zeilen), Playwright-Suite erneut grün (9/10, derselbe
+   vorbestehende `ENOTFOUND minio`-Fehlschlag). Details:
+   `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #294-298.
+10. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/
+    UI-7/UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), ACT-Modus
+    (Sonde Phase 10), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
 Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
-visuelle Regressionstests, PREPARE/ACT/DELEGATE-Modi, `message.delta`-Token-
-Streaming, Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.
+visuelle Regressionstests, ACT/DELEGATE-Modi, Action-Card-UI mit Bestätigen-Button,
+`prepare_follow_up`, `message.delta`-Token-Streaming, Model-Profile-Registry,
+Usage-Metering, separate Plattform-Admin-Ansicht.
