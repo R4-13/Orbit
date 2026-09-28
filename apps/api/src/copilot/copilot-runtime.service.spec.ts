@@ -124,6 +124,39 @@ describe('CopilotRuntimeService', () => {
     );
   });
 
+  it('streamMessage forwards tool.started/tool.completed events, then a final message.completed with the persisted message', async () => {
+    toolRegistry.subset.mockReturnValue('scoped-tools');
+    aiProviders.resolveForTenant.mockResolvedValue({ providerName: 'mock', complete: jest.fn() });
+    scoped.conversationMessage.create.mockResolvedValueOnce({ id: 'user_msg' }).mockResolvedValueOnce({
+      id: 'assistant_msg',
+      role: 'ASSISTANT',
+      content: 'Drei offene Freigaben.',
+    });
+    jest.spyOn(AgentRuntime.prototype, 'runTurn').mockImplementation(async (_context, input) => {
+      input.onEvent?.({ type: 'tool.started', toolCallId: 'tc_1', toolName: 'list_open_approvals' });
+      input.onEvent?.({ type: 'tool.completed', toolCallId: 'tc_1', toolName: 'list_open_approvals', decision: 'ALLOW' });
+      return { finalText: 'Drei offene Freigaben.', toolCallOutcomes: [], iterations: 1 };
+    });
+
+    const emitted: unknown[] = [];
+    await service.streamMessage('tenant_1', 'user_1', 'conv_1', 'x', (event) => emitted.push(event));
+
+    expect(emitted).toEqual([
+      { type: 'tool.started', data: { toolName: 'list_open_approvals' } },
+      { type: 'tool.completed', data: { toolName: 'list_open_approvals', decision: 'ALLOW', error: undefined } },
+      { type: 'message.completed', data: { id: 'assistant_msg', role: 'ASSISTANT', content: 'Drei offene Freigaben.' } },
+    ]);
+  });
+
+  it('streamMessage emits an error event instead of throwing when the turn setup itself fails', async () => {
+    conversations.getConversation.mockRejectedValue(Object.assign(new Error('not found'), { code: 'NOT_FOUND' }));
+
+    const emitted: unknown[] = [];
+    await service.streamMessage('tenant_1', 'user_1', 'conv_1', 'x', (event) => emitted.push(event));
+
+    expect(emitted).toEqual([{ type: 'error', data: { message: 'not found' } }]);
+  });
+
   it('falls back to the prescribed provider-unavailable message and marks the run failed when the runtime throws', async () => {
     toolRegistry.subset.mockReturnValue('scoped-tools');
     aiProviders.resolveForTenant.mockResolvedValue({ providerName: 'mock', complete: jest.fn() });

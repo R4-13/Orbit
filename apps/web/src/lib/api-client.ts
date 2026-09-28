@@ -43,12 +43,13 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 /**
- * Every request to the API goes through here: attaches the current access
- * token, transparently refreshes once on a 401 and retries, and turns a
- * non-2xx response into a typed ApiError (matching OrbitExceptionFilter's
- * {code, message, details} body on the backend).
+ * Attaches the current access token, transparently refreshes once on a 401
+ * and retries, and turns a non-2xx response into a typed ApiError (matching
+ * OrbitExceptionFilter's {code, message, details} body on the backend).
+ * Returns the raw `Response` — `apiFetch` below parses it as JSON; a
+ * streaming caller (`apiFetchStream`) reads `response.body` itself.
  */
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function authenticatedFetch(path: string, options: RequestInit): Promise<Response> {
   const auth = getStoredAuth();
   let response = await rawFetch(path, options, auth?.accessToken);
 
@@ -74,8 +75,23 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     );
   }
 
+  return response;
+}
+
+/** Every ordinary (non-streaming) request to the API goes through here. */
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await authenticatedFetch(path, options);
   if (response.status === 204) {
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+/**
+ * Same auth/refresh/error handling as `apiFetch`, but returns the raw
+ * `Response` for a caller that reads `response.body` as a stream (Sonde's
+ * SSE endpoint, `POST .../messages/stream` — see `use-copilot.ts`).
+ */
+export async function apiFetchStream(path: string, options: RequestInit = {}): Promise<Response> {
+  return authenticatedFetch(path, options);
 }

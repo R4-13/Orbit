@@ -10,11 +10,27 @@ export type PolicyModeResolver = (
   context: ToolExecutionContext,
 ) => Promise<PolicyMode>;
 
+/**
+ * Real-time progress signals emitted while a turn is running — consumed by
+ * Sonde's SSE streaming endpoint (Master-Spec §33) to show the user what
+ * the copilot is doing before the final text is ready. Deliberately only
+ * covers what `AgentRuntime` itself directly observes (tool execution);
+ * no `message.delta` token streaming — none of the three `LLMProvider`
+ * implementations expose a streaming completion API today, and faking
+ * token-by-token output would violate this project's "never simulate
+ * functionality that does not exist" rule (docs/ASSUMPTIONS.md #267).
+ */
+export type AgentTurnEvent =
+  | { type: 'tool.started'; toolCallId: string; toolName: string }
+  | { type: 'tool.completed'; toolCallId: string; toolName: string; decision: PolicyDecision; error?: string };
+
 export interface RunAgentTurnInput {
   systemPrompt?: string;
   messages: LLMMessage[];
   /** Guards against infinite tool-calling loops. Default 5. */
   maxToolIterations?: number;
+  /** Optional progress callback — see `AgentTurnEvent`. Never awaited; a slow/throwing subscriber must not stall or break the turn. */
+  onEvent?: (event: AgentTurnEvent) => void;
 }
 
 export interface ToolCallOutcome {
@@ -88,7 +104,15 @@ export class AgentRuntime {
       messages.push({ role: 'assistant', content: completion.text ?? '' });
 
       for (const toolCall of completion.toolCalls) {
+        this.emit(input, { type: 'tool.started', toolCallId: toolCall.toolCallId, toolName: toolCall.toolName });
         const outcome = await this.executeToolCall(toolCall, context);
+        this.emit(input, {
+          type: 'tool.completed',
+          toolCallId: outcome.toolCallId,
+          toolName: outcome.toolName,
+          decision: outcome.decision,
+          error: outcome.error,
+        });
         toolCallOutcomes.push(outcome);
         messages.push({
           role: 'user',
@@ -135,6 +159,14 @@ export class AgentRuntime {
         error: error instanceof Error ? error.message : String(error),
         durationMs: Date.now() - startedAt,
       };
+    }
+  }
+
+  private emit(input: RunAgentTurnInput, event: AgentTurnEvent): void {
+    try {
+      input.onEvent?.(event);
+    } catch {
+      // A subscriber's own error (e.g. a broken SSE write) must never abort the turn itself.
     }
   }
 }

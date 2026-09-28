@@ -143,12 +143,21 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    (9/10, derselbe vorbestehende `ENOTFOUND minio`-Fehlschlag). Dabei zwei echte,
    live gefundene Bugs behoben (React-Query-Key-Präfixkollision, Lösch-Race).
    Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #284-286.
-8. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/UI-7/
-   UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), Sonde Phase 8
-   (SSE-Streaming), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
+8. ✅ **Sonde Phase 8 — SSE-Streaming.** Erledigt — `POST .../messages/stream`
+   emittiert `tool.started`/`tool.completed`/`message.completed`/`error` in
+   Echtzeit (kein `message.delta`, siehe `docs/ASSUMPTIONS.md` #287), geteilte
+   `runAskTurn()`-Implementierung mit dem synchronen Phase-7-Pfad. Live gegen
+   den laufenden Docker-Stack + Musterwerk-Demo-Tenant verifiziert (echter SSE-
+   Roundtrip im Netzwerk-Log), 5 neue Tests, Playwright-Suite erneut grün
+   (9/10, derselbe vorbestehende `ENOTFOUND minio`-Fehlschlag). Ein echter,
+   live gefundener Bug behoben (Default-Statuscode 201 statt 200 bei `@Res()`).
+   Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #287-293.
+9. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/UI-7/
+   UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), PREPARE-Modus
+   (Sonde Phase 9), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
 Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
-visuelle Regressionstests, Sonde SSE-Streaming + PREPARE/ACT/DELEGATE-Modi,
-Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.
+visuelle Regressionstests, PREPARE/ACT/DELEGATE-Modi, `message.delta`-Token-
+Streaming, Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.

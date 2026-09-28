@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AgentRuntime, buildLayeredSystemPrompt, type LLMMessage, type ToolRegistry } from '@orbit/agent-core';
+import { AgentRuntime, buildLayeredSystemPrompt, type AgentTurnEvent, type LLMMessage, type ToolRegistry } from '@orbit/agent-core';
 import type { ConversationMessage } from '@orbit/domain';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -8,6 +8,7 @@ import { ApprovalsService } from '../approvals/approvals.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CopilotConversationService } from './copilot-conversation.service';
+import type { CopilotStreamEvent } from './copilot-stream-event';
 import { SONDE_ASK_TOOL_NAMES } from './tools/sonde.tools';
 
 /** §31 des Master-Dokuments ("Sonde memory") — "recent messages... Do not send unlimited history." Ein fester, dokumentierter Wert statt einer echten Zusammenfassungs-Kompression (siehe docs/ASSUMPTIONS.md, ConversationSummary bewusst nicht Teil dieser Phase). */
@@ -25,9 +26,10 @@ const PROVIDER_UNAVAILABLE_MESSAGE = 'Der KI-Dienst ist momentan nicht verfügba
  * (§25: "Sonde talks to the user. ORBIT does the work" — Sonde bekommt
  * keinen privilegierten Zugriff, den ein normaler Agent nicht auch hätte).
  *
- * Bewusst **synchron** (kein SSE-Streaming) — das ist Phase 8 der
- * Roadmap (§63), hier nur das Konversations-Fundament + ein echter
- * ASK-Modus.
+ * `sendMessage()` (synchron, Phase 7) und `streamMessage()` (SSE, Phase 8,
+ * §33) teilen sich dieselbe `runAskTurn()`-Implementierung — nur die
+ * Übergabe des optionalen `onToolEvent`-Fortschritts-Callbacks
+ * unterscheidet sie. Kein zweiter, paralleler "Streaming-Sonderpfad".
  */
 @Injectable()
 export class CopilotRuntimeService {
@@ -41,11 +43,46 @@ export class CopilotRuntimeService {
     private readonly approvals: ApprovalsService,
   ) {}
 
-  async sendMessage(
+  sendMessage(tenantId: string, actorUserId: string, conversationId: string, content: string): Promise<ConversationMessage> {
+    return this.runAskTurn(tenantId, actorUserId, conversationId, content);
+  }
+
+  /**
+   * SSE-Variante von `sendMessage()` — emittiert `tool.started`/
+   * `tool.completed` in Echtzeit über `emit`, gefolgt von genau einem
+   * abschließenden `message.completed` (mit derselben persistierten
+   * `ConversationMessage` wie `sendMessage()` sie zurückgeben würde).
+   * Wirft nichts nach außen: Ein Fehler landet als `error`-Event, damit der
+   * Aufrufer (Controller) die bereits offene SSE-Verbindung sauber mit
+   * `res.end()` abschließen kann statt einen unbehandelten Reject zu sehen.
+   */
+  async streamMessage(
     tenantId: string,
     actorUserId: string,
     conversationId: string,
     content: string,
+    emit: (event: CopilotStreamEvent) => void,
+  ): Promise<void> {
+    try {
+      const assistantMessage = await this.runAskTurn(tenantId, actorUserId, conversationId, content, (event) => {
+        if (event.type === 'tool.started') {
+          emit({ type: 'tool.started', data: { toolName: event.toolName } });
+        } else {
+          emit({ type: 'tool.completed', data: { toolName: event.toolName, decision: event.decision, error: event.error } });
+        }
+      });
+      emit({ type: 'message.completed', data: assistantMessage });
+    } catch (error) {
+      emit({ type: 'error', data: { message: error instanceof Error ? error.message : String(error) } });
+    }
+  }
+
+  private async runAskTurn(
+    tenantId: string,
+    actorUserId: string,
+    conversationId: string,
+    content: string,
+    onToolEvent?: (event: AgentTurnEvent) => void,
   ): Promise<ConversationMessage> {
     // Validates that this conversation belongs to actorUserId — throws NotFoundError otherwise (§29: conversations are personal).
     await this.conversations.getConversation(tenantId, actorUserId, conversationId);
@@ -79,7 +116,7 @@ export class CopilotRuntimeService {
     try {
       const result = await runtime.runTurn(
         { tenantId, agentRunId: agentRun.id, actorUserId },
-        { systemPrompt, messages: [...history, { role: 'user', content }] },
+        { systemPrompt, messages: [...history, { role: 'user', content }], onEvent: onToolEvent },
       );
       await this.runs.recordToolCalls(tenantId, agentRun.id, result.toolCallOutcomes);
       await this.runs.complete(tenantId, agentRun.id, result);

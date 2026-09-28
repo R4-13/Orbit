@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { Badge, Button } from '@orbit/ui';
+import type { ConversationMessage } from '@orbit/domain';
 import { ApiError } from '../../lib/api-client';
 import {
+  COPILOT_CONVERSATION_LIST_KEY,
+  copilotMessagesKey,
+  streamCopilotMessage,
   useConversationMessages,
   useConversations,
   useCopilotCapabilities,
   useCreateConversation,
   useDeleteConversation,
-  useSendMessage,
 } from '../../lib/hooks/use-copilot';
 
 const FUTURE_MODES = ['Prepare', 'Act', 'Delegate', 'Navigate'] as const;
@@ -26,17 +30,19 @@ const FUTURE_MODES = ['Prepare', 'Act', 'Delegate', 'Navigate'] as const;
  * (Antworten erscheinen erst nach vollständigem Abschluss des Turns).
  */
 export function SondePanel({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
   const { data: capabilities } = useCopilotCapabilities();
   const { data: conversations } = useConversations();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [streamingStatus, setStreamingStatus] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: messages, isLoading: messagesLoading } = useConversationMessages(activeConversationId);
   const createConversation = useCreateConversation();
   const deleteConversation = useDeleteConversation();
-  const sendMessage = useSendMessage(activeConversationId);
 
   useEffect(() => {
     if (!activeConversationId && conversations && conversations.length > 0) {
@@ -46,7 +52,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, sendMessage.isPending]);
+  }, [messages, isSending, streamingStatus]);
 
   async function handleNewConversation() {
     setError(null);
@@ -78,7 +84,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
 
   async function handleSend() {
     const content = draft.trim();
-    if (!content || sendMessage.isPending) return;
+    if (!content || isSending) return;
     setError(null);
 
     let conversationId = activeConversationId;
@@ -94,11 +100,41 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
     }
 
     setDraft('');
-    try {
-      await sendMessage.mutateAsync(content);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Die Nachricht konnte nicht gesendet werden.');
-    }
+    setIsSending(true);
+    setStreamingStatus('Sonde denkt nach …');
+    // Optimistically shows the user's own message immediately — the SSE
+    // turn's `message.completed` (below) triggers a refetch that replaces
+    // this local-only entry with the real persisted history.
+    queryClient.setQueryData<ConversationMessage[]>(copilotMessagesKey(conversationId), (prev) => [
+      ...(prev ?? []),
+      {
+        id: `optimistic-${Date.now()}`,
+        tenantId: '',
+        conversationId,
+        userId: null,
+        role: 'USER',
+        content,
+        agentRunId: null,
+        createdAt: new Date(),
+      },
+    ]);
+
+    await streamCopilotMessage(conversationId, content, {
+      onToolStarted: (toolName) => setStreamingStatus(`Sonde ruft „${toolName}" auf …`),
+      onToolCompleted: () => setStreamingStatus('Sonde wertet das Ergebnis aus …'),
+      onMessageCompleted: () => {
+        setStreamingStatus(null);
+        setIsSending(false);
+        void queryClient.invalidateQueries({ queryKey: copilotMessagesKey(conversationId) });
+        void queryClient.invalidateQueries({ queryKey: COPILOT_CONVERSATION_LIST_KEY });
+      },
+      onError: (message) => {
+        setStreamingStatus(null);
+        setIsSending(false);
+        setError(message);
+        void queryClient.invalidateQueries({ queryKey: copilotMessagesKey(conversationId) });
+      },
+    });
   }
 
   return (
@@ -203,10 +239,10 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
           <p className="text-center text-xs text-slate-400">Noch keine Nachrichten in dieser Unterhaltung.</p>
         )}
 
-        {sendMessage.isPending ? (
+        {isSending ? (
           <div className="mr-auto flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-400">
             <Loader2 size={14} className="animate-spin" />
-            Sonde antwortet …
+            {streamingStatus ?? 'Sonde antwortet …'}
           </div>
         ) : null}
       </div>
@@ -224,7 +260,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
                 void handleSend();
               }
             }}
-            disabled={sendMessage.isPending || createConversation.isPending}
+            disabled={isSending || createConversation.isPending}
             placeholder="Fragen Sie Sonde etwas …"
             className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:bg-slate-50"
           />
@@ -232,7 +268,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
             variant="primary"
             className="px-2.5"
             onClick={() => void handleSend()}
-            disabled={!draft.trim() || sendMessage.isPending || createConversation.isPending}
+            disabled={!draft.trim() || isSending || createConversation.isPending}
             aria-label="Senden"
           >
             <Send size={16} />

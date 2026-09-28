@@ -146,6 +146,32 @@ describe('AgentRuntime.runTurn', () => {
     expect(result.toolCallOutcomes).toHaveLength(2);
   });
 
+  it('emits tool.started/tool.completed via onEvent in order, and a throwing subscriber does not abort the turn', async () => {
+    const tools = new ToolRegistry();
+    tools.register(buildLogActivityTool());
+
+    const llm = new MockLLMProvider([
+      { toolCalls: [{ toolCallId: 'c1', toolName: 'log_activity', input: { summary: 'x' } }], stopReason: 'tool_use' },
+      { toolCalls: [], stopReason: 'end_turn', text: 'Fertig.' },
+    ]);
+
+    const events: unknown[] = [];
+    const runtime = new AgentRuntime(llm, tools, async () => 'AUTONOMOUS');
+    const result = await runtime.runTurn(CONTEXT, {
+      messages: [],
+      onEvent: (event) => {
+        events.push(event);
+        throw new Error('subscriber exploded');
+      },
+    });
+
+    expect(events).toEqual([
+      { type: 'tool.started', toolCallId: 'c1', toolName: 'log_activity' },
+      { type: 'tool.completed', toolCallId: 'c1', toolName: 'log_activity', decision: 'ALLOW', error: undefined },
+    ]);
+    expect(result.finalText).toBe('Fertig.');
+  });
+
   it('passes the tool name (not the policy action) to resolvePolicyMode, scoped to the run context', async () => {
     const tools = new ToolRegistry();
     tools.register(buildLogActivityTool());
