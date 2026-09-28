@@ -125,11 +125,23 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    ist UI-2 vollständig abgeschlossen. Live verifiziert, inkl. einer echten,
    dokumentierten Permission-Provisionierungslücke (siehe `docs/ASSUMPTIONS.md`
    #275). Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #274-275.
-6. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus** (als Nächstes) — kein
-   UI-Panel ohne dieses Fundament (siehe Begründung oben).
+6. ✅ **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus.** Erledigt (Backend) —
+   `Conversation`/`ConversationMessage`-Modelle, drei lesende Sonde-Tools über die
+   geteilte `ToolRegistry`, neue Policy-Action `copilot.read`, vollständiger
+   `CopilotModule`-Verdrahtungspfad über den echten `AgentRuntime` (kein
+   Sonderpfad), 17 Unit- + 9 E2E-Tests, live gegen den laufenden Docker-Stack und
+   den Musterwerk-Demo-Tenant verifiziert (inkl. desselben Policy-Provisionierungs-
+   Nachtrags-Musters wie bei #275). **Noch offen**: SSE-Streaming (Phase 8),
+   PREPARE/ACT/DELEGATE-Modi, das eigentliche Frontend-Wiring des `SondePanel`
+   (zeigt weiterhin den ehrlichen Platzhalter aus UI-3 — kein UI-Panel ohne dieses
+   Fundament, siehe Begründung oben). Details: `docs/IMPLEMENTATION_STATUS.md`,
+   `docs/ASSUMPTIONS.md` #276-283.
+7. **`SondePanel`-Frontend-Wiring** (als Nächstes) — den bestehenden Platzhalter aus
+   UI-3 durch eine echte Konversations-UI gegen das neue `/copilot/*`-Backend
+   ersetzen (Liste/Anlegen/Senden/Löschen, kein Streaming in diesem Schritt).
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
 Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
-visuelle Regressionstests, PREPARE/ACT/DELEGATE-Sonde-Modi, Model-Profile-Registry,
-Usage-Metering, separate Plattform-Admin-Ansicht.
+visuelle Regressionstests, Sonde SSE-Streaming + PREPARE/ACT/DELEGATE-Modi,
+Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.

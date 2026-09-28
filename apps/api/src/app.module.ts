@@ -16,6 +16,7 @@ import { EnvModule } from './config/env.module';
 import { ORBIT_ENV } from './config/env.token';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { CopilotModule } from './copilot/copilot.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EmailMessagesModule } from './email-messages/email-messages.module';
 import { FollowUpsModule } from './follow-ups/follow-ups.module';
@@ -105,6 +106,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     AgentModule,
     AiProvidersModule,
     AgentDefinitionsModule,
+    CopilotModule,
     WorkflowsModule,
     RetentionModule,
     FollowUpsModule,

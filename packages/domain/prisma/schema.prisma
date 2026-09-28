@@ -278,6 +278,8 @@ model Tenant {
   integrations            Integration[]
   aiProviderConnection    AIProviderConnection?
   branding                TenantBranding?
+  conversations           Conversation[]
+  conversationMessages    ConversationMessage[]
   agentRuns               AgentRun[]
   toolInvocations         ToolInvocation[]
   webhookEvents           WebhookEvent[]
@@ -311,6 +313,9 @@ model User {
 
   assignedCases Case[] @relation("CaseAssignee")
   assignedTasks Task[] @relation("TaskAssignee")
+
+  conversations         Conversation[]
+  conversationMessages  ConversationMessage[]
 
   @@index([tenantId])
   @@map("users")
@@ -887,6 +892,66 @@ model TenantBranding {
   @@map("tenant_brandings")
 }
 
+/// §25-33 des Master-Dokuments ("Sonde — application-wide copilot") /
+/// §29 ("Conversation model"). Bewusst nur `Conversation` + `ConversationMessage`
+/// in dieser ersten Stufe (Phase 6, "Conversation Foundation") — `ConversationSummary`/
+/// `ConversationContext`/`ConversationReference` als eigene, persistierte Modelle
+/// bewusst zurückgestellt (siehe docs/ASSUMPTIONS.md): für einen reinen ASK-Modus
+/// ohne lange Konversationshistorie reicht "letzte N Nachrichten" als Kontext,
+/// eine echte Zusammenfassungs-/Referenz-Persistenz wird erst mit PREPARE/ACT/
+/// DELEGATE (spätere Phasen) tatsächlich gebraucht.
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ConversationMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM_EVENT
+}
+
+model Conversation {
+  id            String             @id @default(uuid())
+  tenantId      String             @map("tenant_id")
+  userId        String             @map("user_id")
+  title         String?
+  status        ConversationStatus @default(ACTIVE)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  lastMessageAt DateTime?          @map("last_message_at")
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@index([tenantId, userId])
+  @@map("conversations")
+}
+
+/// `content` ist bewusst reiner, für den Nutzer sichtbarer Text — kein
+/// verstecktes Chain-of-Thought wird persistiert (§29: "Do not store hidden
+/// chain-of-thought"). `agentRunId` verknüpft eine ASSISTANT-Nachricht optional
+/// mit dem echten AgentRun/ToolInvocation-Datensatz dahinter (Audit/Activity).
+model ConversationMessage {
+  id             String                  @id @default(uuid())
+  tenantId       String                  @map("tenant_id")
+  conversationId String                  @map("conversation_id")
+  userId         String?                 @map("user_id")
+  role           ConversationMessageRole
+  content        String
+  agentRunId     String?                 @map("agent_run_id")
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  agentRun     AgentRun?    @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@map("conversation_messages")
+}
+
 // ============================================================================
 // Agent Runtime (Phase 6)
 // ============================================================================
@@ -907,8 +972,9 @@ model AgentRun {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
-  toolInvocations  ToolInvocation[]
-  workflowStepRuns WorkflowStepRun[]
+  toolInvocations       ToolInvocation[]
+  workflowStepRuns      WorkflowStepRun[]
+  conversationMessages  ConversationMessage[]
 
   @@index([tenantId, status])
   @@map("agent_runs")

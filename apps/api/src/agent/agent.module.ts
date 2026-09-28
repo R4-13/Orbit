@@ -3,6 +3,8 @@ import { AgentRuntime, AnthropicLLMProvider, MockLLMProvider, OpenAILLMProvider,
 import type { LLMProvider } from '@orbit/agent-core';
 import { IntegrationUnavailableError } from '@orbit/shared';
 import type { OrbitEnv } from '@orbit/config';
+import { ApprovalsModule } from '../approvals/approvals.module';
+import { CasesModule } from '../cases/cases.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { ConnectorsModule } from '../connectors/connectors.module';
 import { ContactsModule } from '../contacts/contacts.module';
@@ -19,6 +21,7 @@ import { AGENT_RUNTIME, LLM_PROVIDER, TOOL_REGISTRY } from './agent.tokens';
 import { CommunicationAgentTools } from './tools/communication.tools';
 import { FinanceAgentTools } from './tools/finance.tools';
 import { SalesAgentTools } from './tools/sales.tools';
+import { SondeTools } from '../copilot/tools/sonde.tools';
 
 /**
  * Wires the Agent Runtime (§12-17) into apps/api: an LLM_PROVIDER (mock
@@ -43,12 +46,15 @@ import { SalesAgentTools } from './tools/sales.tools';
     OpportunitiesModule,
     TasksModule,
     MeetingsModule,
+    CasesModule,
+    ApprovalsModule,
   ],
   controllers: [AgentRunsController],
   providers: [
     FinanceAgentTools,
     SalesAgentTools,
     CommunicationAgentTools,
+    SondeTools,
     AgentRunRecorderService,
     {
       provide: LLM_PROVIDER,
@@ -78,12 +84,18 @@ import { SalesAgentTools } from './tools/sales.tools';
     },
     {
       provide: TOOL_REGISTRY,
-      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools],
-      useFactory: (finance: FinanceAgentTools, sales: SalesAgentTools, communication: CommunicationAgentTools) => {
+      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools, SondeTools],
+      useFactory: (
+        finance: FinanceAgentTools,
+        sales: SalesAgentTools,
+        communication: CommunicationAgentTools,
+        sonde: SondeTools,
+      ) => {
         const registry = new ToolRegistry();
         communication.register(registry);
         finance.register(registry);
         sales.register(registry);
+        sonde.register(registry);
         return registry;
       },
     },

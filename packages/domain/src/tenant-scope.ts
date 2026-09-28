@@ -54,6 +54,8 @@ export const TENANT_SCOPED_MODELS = [
   'RetentionPolicy',
   'AIProviderConnection',
   'TenantBranding',
+  'Conversation',
+  'ConversationMessage',
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);
