@@ -116,12 +116,13 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    Browser + per Playwright-E2E-Suite (9/10, ein vorbestehender umgebungsbedingter
    Fehlschlag) verifiziert. Details: `docs/IMPLEMENTATION_STATUS.md`,
    `docs/ASSUMPTIONS.md` #263-268.
-4. **UI-4 — Home-Dashboard** (als Nächstes). 5 KPI-Karten (echte Daten aus
-   bestehenden Endpunkten), Unified-Inbox-Karte, Finance-/Sales-Übersichtskarten,
-   Approvals-/Activity-Vorschau — der sichtbarste, wertvollste verbleibende Teil der
-   UI-Spec.
-5. **Branding-Admin-Seite** (`/admin/branding`, Rest von UI-2) — Backend steht
-   bereits vollständig, nur noch die Formular-/Vorschau-UI fehlt.
+4. ✅ **UI-4 — Home-Dashboard.** Erledigt — 5 KPI-Karten (echte, client-aggregierte
+   Daten), Unified-Inbox-Karte, Finance-/Sales-Übersichtskarten, Approvals-/
+   Activity-Vorschau. Live im Browser + per Playwright-E2E-Suite verifiziert (eine
+   echte Regression in `auth.spec.ts` dabei gefunden und behoben). Details:
+   `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #269-273.
+5. **Branding-Admin-Seite** (`/admin/branding`, Rest von UI-2, als Nächstes) —
+   Backend steht bereits vollständig, nur noch die Formular-/Vorschau-UI fehlt.
 6. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus**, falls danach noch Budget
    verbleibt — kein UI-Panel ohne dieses Fundament (siehe Begründung oben).
 

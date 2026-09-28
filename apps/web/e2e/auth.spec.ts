@@ -4,7 +4,7 @@ import { DEMO_USERS, loginViaUi } from './utils/login';
 test.describe('Auth', () => {
   test('logs in with valid seeded credentials and reaches the dashboard', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.finance);
-    await expect(page.getByText('Willkommen zurück, finance@musterwerk.example.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Willkommen zurück, finance@musterwerk.example' })).toBeVisible();
   });
 
   test('shows a German error message for a wrong password and stays on /login', async ({ page }) => {
