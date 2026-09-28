@@ -107,21 +107,22 @@ Kriterium: größter demonstrierbarer Nutzen pro investiertem Aufwand, kleinste 
 pro Schritt, jede Stufe einzeln lint-/typecheck-/testverifiziert und committet — exakt das
 in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS.md`).
 
-1. **UI-1 — Design-Tokens & Standard-ORION-Theme.** Fundament für alles Weitere; ohne
-   Tokens ist jede spätere Komponente wieder hartkodiert. Kleiner, risikoarmer Schnitt.
-2. **UI-2 — Tenant-Branding (Datenmodell + API + Admin-UI, ohne Datei-Upload-Pipeline).**
-   Logo als URL-Feld statt Objektspeicher-Upload (bewusste Vereinfachung, siehe
-   `docs/ASSUMPTIONS.md`-Eintrag nach Umsetzung) — reduziert Umfang, erfüllt aber den
-   Kern der Anforderung (Farbe/Logo pro Tenant ohne Code-Änderung, DB-persistiert,
-   überlebt Login/Logout, nie Tenant-übergreifend sichtbar).
-3. **UI-3 — Application Shell.** Dunkle Navy-Sidebar mit echten Icons, exakte
-   Navigationsreihenfolge, Header-Leiste (Begrüßung/Suche-Platzhalter/Profilmenü).
-   Sonde-Panel-Region als strukturell ehrlicher Platzhalter (klar als „in Kürze
-   verfügbar" gekennzeichnet, keine simulierte Funktionalität — §33 der UI-Spec).
-4. **UI-4 — Home-Dashboard.** 5 KPI-Karten (echte Daten aus bestehenden Endpunkten),
-   Unified-Inbox-Karte, Finance-/Sales-Übersichtskarten, Approvals-/Activity-Vorschau —
-   der sichtbarste, wertvollste Teil der UI-Spec.
-5. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus**, falls danach noch Budget
+1. ✅ **UI-1 — Design-Tokens & Standard-ORION-Theme.** Erledigt — CSS-Custom-Properties
+   in `apps/web/src/app/globals.css` + Tailwind-Mapping.
+2. ✅/🔶 **UI-2 — Tenant-Branding.** Backend vollständig erledigt (Modell/API/RLS/
+   E2E-Tests) — Admin-UI-Seite mit Live-Vorschau noch offen (siehe unten).
+3. ✅ **UI-3 — Application Shell.** Erledigt — dunkle Navy-Sidebar mit echten Icons,
+   exakte Navigationsreihenfolge, Header-Leiste, Sonde-Panel-Platzhalter. Live im
+   Browser + per Playwright-E2E-Suite (9/10, ein vorbestehender umgebungsbedingter
+   Fehlschlag) verifiziert. Details: `docs/IMPLEMENTATION_STATUS.md`,
+   `docs/ASSUMPTIONS.md` #263-268.
+4. **UI-4 — Home-Dashboard** (als Nächstes). 5 KPI-Karten (echte Daten aus
+   bestehenden Endpunkten), Unified-Inbox-Karte, Finance-/Sales-Übersichtskarten,
+   Approvals-/Activity-Vorschau — der sichtbarste, wertvollste verbleibende Teil der
+   UI-Spec.
+5. **Branding-Admin-Seite** (`/admin/branding`, Rest von UI-2) — Backend steht
+   bereits vollständig, nur noch die Formular-/Vorschau-UI fehlt.
+6. **Sonde Phase 6 (Backend-Fundament) + echter ASK-Modus**, falls danach noch Budget
    verbleibt — kein UI-Panel ohne dieses Fundament (siehe Begründung oben).
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene

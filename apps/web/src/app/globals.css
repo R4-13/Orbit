@@ -5,9 +5,9 @@
 /**
  * Design tokens (docs/ORION_UI_UX_DEVELOPMENT_SPECIFICATION_v1.md §5.4/§24) —
  * the default ORION theme baseline. A tenant's own branding (apps/api/src/branding)
- * overrides the --brand-*/--nav-* subset at runtime via inline styles set on
- * :root by the theme hook (see lib/hooks/use-tenant-theme.ts); everything else
- * (surfaces, text, status colors) stays constant across tenants on purpose —
+ * overrides the brand- and nav- prefixed variables at runtime via inline styles
+ * set on :root by the theme hook (see lib/hooks/use-tenant-branding.ts); everything
+ * else (surfaces, text, status colors) stays constant across tenants on purpose —
  * status colors must never be replaced by a tenant's corporate color (§5.4).
  */
 :root {
