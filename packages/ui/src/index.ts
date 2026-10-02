@@ -7,5 +7,8 @@ export * from './components/label';
 export * from './components/sortable-th';
 export * from './components/donut-chart';
 export * from './components/trend-bar-chart';
+export * from './components/segmented-bar';
+export * from './components/workflow-timeline';
 export * from './hooks/use-sortable-list';
 export * from './lib/donut-segments';
+export * from './lib/segmented-bar-parts';

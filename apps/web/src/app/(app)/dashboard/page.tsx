@@ -9,7 +9,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, TrendBarChart } from '@orbit/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, SegmentedBar, TrendBarChart, WorkflowTimeline } from '@orbit/ui';
 import { useAuth } from '../../../lib/auth-context';
 import { formatDateTime } from '../../../lib/format';
 import { statusLabel } from '../../../lib/status-labels';
@@ -115,6 +115,42 @@ export default function DashboardPage() {
       value: invoices?.filter((i) => i.status === 'REJECTED' || i.status === 'TRANSFER_FAILED').length ?? 0,
       colorVar: '--status-error',
     },
+  ];
+
+  // Real, cumulative pipeline funnel from Invoice.status — each stage's
+  // filter is a strict subset of the previous one's (RECEIVED is the
+  // earliest status; every later status implies "progressed past RECEIVED"),
+  // so counts are guaranteed non-increasing left to right. DUPLICATE_
+  // SUSPECTED/BANK_CHANGE_SUSPECTED invoices are deliberately excluded from
+  // "zur Prüfung vorgelegt" — they're flagged and paused *before* reaching
+  // PENDING_APPROVAL, not past it. No per-stage transition timestamp exists
+  // in the schema (Invoice only has createdAt/updatedAt), so the shown
+  // timestamp is honestly the most recent `updatedAt` among the invoices
+  // currently counted in that stage — a real aggregate, not a fabricated
+  // "exact moment this stage was reached".
+  function latestUpdatedAt(list: { updatedAt: Date | string }[]): string | undefined {
+    if (list.length === 0) return undefined;
+    const latest = list.reduce((max, item) => (new Date(item.updatedAt).getTime() > new Date(max.updatedAt).getTime() ? item : max));
+    return formatDateTime(latest.updatedAt);
+  }
+  const extractedOrLater = invoices?.filter((i) => i.status !== 'RECEIVED') ?? [];
+  const reachedReview =
+    invoices?.filter(
+      (i) =>
+        i.status === 'PENDING_APPROVAL' ||
+        i.status === 'APPROVED' ||
+        i.status === 'REJECTED' ||
+        i.status === 'TRANSFERRED' ||
+        i.status === 'TRANSFER_FAILED',
+    ) ?? [];
+  const approvedOrLater = invoices?.filter((i) => i.status === 'APPROVED' || i.status === 'TRANSFERRED' || i.status === 'TRANSFER_FAILED') ?? [];
+  const transferredInvoices = invoices?.filter((i) => i.status === 'TRANSFERRED') ?? [];
+  const invoicePipelineSteps = [
+    { label: 'Eingang', count: invoices?.length ?? 0, timestamp: latestUpdatedAt(invoices ?? []) },
+    { label: 'Extrahiert', count: extractedOrLater.length, timestamp: latestUpdatedAt(extractedOrLater) },
+    { label: 'Zur Prüfung vorgelegt', count: reachedReview.length, timestamp: latestUpdatedAt(reachedReview) },
+    { label: 'Genehmigt', count: approvedOrLater.length, timestamp: latestUpdatedAt(approvedOrLater) },
+    { label: 'An ERP übertragen', count: transferredInvoices.length, timestamp: latestUpdatedAt(transferredInvoices) },
   ];
 
   const leadStatusSegments = [
@@ -248,8 +284,21 @@ export default function DashboardPage() {
               </div>
             </div>
             {invoices && invoices.length > 0 ? (
+              <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-medium text-slate-500">Genehmigungsstatus</p>
+                  <DonutChart segments={invoiceStatusSegments} size={88} strokeWidth={12} centerLabel={String(invoices.length)} centerSublabel="gesamt" />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-medium text-slate-500">Verarbeitungs-Pipeline</p>
+                  <WorkflowTimeline steps={invoicePipelineSteps} />
+                </div>
+              </div>
+            ) : null}
+            {invoices && invoices.length > 0 ? (
               <div className="mt-4 border-t border-slate-100 pt-4">
-                <DonutChart segments={invoiceStatusSegments} size={88} strokeWidth={12} centerLabel={String(invoices.length)} centerSublabel="gesamt" />
+                <p className="mb-2 text-xs font-medium text-slate-500">Nach Status</p>
+                <SegmentedBar segments={invoiceStatusSegments} />
               </div>
             ) : null}
             <Link href="/finance/invoices" className="mt-4 inline-block text-sm font-medium text-brand hover:underline">
