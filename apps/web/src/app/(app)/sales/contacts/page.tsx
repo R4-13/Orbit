@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Button, Card, Input, Label } from '@orbit/ui';
+import type { Contact } from '@orbit/domain';
+import { Button, Card, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { useContacts, useCreateContact } from '../../../../lib/hooks/use-contacts';
 
+const SORT_ACCESSORS = {
+  name: (c: Contact) => `${c.firstName} ${c.lastName}`,
+  email: (c: Contact) => c.email,
+};
+
 export default function ContactsPage() {
   const { data: contacts, isLoading } = useContacts();
+  const { sorted, sort, requestSort } = useSortableList(contacts, SORT_ACCESSORS);
   const createContact = useCreateContact();
 
   const [firstName, setFirstName] = useState('');
@@ -59,8 +66,8 @@ export default function ContactsPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">E-Mail</th>
+              <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
+              <SortableTh label="E-Mail" sortKey="email" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -70,8 +77,8 @@ export default function ContactsPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : contacts && contacts.length > 0 ? (
-              contacts.map((contact) => (
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((contact) => (
                 <tr key={contact.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {contact.firstName} {contact.lastName}

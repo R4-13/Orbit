@@ -1,13 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card } from '@orbit/ui';
+import type { Task } from '@orbit/domain';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../lib/api-client';
 import { useCompleteTask, useTasks } from '../../../lib/hooks/use-tasks';
 import { statusLabel } from '../../../lib/status-labels';
 
+const SORT_ACCESSORS = {
+  title: (t: Task) => t.title,
+  status: (t: Task) => t.status,
+};
+
 export default function TasksPage() {
   const { data: tasks, isLoading } = useTasks();
+  const { sorted, sort, requestSort } = useSortableList(tasks, SORT_ACCESSORS);
   const completeTask = useCompleteTask();
   const [error, setError] = useState<string | null>(null);
 
@@ -31,8 +38,8 @@ export default function TasksPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Titel</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortableTh label="Titel" sortKey="title" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
               <th className="px-4 py-3 font-medium" />
             </tr>
           </thead>
@@ -43,8 +50,8 @@ export default function TasksPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : tasks && tasks.length > 0 ? (
-              tasks.map((task) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((task) => {
                 const status = statusLabel(task.status);
                 return (
                   <tr key={task.id} className="hover:bg-slate-50">

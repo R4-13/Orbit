@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import type { LeadSource } from '@orbit/domain';
-import { Badge, Button, Card } from '@orbit/ui';
+import type { Lead, LeadSource } from '@orbit/domain';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { useContacts } from '../../../../lib/hooks/use-contacts';
 import { useCreateLead, useLeads } from '../../../../lib/hooks/use-leads';
@@ -16,8 +16,15 @@ const SOURCE_LABELS: Record<LeadSource, string> = {
   MANUAL: 'Manuell',
 };
 
+const SORT_ACCESSORS = {
+  source: (l: Lead) => SOURCE_LABELS[l.source],
+  notes: (l: Lead) => l.notes,
+  status: (l: Lead) => l.status,
+};
+
 export default function LeadsPage() {
   const { data: leads, isLoading } = useLeads();
+  const { sorted, sort, requestSort } = useSortableList(leads, SORT_ACCESSORS);
   const { data: contacts } = useContacts();
   const createLead = useCreateLead();
 
@@ -101,9 +108,9 @@ export default function LeadsPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Quelle</th>
-              <th className="px-4 py-3 font-medium">Notizen</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortableTh label="Quelle" sortKey="source" sort={sort} onSort={requestSort} />
+              <SortableTh label="Notizen" sortKey="notes" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -113,8 +120,8 @@ export default function LeadsPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : leads && leads.length > 0 ? (
-              leads.map((lead) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((lead) => {
                 const status = statusLabel(lead.status);
                 return (
                   <tr key={lead.id} className="hover:bg-slate-50">

@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import type { CaseType } from '@orbit/domain';
-import { Badge, Card } from '@orbit/ui';
+import type { Case, CaseType } from '@orbit/domain';
+import { Badge, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { formatDateTime } from '../../../lib/format';
 import { useCases } from '../../../lib/hooks/use-cases';
 import { caseTypeLabel, statusLabel } from '../../../lib/status-labels';
@@ -14,9 +14,17 @@ const TYPE_TABS: { value: CaseType | null; label: string }[] = [
   { value: 'SALES', label: 'Sales' },
 ];
 
+const SORT_ACCESSORS = {
+  title: (c: Case) => c.title,
+  type: (c: Case) => c.type,
+  status: (c: Case) => c.status,
+  createdAt: (c: Case) => new Date(c.createdAt).getTime(),
+};
+
 export default function CasesPage() {
   const typeFilter = useSearchParams().get('type') as CaseType | null;
   const { data: cases, isLoading } = useCases({ type: typeFilter ?? undefined });
+  const { sorted, sort, requestSort } = useSortableList(cases, SORT_ACCESSORS);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -47,10 +55,10 @@ export default function CasesPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Titel</th>
-              <th className="px-4 py-3 font-medium">Typ</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Erstellt</th>
+              <SortableTh label="Titel" sortKey="title" sort={sort} onSort={requestSort} />
+              <SortableTh label="Typ" sortKey="type" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
+              <SortableTh label="Erstellt" sortKey="createdAt" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -60,8 +68,8 @@ export default function CasesPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : cases && cases.length > 0 ? (
-              cases.map((c) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((c) => {
                 const status = statusLabel(c.status);
                 return (
                   <tr key={c.id} className="hover:bg-slate-50">

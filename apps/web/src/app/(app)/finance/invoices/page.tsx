@@ -2,15 +2,22 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import type { InvoiceStatus } from '@orbit/domain';
-import { Badge, Card } from '@orbit/ui';
+import type { Invoice, InvoiceStatus } from '@orbit/domain';
+import { Badge, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { formatAmount } from '../../../../lib/format';
 import { useInvoices } from '../../../../lib/hooks/use-invoices';
 import { statusLabel } from '../../../../lib/status-labels';
 
+const SORT_ACCESSORS = {
+  invoiceNumber: (i: Invoice) => i.invoiceNumber,
+  amount: (i: Invoice) => Number(i.amountGross ?? 0),
+  status: (i: Invoice) => i.status,
+};
+
 export default function InvoicesPage() {
   const statusFilter = useSearchParams().get('status') as InvoiceStatus | null;
   const { data: invoices, isLoading } = useInvoices(statusFilter ?? undefined);
+  const { sorted, sort, requestSort } = useSortableList(invoices, SORT_ACCESSORS);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -23,9 +30,9 @@ export default function InvoicesPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Rechnungsnummer</th>
-              <th className="px-4 py-3 font-medium">Betrag</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortableTh label="Rechnungsnummer" sortKey="invoiceNumber" sort={sort} onSort={requestSort} />
+              <SortableTh label="Betrag" sortKey="amount" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -35,8 +42,8 @@ export default function InvoicesPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : invoices && invoices.length > 0 ? (
-              invoices.map((invoice) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((invoice) => {
                 const status = statusLabel(invoice.status);
                 return (
                   <tr key={invoice.id} className="hover:bg-slate-50">

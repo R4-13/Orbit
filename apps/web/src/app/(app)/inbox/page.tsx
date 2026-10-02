@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
+import type { EmailMessage } from '@orbit/domain';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useEmailMessages, useSimulateIncomingEmail } from '../../../lib/hooks/use-email-messages';
@@ -13,8 +14,17 @@ const CLASSIFICATION_LABELS: Record<string, string> = {
   OTHER: 'Sonstiges',
 };
 
+const SORT_ACCESSORS = {
+  direction: (e: EmailMessage) => e.direction,
+  from: (e: EmailMessage) => (e.direction === 'INBOUND' ? e.fromAddress : e.toAddresses.join(', ')),
+  subject: (e: EmailMessage) => e.subject,
+  classification: (e: EmailMessage) => e.classification,
+  receivedAt: (e: EmailMessage) => new Date(e.receivedAt ?? e.createdAt).getTime(),
+};
+
 export default function InboxPage() {
   const { data: emails, isLoading } = useEmailMessages();
+  const { sorted, sort, requestSort } = useSortableList(emails, SORT_ACCESSORS);
   const simulate = useSimulateIncomingEmail();
 
   const [fromAddress, setFromAddress] = useState('');
@@ -123,11 +133,11 @@ export default function InboxPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Richtung</th>
-              <th className="px-4 py-3 font-medium">Von / An</th>
-              <th className="px-4 py-3 font-medium">Betreff</th>
-              <th className="px-4 py-3 font-medium">Klassifikation</th>
-              <th className="px-4 py-3 font-medium">Empfangen</th>
+              <SortableTh label="Richtung" sortKey="direction" sort={sort} onSort={requestSort} />
+              <SortableTh label="Von / An" sortKey="from" sort={sort} onSort={requestSort} />
+              <SortableTh label="Betreff" sortKey="subject" sort={sort} onSort={requestSort} />
+              <SortableTh label="Klassifikation" sortKey="classification" sort={sort} onSort={requestSort} />
+              <SortableTh label="Empfangen" sortKey="receivedAt" sort={sort} onSort={requestSort} />
               <th className="px-4 py-3 font-medium">Vorgang</th>
             </tr>
           </thead>
@@ -138,8 +148,8 @@ export default function InboxPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : emails && emails.length > 0 ? (
-              emails.map((email) => (
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((email) => (
                 <tr key={email.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <Badge tone={email.direction === 'INBOUND' ? 'info' : 'neutral'}>

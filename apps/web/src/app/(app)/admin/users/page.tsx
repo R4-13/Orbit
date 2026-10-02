@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card } from '@orbit/ui';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { useAuth } from '../../../../lib/auth-context';
 import { formatDateTime } from '../../../../lib/format';
-import { useDeactivateUser, useUsers } from '../../../../lib/hooks/use-users';
+import { useDeactivateUser, useUsers, type TenantUserSummary } from '../../../../lib/hooks/use-users';
 
 const STATUS_LABELS: Record<string, { label: string; tone: 'neutral' | 'success' | 'danger' | 'warning' }> = {
   ACTIVE: { label: 'Aktiv', tone: 'success' },
@@ -13,9 +13,17 @@ const STATUS_LABELS: Record<string, { label: string; tone: 'neutral' | 'success'
   DEACTIVATED: { label: 'Deaktiviert', tone: 'danger' },
 };
 
+const SORT_ACCESSORS = {
+  name: (u: TenantUserSummary) => `${u.firstName} ${u.lastName}`,
+  email: (u: TenantUserSummary) => u.email,
+  status: (u: TenantUserSummary) => u.status,
+  lastLoginAt: (u: TenantUserSummary) => (u.lastLoginAt ? new Date(u.lastLoginAt).getTime() : null),
+};
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
+  const { sorted, sort, requestSort } = useSortableList(users, SORT_ACCESSORS);
   const deactivate = useDeactivateUser();
   const [error, setError] = useState<string | null>(null);
 
@@ -37,10 +45,10 @@ export default function AdminUsersPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">E-Mail</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Letzte Anmeldung</th>
+              <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
+              <SortableTh label="E-Mail" sortKey="email" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
+              <SortableTh label="Letzte Anmeldung" sortKey="lastLoginAt" sort={sort} onSort={requestSort} />
               <th className="px-4 py-3 font-medium">Aktion</th>
             </tr>
           </thead>
@@ -51,8 +59,8 @@ export default function AdminUsersPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : users && users.length > 0 ? (
-              users.map((user) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((user) => {
                 const status = STATUS_LABELS[user.status] ?? { label: user.status, tone: 'neutral' as const };
                 const isSelf = user.id === currentUser?.id;
                 const isPendingThis = deactivate.isPending && deactivate.variables === user.id;

@@ -2,15 +2,23 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Badge, Button, Card } from '@orbit/ui';
+import type { Opportunity } from '@orbit/domain';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { formatAmount } from '../../../../lib/format';
 import { useCompanies } from '../../../../lib/hooks/use-companies';
 import { useCreateOpportunity, useOpportunities } from '../../../../lib/hooks/use-opportunities';
 import { statusLabel } from '../../../../lib/status-labels';
 
+const SORT_ACCESSORS = {
+  name: (o: Opportunity) => o.name,
+  value: (o: Opportunity) => (o.value !== null ? Number(o.value) : null),
+  stage: (o: Opportunity) => o.stage,
+};
+
 export default function OpportunitiesPage() {
   const { data: opportunities, isLoading } = useOpportunities();
+  const { sorted, sort, requestSort } = useSortableList(opportunities, SORT_ACCESSORS);
   const { data: companies } = useCompanies();
   const createOpportunity = useCreateOpportunity();
 
@@ -103,9 +111,9 @@ export default function OpportunitiesPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Bezeichnung</th>
-              <th className="px-4 py-3 font-medium">Wert</th>
-              <th className="px-4 py-3 font-medium">Phase</th>
+              <SortableTh label="Bezeichnung" sortKey="name" sort={sort} onSort={requestSort} />
+              <SortableTh label="Wert" sortKey="value" sort={sort} onSort={requestSort} />
+              <SortableTh label="Phase" sortKey="stage" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -115,8 +123,8 @@ export default function OpportunitiesPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : opportunities && opportunities.length > 0 ? (
-              opportunities.map((opportunity) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((opportunity) => {
                 const stage = statusLabel(opportunity.stage);
                 return (
                   <tr key={opportunity.id} className="hover:bg-slate-50">

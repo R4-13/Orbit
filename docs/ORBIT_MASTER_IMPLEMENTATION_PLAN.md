@@ -176,12 +176,18 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     im falschen Format (Hex statt Kanal-Format), betraf Sidebar-Untermenüs,
     Icon-Badges und Button-Hover-Zustände. Details:
     `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #302-303.
-12. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
-    zusätzlich angefragt: sortierbare Tabellen (clientseitig, kleiner
-    Aufwand), Logo-Datei-Upload (presigned URL, mittlerer Aufwand), echte
-    Diagramme statt Zahlen-Kacheln (z. B. Recharts, mittlerer Aufwand pro
-    Chart). Alternativ UI-5/UI-6/UI-7/UI-8 oder eine der sechs kleineren
-    offenen Backend-Lücken.
+12. ✅ **UI/UX: Sortierbare Tabellen.** Erledigt — neuer `useSortableList()`/
+    `SortableTh`-Baustein in `packages/ui`, auf neun Datenlisten-Seiten
+    angewendet (Rechnungen, Lieferanten, Leads, Kontakte, Opportunities,
+    Vorgänge, Aufgaben, Freigaben, Posteingang, Nutzerverwaltung). Live
+    verifiziert (echte Sortierung per Browser-JS geprüft, nicht nur
+    optisch), 8 neue Unit-Tests. Details: `docs/IMPLEMENTATION_STATUS.md`,
+    `docs/ASSUMPTIONS.md` #304-309.
+13. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
+    zusätzlich angefragt: Logo-Datei-Upload (presigned URL, mittlerer
+    Aufwand), echte Diagramme statt Zahlen-Kacheln (z. B. Recharts,
+    mittlerer Aufwand pro Chart). Alternativ UI-5/UI-6/UI-7/UI-8 oder eine
+    der sechs kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle

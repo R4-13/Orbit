@@ -1,13 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card } from '@orbit/ui';
+import type { Supplier } from '@orbit/domain';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { useApproveSupplier, useRejectSupplier, useSuppliers } from '../../../../lib/hooks/use-suppliers';
 import { statusLabel } from '../../../../lib/status-labels';
 
+const SORT_ACCESSORS = {
+  name: (s: Supplier) => s.name,
+  status: (s: Supplier) => s.status,
+};
+
 export default function SuppliersPage() {
   const { data: suppliers, isLoading } = useSuppliers();
+  const { sorted, sort, requestSort } = useSortableList(suppliers, SORT_ACCESSORS);
   const approveSupplier = useApproveSupplier();
   const rejectSupplier = useRejectSupplier();
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +54,8 @@ export default function SuppliersPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
               <th className="px-4 py-3 font-medium" />
             </tr>
           </thead>
@@ -59,8 +66,8 @@ export default function SuppliersPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : suppliers && suppliers.length > 0 ? (
-              suppliers.map((supplier) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((supplier) => {
                 const status = statusLabel(supplier.status);
                 return (
                   <tr key={supplier.id} className="hover:bg-slate-50">

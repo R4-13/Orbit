@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Approval } from '@orbit/domain';
-import { Badge, Button, Card } from '@orbit/ui';
+import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
 import { apiFetch, ApiError } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useApprovals } from '../../../lib/hooks/use-approvals';
@@ -16,6 +16,12 @@ const ENTITY_LABELS: Record<string, string> = {
   SUPPLIER: 'Lieferant',
   FOLLOW_UP: 'Folgeaktion',
   MEETING: 'Termin',
+};
+
+const SORT_ACCESSORS = {
+  type: (a: Approval) => ENTITY_LABELS[a.entityType] ?? a.entityType,
+  status: (a: Approval) => a.status,
+  requestedAt: (a: Approval) => new Date(a.requestedAt).getTime(),
 };
 
 function detailLink(entityType: string, entityId: string): string | null {
@@ -61,6 +67,7 @@ function resolveDecisionPath(approval: Approval, decision: 'approve' | 'reject')
 
 export default function ApprovalsPage() {
   const { data: approvals, isLoading } = useApprovals();
+  const { sorted, sort, requestSort } = useSortableList(approvals, SORT_ACCESSORS);
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -99,9 +106,9 @@ export default function ApprovalsPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-medium">Art</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Angefragt am</th>
+              <SortableTh label="Art" sortKey="type" sort={sort} onSort={requestSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
+              <SortableTh label="Angefragt am" sortKey="requestedAt" sort={sort} onSort={requestSort} />
               <th className="px-4 py-3 font-medium">Aktion</th>
             </tr>
           </thead>
@@ -112,8 +119,8 @@ export default function ApprovalsPage() {
                   Wird geladen …
                 </td>
               </tr>
-            ) : approvals && approvals.length > 0 ? (
-              approvals.map((approval) => {
+            ) : sorted && sorted.length > 0 ? (
+              sorted.map((approval) => {
                 const status = statusLabel(approval.status);
                 const link = detailLink(approval.entityType, approval.entityId);
                 const label = ENTITY_LABELS[approval.entityType] ?? approval.entityType;
