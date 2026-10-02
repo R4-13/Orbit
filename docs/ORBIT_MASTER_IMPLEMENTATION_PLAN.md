@@ -163,13 +163,29 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
    `BookingProposal`-Zeilen), Playwright-Suite erneut grün (9/10, derselbe
    vorbestehende `ENOTFOUND minio`-Fehlschlag). Details:
    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #294-298.
-10. **Nächster Schritt** (offen, nach eigener Priorisierung) — z. B. UI-5/UI-6/
-    UI-7/UI-8 (Modul-Konsistenz/visuelle Feinheiten der UI-Spec), ACT-Modus
-    (Sonde Phase 10), oder eine weitere offene Backend-Lücke aus Abschnitt A/B.
+10. ✅ **Sonde Phase 10 — ACT-Modus.** Erledigt — vier ACT-Tools
+    (`create_task`/`create_contact`/`create_lead`/`send_email`) in Sondes
+    Tool-Subset, wieder bewusst **wiederverwendet**. `send_email` bleibt
+    `REQUIRE_APPROVAL` — der Mail-Connector läuft nie, Sonde erzeugt
+    stattdessen eine echte Freigabeanfrage (der live getestete Beweis für
+    §27). `GET /copilot/capabilities` liefert jetzt
+    `{ modes: ['ASK','PREPARE','ACT'], tools: [...10] }`. Details:
+    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #299-301.
+11. ✅ **UI/UX-Bugfix: Sidebar-Text-Kontrast.** Vom Nutzer gemeldeter echter
+    Bug behoben — app-weite Tailwind-Opacity-Modifier-Lücke bei CSS-Variablen
+    im falschen Format (Hex statt Kanal-Format), betraf Sidebar-Untermenüs,
+    Icon-Badges und Button-Hover-Zustände. Details:
+    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #302-303.
+12. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
+    zusätzlich angefragt: sortierbare Tabellen (clientseitig, kleiner
+    Aufwand), Logo-Datei-Upload (presigned URL, mittlerer Aufwand), echte
+    Diagramme statt Zahlen-Kacheln (z. B. Recharts, mittlerer Aufwand pro
+    Chart). Alternativ UI-5/UI-6/UI-7/UI-8 oder eine der sechs kleineren
+    offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
 Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
-visuelle Regressionstests, ACT/DELEGATE-Modi, Action-Card-UI mit Bestätigen-Button,
+visuelle Regressionstests, DELEGATE-Modus, Action-Card-UI mit Bestätigen-Button,
 `prepare_follow_up`, `message.delta`-Token-Streaming, Model-Profile-Registry,
 Usage-Metering, separate Plattform-Admin-Ansicht.

@@ -127,7 +127,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   key={entry.href}
                   href={entry.href}
                   className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
-                    active ? 'bg-nav-active text-nav-active-foreground' : 'text-nav-foreground hover:bg-nav-active/60 hover:text-nav-active-foreground'
+                    active ? 'bg-nav-active text-nav-active-foreground' : 'text-nav-foreground hover:bg-white/5 hover:text-nav-active-foreground'
                   }`}
                 >
                   <Icon size={17} className="shrink-0" />
@@ -159,7 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <Link
                           href={child.href}
                           className={`block rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
-                            active ? 'bg-nav-active text-nav-active-foreground' : 'text-nav-foreground/80 hover:bg-nav-active/60 hover:text-nav-active-foreground'
+                            active ? 'bg-nav-active text-nav-active-foreground' : 'text-nav-foreground/80 hover:bg-white/5 hover:text-nav-active-foreground'
                           }`}
                         >
                           {child.label}

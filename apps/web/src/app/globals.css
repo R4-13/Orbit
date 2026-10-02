@@ -11,17 +11,26 @@
  * status colors must never be replaced by a tenant's corporate color (§5.4).
  */
 :root {
-  --brand-primary: #1d4ed8;
+  /* brand-primary/brand-accent/nav-foreground hold space-separated R G B
+     channels (not a hex string) so Tailwind's rgb(var(..) / <alpha-value>)
+     pattern (tailwind.config.ts) can apply opacity modifiers like
+     bg-brand/10 or text-nav-foreground/80 — a plain hex value here makes
+     those modifier classes silently produce no CSS rule at all (Tailwind
+     can't composite an alpha channel onto a hex string), which is exactly
+     what made the Finance/Sales sidebar submenu text invisible (same
+     color as the sidebar background) before this was fixed. See
+     docs/ASSUMPTIONS.md. */
+  --brand-primary: 29 78 216;
   --brand-primary-foreground: #ffffff;
 
   --brand-secondary: #0f172a;
   --brand-secondary-foreground: #ffffff;
 
-  --brand-accent: #0891b2;
+  --brand-accent: 8 145 178;
   --brand-accent-foreground: #ecfeff;
 
   --nav-background: #0f172a;
-  --nav-foreground: #94a3b8;
+  --nav-foreground: 148 163 184;
   --nav-active-background: rgba(255, 255, 255, 0.08);
   --nav-active-foreground: #ffffff;
 

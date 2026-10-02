@@ -29,6 +29,24 @@ const CSS_VARIABLE_BY_FIELD: Partial<Record<keyof TenantBranding, string>> = {
   navigationForeground: '--nav-foreground',
 };
 
+/**
+ * These three CSS variables hold space-separated "R G B" channels, not a
+ * hex string (see the comment on `--brand-primary` in globals.css) — only
+ * they are ever combined with a Tailwind opacity modifier (`bg-brand/10`,
+ * `text-nav-foreground/80`, ...). The admin branding form's `<input
+ * type="color">` always produces a `#rrggbb` hex string, so it has to be
+ * converted before landing in one of these three variables; the other
+ * five branding fields are plain hex and passed through unchanged.
+ */
+const CHANNEL_CSS_VARIABLES = new Set(['--brand-primary', '--brand-accent', '--nav-foreground']);
+
+function hexToRgbChannels(hex: string): string | null {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!match) return null;
+  const int = Number.parseInt(match[1], 16);
+  return `${(int >> 16) & 255} ${(int >> 8) & 255} ${int & 255}`;
+}
+
 export function useTenantBranding() {
   return useQuery({
     queryKey: ['tenant-branding'],
@@ -53,7 +71,8 @@ export function useApplyTenantTheme(branding: TenantBranding | null | undefined)
       for (const [field, cssVar] of Object.entries(CSS_VARIABLE_BY_FIELD) as [keyof TenantBranding, string][]) {
         const value = branding[field];
         if (typeof value === 'string' && value.length > 0) {
-          root.style.setProperty(cssVar, value);
+          const cssValue = CHANNEL_CSS_VARIABLES.has(cssVar) ? (hexToRgbChannels(value) ?? value) : value;
+          root.style.setProperty(cssVar, cssValue);
           applied.push(cssVar);
         }
       }
