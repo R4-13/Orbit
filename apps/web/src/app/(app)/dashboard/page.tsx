@@ -4,12 +4,15 @@ import Link from 'next/link';
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleDashed,
   Clock,
   Inbox as InboxIcon,
+  RefreshCw,
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, SegmentedBar, TrendBarChart, WorkflowTimeline } from '@orbit/ui';
+import type { Meeting, Task } from '@orbit/domain';
 import { useAuth } from '../../../lib/auth-context';
 import { formatDateTime } from '../../../lib/format';
 import { statusLabel } from '../../../lib/status-labels';
@@ -21,6 +24,7 @@ import { useContacts } from '../../../lib/hooks/use-contacts';
 import { useEmailMessages } from '../../../lib/hooks/use-email-messages';
 import { useInvoices } from '../../../lib/hooks/use-invoices';
 import { useLeads } from '../../../lib/hooks/use-leads';
+import { useMeetings } from '../../../lib/hooks/use-meetings';
 import { useTasks } from '../../../lib/hooks/use-tasks';
 
 /**
@@ -75,6 +79,7 @@ export default function DashboardPage() {
   const { data: contacts } = useContacts();
   const { data: companies } = useCompanies();
   const { data: tasks } = useTasks();
+  const { data: meetings } = useMeetings();
   const { data: emails, isLoading: emailsLoading } = useEmailMessages();
 
   const completedRuns = agentRuns?.filter((r) => r.status === 'COMPLETED').length ?? 0;
@@ -185,6 +190,47 @@ export default function DashboardPage() {
   const recentLeads = [...(leads ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
+
+  // Client-side joins across already-loaded lists (same "no new aggregation
+  // endpoint for this data size" approach as the rest of this dashboard) —
+  // the Lead model itself has no "next action"/"meeting" field, so these are
+  // derived from real, already-existing Task/Meeting records rather than
+  // invented. A lead's "next action" is its case's earliest open task
+  // (Task links to Case, not directly to Lead/Contact); its "meeting" is the
+  // contact's soonest non-cancelled Meeting. Both are honestly "–" when none
+  // exists, never a fabricated placeholder.
+  const contactById = new Map((contacts ?? []).map((c) => [c.id, c]));
+  const companyById = new Map((companies ?? []).map((c) => [c.id, c]));
+  const nextOpenTaskByCaseId = new Map<string, Task>();
+  for (const task of tasks ?? []) {
+    if (task.status !== 'OPEN' || !task.caseId) continue;
+    const existing = nextOpenTaskByCaseId.get(task.caseId);
+    const taskDue = task.dueDate ? new Date(task.dueDate).getTime() : Infinity;
+    const existingDue = existing?.dueDate ? new Date(existing.dueDate).getTime() : Infinity;
+    if (!existing || taskDue < existingDue) nextOpenTaskByCaseId.set(task.caseId, task);
+  }
+  const nextMeetingByContactId = new Map<string, Meeting>();
+  for (const meeting of meetings ?? []) {
+    if (meeting.status === 'CANCELLED' || !meeting.contactId) continue;
+    const existing = nextMeetingByContactId.get(meeting.contactId);
+    const scheduled = meeting.scheduledAt ? new Date(meeting.scheduledAt).getTime() : Infinity;
+    const existingScheduled = existing?.scheduledAt ? new Date(existing.scheduledAt).getTime() : Infinity;
+    if (!existing || scheduled < existingScheduled) nextMeetingByContactId.set(meeting.contactId, meeting);
+  }
+  const salesTableRows = recentLeads.map((lead) => {
+    const contact = contactById.get(lead.contactId);
+    const company = (lead.companyId ? companyById.get(lead.companyId) : undefined) ?? (contact?.companyId ? companyById.get(contact.companyId) : undefined);
+    const nextTask = lead.caseId ? nextOpenTaskByCaseId.get(lead.caseId) : undefined;
+    const nextMeeting = nextMeetingByContactId.get(lead.contactId);
+    return {
+      lead,
+      contactName: contact ? `${contact.firstName} ${contact.lastName}` : '–',
+      companyName: company?.name ?? '–',
+      nextActionLabel: nextTask?.title ?? '–',
+      meetingLabel: nextMeeting ? (nextMeeting.scheduledAt ? formatDateTime(nextMeeting.scheduledAt) : 'Terminvorschlag offen') : '–',
+      crmSynced: Boolean(contact?.crmExternalId),
+    };
+  });
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -335,18 +381,46 @@ export default function DashboardPage() {
                 <DonutChart segments={leadStatusSegments} size={88} strokeWidth={12} centerLabel={String(leads.length)} centerSublabel="gesamt" />
               </div>
             ) : null}
-            {recentLeads.length > 0 ? (
-              <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
-                {recentLeads.map((lead) => {
-                  const status = statusLabel(lead.status);
-                  return (
-                    <li key={lead.id} className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">{formatDateTime(lead.createdAt)}</span>
-                      <Badge tone={status.tone}>{status.label}</Badge>
-                    </li>
-                  );
-                })}
-              </ul>
+            {salesTableRows.length > 0 ? (
+              <div className="-mx-5 mt-3 overflow-x-auto border-t border-slate-100">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-2.5 font-medium">Kontakt</th>
+                      <th className="px-3 py-2.5 font-medium">Unternehmen</th>
+                      <th className="px-3 py-2.5 font-medium">Status</th>
+                      <th className="px-3 py-2.5 font-medium">Nächste Aktion</th>
+                      <th className="px-3 py-2.5 font-medium">Termin</th>
+                      <th className="px-3 py-2.5 text-center font-medium">CRM</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {salesTableRows.map(({ lead, contactName, companyName, nextActionLabel, meetingLabel, crmSynced }) => {
+                      const status = statusLabel(lead.status);
+                      return (
+                        <tr key={lead.id} className="hover:bg-slate-50">
+                          <td className="px-5 py-2.5 text-slate-900">{contactName}</td>
+                          <td className="px-3 py-2.5 text-slate-500">{companyName}</td>
+                          <td className="px-3 py-2.5">
+                            <Badge tone={status.tone}>{status.label}</Badge>
+                          </td>
+                          <td className="max-w-[9rem] truncate px-3 py-2.5 text-slate-500" title={nextActionLabel}>
+                            {nextActionLabel}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-slate-500">{meetingLabel}</td>
+                          <td className="px-3 py-2.5 text-center" title={crmSynced ? 'Mit CRM synchronisiert' : 'Noch nicht mit CRM synchronisiert'}>
+                            {crmSynced ? (
+                              <RefreshCw size={14} className="inline text-[var(--status-success)]" />
+                            ) : (
+                              <CircleDashed size={14} className="inline text-slate-300" />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : null}
             <Link href="/sales/leads" className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
               Alle Leads →
