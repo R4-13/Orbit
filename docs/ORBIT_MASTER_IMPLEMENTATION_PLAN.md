@@ -226,13 +226,33 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     alle Suiten) — keine Regression, nach Leeren der `throttler:*`-Keys
     sofort wieder 100/100 grün. Details: `docs/IMPLEMENTATION_STATUS.md`,
     `docs/ASSUMPTIONS.md` #327-329.
-17. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
+17. ✅ **UI/UX: Gap-Analyse gegen ORION-Referenz-Mockup + Umsetzung der drei
+    frontend-seitig bounded Punkte.** Nutzer lieferte ein Referenz-Mockup
+    und bat um eine Gap-Analyse gegen die echte UI. Ergebnis priorisiert
+    nach "frontend-only, kein Backend-Change" zuerst: (1) `WorkflowTimeline`
+    + `SegmentedBar` — zwei neue, abhängigkeitsfreie `packages/ui`-
+    Komponenten, Finance-Dashboard-Card, echter Invoice-Status-Funnel statt
+    erfundener Pro-Stufen-Zeitstempel; (2) Sales-Kontakttabelle auf dem
+    Dashboard statt schlichter Liste, neuer `use-meetings.ts`-Hook
+    (konsumiert bestehenden Endpunkt), bewusst kein erfundenes "Hot/Warm"-
+    Lead-Temperatur-Feld; (3) Unified-Inbox-Tabellenspalten (Fall/Workflow-
+    Status/Zugewiesener Agent/Menschl. Aktion), alle client-seitig gejoint,
+    kein Backend-Change, bewusst keine "Quelle"-Spalte (nur ein Kanal
+    existiert aktuell). Alle drei Schritte einzeln live verifiziert, voller
+    Workspace-Typecheck/Lint grün, Playwright durchgehend 12/12 (derselbe
+    vorbestehende `sales.spec.ts`-Flake dreimal bestätigt, keine Regression).
+    **Bewusst nicht umgesetzt** (größerer, separat zu scopender Aufwand):
+    Sonde-"Vorgeschlagene Aktionen" — braucht eine neue Backend-Fähigkeit,
+    die proaktiv entscheidet, was vorgeschlagen wird, nicht nur UI-Markup.
+    Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #332-346.
+18. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
     Nutzer in dieser Session angefragten UI/UX-Punkte sind jetzt
     abgeschlossen (Sidebar-Kontrast, sortierbare Tabellen, Logo-Upload,
-    Diagramme, Responsive-Härtung). Weiter mit UI-5/UI-6/UI-7/UI-8
-    (Modul-Konsistenz, feinere Accessibility-Prüfung einzelner Seiten),
-    PREPARE-Modus-Erweiterung (`prepare_follow_up`), oder einer der
-    übrigen fünf kleineren offenen Backend-Lücken.
+    Diagramme, Responsive-Härtung, Mockup-Gap-Analyse). Weiter mit
+    Sonde-"Vorgeschlagene Aktionen" (eigenes Scoping nötig), UI-5/UI-6/
+    UI-7/UI-8 (Modul-Konsistenz, feinere Accessibility-Prüfung einzelner
+    Seiten), PREPARE-Modus-Erweiterung (`prepare_follow_up`), oder einer
+    der übrigen fünf kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-

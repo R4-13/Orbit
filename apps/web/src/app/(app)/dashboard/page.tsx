@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, SegmentedBar, TrendBarChart, WorkflowTimeline } from '@orbit/ui';
-import type { Meeting, Task } from '@orbit/domain';
+import type { AgentRun, Meeting, Task } from '@orbit/domain';
 import { useAuth } from '../../../lib/auth-context';
 import { formatDateTime } from '../../../lib/format';
 import { statusLabel } from '../../../lib/status-labels';
@@ -184,6 +184,48 @@ export default function DashboardPage() {
   const recentEmails = [...(emails ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 8);
+
+  // Joined, per-email view for the Unified Inbox table — again client-side
+  // over already-loaded lists, no new endpoint. "Quelle" (source icon) is
+  // deliberately NOT added as its own column: every current inbox entry
+  // comes from the same EmailMessage table (one channel), so a per-row
+  // source icon would always show the identical email icon — real data with
+  // zero information value, not worth a column. "Zugewiesener Agent" is the
+  // most recent AgentRun.agentType for the email's case (real agent-type
+  // data, not a fabricated per-row assignment), labeled "Sonde-<Typ>" to
+  // match the app's existing Sonde branding. "Menschl. Aktion" is
+  // deliberately the simpler "does this case have an open task" signal, not
+  // a full cross-entity Approval lookup (Approval links to an Invoice/
+  // BookingProposal/etc. via entityType+entityId, not to a Case directly —
+  // joining through that chain for a dashboard preview row would be a much
+  // larger change for a compact-card use case).
+  const caseById = new Map((cases ?? []).map((c) => [c.id, c]));
+  const AGENT_TYPE_LABELS: Record<string, string> = {
+    ORCHESTRATOR: 'Sonde-Orchestrator',
+    COMMUNICATION: 'Sonde-Kommunikation',
+    FINANCE: 'Sonde-Finance',
+    SALES: 'Sonde-Sales',
+  };
+  const latestAgentRunByCaseId = new Map<string, AgentRun>();
+  for (const run of agentRuns ?? []) {
+    if (!run.caseId) continue;
+    const existing = latestAgentRunByCaseId.get(run.caseId);
+    if (!existing || new Date(run.startedAt).getTime() > new Date(existing.startedAt).getTime()) {
+      latestAgentRunByCaseId.set(run.caseId, run);
+    }
+  }
+  const openTaskCaseIds = new Set((tasks ?? []).filter((t) => t.status === 'OPEN' && t.caseId).map((t) => t.caseId as string));
+  const inboxTableRows = recentEmails.map((email) => {
+    const linkedCase = email.caseId ? caseById.get(email.caseId) : undefined;
+    const agentRun = email.caseId ? latestAgentRunByCaseId.get(email.caseId) : undefined;
+    return {
+      email,
+      linkedCase,
+      agentLabel: agentRun ? (AGENT_TYPE_LABELS[agentRun.agentType] ?? agentRun.agentType) : '–',
+      needsHumanAction: linkedCase ? openTaskCaseIds.has(linkedCase.id) : false,
+    };
+  });
+
   const recentRuns = [...(agentRuns ?? [])]
     .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
     .slice(0, 6);
@@ -279,28 +321,53 @@ export default function DashboardPage() {
           ) : recentEmails.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-400">Keine neuen Vorgänge.</p>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Absender</th>
-                  <th className="px-4 py-2.5 font-medium">Betreff</th>
-                  <th className="px-4 py-2.5 font-medium">Klassifikation</th>
-                  <th className="px-4 py-2.5 font-medium">Zeitpunkt</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentEmails.map((email) => (
-                  <tr key={email.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-2.5 text-slate-700">{email.fromAddress}</td>
-                    <td className="max-w-xs truncate px-4 py-2.5 text-slate-900">{email.subject ?? '–'}</td>
-                    <td className="px-4 py-2.5">
-                      {email.classification ? <Badge tone="info">{email.classification}</Badge> : <span className="text-slate-300">–</span>}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{formatDateTime(email.createdAt)}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2.5 font-medium">Absender</th>
+                    <th className="px-4 py-2.5 font-medium">Betreff</th>
+                    <th className="px-4 py-2.5 font-medium">Klassifikation</th>
+                    <th className="px-4 py-2.5 font-medium">Fall</th>
+                    <th className="px-4 py-2.5 font-medium">Workflow-Status</th>
+                    <th className="px-4 py-2.5 font-medium">Zugewiesener Agent</th>
+                    <th className="px-4 py-2.5 font-medium">Menschl. Aktion</th>
+                    <th className="px-4 py-2.5 font-medium">Zeitpunkt</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {inboxTableRows.map(({ email, linkedCase, agentLabel, needsHumanAction }) => {
+                    const caseStatus = linkedCase ? statusLabel(linkedCase.status) : null;
+                    return (
+                      <tr key={email.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 text-slate-700">{email.fromAddress}</td>
+                        <td className="max-w-xs truncate px-4 py-2.5 text-slate-900">{email.subject ?? '–'}</td>
+                        <td className="px-4 py-2.5">
+                          {email.classification ? <Badge tone="info">{email.classification}</Badge> : <span className="text-slate-300">–</span>}
+                        </td>
+                        <td className="max-w-[10rem] truncate px-4 py-2.5">
+                          {linkedCase ? (
+                            <Link href={`/cases/${linkedCase.id}`} className="text-brand hover:underline" title={linkedCase.title}>
+                              {linkedCase.title}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-300">–</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {caseStatus ? <Badge tone={caseStatus.tone}>{caseStatus.label}</Badge> : <span className="text-slate-300">–</span>}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{agentLabel}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge tone={needsHumanAction ? 'warning' : 'neutral'}>{needsHumanAction ? 'Ja' : 'Nein'}</Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{formatDateTime(email.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
