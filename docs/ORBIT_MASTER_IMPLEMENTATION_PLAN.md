@@ -39,12 +39,12 @@ UI/UX-Spezifikation**, die beide bisher nicht existieren.
 |---|---|---|---|
 | 1 | Generische Connector-Idempotenz-Keys (jenseits des bereits gelösten Approval-Resume-Falls) | `PARTIAL` | ASSUMPTIONS (Phase 1, ursprüngliche Einschränkung) |
 | 2 | Agent-Lifecycle: volles 8-Zustands-Modell | `MISSING` (bewusst) | ASSUMPTIONS #253 |
-| 3 | `WorkflowRunnerService.buildWorkflowStepMessage()` — Untrusted-Content-Wrapping | `PARTIAL` | ASSUMPTIONS #246 |
+| 3 | ~~`WorkflowRunnerService.buildWorkflowStepMessage()` — Untrusted-Content-Wrapping~~ | ✅ `DONE` | ASSUMPTIONS #327-329 |
 | 4 | Evaluationslauf-Historie (nur Fall-Definitionen persistiert, keine Lauf-Ergebnisse über Zeit) | `MISSING` (bewusst) | ASSUMPTIONS #252 |
 | 5 | `AIModelProfile`/Model-Lifecycle-Registry, `AIUsageRecord`, `AIProviderHealth`, Fallback-Policy-Engine | `MISSING` (bewusst) | ASSUMPTIONS #262 |
 | 6 | Separate Plattform-Admin-Ansicht `/admin/platform/ai` | `MISSING` (bewusst) | ASSUMPTIONS #262 |
 
-Diese sechs Punkte bleiben offen, sind aber jeweils klein und in sich abgeschlossen —
+Fünf der ursprünglich sechs Punkte bleiben offen, sind aber jeweils klein und in sich abgeschlossen —
 niedrigere Priorität als die beiden folgenden großen Blöcke.
 
 ---
@@ -214,13 +214,25 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     automatisierter Accessibility-Audit (axe-core, vollständige
     Tastatur-Navigation, Screenreader-Test). Details:
     `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #320-326.
-16. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
+16. ✅ **Backend-Härtung: wrapUntrustedContent() auf Workflow-Step-
+    Nachrichten.** Erledigt — schließt die in §63-Lückenliste Punkt 3
+    (ASSUMPTIONS #246) offen gelassene Folgearbeit. Ganze Schritt-
+    Nachricht wird jetzt unconditional gewrapped (nicht feldweise), da
+    `inputMapping` grundsätzlich rohen Tool-Output eines vorherigen
+    Schritts übernehmen kann. 1 neuer + 2 angepasste Unit-Tests, volle
+    API-Unit- (271) und API-E2E-Suite (100) grün. **Echter Nebenfund bei
+    der Verifikation**: drei volle E2E-Läufe kurz hintereinander lösten
+    den echten Redis-Rate-Limiter selbst aus (429-Kaskade über fast
+    alle Suiten) — keine Regression, nach Leeren der `throttler:*`-Keys
+    sofort wieder 100/100 grün. Details: `docs/IMPLEMENTATION_STATUS.md`,
+    `docs/ASSUMPTIONS.md` #327-329.
+17. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
     Nutzer in dieser Session angefragten UI/UX-Punkte sind jetzt
     abgeschlossen (Sidebar-Kontrast, sortierbare Tabellen, Logo-Upload,
     Diagramme, Responsive-Härtung). Weiter mit UI-5/UI-6/UI-7/UI-8
     (Modul-Konsistenz, feinere Accessibility-Prüfung einzelner Seiten),
     PREPARE-Modus-Erweiterung (`prepare_follow_up`), oder einer der
-    sechs kleineren offenen Backend-Lücken.
+    übrigen fünf kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-

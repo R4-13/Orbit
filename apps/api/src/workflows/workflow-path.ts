@@ -1,3 +1,5 @@
+import { wrapUntrustedContent } from '@orbit/agent-core';
+
 /**
  * Minimal JSON-Path-artige Auflösung für WorkflowStepDefinition.inputMapping/
  * .condition (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 3) — bewusst **kein**
@@ -57,14 +59,26 @@ export function evaluateWorkflowCondition(context: WorkflowPathContext, conditio
  * does manually today (see AGENT_ARCHITECTURE.md, "Der Orchestrator"), just
  * data-driven instead of hard-coded. With no mapping at all (typically the
  * workflow's first step), the full trigger input is passed through as-is.
+ *
+ * The whole serialized object is wrapped via `wrapUntrustedContent()`
+ * before being returned (docs/ASSUMPTIONS.md, formerly #246's open follow-up).
+ * Trigger input can come from a trusted, authenticated API caller today, but
+ * a step's inputMapping can equally pull a prior step's raw tool output
+ * (`$.steps[N].output...`) into the message — and that output may itself
+ * originate from untrusted external content (an email body, a document) a
+ * tool fetched. Scoping the wrap field-by-field would require re-auditing
+ * every current and future tool for whether its output can carry untrusted
+ * text; wrapping the whole message unconditionally sidesteps that and costs
+ * nothing structurally, since this content was already meant to be read as
+ * data by the next agent, never as instructions.
  */
 export function buildWorkflowStepMessage(context: WorkflowPathContext, inputMapping: Record<string, string> | null | undefined): string {
   if (!inputMapping || Object.keys(inputMapping).length === 0) {
-    return JSON.stringify(context.trigger.input);
+    return wrapUntrustedContent(JSON.stringify(context.trigger.input));
   }
   const resolved: Record<string, unknown> = {};
   for (const [field, path] of Object.entries(inputMapping)) {
     resolved[field] = resolveWorkflowPath(context, path);
   }
-  return JSON.stringify(resolved);
+  return wrapUntrustedContent(JSON.stringify(resolved));
 }

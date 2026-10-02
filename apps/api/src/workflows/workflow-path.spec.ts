@@ -1,4 +1,13 @@
+import { UNTRUSTED_CONTENT_TAG } from '@orbit/agent-core';
 import { buildWorkflowStepMessage, evaluateWorkflowCondition, resolveWorkflowPath, type WorkflowPathContext } from './workflow-path';
+
+/** Strips the `wrapUntrustedContent()` tags buildWorkflowStepMessage() now applies, so tests can assert on the underlying JSON. */
+function parseWrappedMessage(message: string): unknown {
+  expect(message.startsWith(`<${UNTRUSTED_CONTENT_TAG}>\n`)).toBe(true);
+  expect(message.endsWith(`\n</${UNTRUSTED_CONTENT_TAG}>`)).toBe(true);
+  const inner = message.slice(`<${UNTRUSTED_CONTENT_TAG}>\n`.length, -`\n</${UNTRUSTED_CONTENT_TAG}>`.length);
+  return JSON.parse(inner);
+}
 
 describe('resolveWorkflowPath', () => {
   const context: WorkflowPathContext = {
@@ -62,8 +71,8 @@ describe('buildWorkflowStepMessage', () => {
   };
 
   it('passes the full trigger input through when there is no mapping', () => {
-    expect(JSON.parse(buildWorkflowStepMessage(context, undefined))).toEqual({ subject: 'Hallo', bodyText: 'Text' });
-    expect(JSON.parse(buildWorkflowStepMessage(context, {}))).toEqual({ subject: 'Hallo', bodyText: 'Text' });
+    expect(parseWrappedMessage(buildWorkflowStepMessage(context, undefined))).toEqual({ subject: 'Hallo', bodyText: 'Text' });
+    expect(parseWrappedMessage(buildWorkflowStepMessage(context, {}))).toEqual({ subject: 'Hallo', bodyText: 'Text' });
   });
 
   it('resolves every mapping entry into a flat object', () => {
@@ -71,6 +80,11 @@ describe('buildWorkflowStepMessage', () => {
       companyId: '$.steps[1].output.create_company.id',
       subject: '$.trigger.input.subject',
     });
-    expect(JSON.parse(message)).toEqual({ companyId: 'company_1', subject: 'Hallo' });
+    expect(parseWrappedMessage(message)).toEqual({ companyId: 'company_1', subject: 'Hallo' });
+  });
+
+  it('wraps the serialized message so the receiving agent treats it as data, not instructions', () => {
+    const message = buildWorkflowStepMessage(context, undefined);
+    expect(message).toBe(`<${UNTRUSTED_CONTENT_TAG}>\n${JSON.stringify(context.trigger.input)}\n</${UNTRUSTED_CONTENT_TAG}>`);
   });
 });
