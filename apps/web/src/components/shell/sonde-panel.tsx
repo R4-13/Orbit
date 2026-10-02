@@ -140,7 +140,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <aside className="flex h-screen w-[400px] shrink-0 flex-col border-l border-slate-200 bg-white">
+    <aside className="fixed inset-0 z-50 flex flex-col bg-white lg:static lg:inset-auto lg:z-auto lg:h-screen lg:w-[400px] lg:shrink-0 lg:border-l lg:border-slate-200">
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4">
         <div className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-accent">

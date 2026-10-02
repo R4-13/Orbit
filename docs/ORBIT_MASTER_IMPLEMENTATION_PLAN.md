@@ -199,13 +199,28 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     Sales-Status-Donuts, Activity-Trend-Balkendiagramm (letzte 7 Tage).
     Live mit echten Musterwerk-Demo-Daten verifiziert, 4 neue Unit-Tests.
     Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #315-319.
-15. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
+15. ✅ **UI/UX: Responsive/Accessibility-Härtung (App-Shell).** Erledigt —
+    echten, vorbestehenden Mobile-Bug behoben (Sidebar unterhalb ~480px
+    nahezu viewport-füllend, nicht einklappbar). Sidebar jetzt unterhalb
+    `md:` (768px) eine Slide-in-Drawer mit Backdrop (schließt bei
+    Routenwechsel/Escape), neuer Hamburger-Button im Header. Sonde-Panel
+    unterhalb `lg:` (1024px) ein Vollbild-Overlay statt eines seitlichen
+    400px-Panels — beim eigenen Tablet-Test (768px) einen zweiten echten
+    Bug gefunden (Sidebar+Sonde quetschten den Hauptinhalt bei `md:` als
+    Umschaltpunkt auf ~144px) und durch den `lg:`-Umschaltpunkt behoben.
+    `AppHeader` blendet Suchfeld/Glocke/E-Mail/Logout-Text stufenweise
+    ein. Live an drei Breakpoints verifiziert (375px/768px/1440px), volle
+    Playwright-Suite weiterhin 12/12 grün. Bewusst nicht umgesetzt:
+    automatisierter Accessibility-Audit (axe-core, vollständige
+    Tastatur-Navigation, Screenreader-Test). Details:
+    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #320-326.
+16. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
     Nutzer in dieser Session angefragten UI/UX-Punkte sind jetzt
     abgeschlossen (Sidebar-Kontrast, sortierbare Tabellen, Logo-Upload,
-    Diagramme). Weiter mit UI-5/UI-6/UI-7/UI-8 (Modul-Konsistenz/
-    Responsive-Accessibility-Härtung), PREPARE-Modus-Erweiterung
-    (`prepare_follow_up`), oder einer der sechs kleineren offenen
-    Backend-Lücken.
+    Diagramme, Responsive-Härtung). Weiter mit UI-5/UI-6/UI-7/UI-8
+    (Modul-Konsistenz, feinere Accessibility-Prüfung einzelner Seiten),
+    PREPARE-Modus-Erweiterung (`prepare_follow_up`), oder einer der
+    sechs kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-

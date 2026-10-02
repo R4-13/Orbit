@@ -91,7 +91,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, hasPermission, logout } = useAuth();
   const { data: brandingResponse } = useTenantBranding();
-  const [sondeOpen, setSondeOpen] = useState(true);
+  // Desktop keeps the established "open by default" behaviour (ASSUMPTIONS
+  // #268); below the lg breakpoint the panel is a full-screen overlay (see
+  // SondePanel's own responsive classes — a fixed 400px side panel at
+  // exactly the md/tablet width squeezed the sidebar+main content into an
+  // unusably narrow column, so Sonde stays an overlay through tablet sizes
+  // and only docks as a static side panel at lg: and up), so opening it by
+  // default would immediately hide the dashboard behind Sonde on first
+  // load — closed by default there instead. Starts `false` to match the
+  // server-rendered markup (no viewport info during SSR) and flips once on
+  // mount if the viewport is already desktop-sized.
+  const [sondeOpen, setSondeOpen] = useState(false);
+  // Below the md breakpoint the sidebar is a closed-by-default slide-in
+  // drawer (§28 of the UI-Spec expects a collapsible nav on narrow
+  // viewports) — at md: and up this state is simply never read (the
+  // sidebar's own classes force it open/static there, see below).
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   useApplyTenantTheme(brandingResponse?.branding);
 
   useEffect(() => {
@@ -99,6 +114,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // Tailwind's `lg` breakpoint (1024px) — matches SondePanel's own
+  // lg:static classes (see comment above). Runs once on mount, not on
+  // resize: toggling Sonde open/closed mid-session based on a live resize
+  // would be surprising, this only sets the *initial* default.
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setSondeOpen(true);
+    }
+  }, []);
+
+  // A route change is the user having picked something from the drawer —
+  // close it so the next screen isn't immediately obscured.
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    }
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [sidebarOpen]);
 
   if (isLoading || !isAuthenticated || !user) {
     return (
@@ -112,7 +152,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen">
-      <aside className="flex w-56 shrink-0 flex-col bg-nav">
+      {sidebarOpen ? (
+        <div
+          className="fixed inset-0 z-30 bg-black/30 md:hidden"
+          aria-hidden="true"
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col bg-nav transition-transform duration-200 md:static md:z-auto md:w-56 md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="px-4 py-5">
           <TenantLogo logoUrl={branding?.logoMarkUrl ?? branding?.logoUrl} companyDisplayName={branding?.companyDisplayName} />
         </div>
@@ -184,12 +235,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           companyDisplayName={branding?.companyDisplayName}
           sondeOpen={sondeOpen}
           onToggleSonde={() => setSondeOpen((prev) => !prev)}
+          onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
           onLogout={() => {
             void logout().then(() => router.replace('/login'));
           }}
         />
         <div className="flex min-h-0 flex-1">
-          <main className="flex-1 overflow-y-auto bg-surface-page px-8 py-6">{children}</main>
+          <main className="flex-1 overflow-y-auto bg-surface-page px-4 py-5 sm:px-6 md:px-8 md:py-6">{children}</main>
           {sondeOpen ? <SondePanel onClose={() => setSondeOpen(false)} /> : null}
         </div>
       </div>
