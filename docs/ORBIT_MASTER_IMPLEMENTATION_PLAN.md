@@ -193,10 +193,19 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     auf drei Ebenen verifiziert (Jest-E2E, Browser-Konsole, Playwright
     `setInputFiles()`). Details: `docs/IMPLEMENTATION_STATUS.md`,
     `docs/ASSUMPTIONS.md` #310-314.
-14. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
-    zusätzlich angefragt: echte Diagramme statt Zahlen-Kacheln (z. B.
-    Recharts, mittlerer Aufwand pro Chart). Alternativ UI-5/UI-6/UI-7/UI-8
-    oder eine der sechs kleineren offenen Backend-Lücken.
+14. ✅ **UI/UX: Echte Diagramme statt Zahlen-Kacheln.** Erledigt — zwei neue,
+    abhängigkeitsfreie Diagramm-Komponenten (`DonutChart`/`TrendBarChart`,
+    bewusst keine Chart-Bibliothek) auf dem Home-Dashboard: Finance-/
+    Sales-Status-Donuts, Activity-Trend-Balkendiagramm (letzte 7 Tage).
+    Live mit echten Musterwerk-Demo-Daten verifiziert, 4 neue Unit-Tests.
+    Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #315-319.
+15. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
+    Nutzer in dieser Session angefragten UI/UX-Punkte sind jetzt
+    abgeschlossen (Sidebar-Kontrast, sortierbare Tabellen, Logo-Upload,
+    Diagramme). Weiter mit UI-5/UI-6/UI-7/UI-8 (Modul-Konsistenz/
+    Responsive-Accessibility-Härtung), PREPARE-Modus-Erweiterung
+    (`prepare_follow_up`), oder einer der sechs kleineren offenen
+    Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-

@@ -9,7 +9,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@orbit/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, TrendBarChart } from '@orbit/ui';
 import { useAuth } from '../../../lib/auth-context';
 import { formatDateTime } from '../../../lib/format';
 import { statusLabel } from '../../../lib/status-labels';
@@ -91,6 +91,54 @@ export default function DashboardPage() {
   const pendingInvoiceApprovals = invoices?.filter((i) => i.status === 'PENDING_APPROVAL').length ?? 0;
 
   const openTasks = tasks?.filter((t) => t.status === 'OPEN').length ?? 0;
+
+  // Grouped (not raw per-enum-value) so the donut stays readable — four
+  // buckets instead of nine raw InvoiceStatus values.
+  const invoiceStatusSegments = [
+    {
+      label: 'Offen',
+      value: invoices?.filter((i) => i.status === 'RECEIVED' || i.status === 'EXTRACTED' || i.status === 'PENDING_APPROVAL').length ?? 0,
+      colorVar: '--status-info',
+    },
+    {
+      label: 'Prüfung nötig',
+      value: invoices?.filter((i) => i.status === 'DUPLICATE_SUSPECTED' || i.status === 'BANK_CHANGE_SUSPECTED').length ?? 0,
+      colorVar: '--status-warning',
+    },
+    {
+      label: 'Abgeschlossen',
+      value: invoices?.filter((i) => i.status === 'APPROVED' || i.status === 'TRANSFERRED').length ?? 0,
+      colorVar: '--status-success',
+    },
+    {
+      label: 'Abgelehnt/Fehler',
+      value: invoices?.filter((i) => i.status === 'REJECTED' || i.status === 'TRANSFER_FAILED').length ?? 0,
+      colorVar: '--status-error',
+    },
+  ];
+
+  const leadStatusSegments = [
+    { label: 'Neu', value: leads?.filter((l) => l.status === 'NEW').length ?? 0, colorVar: '--status-info' },
+    { label: 'Qualifiziert', value: leads?.filter((l) => l.status === 'QUALIFIED').length ?? 0, colorVar: '--status-warning' },
+    { label: 'Konvertiert', value: leads?.filter((l) => l.status === 'CONVERTED').length ?? 0, colorVar: '--status-success' },
+    { label: 'Disqualifiziert', value: leads?.filter((l) => l.status === 'DISQUALIFIED').length ?? 0, colorVar: '--status-error' },
+  ];
+
+  // Last 7 calendar days (oldest first), completed vs. failed agent runs per day.
+  const runsPerDay = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - i));
+    const dayKey = date.toISOString().slice(0, 10);
+    const label = date.toLocaleDateString('de-DE', { weekday: 'short' });
+    const dayRuns = (agentRuns ?? []).filter((r) => new Date(r.startedAt).toISOString().slice(0, 10) === dayKey);
+    return {
+      label,
+      values: {
+        completed: dayRuns.filter((r) => r.status === 'COMPLETED').length,
+        failed: dayRuns.filter((r) => r.status === 'FAILED').length,
+      },
+    };
+  });
 
   const recentEmails = [...(emails ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -199,6 +247,11 @@ export default function DashboardPage() {
                 <p className="text-xl font-semibold text-slate-900">{bankChangeWarnings}</p>
               </div>
             </div>
+            {invoices && invoices.length > 0 ? (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <DonutChart segments={invoiceStatusSegments} size={88} strokeWidth={12} centerLabel={String(invoices.length)} centerSublabel="gesamt" />
+              </div>
+            ) : null}
             <Link href="/finance/invoices" className="mt-4 inline-block text-sm font-medium text-brand hover:underline">
               Alle Rechnungen →
             </Link>
@@ -228,6 +281,11 @@ export default function DashboardPage() {
                 <p className="text-xl font-semibold text-slate-900">{openTasks}</p>
               </div>
             </div>
+            {leads && leads.length > 0 ? (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <DonutChart segments={leadStatusSegments} size={88} strokeWidth={12} centerLabel={String(leads.length)} centerSublabel="gesamt" />
+              </div>
+            ) : null}
             {recentLeads.length > 0 ? (
               <ul className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
                 {recentLeads.map((lead) => {
@@ -290,7 +348,19 @@ export default function DashboardPage() {
             ) : recentRuns.length === 0 ? (
               <p className="px-5 py-6 text-sm text-slate-400">Noch keine Aktivität.</p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <>
+                <div className="px-5 pb-1 pt-4">
+                  <p className="mb-2 text-xs font-medium text-slate-500">Agent-Läufe — letzte 7 Tage</p>
+                  <TrendBarChart
+                    data={runsPerDay}
+                    series={[
+                      { key: 'completed', label: 'Abgeschlossen', colorVar: '--status-success' },
+                      { key: 'failed', label: 'Fehlgeschlagen', colorVar: '--status-error' },
+                    ]}
+                    height={64}
+                  />
+                </div>
+                <ul className="mt-2 divide-y divide-slate-100 border-t border-slate-100">
                 {recentRuns.map((run) => {
                   const status = statusLabel(run.status);
                   return (
@@ -303,7 +373,8 @@ export default function DashboardPage() {
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </>
             )}
           </CardContent>
         </Card>

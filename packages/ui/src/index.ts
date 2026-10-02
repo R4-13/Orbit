@@ -5,4 +5,7 @@ export * from './components/badge';
 export * from './components/input';
 export * from './components/label';
 export * from './components/sortable-th';
+export * from './components/donut-chart';
+export * from './components/trend-bar-chart';
 export * from './hooks/use-sortable-list';
+export * from './lib/donut-segments';
