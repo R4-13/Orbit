@@ -35,6 +35,34 @@ export const SONDE_ASK_TOOL_NAMES = ['get_dashboard_summary', 'list_open_approva
 export const SONDE_PREPARE_TOOL_NAMES = ['draft_email', 'create_meeting', 'create_booking_proposal'] as const;
 
 /**
+ * §26/§32 ("ACT" capability category) — "executes a controlled permitted
+ * action". Wieder bewusst **keine neuen Tools**: `create_task`/
+ * `create_contact`/`create_lead` (`SalesAgentTools`) und `send_email`
+ * (`SalesAgentTools`, sendet die mit `draft_email` zuvor entworfene
+ * E-Mail über den echten Mail-Connector) existieren bereits, mit eigener
+ * Testabdeckung, über denselben Tool-Registry → Policy-Engine-Pfad.
+ *
+ * `create_task`/`create_contact`/`create_lead` sind standardmäßig
+ * `AUTONOMOUS` — ruft Sonde sie auf, legt genau derselbe Mechanismus,
+ * den Finance-/Sales-Agenten schon nutzen, sofort einen echten
+ * Datensatz an (kein Sonderpfad, keine reduzierten Prüfungen).
+ * `send_email` ist standardmäßig `REQUIRE_APPROVAL`
+ * (`POLICY_ACTIONS.FOLLOW_UP_SEND`) — ruft Sonde es auf, versendet es
+ * NICHT direkt, sondern erzeugt automatisch eine `FOLLOW_UP`-
+ * Freigabeanfrage (`CopilotRuntimeService.runAskTurn()`s bereits
+ * bestehende, generische Behandlung jeder Nicht-ALLOW/Nicht-DENY-
+ * Entscheidung) — der konkrete, lebende Beweis für §27: "The action must
+ * still pass RBAC → Policy Engine → Approval Rules → Workflow Engine.
+ * Sonde cannot bypass those layers."
+ *
+ * `create_meeting` ist hier bewusst nicht noch einmal aufgeführt — es ist
+ * bereits Teil von `SONDE_PREPARE_TOOL_NAMES` (siehe dortigen
+ * Kommentar); ein Tool in zwei Modus-Subsets gleichzeitig zu führen wäre
+ * reine, bedeutungslose Duplikation.
+ */
+export const SONDE_ACT_TOOL_NAMES = ['create_task', 'create_contact', 'create_lead', 'send_email'] as const;
+
+/**
  * §26/§32 des Master-Dokuments ("Sonde modes" / "READ" capability
  * category) — die ersten drei, namentlich im Master-Dokument genannten
  * READ-Tools (`get_dashboard_summary`, `list_open_approvals`, `get_case`).

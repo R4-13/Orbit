@@ -89,6 +89,10 @@ describe('CopilotRuntimeService', () => {
       'draft_email',
       'create_meeting',
       'create_booking_proposal',
+      'create_task',
+      'create_contact',
+      'create_lead',
+      'send_email',
     ]);
     expect(scoped.conversationMessage.create).toHaveBeenNthCalledWith(1, {
       data: { tenantId: 'tenant_1', conversationId: 'conv_1', userId: 'user_1', role: 'USER', content: 'Wie viele Freigaben stehen aus?' },

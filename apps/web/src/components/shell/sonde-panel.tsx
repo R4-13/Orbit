@@ -17,18 +17,19 @@ import {
   useDeleteConversation,
 } from '../../lib/hooks/use-copilot';
 
-const FUTURE_MODES = ['Act', 'Delegate', 'Navigate'] as const;
+const FUTURE_MODES = ['Delegate', 'Navigate'] as const;
 
 /**
- * §15/§37 der UI/UX-Spezifikation + Master-Spec §25-33 (Sonde ASK+PREPARE,
- * Phase 6-9). Verdrahtet gegen das echte /copilot/*-Backend — keine
- * simulierte Konversation mehr. Bewusst weiterhin ehrlich in dem, was NICHT
- * funktioniert: nur Ask und Prepare sind echte, aktive Modi (das Backend
- * unterstützt aktuell diese zwei, siehe GET /copilot/capabilities);
- * Act/Delegate/Navigate bleiben als deaktivierte Chips mit erklärendem
- * Tooltip sichtbar. Prepare-Tools (E-Mail-Entwurf, Terminvorschlag,
- * Buchungsvorschlag) erzeugen echte Datensätze, die noch eine menschliche
- * Freigabe/Bestätigung brauchen — nie eine endgültige Aktion.
+ * §15/§37 der UI/UX-Spezifikation + Master-Spec §25-33 (Sonde ASK+
+ * PREPARE+ACT, Phase 6-10). Verdrahtet gegen das echte /copilot/*-
+ * Backend — keine simulierte Konversation mehr. Bewusst weiterhin
+ * ehrlich in dem, was NICHT funktioniert: nur Ask/Prepare/Act sind
+ * echte, aktive Modi (das Backend unterstützt aktuell diese drei, siehe
+ * GET /copilot/capabilities); Delegate/Navigate bleiben als deaktivierte
+ * Chips mit erklärendem Tooltip sichtbar. Prepare-Tools erzeugen nur
+ * Vorschläge; Act-Tools wirken sofort und endgültig (Aufgabe/Kontakt/
+ * Lead anlegen), außer `send_email`, das immer menschliche Freigabe
+ * braucht (REQUIRE_APPROVAL, §27).
  */
 export function SondePanel({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -148,7 +149,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
           <div>
             <p className="text-sm font-semibold text-slate-900">Sonde</p>
             <p className="text-xs text-slate-400">
-              {capabilities ? 'Ask- & Prepare-Modus aktiv' : 'Wird geladen …'}
+              {capabilities ? 'Ask-, Prepare- & Act-Modus aktiv' : 'Wird geladen …'}
             </p>
           </div>
         </div>
@@ -184,6 +185,7 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
       <div className="flex flex-wrap gap-1.5 border-b border-slate-100 px-4 py-2.5">
         <Badge tone="success">Ask</Badge>
         <Badge tone="success">Prepare</Badge>
+        <Badge tone="success">Act</Badge>
         {FUTURE_MODES.map((mode) => (
           <Badge key={mode} tone="neutral" title={`${mode}-Modus ist noch nicht verfügbar`} className="opacity-50">
             {mode}
@@ -217,8 +219,9 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
             </span>
             <p className="text-sm font-medium text-slate-700">Stellen Sie Sonde eine Frage</p>
             <p className="text-xs text-slate-400">
-              Sonde kann offene Vorgänge, Freigaben und Fälle nachschlagen sowie E-Mail-Entwürfe,
-              Terminvorschläge und Buchungsvorschläge vorbereiten — zur Freigabe durch Sie.
+              Sonde kann offene Vorgänge nachschlagen, E-Mail-Entwürfe und Terminvorschläge
+              vorbereiten sowie Aufgaben, Kontakte und Leads direkt anlegen — ein E-Mail-Versand
+              wartet dabei immer auf Ihre Freigabe.
             </p>
           </div>
         ) : messagesLoading ? (

@@ -103,14 +103,25 @@ describe('Copilot / Sonde (e2e)', () => {
     await app.close();
   });
 
-  it('GET /copilot/capabilities lists the ASK read tools and the PREPARE proposal tools', async () => {
+  it('GET /copilot/capabilities lists the ASK, PREPARE and ACT tools', async () => {
     const response = await request(app.getHttpServer())
       .get('/api/v1/copilot/capabilities')
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
     expect(response.body).toEqual({
-      modes: ['ASK', 'PREPARE'],
-      tools: ['get_dashboard_summary', 'list_open_approvals', 'get_case', 'draft_email', 'create_meeting', 'create_booking_proposal'],
+      modes: ['ASK', 'PREPARE', 'ACT'],
+      tools: [
+        'get_dashboard_summary',
+        'list_open_approvals',
+        'get_case',
+        'draft_email',
+        'create_meeting',
+        'create_booking_proposal',
+        'create_task',
+        'create_contact',
+        'create_lead',
+        'send_email',
+      ],
     });
   });
 
@@ -302,6 +313,88 @@ describe('Copilot / Sonde (e2e)', () => {
       const proposals = await prisma.forTenantId(tenantAId).bookingProposal.findMany({ where: { invoiceId: invoice.id } });
       expect(proposals).toHaveLength(1);
       expect(proposals[0]).toMatchObject({ accountCode: '4200', description: 'Büromaterial' });
+    });
+  });
+
+  /**
+   * §26/§32 Phase 10 ("Sonde Safe Actions") — wie bei PREPARE bewusst
+   * dieselben, bereits anderswo getesteten Domain-Agent-Tools. Der
+   * zweite Test ist der konkrete, live geprüfte Beweis für §27 ("Sonde
+   * cannot bypass RBAC → Policy Engine → Approval Rules"): `send_email`
+   * ist `REQUIRE_APPROVAL`, Sonde darf es aufrufen, aber der Tool-Code
+   * (und damit der echte Mail-Connector) läuft dabei nie — es entsteht
+   * ausschließlich eine Freigabeanfrage.
+   */
+  describe('ACT mode', () => {
+    let actConversationId: string;
+
+    beforeAll(async () => {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/copilot/conversations')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ title: 'Act-Test' })
+        .expect(201);
+      actConversationId = response.body.id;
+    });
+
+    it('create_task really and immediately creates a real Task via Sonde (AUTONOMOUS, no approval needed)', async () => {
+      llm.seedResponse({
+        toolCalls: [
+          {
+            toolCallId: randomUUID(),
+            toolName: 'create_task',
+            input: { title: 'Rückruf Müller GmbH', description: 'Angebot nachfassen' },
+          },
+        ],
+        stopReason: 'tool_use',
+      });
+      llm.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'Ich habe die Aufgabe angelegt.' });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${actConversationId}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Leg eine Aufgabe an: Rückruf Müller GmbH, Angebot nachfassen.' })
+        .expect(201);
+      expect(response.body.content).toBe('Ich habe die Aufgabe angelegt.');
+
+      const tasks = await prisma.forTenantId(tenantAId).task.findMany({ where: { title: 'Rückruf Müller GmbH' } });
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0]).toMatchObject({ description: 'Angebot nachfassen', status: 'OPEN' });
+    });
+
+    it('send_email never sends directly (REQUIRE_APPROVAL) — Sonde creates a FOLLOW_UP approval instead, the mail connector never runs', async () => {
+      const draft = await prisma.forTenantId(tenantAId).emailMessage.create({
+        data: {
+          tenantId: tenantAId,
+          direction: 'OUTBOUND',
+          fromAddress: 'noreply@musterwerk.example',
+          toAddresses: ['kunde@example.com'],
+          subject: 'Ihre Anfrage',
+          bodyPreview: 'Vielen Dank für Ihre Anfrage.',
+        },
+      });
+
+      llm.seedResponse({
+        toolCalls: [{ toolCallId: randomUUID(), toolName: 'send_email', input: { draftEmailId: draft.id } }],
+        stopReason: 'tool_use',
+      });
+      llm.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'Der Versand wartet jetzt auf Ihre Freigabe.' });
+
+      const response = await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${actConversationId}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Versende den Entwurf jetzt.' })
+        .expect(201);
+      expect(response.body.content).toBe('Der Versand wartet jetzt auf Ihre Freigabe.');
+
+      const stillUnsent = await prisma.forTenantId(tenantAId).emailMessage.findUniqueOrThrow({ where: { id: draft.id } });
+      expect(stillUnsent.sentAt).toBeNull();
+
+      const approvals = await prisma
+        .forTenantId(tenantAId)
+        .approval.findMany({ where: { policyAction: 'send_email', entityType: 'FOLLOW_UP' } });
+      expect(approvals).toHaveLength(1);
+      expect(approvals[0]).toMatchObject({ status: 'PENDING' });
     });
   });
 });
