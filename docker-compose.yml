@@ -68,6 +68,7 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 orbit_minio_admin orbit_minio_admin_secret_change_me &&
       mc mb -p local/orbit-documents &&
+      mc anonymous set download local/orbit-documents/public &&
       exit 0
       "
 
@@ -96,6 +97,11 @@ services:
       DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
       REDIS_URL: "redis://redis:6379"
       S3_ENDPOINT: "http://minio:9000"
+      # Browser-reachable: presigned URLs the api hands to the frontend
+      # (document uploads, tenant logo uploads/public reads) must point
+      # somewhere the host's browser can resolve — "minio" only resolves
+      # inside this compose network. See packages/config/src/env.ts.
+      S3_PUBLIC_ENDPOINT: "http://localhost:9000"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - "3001:3001"

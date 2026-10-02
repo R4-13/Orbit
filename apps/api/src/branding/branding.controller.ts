@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { BrandingService } from './branding.service';
+import { RequestLogoUploadUrlDto } from './dto/request-logo-upload-url.dto';
 import { UpdateTenantBrandingDto } from './dto/update-tenant-branding.dto';
 
 /**
@@ -45,5 +46,18 @@ export class BrandingController {
   @HttpCode(204)
   async resetBranding(@CurrentUser() user: AuthenticatedUser) {
     await this.branding.resetBranding(user.tenantId, user.id);
+  }
+
+  /**
+   * Returns a presigned upload URL, not the uploaded result — the caller
+   * PUTs the file directly to it, then saves the returned `publicUrl` via
+   * the normal `PUT /tenant/branding` call (same two-step flow as
+   * DocumentsModule's own upload endpoint).
+   */
+  @Post('logo-upload-url')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.TENANT_BRANDING_CONFIGURE)
+  requestLogoUploadUrl(@CurrentUser() user: AuthenticatedUser, @Body() dto: RequestLogoUploadUrlDto) {
+    return this.branding.createLogoUploadUrl(user.tenantId, dto);
   }
 }

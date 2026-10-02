@@ -183,15 +183,24 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     verifiziert (echte Sortierung per Browser-JS geprüft, nicht nur
     optisch), 8 neue Unit-Tests. Details: `docs/IMPLEMENTATION_STATUS.md`,
     `docs/ASSUMPTIONS.md` #304-309.
-13. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
-    zusätzlich angefragt: Logo-Datei-Upload (presigned URL, mittlerer
-    Aufwand), echte Diagramme statt Zahlen-Kacheln (z. B. Recharts,
-    mittlerer Aufwand pro Chart). Alternativ UI-5/UI-6/UI-7/UI-8 oder eine
-    der sechs kleineren offenen Backend-Lücken.
+13. ✅ **UI/UX: Logo-Datei-Upload.** Erledigt — echter Datei-Upload (PNG/
+    JPEG/WebP, presigned URL, anonym lesbarer `public/`-Bucket-Präfix)
+    statt nur einer Text-URL. Dabei einen echten, vorbestehenden
+    Infrastruktur-Bug behoben (`S3_PUBLIC_ENDPOINT`), der auch die
+    bestehenden Dokumenten-Uploads betraf — Nebeneffekt: die volle
+    Playwright-Suite läuft jetzt 12/12 statt 9/10 (der alte `ENOTFOUND
+    minio`-Fehlschlag ist tatsächlich behoben, nicht nur umgangen). Live
+    auf drei Ebenen verifiziert (Jest-E2E, Browser-Konsole, Playwright
+    `setInputFiles()`). Details: `docs/IMPLEMENTATION_STATUS.md`,
+    `docs/ASSUMPTIONS.md` #310-314.
+14. **Nächster Schritt** (offen, nach eigener Priorisierung) — vom Nutzer
+    zusätzlich angefragt: echte Diagramme statt Zahlen-Kacheln (z. B.
+    Recharts, mittlerer Aufwand pro Chart). Alternativ UI-5/UI-6/UI-7/UI-8
+    oder eine der sechs kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
-Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): volle
-Datei-Upload-Logo-Pipeline mit SVG-Sanitization, automatische Kontrast-Validierung,
-visuelle Regressionstests, DELEGATE-Modus, Action-Card-UI mit Bestätigen-Button,
-`prepare_follow_up`, `message.delta`-Token-Streaming, Model-Profile-Registry,
-Usage-Metering, separate Plattform-Admin-Ansicht.
+Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-
+Unterstützung (Sanitization-Pipeline — Raster-Upload ist erledigt, siehe Punkt 13),
+automatische Kontrast-Validierung, visuelle Regressionstests, DELEGATE-Modus,
+Action-Card-UI mit Bestätigen-Button, `prepare_follow_up`, `message.delta`-Token-
+Streaming, Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.

@@ -102,3 +102,45 @@ export function useResetTenantBranding() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tenant-branding'] }),
   });
 }
+
+/** Mirrors ALLOWED_LOGO_CONTENT_TYPES in apps/api/src/branding/dto/request-logo-upload-url.dto.ts — kept in sync by hand, not a shared import (no existing packages/shared bridge for API DTO constants to the frontend). */
+export const ALLOWED_LOGO_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const MAX_LOGO_FILE_SIZE_BYTES = 2 * 1024 * 1024;
+
+export function useRequestLogoUploadUrl() {
+  return useMutation({
+    mutationFn: (input: { fileName: string; contentType: string }) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>('/v1/tenant/branding/logo-upload-url', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+  });
+}
+
+/**
+ * Client-side validation + the two-step upload (request a presigned URL,
+ * then PUT the bytes directly to object storage — the file never transits
+ * our own API, same as DocumentsModule's uploads) — pulled out of the
+ * branding page component so it's testable on its own and the page only
+ * has to wire it to local state.
+ */
+export async function uploadLogoFile(
+  file: File,
+  requestUploadUrl: (input: { fileName: string; contentType: string }) => Promise<{ uploadUrl: string; publicUrl: string }>,
+): Promise<string> {
+  if (!(ALLOWED_LOGO_CONTENT_TYPES as readonly string[]).includes(file.type)) {
+    throw new Error(`Nicht unterstütztes Dateiformat „${file.type || 'unbekannt'}“ — erlaubt sind PNG, JPEG oder WebP.`);
+  }
+  if (file.size > MAX_LOGO_FILE_SIZE_BYTES) {
+    throw new Error(`Datei zu groß (${(file.size / 1024 / 1024).toFixed(1)} MB) — maximal 2 MB.`);
+  }
+
+  const { uploadUrl, publicUrl } = await requestUploadUrl({ fileName: file.name, contentType: file.type });
+
+  const response = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+  if (!response.ok) {
+    throw new Error('Der Upload zum Objektspeicher ist fehlgeschlagen.');
+  }
+
+  return publicUrl;
+}

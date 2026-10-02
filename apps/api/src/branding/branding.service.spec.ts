@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { BrandingService } from './branding.service';
 
 describe('BrandingService', () => {
@@ -8,6 +9,7 @@ describe('BrandingService', () => {
   let scoped: { tenantBranding: { findUnique: jest.Mock; upsert: jest.Mock; delete: jest.Mock } };
   let prisma: { forTenantId: jest.Mock };
   let audit: { record: jest.Mock };
+  let storage: { buildPublicStorageKey: jest.Mock; getPublicUploadUrl: jest.Mock; getPublicUrl: jest.Mock };
 
   beforeEach(async () => {
     scoped = {
@@ -15,9 +17,19 @@ describe('BrandingService', () => {
     };
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    storage = {
+      buildPublicStorageKey: jest.fn().mockReturnValue('public/tenants/tenant_1/branding/abc-logo.png'),
+      getPublicUploadUrl: jest.fn().mockResolvedValue('https://minio.example/presigned-put'),
+      getPublicUrl: jest.fn().mockReturnValue('https://minio.example/public/tenants/tenant_1/branding/abc-logo.png'),
+    };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [BrandingService, { provide: PrismaService, useValue: prisma }, { provide: AuditService, useValue: audit }],
+      providers: [
+        BrandingService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: AuditService, useValue: audit },
+        { provide: StorageService, useValue: storage },
+      ],
     }).compile();
 
     service = moduleRef.get(BrandingService);
@@ -53,6 +65,20 @@ describe('BrandingService', () => {
       );
       expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TENANT_BRANDING_UPDATED' }));
       expect(result.companyDisplayName).toBe('ACME GmbH');
+    });
+  });
+
+  describe('createLogoUploadUrl', () => {
+    it('builds a public storage key and returns both the presigned upload URL and the permanent public URL', async () => {
+      const result = await service.createLogoUploadUrl('tenant_1', { fileName: 'logo.png', contentType: 'image/png' });
+
+      expect(storage.buildPublicStorageKey).toHaveBeenCalledWith('tenant_1', 'branding', 'logo.png');
+      expect(storage.getPublicUploadUrl).toHaveBeenCalledWith('public/tenants/tenant_1/branding/abc-logo.png', 'image/png');
+      expect(storage.getPublicUrl).toHaveBeenCalledWith('public/tenants/tenant_1/branding/abc-logo.png');
+      expect(result).toEqual({
+        uploadUrl: 'https://minio.example/presigned-put',
+        publicUrl: 'https://minio.example/public/tenants/tenant_1/branding/abc-logo.png',
+      });
     });
   });
 

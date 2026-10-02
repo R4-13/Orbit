@@ -116,4 +116,55 @@ describe('Tenant branding (e2e)', () => {
   it('rejects PUT without TENANT_BRANDING_CONFIGURE-carrying auth', async () => {
     await request(app.getHttpServer()).put('/api/v1/tenant/branding').send({ companyDisplayName: 'x' }).expect(401);
   });
+
+  /**
+   * A 1x1 transparent PNG — the smallest valid PNG byte sequence, real
+   * enough for MinIO to accept and store like any other image.
+   */
+  const ONE_PIXEL_PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
+
+  describe('logo upload (presigned URL -> real public read)', () => {
+    it('uploads a real PNG via the presigned URL, then the returned publicUrl is readable unauthenticated', async () => {
+      const uploadUrlResponse = await request(app.getHttpServer())
+        .post('/api/v1/tenant/branding/logo-upload-url')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ fileName: 'logo.png', contentType: 'image/png' })
+        .expect(201);
+
+      const { uploadUrl, publicUrl } = uploadUrlResponse.body as { uploadUrl: string; publicUrl: string };
+      expect(publicUrl).toContain('/public/tenants/');
+
+      const putResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/png' },
+        body: ONE_PIXEL_PNG,
+      });
+      expect(putResponse.ok).toBe(true);
+
+      // No Authorization header — this is the whole point: a tenant logo
+      // must be loadable in a plain <img> tag by anyone with the URL.
+      const getResponse = await fetch(publicUrl);
+      expect(getResponse.status).toBe(200);
+      const bytes = Buffer.from(await getResponse.arrayBuffer());
+      expect(bytes.equals(ONE_PIXEL_PNG)).toBe(true);
+    });
+
+    it('rejects a disallowed content type (e.g. SVG) with 400 before any upload URL is issued', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/tenant/branding/logo-upload-url')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ fileName: 'logo.svg', contentType: 'image/svg+xml' })
+        .expect(400);
+    });
+
+    it('rejects the request without TENANT_BRANDING_CONFIGURE-carrying auth', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/tenant/branding/logo-upload-url')
+        .send({ fileName: 'logo.png', contentType: 'image/png' })
+        .expect(401);
+    });
+  });
 });

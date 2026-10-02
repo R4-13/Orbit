@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import {
+  ALLOWED_LOGO_CONTENT_TYPES,
+  uploadLogoFile,
+  useRequestLogoUploadUrl,
   useResetTenantBranding,
   useTenantBranding,
   useUpdateTenantBranding,
@@ -27,6 +30,68 @@ type FormState = {
   logoUrl: string;
   logoMarkUrl: string;
 } & typeof DEFAULTS;
+
+function LogoField({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const requestUploadUrl = useRequestLogoUploadUrl();
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleFileSelected(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // allow re-selecting the same file after an error
+    if (!file) return;
+
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const publicUrl = await uploadLogoFile(file, (input) => requestUploadUrl.mutateAsync(input));
+      onChange(publicUrl);
+    } catch (err) {
+      setUploadError(err instanceof ApiError || err instanceof Error ? err.message : 'Der Upload ist fehlgeschlagen.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isUploading}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {isUploading ? 'Lädt hoch …' : 'Datei hochladen'}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ALLOWED_LOGO_CONTENT_TYPES.join(',')}
+          className="hidden"
+          onChange={(event) => void handleFileSelected(event)}
+        />
+      </div>
+      <p className="mt-1 text-xs text-slate-400">PNG, JPEG oder WebP, maximal 2 MB. Alternativ eine bestehende URL eintragen.</p>
+      {uploadError ? <p className="mt-1 text-xs text-red-600">{uploadError}</p> : null}
+    </div>
+  );
+}
 
 function ColorField({
   label,
@@ -144,24 +209,20 @@ export default function AdminBrandingPage() {
                   placeholder="z. B. ACME GmbH"
                 />
               </div>
-              <div>
-                <Label htmlFor="branding-logo">Logo-URL</Label>
-                <Input
-                  id="branding-logo"
-                  value={form.logoUrl}
-                  onChange={(event) => set('logoUrl', event.target.value)}
-                  placeholder="https://…/logo.svg"
-                />
-              </div>
-              <div>
-                <Label htmlFor="branding-logo-mark">Kompaktes Logo/Zeichen-URL (optional)</Label>
-                <Input
-                  id="branding-logo-mark"
-                  value={form.logoMarkUrl}
-                  onChange={(event) => set('logoMarkUrl', event.target.value)}
-                  placeholder="https://…/mark.svg"
-                />
-              </div>
+              <LogoField
+                id="branding-logo"
+                label="Logo"
+                placeholder="https://…/logo.png"
+                value={form.logoUrl}
+                onChange={(value) => set('logoUrl', value)}
+              />
+              <LogoField
+                id="branding-logo-mark"
+                label="Kompaktes Logo/Zeichen (optional)"
+                placeholder="https://…/mark.png"
+                value={form.logoMarkUrl}
+                onChange={(value) => set('logoMarkUrl', value)}
+              />
             </CardContent>
           </Card>
 
@@ -172,6 +233,10 @@ export default function AdminBrandingPage() {
             <CardContent>
               <div className="overflow-hidden rounded-md border border-slate-200">
                 <div className="flex items-center gap-2 px-3 py-2.5" style={{ backgroundColor: form.navigationBackground }}>
+                  {form.logoMarkUrl || form.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary external/object-storage URL; next/image's fixed remote-pattern allowlist doesn't fit a per-tenant, user-editable source.
+                    <img src={form.logoMarkUrl || form.logoUrl} alt="" className="h-5 w-5 rounded object-contain" />
+                  ) : null}
                   <span className="text-xs font-semibold" style={{ color: form.navigationForeground }}>
                     {form.companyDisplayName || 'Project ORBIT'}
                   </span>

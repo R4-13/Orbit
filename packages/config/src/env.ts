@@ -58,6 +58,16 @@ export const envSchema = z.object({
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: booleanEnvVar(true),
+  /**
+   * The browser-reachable S3 endpoint for presigned URLs, if different
+   * from S3_ENDPOINT. In docker-compose.yml, S3_ENDPOINT is the
+   * Docker-internal hostname ("http://minio:9000") that only the api/
+   * worker containers can resolve — a presigned URL built from it would
+   * be unreachable from a real browser on the host. Optional: falls back
+   * to S3_ENDPOINT everywhere else (host-based `pnpm dev`, tests), where
+   * the two are already identical. See StorageService.
+   */
+  S3_PUBLIC_ENDPOINT: z.string().optional(),
 
   /**
    * Server-side enforcement of declared upload metadata before a
