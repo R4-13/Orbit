@@ -20,6 +20,19 @@ import {
 const FUTURE_MODES = ['Delegate', 'Navigate'] as const;
 
 /**
+ * §27/§28 der Sonde-Konzept-Doku ("Proactive Suggestions"/"Global
+ * Questions") — bewusst **anklickbare Vorschlags-Chips**, keine automatisch
+ * eingeblendeten, unaufgeforderten Vorschlagskarten wie im ursprünglichen
+ * ORION-Referenz-Mockup: §27 verlangt ausdrücklich "Do not automatically
+ * interrupt users with unsolicited messages in MVP" — ein Chip sendet die
+ * Frage erst, wenn der Nutzer ihn anklickt, genau wie selbst getippter
+ * Text. Die erste Frage ist wörtlich das in §28 genannte Beispiel ("Was
+ * braucht heute meine Aufmerksamkeit?"), für das `get_dashboard_summary`/
+ * `list_open_approvals` bereits als ASK-Tools existieren.
+ */
+const QUICK_PROMPTS = ['Was braucht heute meine Aufmerksamkeit?', 'Zeige offene Freigaben'] as const;
+
+/**
  * §15/§37 der UI/UX-Spezifikation + Master-Spec §25-33 (Sonde ASK+
  * PREPARE+ACT, Phase 6-10). Verdrahtet gegen das echte /copilot/*-
  * Backend — keine simulierte Konversation mehr. Bewusst weiterhin
@@ -84,8 +97,8 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  async function handleSend() {
-    const content = draft.trim();
+  async function handleSend(overrideContent?: string) {
+    const content = (overrideContent ?? draft).trim();
     if (!content || isSending) return;
     setError(null);
 
@@ -255,8 +268,21 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
 
       {error ? <p className="px-4 pb-2 text-xs text-red-600">{error}</p> : null}
 
-      <div className="border-t border-slate-100 px-4 py-3">
-        <div className="flex items-center gap-2">
+      <div className="border-t border-slate-100 px-4 pt-3">
+        <div className="flex flex-wrap gap-1.5 pb-2">
+          {QUICK_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => void handleSend(prompt)}
+              disabled={isSending || createConversation.isPending}
+              className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 pb-3">
           <input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}

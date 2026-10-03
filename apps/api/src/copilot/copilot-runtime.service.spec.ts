@@ -86,6 +86,8 @@ describe('CopilotRuntimeService', () => {
       'get_dashboard_summary',
       'list_open_approvals',
       'get_case',
+      'list_overdue_tasks',
+      'list_failed_agent_runs',
       'draft_email',
       'create_meeting',
       'create_booking_proposal',

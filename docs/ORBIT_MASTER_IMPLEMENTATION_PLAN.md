@@ -245,14 +245,29 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     Sonde-"Vorgeschlagene Aktionen" — braucht eine neue Backend-Fähigkeit,
     die proaktiv entscheidet, was vorgeschlagen wird, nicht nur UI-Markup.
     Details: `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #332-346.
-18. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
+18. ✅ **Sonde: Vorschlags-Chips + Global-Questions-Tools.** Erledigt —
+    Scoping ergab: automatisch eingeblendete Vorschlagskarten wie im
+    Mockup widersprechen `docs/SONDE_CONCEPT.md` §27 ("Do not
+    automatically interrupt users with unsolicited messages in MVP").
+    Stattdessen umgesetzt: anklickbare Vorschlags-Chips im Composer
+    (senden erst bei Klick) + zwei neue ASK-Tools
+    (`list_overdue_tasks`/`list_failed_agent_runs`), die §28s "Global
+    Questions"-Dienste komplettieren. **Dabei ein echter NestJS-DI-
+    Zyklus-Bug gefunden** (`TOOL_REGISTRY` → `SondeTools` →
+    `AgentRunRecorderService` → `TOOL_REGISTRY`), der beim Bootstrap hing
+    statt zu werfen — 90 von 100 E2E-Tests fielen dadurch aus. Kein Code
+    committet, bis Ursache gefunden (direkter `PrismaService`-Zugriff
+    statt `AgentRunRecorderService`) und durch einen vollständigen,
+    grünen E2E-Lauf (20/20, 100/100) bestätigt war. Details:
+    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #347-350.
+19. **Nächster Schritt** (offen, nach eigener Priorisierung) — alle vom
     Nutzer in dieser Session angefragten UI/UX-Punkte sind jetzt
     abgeschlossen (Sidebar-Kontrast, sortierbare Tabellen, Logo-Upload,
-    Diagramme, Responsive-Härtung, Mockup-Gap-Analyse). Weiter mit
-    Sonde-"Vorgeschlagene Aktionen" (eigenes Scoping nötig), UI-5/UI-6/
-    UI-7/UI-8 (Modul-Konsistenz, feinere Accessibility-Prüfung einzelner
-    Seiten), PREPARE-Modus-Erweiterung (`prepare_follow_up`), oder einer
-    der übrigen fünf kleineren offenen Backend-Lücken.
+    Diagramme, Responsive-Härtung, Mockup-Gap-Analyse, Sonde-
+    Vorschlags-Chips). Weiter mit UI-5/UI-6/UI-7/UI-8 (Modul-Konsistenz,
+    feinere Accessibility-Prüfung einzelner Seiten), PREPARE-Modus-
+    Erweiterung (`prepare_follow_up`), oder einer der übrigen fünf
+    kleineren offenen Backend-Lücken.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-
