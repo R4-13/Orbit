@@ -1,7 +1,8 @@
-import { Body, Controller, Delete, Get, Param, ParseEnumPipe, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, ParseEnumPipe, Put, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { IntegrationConnectorType } from '@orbit/domain';
+import { CONNECTOR_REGISTRY, getConnectorMetadata } from '@orbit/integration-core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,6 +22,21 @@ export class IntegrationsController {
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.integrationsService.findAll(user.tenantId);
+  }
+
+  /** §4/§13 des Integration-Framework-Amendments — der statische Connector-Katalog, unabhängig vom Verbindungsstatus dieses Tenants. */
+  @Get('connectors')
+  listConnectors() {
+    return CONNECTOR_REGISTRY;
+  }
+
+  @Get('connectors/:connectorType')
+  getConnector(@Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType) {
+    const metadata = getConnectorMetadata(connectorType);
+    if (!metadata) {
+      throw new NotFoundException('Connector not found.');
+    }
+    return metadata;
   }
 
   @Put(':connectorType/credentials')

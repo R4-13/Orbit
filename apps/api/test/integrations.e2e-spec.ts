@@ -130,6 +130,33 @@ describe('Integrations / credential storage (e2e)', () => {
       .expect(404);
   });
 
+  it('GET /integrations/connectors lists the static connector catalog (all 7 known connector types)', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/integrations/connectors')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(response.body).toHaveLength(7);
+    expect(response.body.map((c: { id: string }) => c.id).sort()).toEqual(
+      ['DATEV', 'GMAIL', 'GOOGLE_CALENDAR', 'HUBSPOT', 'LEXWARE', 'MICROSOFT', 'TWILIO'].sort(),
+    );
+    const gmail = response.body.find((c: { id: string }) => c.id === 'GMAIL');
+    expect(gmail).toMatchObject({ provider: 'Google', authentication: { type: 'oauth2' } });
+  });
+
+  it('GET /integrations/connectors/:id returns a single connector, 404 for an unknown one', async () => {
+    const gmail = await request(app.getHttpServer())
+      .get('/api/v1/integrations/connectors/GMAIL')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(gmail.body).toMatchObject({ id: 'GMAIL', category: 'mail' });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/integrations/connectors/NOT_A_REAL_CONNECTOR')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400); // ParseEnumPipe rejects it before the registry lookup ever runs
+  });
+
   it('rejects an unknown connectorType with 400', async () => {
     await request(app.getHttpServer())
       .delete('/api/v1/integrations/NOT_A_REAL_CONNECTOR')

@@ -132,8 +132,8 @@ Connect/Read-Flow, nicht Umbau des bestehenden Sales-Follow-up-Pfads).
 
 | Increment | Status |
 |---|---|
-| A — Datenmodell & Credential Vault | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #351-360) |
-| B — Connector Registry | In Arbeit |
-| C — OAuth2 + Gmail-Connector | Offen |
+| A — Datenmodell & Credential Vault | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #351-363) |
+| B — Connector Registry | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #364-371) |
+| C — OAuth2 + Gmail-Connector | In Arbeit |
 | D — Neues UI | Offen |
 | E — Doku/Migration | Laufend (diese Datei) |

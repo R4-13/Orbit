@@ -15,3 +15,5 @@ export * from './telephony/types';
 export * from './telephony/mock-telephony-connector';
 export * from './ocr/types';
 export * from './ocr/mock-ocr-provider';
+export * from './registry/types';
+export * from './registry/connector-registry';
