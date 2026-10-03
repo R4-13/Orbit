@@ -183,9 +183,18 @@ enum IntegrationConnectorType {
   TWILIO
 }
 
+/// §10 des Integration-Framework-Amendments (ORBIT_MASTER_SPECIFICATION_v3_AMENDMENT_01):
+/// CONNECTING (OAuth-Flow gestartet, noch kein Callback), DEGRADED (verbunden,
+/// aber mit eingeschränkter Funktion — z. B. ein Health-Check-Fehlschlag ohne
+/// Auth-Verlust) und AUTH_REQUIRED (Token abgelaufen/widerrufen, Nutzer muss
+/// sich erneut autorisieren, ohne dass Credentials verloren gingen) ergänzen
+/// die vier ursprünglichen Werte.
 enum IntegrationStatus {
   NOT_CONFIGURED
+  CONNECTING
   CONNECTED
+  DEGRADED
+  AUTH_REQUIRED
   DISCONNECTED
   ERROR
 }
@@ -276,6 +285,7 @@ model Tenant {
   opportunities           Opportunity[]
   meetings                Meeting[]
   integrations            Integration[]
+  integrationCredentialSecrets IntegrationCredentialSecret[]
   aiProviderConnection    AIProviderConnection?
   branding                TenantBranding?
   conversations           Conversation[]
@@ -787,29 +797,66 @@ model Meeting {
 // Integrationen / Connector-Credentials (Phase 5, 9-11)
 // ============================================================================
 
-/// Ein Eintrag pro Tenant und Connector-Typ. `encryptedCredentials` ist als
-/// AES-256-GCM-verschlüsseltes Feld vorgesehen (CREDENTIAL_ENCRYPTION_KEY,
-/// siehe ASSUMPTIONS #7) — die tatsächliche Ver-/Entschlüsselungslogik ist
-/// aber noch NICHT implementiert (kein realer Connector persistiert bisher
-/// Credentials, siehe docs/SECURITY.md Abschnitt 4). Nicht vor dem ersten
-/// echten Schreiben dieses Feldes nachziehen vergessen.
+/// Ein Eintrag pro Tenant und Connector-Typ — entspricht der
+/// `IntegrationConnection` aus dem Integration-Framework-Amendment
+/// (ORBIT_MASTER_SPECIFICATION_v3_AMENDMENT_01, §6). Speichert bewusst
+/// **keine** Secrets/Tokens direkt: `credentialReference` verweist auf einen
+/// `IntegrationCredentialSecret`-Datensatz hinter der
+/// `CredentialVaultService`-Abstraktion (echtes AES-256-GCM via
+/// `CredentialEncryptionService`, siehe ASSUMPTIONS) — Connector-/Business-
+/// Code liest/schreibt Secrets nie direkt aus dieser Tabelle.
+/// `externalAccountId`/`externalAccountDisplayName` werden dynamisch aus dem
+/// jeweiligen Provider-Kontext nach erfolgreichem OAuth-Flow ermittelt (§7.2.1
+/// — niemals ein fest im Code hinterlegter Beispielwert).
 model Integration {
-  id                   String                   @id @default(uuid())
-  tenantId             String                   @map("tenant_id")
-  connectorType        IntegrationConnectorType @map("connector_type")
-  status               IntegrationStatus        @default(NOT_CONFIGURED)
-  encryptedCredentials Bytes?                   @map("encrypted_credentials")
+  id                          String                   @id @default(uuid())
+  tenantId                    String                   @map("tenant_id")
+  connectorType                IntegrationConnectorType @map("connector_type")
+  status                       IntegrationStatus        @default(NOT_CONFIGURED)
+  /// Verweist auf `IntegrationCredentialSecret.id` — niemals ein Secret selbst.
+  credentialReference           String?                  @map("credential_reference")
+  /// Dynamisch vom Provider ermittelt (z. B. die autorisierte Google-Account-ID), nie hartcodiert.
+  externalAccountId             String?                  @map("external_account_id")
+  /// Dynamisch vom Provider ermittelt (z. B. die autorisierte E-Mail-Adresse), nie hartcodiert.
+  externalAccountDisplayName    String?                  @map("external_account_display_name")
+  /// Tatsächlich gewährte Capability-Strings (z. B. ["email.read"]) — kann enger sein als vom Connector maximal unterstützt.
+  grantedCapabilities           Json?                    @map("granted_capabilities")
   /// Nicht-geheime Konfiguration (z. B. gewählte DATEV-Umgebung, Postfach-Adresse).
-  config               Json?
-  lastTestedAt         DateTime?                @map("last_tested_at")
-  lastTestStatus       String?                  @map("last_test_status")
-  createdAt            DateTime                 @default(now()) @map("created_at")
-  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  config                        Json?
+  lastTestedAt                  DateTime?                @map("last_tested_at")
+  lastTestStatus                String?                  @map("last_test_status")
+  lastSuccessAt                 DateTime?                @map("last_success_at")
+  lastErrorAt                   DateTime?                @map("last_error_at")
+  lastErrorCode                 String?                  @map("last_error_code")
+  createdAt                     DateTime                 @default(now()) @map("created_at")
+  updatedAt                     DateTime                 @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, connectorType])
   @@map("integrations")
+}
+
+/// Die physische Ablage hinter `CredentialVaultService` (MVP-Implementierung
+/// der generischen Credential-/Secret-Store-Abstraktion aus dem Integration-
+/// Framework-Amendment §6) — austauschbar gegen einen externen Secret
+/// Manager, ohne `Integration.credentialReference` oder Connector-Code zu
+/// ändern (die Referenz bliebe eine opake String-ID). `encryptedValue` nutzt
+/// dasselbe AES-256-GCM-Verfahren wie zuvor direkt auf `Integration`
+/// (`CredentialEncryptionService`, unverändert wiederverwendet).
+model IntegrationCredentialSecret {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  encryptedValue Bytes    @map("encrypted_value")
+  /// Für künftige Secret-Rotation (§6) — beginnt bei 1, erhöht sich bei jedem `updateSecret()`.
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("integration_credential_secrets")
 }
 
 /// §35-44 des Unified-Evolution-Konzepts ("LLM Provider Strategy") — BYOK-

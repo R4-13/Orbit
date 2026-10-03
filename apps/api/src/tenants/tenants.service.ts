@@ -242,8 +242,8 @@ export class TenantsService {
    * tenant's rows even if called with a forged id. Deliberately excludes
    * secrets that were never the tenant's own "data" to export in the first
    * place: password hashes, refresh token hashes, and connector
-   * credentials (Integration.encryptedCredentials, itself unused so far —
-   * see docs/SECURITY.md).
+   * credentials (Integration.credentialReference only points at a vault
+   * row — see CredentialVaultService — never exported either way).
    */
   async exportTenantData(tenantId: string, actorUserId: string): Promise<TenantDataExport> {
     const scoped = this.prisma.forTenantId(tenantId);

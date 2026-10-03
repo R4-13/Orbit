@@ -3,30 +3,31 @@ import { NotFoundError } from '@orbit/shared';
 import type { Integration, IntegrationConnectorType, Prisma } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CredentialEncryptionService } from '../security/credential-encryption.service';
+import { CredentialVaultService } from '../security/credential-vault.service';
 
-export type IntegrationSummary = Omit<Integration, 'encryptedCredentials'> & { hasCredentials: boolean };
+export type IntegrationSummary = Omit<Integration, 'credentialReference'> & { hasCredentials: boolean };
 
 function toSummary(integration: Integration): IntegrationSummary {
-  const { encryptedCredentials, ...rest } = integration;
-  return { ...rest, hasCredentials: encryptedCredentials !== null };
+  const { credentialReference, ...rest } = integration;
+  return { ...rest, hasCredentials: credentialReference !== null };
 }
 
 /**
- * §39/§52: per-tenant connector credential storage. Credentials are
- * encrypted at rest (CredentialEncryptionService, AES-256-GCM) and never
- * read back out over the API — `findAll()`/`upsertCredentials()` both
- * return only `hasCredentials: boolean`, never the plaintext or even the
- * ciphertext. Decrypting is for a real connector adapter's own internal
- * use only (none exist yet — every connector is still a mock, see
- * docs/INTEGRATIONS.md), not exposed as an endpoint.
+ * §39/§52, erweitert um das Integration-Framework-Amendment
+ * (ORBIT_MASTER_SPECIFICATION_v3_AMENDMENT_01, §6): per-tenant Connector-
+ * Verbindungsstatus (`IntegrationConnection`). Secrets selbst werden
+ * ausschließlich über `CredentialVaultService` gespeichert/gelesen —
+ * dieser Service sieht nie ein Klartext-Secret, nur die opake
+ * `credentialReference`-ID. `findAll()`/`upsertCredentials()` geben
+ * entsprechend nur `hasCredentials: boolean` zurück, nie die Referenz
+ * selbst oder gar das Secret.
  */
 @Injectable()
 export class IntegrationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly encryption: CredentialEncryptionService,
+    private readonly vault: CredentialVaultService,
   ) {}
 
   findAll(tenantId: string): Promise<IntegrationSummary[]> {
@@ -43,12 +44,17 @@ export class IntegrationsService {
     credentials: Record<string, unknown>,
     config?: Record<string, unknown>,
   ): Promise<IntegrationSummary> {
-    // Prisma's generated `Bytes` type wants a Uint8Array<ArrayBuffer>
-    // specifically; Node's Buffer is typed as Uint8Array<ArrayBufferLike>
-    // (which also admits SharedArrayBuffer), so a plain Buffer doesn't
-    // structurally match under strict lib.dom typings — copy into a fresh
-    // Uint8Array to satisfy that without an unsafe cast.
-    const encryptedCredentials = new Uint8Array(this.encryption.encrypt(JSON.stringify(credentials)));
+    const existing = await this.prisma
+      .forTenantId(tenantId)
+      .integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType } } });
+
+    let credentialReference: string;
+    if (existing?.credentialReference != null) {
+      await this.vault.updateSecret(tenantId, existing.credentialReference, { tenantId, value: credentials });
+      credentialReference = existing.credentialReference;
+    } else {
+      credentialReference = await this.vault.storeSecret({ tenantId, value: credentials });
+    }
 
     const updated = await this.prisma.forTenantId(tenantId).integration.upsert({
       where: { tenantId_connectorType: { tenantId, connectorType } },
@@ -56,12 +62,12 @@ export class IntegrationsService {
         tenantId,
         connectorType,
         status: 'CONNECTED',
-        encryptedCredentials,
+        credentialReference,
         config: config as Prisma.InputJsonValue | undefined,
       },
       update: {
         status: 'CONNECTED',
-        encryptedCredentials,
+        credentialReference,
         config: config as Prisma.InputJsonValue | undefined,
       },
     });
@@ -87,9 +93,13 @@ export class IntegrationsService {
       throw new NotFoundError('Integration not configured.', { connectorType });
     }
 
+    if (existing.credentialReference) {
+      await this.vault.deleteSecret(tenantId, existing.credentialReference);
+    }
+
     const updated = await this.prisma.forTenantId(tenantId).integration.update({
       where: { tenantId_connectorType: { tenantId, connectorType } },
-      data: { status: 'DISCONNECTED', encryptedCredentials: null },
+      data: { status: 'DISCONNECTED', credentialReference: null },
     });
 
     await this.audit.record({

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Integration, IntegrationConnectorType } from '@orbit/domain';
 import { apiFetch } from '../api-client';
 
-export type IntegrationSummary = Omit<Integration, 'encryptedCredentials'> & { hasCredentials: boolean };
+export type IntegrationSummary = Omit<Integration, 'credentialReference'> & { hasCredentials: boolean };
 
 export function useIntegrations() {
   return useQuery({
