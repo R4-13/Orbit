@@ -124,7 +124,11 @@ export default function InboxPage() {
               E-Mail senden
             </Button>
           </form>
-          {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          ) : null}
           {lastResult ? <p className="mt-3 text-sm text-emerald-700">{lastResult}</p> : null}
         </CardContent>
       </Card>

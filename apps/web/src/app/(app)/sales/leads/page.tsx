@@ -96,7 +96,11 @@ export default function LeadsPage() {
             Lead anlegen
           </Button>
         </form>
-        {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
         {!contacts || contacts.length === 0 ? (
           <p className="mt-3 text-sm text-slate-500">
             Noch kein Kontakt vorhanden — legen Sie zuerst einen unter „Kontakte“ an.

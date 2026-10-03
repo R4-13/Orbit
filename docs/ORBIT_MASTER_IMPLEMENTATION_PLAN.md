@@ -278,7 +278,13 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     Live verifiziert durch echtes Stoppen des `orbit-api`-Containers
     (frischer Tab → Fehlerkarte → Retry nach Neustart → echte Daten).
     Details: `docs/ASSUMPTIONS.md` #387-392.
-21. ✅ **Integration Setup & Connector Framework (Amendment 01, v2.0).**
+21. ✅ **UI/UX Phase UI-6 — Modul-Konsistenz.** Systematischer Audit (Seitentitel/
+    Container-Breiten/Badge-Tones/destruktive Button-Varianten) ergab keine
+    echte Lücke in diesen vier Bereichen. Ein konkreter Befund: 5 von 16
+    Seiten mit eigenem Mutations-Fehlerbanner nutzten unformatierten roten
+    Text ohne `role="alert"` statt des bereits etablierten umrandeten
+    Musters — alle 5 vereinheitlicht. Details: `docs/ASSUMPTIONS.md` #393-394.
+22. ✅ **Integration Setup & Connector Framework (Amendment 01, v2.0).**
     Vollständig abgeschlossen, alle fünf Increments (A-E) — siehe eigener
     Umsetzungsplan `docs/INTEGRATION_FRAMEWORK_PHASE1_PLAN.md`: Credential
     Vault (echtes AES-256-GCM, tenant-gescopt, RLS-isoliert), statische
