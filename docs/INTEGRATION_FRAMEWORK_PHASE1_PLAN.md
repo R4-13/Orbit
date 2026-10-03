@@ -135,5 +135,5 @@ Connect/Read-Flow, nicht Umbau des bestehenden Sales-Follow-up-Pfads).
 | A — Datenmodell & Credential Vault | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #351-363) |
 | B — Connector Registry | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #364-371) |
 | C — OAuth2 + Gmail-Connector | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #372-381) — Live-Validierung gegen echtes Google-Konto bleibt `REQUIRES_PROVIDER_CREDENTIALS` |
-| D — Neues UI | In Arbeit |
-| E — Doku/Migration | Laufend (diese Datei) |
+| D — Neues UI | ✅ Abgeschlossen (`docs/ASSUMPTIONS.md` #382-385) — live im Browser verifiziert |
+| E — Doku/Migration | ✅ Abgeschlossen (diese Datei, `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md`) |

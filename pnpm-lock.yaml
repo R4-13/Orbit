@@ -204,6 +204,9 @@ importers:
       '@orbit/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@orbit/integration-core':
+        specifier: workspace:*
+        version: link:../../packages/integration-core
       '@orbit/shared':
         specifier: workspace:*
         version: link:../../packages/shared

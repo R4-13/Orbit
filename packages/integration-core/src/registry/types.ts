@@ -70,6 +70,19 @@ export interface ConnectorMetadata {
     mode: 'guided' | 'manual';
     sondeSupported: boolean;
   };
+  /**
+   * Whether a real, callable backend connector exists today behind
+   * `POST /integrations/:id/connect` — distinct from `status: 'active'`
+   * (which only means "at least a mock implementation exists", true for
+   * all seven). Only `GMAIL` is `true` as of Increment C
+   * (`GmailConnectorService`); the frontend uses this to decide whether
+   * to render a real, clickable "Mit … verbinden" button or an honest
+   * "noch nicht verfügbar" state (§21.9's "niemals automatisch als
+   * kompatibel markieren" principle, extended to not-yet-implemented
+   * connectors — a clickable button that 400s on click would be exactly
+   * that kind of false compatibility signal).
+   */
+  liveConnectSupported: boolean;
   testConnectionSupported: boolean;
   disconnectSupported: boolean;
   syncModes: ConnectorSyncMode[];

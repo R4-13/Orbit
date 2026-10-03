@@ -29,6 +29,11 @@ describe('CONNECTOR_REGISTRY', () => {
       }
     }
   });
+
+  it('only GMAIL has liveConnectSupported: true — the only connector with a real backend service behind /connect as of Increment C', () => {
+    const live = CONNECTOR_REGISTRY.filter((c) => c.liveConnectSupported).map((c) => c.id);
+    expect(live).toEqual(['GMAIL']);
+  });
 });
 
 describe('getConnectorMetadata', () => {

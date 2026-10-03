@@ -12,9 +12,6 @@ import { UpsertIntegrationCredentialsDto } from './dto/upsert-integration-creden
 import { GmailConnectorService } from './gmail-connector.service';
 import { IntegrationsService } from './integrations.service';
 
-/** Connector types with a real, OAuth-capable connector service behind `connect`/`test`/revoke-on-disconnect — everything else still only supports the generic credentials PUT (§18: real connectors "folgen pro Connector in der jeweiligen Phase", see docs/INTEGRATIONS.md). */
-const OAUTH_CAPABLE_CONNECTORS: readonly IntegrationConnectorType[] = ['GMAIL'];
-
 @ApiTags('integrations')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -88,8 +85,9 @@ export class IntegrationsController {
     return this.integrationsService.disconnect(user.tenantId, user.id, connectorType);
   }
 
+  /** Single source of truth for "is this connector really callable today" is the registry's `liveConnectSupported` flag (currently only GMAIL) — not a second, separately-maintained list here. */
   private assertOAuthCapable(connectorType: IntegrationConnectorType, action: string): void {
-    if (!OAUTH_CAPABLE_CONNECTORS.includes(connectorType)) {
+    if (!getConnectorMetadata(connectorType)?.liveConnectSupported) {
       throw new BadRequestException(`${action} wird für "${connectorType}" noch nicht unterstützt — siehe docs/INTEGRATIONS.md.`);
     }
   }
