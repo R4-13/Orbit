@@ -31,7 +31,8 @@ Implementierungen unterschiedlich behandelt.
 | Connector | Interface | Env-Variable | Status | Phase (reale Anbindung) |
 |---|---|---|---|---|
 | Finance / FiBu (DATEV, Lexware Office) | `FinanceConnector` (`src/finance/types.ts`) | `FINANCE_CONNECTOR` (`mock` \| `datev` \| `lexware`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 7 (Finance-Workflow) |
-| Mail (Microsoft 365/Outlook, Gmail) | `MailConnector` (`src/mail/types.ts`) | `MAIL_CONNECTOR` (`mock` \| `microsoft` \| `gmail`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 9 |
+| Mail (Microsoft 365/Outlook, Gmail) — `SalesAgentTools`-Singleton-Pfad | `MailConnector` (`src/mail/types.ts`) | `MAIL_CONNECTOR` (`mock` \| `microsoft` \| `gmail`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 9 |
+| Gmail — Integration-Framework-Connector (`GmailConnectorService`, tenant-aufgelöst, OAuth2) | kein geteiltes Interface (siehe `docs/ASSUMPTIONS.md` #374) — eigener, tenant-aufgelöster Service (`apps/api/src/integrations/gmail-connector.service.ts`) | `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` | Code: IMPLEMENTED + TESTED WITH MOCK (OAuth2-Flow, Token-Refresh, Nachrichten-/Anhang-Parsing — 42 Unit-Tests, `fetch` gemockt). Live-Verbindung gegen ein echtes Google-Konto: REQUIRES PROVIDER CREDENTIALS (`GOOGLE_CLIENT_ID`/`SECRET` in `.env` noch leer) | Amendment-01-Phase-1 (siehe `docs/ORBIT_MASTER_SPECIFICATION_v3_AMENDMENT_01_INTEGRATION_FRAMEWORK.md`) |
 | Kalender (Microsoft/Outlook, Google Calendar) | `CalendarConnector` (`src/calendar/types.ts`) | `CALENDAR_CONNECTOR` (`mock` \| `microsoft` \| `google`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 9 |
 | CRM (HubSpot) | `CrmConnector` (`src/crm/types.ts`) | `CRM_CONNECTOR` (`mock` \| `hubspot`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 10 |
 | Telefonie (Twilio) | `TelephonyConnector` (`src/telephony/types.ts`) | `TELEPHONY_CONNECTOR` (`mock` \| `twilio`) | Interface + Mock: IMPLEMENTED. Real: REQUIRES PROVIDER CREDENTIALS | Phase 11 |
@@ -39,6 +40,8 @@ Implementierungen unterschiedlich behandelt.
 | OCR (Rechnungs-Texterkennung) | `OcrProvider` (`packages/integration-core/src/ocr/types.ts`) | `OCR_PROVIDER` (`mock` \| `tesseract`) | Interface + Mock: IMPLEMENTED. Real (Tesseract): NICHT BEGONNEN (Implementierungs-, kein Zugangsdaten-Blocker) | Phase 7 (Finance-Workflow, Rechnungsextraktion) |
 | Speech-to-Text | — | `STT_PROVIDER` (`mock` \| `whisper`) | NICHT BEGONNEN | Phase 11 (Telefonie/Sales-Workflow) |
 | LLM-Provider (Agent-Runtime) | `LLMProvider` | `LLM_PROVIDER` (`mock` \| `anthropic`) | NICHT BEGONNEN | Phase 6 (Agent Runtime) |
+
+**Warum zwei Gmail-Zeilen:** Der ursprüngliche `MAIL_CONNECTOR=gmail`-Pfad (prozessweiter Singleton, genutzt von `SalesAgentTools` für ausgehende Follow-up-Mails) und der neue, tenant-aufgelöste `GmailConnectorService` (Integration-Framework-Amendment, OAuth2, Enduser-"Mit Google verbinden") sind bewusst getrennte Implementierungen — Ersterer bleibt unverändert ein Mock, Letzterer ist real und bereits gegen echte Google-Endpunkte implementiert. Eine Zusammenführung (`SalesAgentTools` auf den echten Connector migrieren) ist ein bewusst zurückgestellter, separater Folgeauftrag (`docs/ASSUMPTIONS.md` #353/#374).
 
 ## Warum jeder Connector eine Mock-Implementierung *zuerst* bekommt
 

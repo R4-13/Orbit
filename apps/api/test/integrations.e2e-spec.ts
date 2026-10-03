@@ -157,6 +157,29 @@ describe('Integrations / credential storage (e2e)', () => {
       .expect(400); // ParseEnumPipe rejects it before the registry lookup ever runs
   });
 
+  it('POST /integrations/GMAIL/connect returns 503 in this environment, honestly, because GOOGLE_CLIENT_ID/SECRET are not configured (REQUIRES_PROVIDER_CREDENTIALS, §23 des Amendments)', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/integrations/GMAIL/connect')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(503);
+    expect(response.body.code).toBe('INTEGRATION_UNAVAILABLE');
+  });
+
+  it('POST /integrations/DATEV/connect rejects with 400 — DATEV has no OAuth-capable connector service yet, only the generic credentials PUT', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/integrations/DATEV/connect')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(400);
+  });
+
+  it('POST /integrations/GMAIL/test returns { ok: false } (not an error) for a tenant that never connected Gmail', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/integrations/GMAIL/test')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201); // NestJS's default success status for POST without @HttpCode — matches the rest of this controller's un-annotated POST-like mutations
+    expect(response.body).toEqual({ ok: false });
+  });
+
   it('rejects an unknown connectorType with 400', async () => {
     await request(app.getHttpServer())
       .delete('/api/v1/integrations/NOT_A_REAL_CONNECTOR')
