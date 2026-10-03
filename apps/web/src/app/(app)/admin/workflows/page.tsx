@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgentDefinition } from '@orbit/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeTone } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { formatDateTime } from '../../../../lib/format';
 import { useAgentDefinitions } from '../../../../lib/hooks/use-agent-definitions';
 import {
@@ -521,7 +521,7 @@ function CreateWorkflowForm({ agentOptions }: { agentOptions: AgentDefinition[] 
 }
 
 export default function AdminWorkflowsPage() {
-  const { data: definitions, isLoading } = useWorkflowDefinitions();
+  const { data: definitions, isLoading, isError, error: loadError, refetch } = useWorkflowDefinitions();
   const { data: agentDefinitions } = useAgentDefinitions();
   const agentOptions = (agentDefinitions ?? []).filter((a) => a.status === 'ACTIVE');
 
@@ -541,7 +541,12 @@ export default function AdminWorkflowsPage() {
 
       <CreateWorkflowForm agentOptions={agentOptions} />
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Die Workflows konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : isLoading ? (
         <p className="text-sm text-slate-400">Wird geladen …</p>
       ) : definitions && definitions.length > 0 ? (
         <div className="space-y-4">

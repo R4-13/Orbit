@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { Supplier } from '@orbit/domain';
-import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useApproveSupplier, useRejectSupplier, useSuppliers } from '../../../../lib/hooks/use-suppliers';
 import { statusLabel } from '../../../../lib/status-labels';
 
@@ -13,7 +13,7 @@ const SORT_ACCESSORS = {
 };
 
 export default function SuppliersPage() {
-  const { data: suppliers, isLoading } = useSuppliers();
+  const { data: suppliers, isLoading, isError, error: loadError, refetch } = useSuppliers();
   const { sorted, sort, requestSort } = useSortableList(suppliers, SORT_ACCESSORS);
   const approveSupplier = useApproveSupplier();
   const rejectSupplier = useRejectSupplier();
@@ -50,6 +50,13 @@ export default function SuppliersPage() {
         </p>
       ) : null}
 
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(loadError, 'Die Lieferanten konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -104,6 +111,7 @@ export default function SuppliersPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

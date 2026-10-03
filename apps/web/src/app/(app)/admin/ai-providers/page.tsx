@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { AIProviderKey } from '@orbit/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeTone } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { formatDateTime } from '../../../../lib/format';
 import {
   useAiProviderStatus,
@@ -86,7 +86,7 @@ function ByokForm({ onSaved }: { onSaved: () => void }) {
 }
 
 export default function AdminAiProvidersPage() {
-  const { data: status, isLoading } = useAiProviderStatus();
+  const { data: status, isLoading, isError, error: loadError, refetch } = useAiProviderStatus();
   const testConnection = useTestAiProviderConnection();
   const disconnect = useDisconnectAiProvider();
   const [showByokForm, setShowByokForm] = useState(false);
@@ -128,7 +128,9 @@ export default function AdminAiProvidersPage() {
           <CardTitle>KI-Modus</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading ? (
+          {isError ? (
+            <ErrorState message={errorMessage(loadError, 'Der KI-Provider-Status konnte nicht geladen werden.')} onRetry={() => void refetch()} />
+          ) : isLoading ? (
             <p className="text-sm text-slate-400">Wird geladen …</p>
           ) : (
             <>

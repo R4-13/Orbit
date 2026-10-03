@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { LeadStatus } from '@orbit/domain';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@orbit/ui';
-import { apiFetch } from '../../../../../lib/api-client';
+import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { apiFetch, errorMessage } from '../../../../../lib/api-client';
 import { formatAmount, formatDateTime } from '../../../../../lib/format';
 import { useLead } from '../../../../../lib/hooks/use-leads';
 import { statusLabel } from '../../../../../lib/status-labels';
@@ -14,7 +14,7 @@ const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'QUALIFIED', 'DISQUALIFIED', 'CONVE
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: lead, isLoading } = useLead(id);
+  const { data: lead, isLoading, isError, error, refetch } = useLead(id);
   const queryClient = useQueryClient();
   const updateStatus = useMutation({
     mutationFn: (status: LeadStatus) =>
@@ -27,6 +27,9 @@ export default function LeadDetailPage() {
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
+  }
+  if (isError) {
+    return <ErrorState message={errorMessage(error, 'Der Lead konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
   }
   if (!lead) {
     return <p className="text-sm text-slate-500">Lead nicht gefunden.</p>;

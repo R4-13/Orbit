@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { Case, CaseType } from '@orbit/domain';
-import { Badge, Card, SortableTh, useSortableList } from '@orbit/ui';
+import { Badge, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useCases } from '../../../lib/hooks/use-cases';
 import { caseTypeLabel, statusLabel } from '../../../lib/status-labels';
@@ -23,7 +24,7 @@ const SORT_ACCESSORS = {
 
 export default function CasesPage() {
   const typeFilter = useSearchParams().get('type') as CaseType | null;
-  const { data: cases, isLoading } = useCases({ type: typeFilter ?? undefined });
+  const { data: cases, isLoading, isError, error, refetch } = useCases({ type: typeFilter ?? undefined });
   const { sorted, sort, requestSort } = useSortableList(cases, SORT_ACCESSORS);
 
   return (
@@ -51,6 +52,13 @@ export default function CasesPage() {
         })}
       </div>
 
+      {isError ? (
+        <ErrorState
+          className="mt-4"
+          message={errorMessage(error, 'Die Vorgänge konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-4 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -96,6 +104,7 @@ export default function CasesPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

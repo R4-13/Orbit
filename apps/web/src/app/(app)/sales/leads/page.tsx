@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { Lead, LeadSource } from '@orbit/domain';
-import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useContacts } from '../../../../lib/hooks/use-contacts';
 import { useCreateLead, useLeads } from '../../../../lib/hooks/use-leads';
 import { statusLabel } from '../../../../lib/status-labels';
@@ -23,7 +23,7 @@ const SORT_ACCESSORS = {
 };
 
 export default function LeadsPage() {
-  const { data: leads, isLoading } = useLeads();
+  const { data: leads, isLoading, isError, error: loadError, refetch } = useLeads();
   const { sorted, sort, requestSort } = useSortableList(leads, SORT_ACCESSORS);
   const { data: contacts } = useContacts();
   const createLead = useCreateLead();
@@ -104,6 +104,12 @@ export default function LeadsPage() {
         ) : null}
       </Card>
 
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Die Leads konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -147,6 +153,7 @@ export default function LeadsPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

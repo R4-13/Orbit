@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { Opportunity } from '@orbit/domain';
-import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { formatAmount } from '../../../../lib/format';
 import { useCompanies } from '../../../../lib/hooks/use-companies';
 import { useCreateOpportunity, useOpportunities } from '../../../../lib/hooks/use-opportunities';
@@ -17,7 +17,7 @@ const SORT_ACCESSORS = {
 };
 
 export default function OpportunitiesPage() {
-  const { data: opportunities, isLoading } = useOpportunities();
+  const { data: opportunities, isLoading, isError, error: loadError, refetch } = useOpportunities();
   const { sorted, sort, requestSort } = useSortableList(opportunities, SORT_ACCESSORS);
   const { data: companies } = useCompanies();
   const createOpportunity = useCreateOpportunity();
@@ -107,6 +107,12 @@ export default function OpportunitiesPage() {
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </Card>
 
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Die Opportunities konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -155,6 +161,7 @@ export default function OpportunitiesPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

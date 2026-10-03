@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import {
   ALLOWED_LOGO_CONTENT_TYPES,
   uploadLogoFile,
@@ -119,7 +119,7 @@ function ColorField({
 }
 
 export default function AdminBrandingPage() {
-  const { data: brandingResponse, isLoading } = useTenantBranding();
+  const { data: brandingResponse, isLoading, isError, error: loadError, refetch } = useTenantBranding();
   const update = useUpdateTenantBranding();
   const reset = useResetTenantBranding();
   const [form, setForm] = useState<FormState>({ companyDisplayName: '', logoUrl: '', logoMarkUrl: '', ...DEFAULTS });
@@ -191,7 +191,13 @@ export default function AdminBrandingPage() {
         </p>
       ) : null}
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(loadError, 'Das Branding konnte nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : isLoading ? (
         <p className="mt-6 text-sm text-slate-400">Wird geladen …</p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

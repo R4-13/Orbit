@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
-import { ApiError } from '../../../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../../lib/api-client';
 import { formatAmount } from '../../../../../lib/format';
 import {
   useAddBookingProposal,
@@ -17,7 +17,7 @@ import { statusLabel } from '../../../../../lib/status-labels';
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: invoice, isLoading } = useInvoice(id);
+  const { data: invoice, isLoading, isError, error, refetch } = useInvoice(id);
   const addBookingProposal = useAddBookingProposal(id);
   const approveInvoice = useApproveInvoice(id);
   const transferInvoice = useTransferInvoice(id);
@@ -29,6 +29,9 @@ export default function InvoiceDetailPage() {
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
+  }
+  if (isError) {
+    return <ErrorState message={errorMessage(error, 'Die Rechnung konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
   }
   if (!invoice) {
     return <p className="text-sm text-slate-500">Rechnung nicht gefunden.</p>;

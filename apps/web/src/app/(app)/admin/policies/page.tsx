@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { PolicyMode } from '@orbit/shared';
-import { Badge, Card, type BadgeTone } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Card, ErrorState, type BadgeTone } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { usePolicies, useUpdatePolicyMode } from '../../../../lib/hooks/use-policies';
 
 const MODE_LABELS: Record<PolicyMode, { label: string; tone: BadgeTone }> = {
@@ -35,7 +35,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default function AdminPoliciesPage() {
-  const { data: policies, isLoading } = usePolicies();
+  const { data: policies, isLoading, isError, error: loadError, refetch } = usePolicies();
   const updateMode = useUpdatePolicyMode();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -53,6 +53,13 @@ export default function AdminPoliciesPage() {
         </p>
       ) : null}
 
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(loadError, 'Die Policy-Konfiguration konnte nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -127,6 +134,7 @@ export default function AdminPoliciesPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState, type FormEvent } from 'react';
 import type { Contact } from '@orbit/domain';
-import { Button, Card, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Button, Card, ErrorState, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useContacts, useCreateContact } from '../../../../lib/hooks/use-contacts';
 
 const SORT_ACCESSORS = {
@@ -12,7 +12,7 @@ const SORT_ACCESSORS = {
 };
 
 export default function ContactsPage() {
-  const { data: contacts, isLoading } = useContacts();
+  const { data: contacts, isLoading, isError, error: loadError, refetch } = useContacts();
   const { sorted, sort, requestSort } = useSortableList(contacts, SORT_ACCESSORS);
   const createContact = useCreateContact();
 
@@ -62,6 +62,12 @@ export default function ContactsPage() {
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </Card>
 
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Die Kontakte konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -96,6 +102,7 @@ export default function ContactsPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { RetentionCategory } from '@orbit/domain';
-import { Badge, Button, Card, Input } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, Input } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import {
   useApplyRetention,
   useRetentionPolicies,
@@ -136,7 +136,7 @@ function CategoryRow({ category, currentDays }: { category: RetentionCategory; c
 }
 
 export default function AdminRetentionPage() {
-  const { data: policies, isLoading } = useRetentionPolicies();
+  const { data: policies, isLoading, isError, error, refetch } = useRetentionPolicies();
   const policyByCategory = new Map((policies ?? []).map((p) => [p.category, p.retentionDays]));
 
   return (
@@ -148,6 +148,13 @@ export default function AdminRetentionPage() {
         Löschen selbst muss danach explizit bestätigt werden und läuft nie automatisch.
       </p>
 
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(error, 'Die Aufbewahrungsregeln konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -173,6 +180,7 @@ export default function AdminRetentionPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

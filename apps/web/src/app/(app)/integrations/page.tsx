@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConnectorMetadata } from '@orbit/integration-core';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeTone } from '@orbit/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
 import { Calendar, Mail, Phone, Plug, Receipt, Users } from 'lucide-react';
-import { ApiError } from '../../../lib/api-client';
+import { ApiError, errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import {
   useConnectors,
@@ -260,9 +260,22 @@ function ApiKeyConnectorRow({ connector, integration }: { connector: ConnectorMe
 }
 
 export default function IntegrationsPage() {
-  const { data: connectors, isLoading: connectorsLoading } = useConnectors();
-  const { data: integrations, isLoading: integrationsLoading } = useIntegrations();
+  const {
+    data: connectors,
+    isLoading: connectorsLoading,
+    isError: connectorsIsError,
+    error: connectorsError,
+    refetch: refetchConnectors,
+  } = useConnectors();
+  const {
+    data: integrations,
+    isLoading: integrationsLoading,
+    isError: integrationsIsError,
+    error: integrationsError,
+    refetch: refetchIntegrations,
+  } = useIntegrations();
   const isLoading = connectorsLoading || integrationsLoading;
+  const isError = connectorsIsError || integrationsIsError;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -275,25 +288,36 @@ export default function IntegrationsPage() {
 
       <CallbackBanner />
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Connectoren</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <p className="px-5 py-6 text-sm text-slate-400">Wird geladen …</p>
-          ) : (
-            connectors?.map((connector) => {
-              const integration = integrations?.find((i) => i.connectorType === connector.id);
-              return connector.authentication.type === 'api_key' ? (
-                <ApiKeyConnectorRow key={connector.id} connector={connector} integration={integration} />
-              ) : (
-                <OAuthConnectorRow key={connector.id} connector={connector} integration={integration} />
-              );
-            })
-          )}
-        </CardContent>
-      </Card>
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(connectorsError ?? integrationsError, 'Die Integrationen konnten nicht geladen werden.')}
+          onRetry={() => {
+            void refetchConnectors();
+            void refetchIntegrations();
+          }}
+        />
+      ) : (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Connectoren</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <p className="px-5 py-6 text-sm text-slate-400">Wird geladen …</p>
+            ) : (
+              connectors?.map((connector) => {
+                const integration = integrations?.find((i) => i.connectorType === connector.id);
+                return connector.authentication.type === 'api_key' ? (
+                  <ApiKeyConnectorRow key={connector.id} connector={connector} integration={integration} />
+                ) : (
+                  <OAuthConnectorRow key={connector.id} connector={connector} integration={integration} />
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

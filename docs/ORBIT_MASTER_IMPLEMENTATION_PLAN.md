@@ -268,6 +268,28 @@ in dieser Session bereits etablierte Vorgehen (siehe `docs/IMPLEMENTATION_STATUS
     feinere Accessibility-Prüfung einzelner Seiten), PREPARE-Modus-
     Erweiterung (`prepare_follow_up`), oder einer der übrigen fünf
     kleineren offenen Backend-Lücken.
+20. ✅ **UI/UX Phase UI-7 — Fehlerzustände.** Systematischer Audit ergab:
+    von 24 Seiten prüfte genau eine die `isError`-Query-Fehlerzustand —
+    ein echter Backend-Ausfall war für den Nutzer zuvor nicht von "keine
+    Daten vorhanden" unterscheidbar. Neue `ErrorState`-Komponente
+    (`packages/ui`) + `errorMessage()`-Helfer auf alle 24 Seiten
+    ausgerollt (Detailseiten/Listenseiten/Card-Content-Varianten/ein
+    kombinierter Dashboard-Banner, je nach bestehender Seitenstruktur).
+    Live verifiziert durch echtes Stoppen des `orbit-api`-Containers
+    (frischer Tab → Fehlerkarte → Retry nach Neustart → echte Daten).
+    Details: `docs/ASSUMPTIONS.md` #387-392.
+21. ✅ **Integration Setup & Connector Framework (Amendment 01, v2.0).**
+    Vollständig abgeschlossen, alle fünf Increments (A-E) — siehe eigener
+    Umsetzungsplan `docs/INTEGRATION_FRAMEWORK_PHASE1_PLAN.md`: Credential
+    Vault (echtes AES-256-GCM, tenant-gescopt, RLS-isoliert), statische
+    Connector-Registry (7 Connectoren, Capabilities aus echten Interfaces
+    abgeleitet), generischer `OAuth2Service` + echter `GmailConnectorService`
+    (alle Google-Endpunkte live gegen offizielle Doku verifiziert), neues
+    Enduser-UI ohne JSON-Freitextfeld (echter Gmail-OAuth-Button,
+    strukturiertes Twilio-Formular, ehrliches „noch nicht verfügbar" für
+    die vier übrigen Mock-Connectoren). Live im Browser verifiziert
+    (inkl. eines echten Docker-Image-Staleness-Fundes). Details:
+    `docs/IMPLEMENTATION_STATUS.md`, `docs/ASSUMPTIONS.md` #351-386.
 
 Bewusst zurückgestellt (zu groß/zu wenig Grenznutzen für diese Session, als offene
 Punkte in `docs/ASSUMPTIONS.md` zu dokumentieren, sobald erreicht): SVG-Logo-

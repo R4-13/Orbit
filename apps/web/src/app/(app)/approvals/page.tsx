@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Approval } from '@orbit/domain';
-import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
-import { apiFetch, ApiError } from '../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { apiFetch, ApiError, errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useApprovals } from '../../../lib/hooks/use-approvals';
 import { statusLabel } from '../../../lib/status-labels';
@@ -66,7 +66,7 @@ function resolveDecisionPath(approval: Approval, decision: 'approve' | 'reject')
 }
 
 export default function ApprovalsPage() {
-  const { data: approvals, isLoading } = useApprovals();
+  const { data: approvals, isLoading, isError, error: loadError, refetch } = useApprovals();
   const { sorted, sort, requestSort } = useSortableList(approvals, SORT_ACCESSORS);
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -102,6 +102,13 @@ export default function ApprovalsPage() {
         </p>
       ) : null}
 
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(loadError, 'Die Freigaben konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -186,6 +193,7 @@ export default function ApprovalsPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

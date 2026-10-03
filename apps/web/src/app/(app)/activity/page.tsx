@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import type { AgentType } from '@orbit/domain';
-import { Badge, Card } from '@orbit/ui';
+import { Badge, Card, ErrorState } from '@orbit/ui';
+import { errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useAgentRuns } from '../../../lib/hooks/use-agent-runs';
 import { statusLabel } from '../../../lib/status-labels';
@@ -24,7 +25,7 @@ const AGENT_TYPE_LABELS: Record<AgentType, string> = {
 
 export default function ActivityPage() {
   const agentTypeFilter = useSearchParams().get('agentType') as AgentType | null;
-  const { data: runs, isLoading } = useAgentRuns({ agentType: agentTypeFilter ?? undefined });
+  const { data: runs, isLoading, isError, error, refetch } = useAgentRuns({ agentType: agentTypeFilter ?? undefined });
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -51,6 +52,13 @@ export default function ActivityPage() {
         })}
       </div>
 
+      {isError ? (
+        <ErrorState
+          className="mt-4"
+          message={errorMessage(error, 'Die Agent-Läufe konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <div className="mt-4 space-y-3">
         {isLoading ? (
           <p className="text-sm text-slate-400">Wird geladen …</p>
@@ -94,6 +102,7 @@ export default function ActivityPage() {
           <p className="text-sm text-slate-400">Noch keine Agent-Läufe vorhanden.</p>
         )}
       </div>
+      )}
     </div>
   );
 }

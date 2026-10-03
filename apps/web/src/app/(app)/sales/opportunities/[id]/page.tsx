@@ -2,7 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import type { OpportunityStage } from '@orbit/domain';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@orbit/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { errorMessage } from '../../../../../lib/api-client';
 import { formatAmount, formatDateTime } from '../../../../../lib/format';
 import { useOpportunity, useUpdateOpportunityStage } from '../../../../../lib/hooks/use-opportunities';
 import { statusLabel } from '../../../../../lib/status-labels';
@@ -11,11 +12,16 @@ const STAGE_OPTIONS: OpportunityStage[] = ['NEW', 'QUALIFICATION', 'PROPOSAL', '
 
 export default function OpportunityDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: opportunity, isLoading } = useOpportunity(id);
+  const { data: opportunity, isLoading, isError, error, refetch } = useOpportunity(id);
   const updateStage = useUpdateOpportunityStage(id);
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
+  }
+  if (isError) {
+    return (
+      <ErrorState message={errorMessage(error, 'Die Opportunity konnte nicht geladen werden.')} onRetry={() => void refetch()} />
+    );
   }
   if (!opportunity) {
     return <p className="text-sm text-slate-500">Opportunity nicht gefunden.</p>;

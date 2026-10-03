@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { CaseStatus } from '@orbit/domain';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@orbit/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { errorMessage } from '../../../../lib/api-client';
 import { formatAmount, formatDateTime } from '../../../../lib/format';
 import { useCase, useUpdateCaseStatus } from '../../../../lib/hooks/use-cases';
 import { caseTypeLabel, statusLabel } from '../../../../lib/status-labels';
@@ -12,11 +13,14 @@ const STATUS_OPTIONS: CaseStatus[] = ['OPEN', 'IN_PROGRESS', 'WAITING_APPROVAL',
 
 export default function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: c, isLoading } = useCase(id);
+  const { data: c, isLoading, isError, error, refetch } = useCase(id);
   const updateStatus = useUpdateCaseStatus(id);
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
+  }
+  if (isError) {
+    return <ErrorState message={errorMessage(error, 'Der Vorgang konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
   }
   if (!c) {
     return <p className="text-sm text-slate-500">Vorgang nicht gefunden.</p>;

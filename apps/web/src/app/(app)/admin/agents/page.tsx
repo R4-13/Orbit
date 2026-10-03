@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import type { AgentDefinition } from '@orbit/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, type BadgeTone } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { formatDateTime } from '../../../../lib/format';
 import {
   useAgentDefinitions,
@@ -80,7 +80,7 @@ function parseCommaList(value: string): string[] {
 }
 
 function EvaluationPanel({ agentKey }: { agentKey: string }) {
-  const { data: cases, isLoading } = useEvaluationCases(agentKey);
+  const { data: cases, isLoading, isError, error: loadError } = useEvaluationCases(agentKey);
   const createCase = useCreateEvaluationCase();
   const deleteCase = useDeleteEvaluationCase();
   const runSuite = useRunEvaluationSuite();
@@ -152,7 +152,9 @@ function EvaluationPanel({ agentKey }: { agentKey: string }) {
 
       {runError ? <p className="mb-2 text-xs text-red-600">{runError}</p> : null}
 
-      {isLoading ? (
+      {isError ? (
+        <p className="text-xs text-red-600">{errorMessage(loadError, 'Die Evaluationsfälle konnten nicht geladen werden.')}</p>
+      ) : isLoading ? (
         <p className="text-xs text-slate-400">Wird geladen …</p>
       ) : cases && cases.length > 0 ? (
         <ul className="space-y-1.5">
@@ -610,7 +612,7 @@ function CreateAgentForm({ tools }: { tools: ToolCatalogEntry[] }) {
 }
 
 export default function AdminAgentsPage() {
-  const { data: definitions, isLoading } = useAgentDefinitions();
+  const { data: definitions, isLoading, isError, error: loadError, refetch } = useAgentDefinitions();
   const { data: tools } = useToolCatalog();
 
   return (
@@ -627,7 +629,12 @@ export default function AdminAgentsPage() {
 
       <CreateAgentForm tools={tools ?? []} />
 
-      {isLoading ? (
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Die Agentenkonfiguration konnte nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : isLoading ? (
         <p className="text-sm text-slate-400">Wird geladen …</p>
       ) : definitions && definitions.length > 0 ? (
         <div className="space-y-4">

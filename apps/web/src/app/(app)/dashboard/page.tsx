@@ -11,7 +11,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, SegmentedBar, TrendBarChart, WorkflowTimeline } from '@orbit/ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, DonutChart, ErrorState, SegmentedBar, TrendBarChart, WorkflowTimeline } from '@orbit/ui';
 import type { AgentRun, Meeting, Task } from '@orbit/domain';
 import { useAuth } from '../../../lib/auth-context';
 import { formatDateTime } from '../../../lib/format';
@@ -71,16 +71,53 @@ function KpiCard({
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: cases } = useCases();
-  const { data: agentRuns, isLoading: agentRunsLoading } = useAgentRuns();
-  const { data: pendingApprovals, isLoading: approvalsLoading } = useApprovals('PENDING');
-  const { data: invoices } = useInvoices();
-  const { data: leads } = useLeads();
-  const { data: contacts } = useContacts();
-  const { data: companies } = useCompanies();
-  const { data: tasks } = useTasks();
-  const { data: meetings } = useMeetings();
-  const { data: emails, isLoading: emailsLoading } = useEmailMessages();
+  const casesQuery = useCases();
+  const { data: cases } = casesQuery;
+  const { data: agentRuns, isLoading: agentRunsLoading, isError: agentRunsIsError, refetch: refetchAgentRuns } = useAgentRuns();
+  const { data: pendingApprovals, isLoading: approvalsLoading, isError: approvalsIsError, refetch: refetchApprovals } = useApprovals('PENDING');
+  const invoicesQuery = useInvoices();
+  const { data: invoices } = invoicesQuery;
+  const leadsQuery = useLeads();
+  const { data: leads } = leadsQuery;
+  const contactsQuery = useContacts();
+  const { data: contacts } = contactsQuery;
+  const companiesQuery = useCompanies();
+  const { data: companies } = companiesQuery;
+  const tasksQuery = useTasks();
+  const { data: tasks } = tasksQuery;
+  const meetingsQuery = useMeetings();
+  const { data: meetings } = meetingsQuery;
+  const { data: emails, isLoading: emailsLoading, isError: emailsIsError, refetch: refetchEmails } = useEmailMessages();
+
+  // UI-7 ("error states") — the dashboard aggregates nine independent queries into cards that
+  // already degrade gracefully per-section (missing data shows "–", not a crash); a single
+  // combined banner surfaces that *something* failed without throwing away that per-card
+  // resilience by rebuilding every section's own loading/empty branching around nine separate
+  // error states.
+  const hasLoadError =
+    agentRunsIsError ||
+    approvalsIsError ||
+    emailsIsError ||
+    casesQuery.isError ||
+    invoicesQuery.isError ||
+    leadsQuery.isError ||
+    contactsQuery.isError ||
+    companiesQuery.isError ||
+    tasksQuery.isError ||
+    meetingsQuery.isError;
+
+  function retryAll() {
+    void refetchAgentRuns();
+    void refetchApprovals();
+    void refetchEmails();
+    void casesQuery.refetch();
+    void invoicesQuery.refetch();
+    void leadsQuery.refetch();
+    void contactsQuery.refetch();
+    void companiesQuery.refetch();
+    void tasksQuery.refetch();
+    void meetingsQuery.refetch();
+  }
 
   const completedRuns = agentRuns?.filter((r) => r.status === 'COMPLETED').length ?? 0;
   const failedRuns = agentRuns?.filter((r) => r.status === 'FAILED').length ?? 0;
@@ -282,6 +319,13 @@ export default function DashboardPage() {
         </h1>
         <p className="mt-1 text-sm text-slate-500">Hier ist der aktuelle Stand Ihrer Geschäftsprozesse.</p>
       </div>
+
+      {hasLoadError ? (
+        <ErrorState
+          message="Einige Daten konnten nicht geladen werden — einzelne Kacheln zeigen daher möglicherweise unvollständige Werte."
+          onRetry={retryAll}
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard icon={CheckCircle2} label="Verarbeitete Posten" value={String(cases?.length ?? '–')} href="/cases" />

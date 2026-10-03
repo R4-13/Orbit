@@ -78,6 +78,11 @@ async function authenticatedFetch(path: string, options: RequestInit): Promise<R
   return response;
 }
 
+/** UI-7 error-state rollout — the one place that turns a caught query/mutation error into the German text shown to the user, instead of each page repeating its own `error instanceof ApiError ? ... : '...'` fallback. */
+export function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError ? error.message : fallback;
+}
+
 /** Every ordinary (non-streaming) request to the API goes through here. */
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await authenticatedFetch(path, options);

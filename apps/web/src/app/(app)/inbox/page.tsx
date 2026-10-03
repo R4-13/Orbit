@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { EmailMessage } from '@orbit/domain';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../lib/api-client';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import { useEmailMessages, useSimulateIncomingEmail } from '../../../lib/hooks/use-email-messages';
 
@@ -23,7 +23,7 @@ const SORT_ACCESSORS = {
 };
 
 export default function InboxPage() {
-  const { data: emails, isLoading } = useEmailMessages();
+  const { data: emails, isLoading, isError, error: loadError, refetch } = useEmailMessages();
   const { sorted, sort, requestSort } = useSortableList(emails, SORT_ACCESSORS);
   const simulate = useSimulateIncomingEmail();
 
@@ -129,6 +129,12 @@ export default function InboxPage() {
         </CardContent>
       </Card>
 
+      {isError ? (
+        <ErrorState
+          message={errorMessage(loadError, 'Der Posteingang konnte nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -185,6 +191,7 @@ export default function InboxPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }

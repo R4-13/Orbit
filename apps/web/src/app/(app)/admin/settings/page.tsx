@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
 import { ApiError } from '../../../../lib/api-client';
 import { formatDateTime } from '../../../../lib/format';
 import {
@@ -23,7 +23,7 @@ function downloadJson(filename: string, data: unknown) {
 }
 
 export default function AdminSettingsPage() {
-  const { data: tenant, isLoading } = useOwnTenant();
+  const { data: tenant, isLoading, isError, error: tenantError, refetch } = useOwnTenant();
   const exportData = useExportTenantData();
   const requestDeletion = useRequestTenantDeletion();
   const cancelDeletion = useCancelTenantDeletion();
@@ -78,6 +78,9 @@ export default function AdminSettingsPage() {
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
+  }
+  if (isError) {
+    return <ErrorState message={describeError(tenantError)} onRetry={() => void refetch()} />;
   }
   if (!tenant) {
     return <p className="text-sm text-slate-500">Mandant nicht gefunden.</p>;

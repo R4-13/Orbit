@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge, Button, Card, SortableTh, useSortableList } from '@orbit/ui';
-import { ApiError } from '../../../../lib/api-client';
+import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useAuth } from '../../../../lib/auth-context';
 import { formatDateTime } from '../../../../lib/format';
 import { useDeactivateUser, useUsers, type TenantUserSummary } from '../../../../lib/hooks/use-users';
@@ -22,7 +22,7 @@ const SORT_ACCESSORS = {
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
-  const { data: users, isLoading } = useUsers();
+  const { data: users, isLoading, isError, error: loadError, refetch } = useUsers();
   const { sorted, sort, requestSort } = useSortableList(users, SORT_ACCESSORS);
   const deactivate = useDeactivateUser();
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +41,13 @@ export default function AdminUsersPage() {
         </p>
       ) : null}
 
+      {isError ? (
+        <ErrorState
+          className="mt-6"
+          message={errorMessage(loadError, 'Die Nutzer konnten nicht geladen werden.')}
+          onRetry={() => void refetch()}
+        />
+      ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -111,6 +118,7 @@ export default function AdminUsersPage() {
           </tbody>
         </table>
       </Card>
+      )}
     </div>
   );
 }
