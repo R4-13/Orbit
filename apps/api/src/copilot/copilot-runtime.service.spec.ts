@@ -7,6 +7,7 @@ import { ApprovalsService } from '../approvals/approvals.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CopilotConversationService } from './copilot-conversation.service';
+import { SondeCaseContextService } from './case-context.service';
 import { CopilotRuntimeService } from './copilot-runtime.service';
 
 describe('CopilotRuntimeService', () => {
@@ -55,6 +56,7 @@ describe('CopilotRuntimeService', () => {
         { provide: PolicyEnforcementService, useValue: policy },
         { provide: AgentRunRecorderService, useValue: runs },
         { provide: ApprovalsService, useValue: approvals },
+        { provide: SondeCaseContextService, useValue: { build: jest.fn().mockResolvedValue(null) } },
       ],
     }).compile();
 
