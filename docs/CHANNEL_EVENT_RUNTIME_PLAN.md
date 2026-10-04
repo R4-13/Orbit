@@ -94,7 +94,7 @@ Umsetzungsbeginn — siehe `docs/ASSUMPTIONS.md` für die vollständige Tabelle)
 | Increment | Inhalt | Status |
 |---|---|---|
 | A | `IntakeEvent`+`ConnectorSync`-Datenmodell, `NormalizedIntakeEvent`/`PartyReference`/`AttachmentReference`-Typen, RLS, `TENANT_SCOPED_MODELS` | ✅ Abgeschlossen |
-| B | Relevance/Triage-Stufe + Konvergenz von simuliertem/echtem Pfad auf `IntakeService.handleIntakeEvent()`; Domain-Routing als Lookup-Tabelle statt if/else | Offen |
+| B | Relevance/Triage-Stufe + Konvergenz von simuliertem/echtem Pfad auf `IntakeService.handleIntakeEvent()`; Domain-Routing als Lookup-Tabelle statt if/else | ✅ Abgeschlossen |
 | C | `ChannelPollAdapter`-Interface + `GmailPollAdapter` (Cursor in `ConnectorSync`) | Offen |
 | D | Generische Sync-Queue/-Processor/-Scheduler + Concurrency-Erweiterung + Idempotenz-Verdrahtung | Offen |
 | E | Human-in-the-Loop-Pfad für `UNKNOWN_REQUIRES_REVIEW` | Offen |

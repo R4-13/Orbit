@@ -155,7 +155,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
     expect(followUpTask).toBeDefined();
   });
 
-  it('returns OTHER and creates no case for content unrelated to Finance or Sales', async () => {
+  it('returns OTHER and creates no case for content unrelated to Finance or Sales (caught by the Relevance/Triage stage as NON_ACTIONABLE, before domain classification ever runs)', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/intake/emails')
       .set('Authorization', `Bearer ${financeToken}`)
@@ -169,5 +169,30 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
 
     expect(response.body.category).toBe('OTHER');
     expect(response.body.case).toBeUndefined();
+  });
+
+  it('routes ambiguous content with no recognizable business or marketing signal to UNKNOWN_REQUIRES_REVIEW and creates a human-review Task instead of guessing a domain', async () => {
+    const runId = randomUUID();
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/intake/emails')
+      .set('Authorization', `Bearer ${financeToken}`)
+      .send({
+        fromAddress: `unklar-${runId}@ambiguous-e2e.example`,
+        toAddresses: ['info@musterwerk.example'],
+        subject: `Kurze Frage ${runId}`,
+        bodyText: 'Könnten wir das kurz telefonisch besprechen? Ich melde mich die Tage.',
+      })
+      .expect(201);
+
+    expect(response.body.category).toBe('OTHER');
+    expect(response.body.case).toBeUndefined();
+
+    const tasks = await request(app.getHttpServer())
+      .get('/api/v1/tasks?status=OPEN')
+      .set('Authorization', `Bearer ${financeToken}`)
+      .expect(200);
+    const reviewTask = (tasks.body as Array<{ title: string }>).find((task) => task.title.includes(runId));
+    expect(reviewTask).toBeDefined();
+    expect(reviewTask?.title).toContain('Prüfung erforderlich');
   });
 });

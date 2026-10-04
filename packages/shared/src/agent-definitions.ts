@@ -25,6 +25,15 @@ export interface DefaultAgentDefinition {
 
 export const DEFAULT_AGENT_DEFINITIONS: readonly DefaultAgentDefinition[] = [
   {
+    key: 'triage',
+    name: 'Triage Agent',
+    description: 'Stuft jedes eingehende Intake-Event vor jeder Domain-Klassifikation als geschäftlich relevant/irrelevant ein (Channel Event Runtime).',
+    baseType: 'COMMUNICATION',
+    systemPrompt:
+      'Du bist der Triage-Agent. Stufe das eingehende Ereignis ausschließlich mit assess_relevance ein — BUSINESS_ACTIONABLE, BUSINESS_INFORMATIONAL, NON_ACTIONABLE, PRIVATE_PERSONAL oder UNKNOWN_REQUIRES_REVIEW. Du führst selbst niemals eine Geschäftsaktion aus und entscheidest nicht, was als Nächstes passiert — das übernimmt die aufrufende Anwendungslogik anhand deiner Einstufung.',
+    allowedTools: ['assess_relevance'],
+  },
+  {
     key: 'communication-intake',
     name: 'Communication/Intake Agent',
     description: 'Klassifiziert jede eingehende Nachricht als FINANCE/SALES/OTHER (§12).',

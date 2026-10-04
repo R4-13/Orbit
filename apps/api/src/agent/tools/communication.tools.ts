@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { POLICY_ACTIONS } from '@orbit/shared';
 import type { ToolDefinition, ToolRegistry } from '@orbit/agent-core';
 
-const FINANCE_KEYWORDS = ['rechnung', 'invoice', 'zahlung', 'beleg', 'fällig'];
-const SALES_KEYWORDS = ['interesse', 'angebot', 'anfrage', 'beratung', 'demo', 'kaufen', 'preis'];
+/** Exportiert für Wiederverwendung durch triage.tools.ts (assess_relevance) — dieselben Begriffe signalisieren sowohl "geschäftlich relevant" (Triage) als auch "welche Domäne" (Klassifikation), keine zwei getrennten, potenziell auseinanderlaufenden Listen. */
+export const FINANCE_KEYWORDS = ['rechnung', 'invoice', 'zahlung', 'beleg', 'fällig'];
+export const SALES_KEYWORDS = ['interesse', 'angebot', 'anfrage', 'beratung', 'demo', 'kaufen', 'preis'];
 
 /**
  * Communication/Intake Agent tool (§12). `classify_message`'s

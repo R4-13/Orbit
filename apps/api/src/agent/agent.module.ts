@@ -21,6 +21,7 @@ import { AGENT_RUNTIME, LLM_PROVIDER, TOOL_REGISTRY } from './agent.tokens';
 import { CommunicationAgentTools } from './tools/communication.tools';
 import { FinanceAgentTools } from './tools/finance.tools';
 import { SalesAgentTools } from './tools/sales.tools';
+import { TriageAgentTools } from './tools/triage.tools';
 import { SondeTools } from '../copilot/tools/sonde.tools';
 
 /**
@@ -54,6 +55,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
     FinanceAgentTools,
     SalesAgentTools,
     CommunicationAgentTools,
+    TriageAgentTools,
     SondeTools,
     AgentRunRecorderService,
     {
@@ -84,15 +86,17 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
     },
     {
       provide: TOOL_REGISTRY,
-      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools, SondeTools],
+      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools, TriageAgentTools, SondeTools],
       useFactory: (
         finance: FinanceAgentTools,
         sales: SalesAgentTools,
         communication: CommunicationAgentTools,
+        triage: TriageAgentTools,
         sonde: SondeTools,
       ) => {
         const registry = new ToolRegistry();
         communication.register(registry);
+        triage.register(registry);
         finance.register(registry);
         sales.register(registry);
         sonde.register(registry);

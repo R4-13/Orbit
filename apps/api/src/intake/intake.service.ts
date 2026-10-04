@@ -2,7 +2,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { LLMCompletionRequest, LLMProvider, ToolCallOutcome } from '@orbit/agent-core';
 import { MockLLMProvider, wrapUntrustedContent } from '@orbit/agent-core';
-import type { Case } from '@orbit/domain';
+import type { Case, IntakeRelevance, Prisma } from '@orbit/domain';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
@@ -11,13 +11,19 @@ import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { TasksService } from '../tasks/tasks.service';
+import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 
 export interface IntakeResult {
   case?: Case;
   category: 'FINANCE' | 'SALES' | 'OTHER';
   agentRunIds: string[];
+  intakeEventId: string;
 }
+
+/** Low-confidence or ambiguous triage verdicts are forced to UNKNOWN_REQUIRES_REVIEW here — deterministic application logic, not left to the LLM/tool's own judgment (§4 of docs/CHANNEL_EVENT_RUNTIME_PLAN.md). */
+const RELEVANCE_CONFIDENCE_THRESHOLD = 0.5;
 
 /** Parses the JSON payload AgentRuntime appends as `[tool_result:toolName] {...}`. */
 function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T | undefined {
@@ -32,26 +38,34 @@ function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T 
 }
 
 /**
- * The Orchestrator + Communication/Intake Agent's entry point (§12): the
- * one place an "email arrived" event enters the system, since this MVP
- * has no real mail connector (§23/§29) to call it for us — see
- * docs/KNOWN_LIMITATIONS.md. Classifies the message, creates the Case
- * (closing the auto-Case-creation gap noted in MASTER_SPEC_GAP_ANALYSIS.md
- * §11 for this path specifically — existing direct human-driven
- * invoice/lead creation is deliberately left unchanged, see
- * docs/ASSUMPTIONS.md Phase 18), and dispatches to the Finance or Sales
- * agent turn.
+ * Channel Event Runtime (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) — the single
+ * true entry point for every inbound intake source is `handleIntakeEvent()`.
+ * `handleIncomingEmail()` (the `/inbox` "simulate incoming email" form's
+ * target, and still `IntakeController`'s public contract) is now a thin
+ * adapter that builds a `NormalizedIntakeEvent` and calls it — simulation
+ * is "just another source" into the same pipeline, not a parallel path.
+ * A real channel adapter (Increment C's `GmailPollAdapter`) converges on
+ * the exact same method.
  *
- * The *orchestration* itself (which agent runs next, in what order) is
- * still this hard-coded if/else — docs/AGENT_STUDIO_CONCEPT.md Abschnitt 3
- * explicitly defers generalizing that into a configurable
- * WorkflowDefinition to its own, later phase. What *is* wired up (Abschnitt
- * 1, "Agenten-Konfiguration"): each of the three `runAgentTurn`/`classify`
- * call sites resolves its system prompt + allowed tool set from a stored
- * `AgentDefinition` (via AgentDefinitionResolverService, key
- * "communication-intake"/"finance-intake"/"sales-intake") instead of a
- * literal string — editing an agent's prompt or tool grants at
- * /admin/agents changes what these calls actually do on the next request.
+ * Pipeline per event: persist `EmailMessage` (full source data) +
+ * `IntakeEvent` (orchestration/audit record, references only — see its
+ * schema doc comment) → Relevance/Triage (`assessRelevance()`, a dedicated
+ * `AgentRun`, BEFORE any domain classification) → only
+ * `BUSINESS_ACTIONABLE` proceeds to the existing FINANCE/SALES/OTHER
+ * `classify()` step, unchanged → `Case` creation → domain-specific agent
+ * turn via `DOMAIN_WORKFLOW_HANDLERS` (a lookup table, not nested if/else —
+ * a future domain registers one new entry, no change to this dispatch
+ * loop). `UNKNOWN_REQUIRES_REVIEW` creates a human-review `Task` instead of
+ * guessing a domain; `NON_ACTIONABLE`/`PRIVATE_PERSONAL` are logged and
+ * skipped; `BUSINESS_INFORMATIONAL` is logged with no automatic workflow.
+ *
+ * **Known, explicitly flagged scope boundary** (Increment F/G of the plan):
+ * Finance/Sales still execute via the pre-existing, proven `runAgentTurn()`
+ * path below — NOT yet via the durable `WorkflowDefinition`/`WorkflowRun`
+ * engine. Migrating onto it is Increment G, mandatory before Finance/Sales
+ * automated intake may be marked anything beyond `PARTIAL` in
+ * docs/IMPLEMENTATION_STATUS.md, regardless of whether the live Gmail path
+ * (Increment F) already works end to end.
  */
 @Injectable()
 export class IntakeService {
@@ -63,19 +77,37 @@ export class IntakeService {
     private readonly approvals: ApprovalsService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
+    private readonly tasks: TasksService,
     private readonly prisma: PrismaService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
+    const event: NormalizedIntakeEvent = {
+      tenantId,
+      channel: 'SIMULATED',
+      provider: 'simulated',
+      externalEventId: randomUUID(),
+      occurredAt: new Date(),
+      sender: { address: input.fromAddress },
+      recipients: input.toAddresses.map((address) => ({ address })),
+      subject: input.subject,
+      content: input.bodyText,
+      attachments: input.attachment ? [input.attachment] : undefined,
+    };
+    return this.handleIntakeEvent(tenantId, actorUserId, event);
+  }
+
+  async handleIntakeEvent(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<IntakeResult> {
     const inboundEmail = await this.prisma.forTenantId(tenantId).emailMessage.create({
       data: {
         tenantId,
         direction: 'INBOUND',
-        fromAddress: input.fromAddress,
-        toAddresses: input.toAddresses,
-        subject: input.subject,
-        bodyPreview: input.bodyText.slice(0, 500),
-        receivedAt: new Date(),
+        fromAddress: event.sender?.address ?? '',
+        toAddresses: (event.recipients ?? []).map((r) => r.address ?? '').filter(Boolean),
+        subject: event.subject,
+        bodyPreview: event.content?.slice(0, 500),
+        providerMessageId: event.channel === 'SIMULATED' ? null : event.externalEventId,
+        receivedAt: event.occurredAt,
       },
     });
     await this.audit.record({
@@ -84,43 +116,179 @@ export class IntakeService {
       actorType: 'AGENT',
       entityType: 'EmailMessage',
       entityId: inboundEmail.id,
-      payload: { fromAddress: input.fromAddress, subject: input.subject },
+      payload: { fromAddress: event.sender?.address, subject: event.subject },
     });
 
-    const category = await this.classify(tenantId, actorUserId, input);
-    await this.prisma.forTenantId(tenantId).emailMessage.update({
-      where: { id: inboundEmail.id },
-      data: { classification: category },
+    const intakeEvent = await this.prisma.forTenantId(tenantId).intakeEvent.create({
+      data: {
+        tenantId,
+        connectionId: event.connectionId,
+        channel: event.channel,
+        provider: event.provider,
+        externalEventId: event.externalEventId,
+        occurredAt: event.occurredAt,
+        senderRef: event.sender as Prisma.InputJsonValue | undefined,
+        recipientRefs: event.recipients as Prisma.InputJsonValue | undefined,
+        subject: event.subject,
+        emailMessageId: inboundEmail.id,
+        status: 'RECEIVED',
+      },
     });
+
+    const triage = await this.assessRelevance(tenantId, actorUserId, event);
+    const relevance = this.enforceRelevanceThreshold(triage);
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+      where: { id: intakeEvent.id },
+      data: { relevance, status: 'TRIAGED' },
+    });
+
+    if (relevance === 'NON_ACTIONABLE' || relevance === 'PRIVATE_PERSONAL') {
+      await this.prisma.forTenantId(tenantId).intakeEvent.update({
+        where: { id: intakeEvent.id },
+        data: { status: 'SKIPPED_NON_ACTIONABLE' },
+      });
+      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
+    }
+
+    if (relevance === 'UNKNOWN_REQUIRES_REVIEW') {
+      await this.tasks.create(
+        tenantId,
+        actorUserId,
+        {
+          title: `Prüfung erforderlich: ${event.subject ?? '(ohne Betreff)'}`,
+          description: `Der Triage-Agent konnte die Relevanz nicht sicher einstufen (Begründung: ${triage.reasoning}). Bitte manuell prüfen, ob dies ein geschäftlicher Vorgang ist.`,
+        },
+        'AGENT',
+        'AGENT',
+      );
+      await this.prisma.forTenantId(tenantId).intakeEvent.update({
+        where: { id: intakeEvent.id },
+        data: { status: 'NEEDS_REVIEW' },
+      });
+      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
+    }
+
+    if (relevance === 'BUSINESS_INFORMATIONAL') {
+      await this.prisma.forTenantId(tenantId).intakeEvent.update({
+        where: { id: intakeEvent.id },
+        data: { status: 'COMPLETED' },
+      });
+      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
+    }
+
+    // relevance === 'BUSINESS_ACTIONABLE' — proceed to the existing domain classification/routing, unchanged.
+    const category = await this.classify(tenantId, actorUserId, {
+      subject: event.subject ?? '',
+      bodyText: event.content ?? '',
+      hasAttachment: Boolean(event.attachments?.length),
+    });
+    await this.prisma.forTenantId(tenantId).emailMessage.update({ where: { id: inboundEmail.id }, data: { classification: category } });
+    await this.prisma
+      .forTenantId(tenantId)
+      .intakeEvent.update({ where: { id: intakeEvent.id }, data: { domainCategory: category, status: 'ROUTED' } });
 
     if (category === 'OTHER') {
-      return { category, agentRunIds: [] };
+      await this.prisma.forTenantId(tenantId).intakeEvent.update({ where: { id: intakeEvent.id }, data: { status: 'COMPLETED' } });
+      return { category, agentRunIds: [], intakeEventId: intakeEvent.id };
     }
 
     const businessCase = await this.cases.create(tenantId, actorUserId ?? '', {
       type: category,
-      title: category === 'FINANCE' ? `Rechnungseingang: ${input.subject}` : `Neue Anfrage: ${input.subject}`,
-      description: input.bodyText.slice(0, 1000),
+      title: category === 'FINANCE' ? `Rechnungseingang: ${event.subject ?? ''}` : `Neue Anfrage: ${event.subject ?? ''}`,
+      description: event.content?.slice(0, 1000),
     });
-    await this.prisma.forTenantId(tenantId).emailMessage.update({
-      where: { id: inboundEmail.id },
-      data: { caseId: businessCase.id },
-    });
+    await this.prisma.forTenantId(tenantId).emailMessage.update({ where: { id: inboundEmail.id }, data: { caseId: businessCase.id } });
+    await this.prisma
+      .forTenantId(tenantId)
+      .intakeEvent.update({ where: { id: intakeEvent.id }, data: { caseId: businessCase.id, status: 'PROCESSING' } });
 
-    const agentRunIds: string[] = [];
-    if (category === 'FINANCE' && input.attachment) {
-      agentRunIds.push(await this.runFinanceAgent(tenantId, actorUserId, businessCase, input));
-    } else if (category === 'SALES') {
-      agentRunIds.push(await this.runSalesAgent(tenantId, actorUserId, businessCase, input));
+    const handler = this.domainWorkflowHandlers[category];
+    let agentRunIds: string[] = [];
+    try {
+      const agentRunId = handler ? await handler(tenantId, actorUserId, businessCase, event) : null;
+      agentRunIds = agentRunId ? [agentRunId] : [];
+    } catch (error) {
+      await this.prisma.forTenantId(tenantId).intakeEvent.update({
+        where: { id: intakeEvent.id },
+        data: { status: 'FAILED', errorMessage: error instanceof Error ? error.message : String(error) },
+      });
+      throw error;
     }
 
-    return { case: businessCase, category, agentRunIds };
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({ where: { id: intakeEvent.id }, data: { status: 'COMPLETED' } });
+    return { case: businessCase, category, agentRunIds, intakeEventId: intakeEvent.id };
+  }
+
+  /**
+   * Relevance/Triage — runs BEFORE domain classification, its own
+   * `AgentRun` (no `caseId`, same shape as `classify()`'s own run — a
+   * `Case` may not even exist yet at this point, matches how
+   * `AgentRun.caseId` is already nullable for exactly this reason).
+   * Resolves the dedicated "triage" `AgentDefinition` — a 4th key next to
+   * communication-intake/finance-intake/sales-intake, same resolver, no
+   * special-casing needed (§5 of the user's design: a dedicated Triage
+   * agent reusing AgentRuntime/ToolRegistry/AgentDefinitionResolverService
+   * is fine).
+   */
+  private async assessRelevance(
+    tenantId: string,
+    actorUserId: string | undefined,
+    event: NormalizedIntakeEvent,
+  ): Promise<{ relevance: IntakeRelevance; confidence: number; reasoning: string }> {
+    if (this.llm instanceof MockLLMProvider) {
+      this.llm.seedResponse({
+        toolCalls: [
+          {
+            toolCallId: randomUUID(),
+            toolName: 'assess_relevance',
+            input: { subject: event.subject ?? '', content: event.content ?? '' },
+          },
+        ],
+        stopReason: 'tool_use',
+      });
+    }
+
+    const run = await this.runs.start({
+      tenantId,
+      agentType: 'COMMUNICATION',
+      triggerType: event.channel === 'SIMULATED' ? 'MANUAL' : 'EMAIL',
+      input: { subject: event.subject },
+    });
+
+    const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, 'triage');
+    const result = await runtime.runTurn(
+      { tenantId, agentRunId: run.id, actorUserId },
+      {
+        systemPrompt,
+        messages: [{ role: 'user', content: wrapUntrustedContent(`Betreff: ${event.subject ?? ''}\n\n${event.content ?? ''}`) }],
+        maxToolIterations: 2,
+      },
+    );
+
+    await this.runs.recordToolCalls(tenantId, run.id, result.toolCallOutcomes);
+    await this.runs.complete(tenantId, run.id, result);
+
+    const outcome = result.toolCallOutcomes.find((o) => o.toolName === 'assess_relevance');
+    const output = outcome?.output as { relevance?: IntakeRelevance; confidence?: number; reasoning?: string } | undefined;
+    return {
+      relevance: output?.relevance ?? 'UNKNOWN_REQUIRES_REVIEW',
+      confidence: output?.confidence ?? 0,
+      reasoning: output?.reasoning ?? 'Keine Einstufung durch den Triage-Agenten erhalten.',
+    };
+  }
+
+  /** Deterministic enforcement, independent of what the tool/LLM itself returned — §4: "thresholds and consequences of low confidence must be enforced deterministically by application/policy logic." */
+  private enforceRelevanceThreshold(triage: { relevance: IntakeRelevance; confidence: number }): IntakeRelevance {
+    if (triage.confidence < RELEVANCE_CONFIDENCE_THRESHOLD) {
+      return 'UNKNOWN_REQUIRES_REVIEW';
+    }
+    return triage.relevance;
   }
 
   private async classify(
     tenantId: string,
     actorUserId: string | undefined,
-    input: IncomingEmailDto,
+    input: { subject: string; bodyText: string; hasAttachment: boolean },
   ): Promise<'FINANCE' | 'SALES' | 'OTHER'> {
     if (this.llm instanceof MockLLMProvider) {
       // Deliberately seeds only this one response, not a trailing
@@ -138,7 +306,7 @@ export class IntakeService {
           {
             toolCallId: randomUUID(),
             toolName: 'classify_message',
-            input: { subject: input.subject, bodyText: input.bodyText, hasAttachment: Boolean(input.attachment) },
+            input: { subject: input.subject, bodyText: input.bodyText, hasAttachment: input.hasAttachment },
           },
         ],
         stopReason: 'tool_use',
@@ -174,9 +342,12 @@ export class IntakeService {
     tenantId: string,
     actorUserId: string | undefined,
     businessCase: Case,
-    input: IncomingEmailDto,
+    event: NormalizedIntakeEvent,
   ): Promise<string> {
-    const attachment = input.attachment!;
+    const attachment = event.attachments?.[0];
+    if (!attachment) {
+      throw new Error('runFinanceAgent called without an attachment — caller (domainWorkflowHandlers.FINANCE) must guard this.');
+    }
     const bytes = Buffer.from(attachment.contentBase64, 'base64');
     const checksum = createHash('sha256').update(bytes).digest('hex');
     const storageKey = this.storage.buildStorageKey(tenantId, attachment.fileName);
@@ -244,7 +415,7 @@ export class IntakeService {
       'FINANCE',
       businessCase.id,
       'finance-intake',
-      `Neue Rechnung eingegangen: ${wrapUntrustedContent(input.subject)}. Dokument-ID: ${document.id}.`,
+      `Neue Rechnung eingegangen: ${wrapUntrustedContent(event.subject ?? '')}. Dokument-ID: ${document.id}.`,
       3,
     );
   }
@@ -253,12 +424,13 @@ export class IntakeService {
     tenantId: string,
     actorUserId: string | undefined,
     businessCase: Case,
-    input: IncomingEmailDto,
+    event: NormalizedIntakeEvent,
   ): Promise<string> {
-    const domain = input.fromAddress.split('@')[1] ?? 'unbekannt.example';
+    const fromAddress = event.sender?.address ?? '';
+    const domain = fromAddress.split('@')[1] ?? 'unbekannt.example';
     const companyNameGuess = domain.split('.')[0];
     const companyName = (companyNameGuess ?? 'Unbekannt').charAt(0).toUpperCase() + (companyNameGuess ?? 'unbekannt').slice(1);
-    const localPart = input.fromAddress.split('@')[0] ?? 'kontakt';
+    const localPart = fromAddress.split('@')[0] ?? 'kontakt';
     const [firstNameGuess, lastNameGuess] = localPart.split(/[._-]/);
     const firstName = firstNameGuess ? firstNameGuess.charAt(0).toUpperCase() + firstNameGuess.slice(1) : 'Neuer';
     const lastName = lastNameGuess ? lastNameGuess.charAt(0).toUpperCase() + lastNameGuess.slice(1) : 'Kontakt';
@@ -275,7 +447,7 @@ export class IntakeService {
             {
               toolCallId: randomUUID(),
               toolName: 'create_contact',
-              input: { email: input.fromAddress, firstName, lastName, companyId: company?.id },
+              input: { email: fromAddress, firstName, lastName, companyId: company?.id },
             },
           ],
           stopReason: 'tool_use',
@@ -296,7 +468,7 @@ export class IntakeService {
                 contactId: contact.id,
                 companyId: company?.id,
                 source: 'EMAIL',
-                notes: input.bodyText.slice(0, 500),
+                notes: event.content?.slice(0, 500),
                 caseId: businessCase.id,
               },
             },
@@ -313,7 +485,7 @@ export class IntakeService {
       'SALES',
       businessCase.id,
       'sales-intake',
-      `Neue Interessenten-E-Mail: ${wrapUntrustedContent(`${input.subject}\n\n${input.bodyText}`)}`,
+      `Neue Interessenten-E-Mail: ${wrapUntrustedContent(`${event.subject ?? ''}\n\n${event.content ?? ''}`)}`,
       4,
     );
   }
@@ -371,4 +543,28 @@ export class IntakeService {
       });
     }
   }
+
+  /**
+   * Domain routing as a lookup table, not nested if/else (§8 of
+   * docs/CHANNEL_EVENT_RUNTIME_PLAN.md: "Do not overfit to the current two
+   * domains... extensible so future workflow types can be registered
+   * without rebuilding the... runtime"). A future domain adds one entry
+   * here and one private method above — `handleIntakeEvent()`'s dispatch
+   * loop itself never changes. Each handler decides internally whether it
+   * has enough to act (e.g. FINANCE needs an attachment) — the generic
+   * dispatcher doesn't encode any domain-specific precondition. A class
+   * field (not a module-level const) so the arrow functions can close
+   * over `this` and call the private `runFinanceAgent`/`runSalesAgent`
+   * methods directly, no awkward external-access workaround needed.
+   */
+  private readonly domainWorkflowHandlers: Record<
+    string,
+    (tenantId: string, actorUserId: string | undefined, businessCase: Case, event: NormalizedIntakeEvent) => Promise<string | null>
+  > = {
+    FINANCE: (tenantId, actorUserId, businessCase, event) => {
+      if (!event.attachments?.length) return Promise.resolve(null);
+      return this.runFinanceAgent(tenantId, actorUserId, businessCase, event);
+    },
+    SALES: (tenantId, actorUserId, businessCase, event) => this.runSalesAgent(tenantId, actorUserId, businessCase, event),
+  };
 }

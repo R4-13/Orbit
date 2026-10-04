@@ -4,11 +4,12 @@ import { AgentDefinitionsModule } from '../agent-definitions/agent-definitions.m
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { CasesModule } from '../cases/cases.module';
 import { StorageModule } from '../storage/storage.module';
+import { TasksModule } from '../tasks/tasks.module';
 import { IntakeController } from './intake.controller';
 import { IntakeService } from './intake.service';
 
 @Module({
-  imports: [AgentModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule],
+  imports: [AgentModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule],
   controllers: [IntakeController],
   providers: [IntakeService],
 })

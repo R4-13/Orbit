@@ -157,12 +157,18 @@ describe('Integrations / credential storage (e2e)', () => {
       .expect(400); // ParseEnumPipe rejects it before the registry lookup ever runs
   });
 
-  it('POST /integrations/GMAIL/connect returns 503 in this environment, honestly, because GOOGLE_CLIENT_ID/SECRET are not configured (REQUIRES_PROVIDER_CREDENTIALS, §23 des Amendments)', async () => {
+  it('POST /integrations/GMAIL/connect returns a real authorization URL when GOOGLE_CLIENT_ID/SECRET are configured, or an honest 503 (REQUIRES_PROVIDER_CREDENTIALS, §23 des Amendments) when they are not — never a silent fake success either way', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/integrations/GMAIL/connect')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(503);
-    expect(response.body.code).toBe('INTEGRATION_UNAVAILABLE');
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    if (process.env.GOOGLE_CLIENT_ID) {
+      expect(response.status).toBe(201);
+      expect(response.body.authorizationUrl).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+    } else {
+      expect(response.status).toBe(503);
+      expect(response.body.code).toBe('INTEGRATION_UNAVAILABLE');
+    }
   });
 
   it('POST /integrations/DATEV/connect rejects with 400 — DATEV has no OAuth-capable connector service yet, only the generic credentials PUT', async () => {
@@ -173,11 +179,35 @@ describe('Integrations / credential storage (e2e)', () => {
   });
 
   it('POST /integrations/GMAIL/test returns { ok: false } (not an error) for a tenant that never connected Gmail', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/api/v1/integrations/GMAIL/test')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(201); // NestJS's default success status for POST without @HttpCode — matches the rest of this controller's un-annotated POST-like mutations
-    expect(response.body).toEqual({ ok: false });
+    // A fresh, throwaway tenant — not the shared Musterwerk admin tenant used
+    // everywhere else in this file. Musterwerk's own Gmail connection state is
+    // no longer a safe "never connected" assumption now that a real OAuth
+    // connect has legitimately been exercised against it (live verification
+    // earlier this session, docs/ASSUMPTIONS.md Channel Event Runtime).
+    const suffix = randomUUID();
+    const { tenant: freshTenant } = await tenantsService.bootstrapTenant({
+      name: `E2E Gmail Test ${suffix}`,
+      slug: `e2e-gmail-test-${suffix}`,
+      adminEmail: `admin-${suffix}@e2e-gmail-test.example`,
+      adminPassword: 'Musterwerk#2026!',
+      adminFirstName: 'E2E',
+      adminLastName: 'Admin',
+    });
+    try {
+      const freshLogin = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email: `admin-${suffix}@e2e-gmail-test.example`, password: 'Musterwerk#2026!' })
+        .expect(200);
+      const freshToken = freshLogin.body.accessToken as string;
+
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/integrations/GMAIL/test')
+        .set('Authorization', `Bearer ${freshToken}`)
+        .expect(201); // NestJS's default success status for POST without @HttpCode — matches the rest of this controller's un-annotated POST-like mutations
+      expect(response.body).toEqual({ ok: false });
+    } finally {
+      await prisma.tenant.delete({ where: { id: freshTenant.id } }).catch(() => undefined);
+    }
   });
 
   it('rejects an unknown connectorType with 400', async () => {

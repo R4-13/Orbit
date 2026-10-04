@@ -51,6 +51,8 @@ export const POLICY_ACTIONS = {
   EMAIL_DRAFT: 'email.draft',
   /** §25-33 des Master-Dokuments ("Sonde") — deckt jeden reinen Lese-Tool-Aufruf des Copilots ab (§26 ASK-Modus). Kein Seiteneffekt, daher AUTONOMOUS-Default wie CALENDAR_READ. */
   COPILOT_READ: 'copilot.read',
+  /** Channel Event Runtime — die Relevanz-/Triage-Einstufung (BUSINESS_ACTIONABLE/.../UNKNOWN_REQUIRES_REVIEW), die JEDEM eingehenden Intake-Event vorausgeht. Reine Klassifikation ohne Seiteneffekt, daher wie EMAIL_CLASSIFY AUTONOMOUS. */
+  EMAIL_TRIAGE: 'email.triage',
 } as const;
 
 export type PolicyActionKey = (typeof POLICY_ACTIONS)[keyof typeof POLICY_ACTIONS];
@@ -85,4 +87,5 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.CALENDAR_READ]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.EMAIL_DRAFT]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.COPILOT_READ]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.EMAIL_TRIAGE]: { mode: 'AUTONOMOUS' },
 };
