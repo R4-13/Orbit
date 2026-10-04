@@ -163,10 +163,12 @@ function OAuthConnectorRow({ connector, integration }: { connector: ConnectorMet
   const status = integration?.status ?? 'NOT_CONFIGURED';
   const isConnected = integration?.hasCredentials ?? false;
 
-  async function handleConnect() {
+  const grantedSend = Array.isArray(integration?.grantedCapabilities) && (integration?.grantedCapabilities as unknown[]).includes('email.send');
+
+  async function handleConnect(send = false) {
     setError(null);
     try {
-      const { authorizationUrl } = await startConnect.mutateAsync(connector.id);
+      const { authorizationUrl } = await startConnect.mutateAsync({ connectorType: connector.id, send });
       window.location.href = authorizationUrl;
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Der Verbindungsvorgang konnte nicht gestartet werden.');
@@ -214,6 +216,11 @@ function OAuthConnectorRow({ connector, integration }: { connector: ConnectorMet
             </Button>
           ) : isConnected ? (
             <>
+              {connector.id === 'GMAIL' && !grantedSend ? (
+                <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void handleConnect(true)} title="Erlaubt ORBIT, freigegebene Nachrichten über dieses Postfach zu senden. Ohne diese Berechtigung wird nie etwas gesendet.">
+                  Sendeberechtigung erteilen
+                </Button>
+              ) : null}
               <Button variant="secondary" disabled={testConnection.isPending} onClick={handleTest}>
                 Testen
               </Button>
@@ -222,7 +229,7 @@ function OAuthConnectorRow({ connector, integration }: { connector: ConnectorMet
               </Button>
             </>
           ) : (
-            <Button disabled={startConnect.isPending} onClick={handleConnect}>
+            <Button disabled={startConnect.isPending} onClick={() => void handleConnect()}>
               Mit {connector.provider} verbinden
             </Button>
           )}

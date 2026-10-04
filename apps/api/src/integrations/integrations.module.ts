@@ -9,7 +9,7 @@ import { IntegrationsController } from './integrations.controller';
 import { IntegrationsService } from './integrations.service';
 import { OAuthStateService } from './oauth-state.service';
 import { OAuth2Service } from './oauth2.service';
-import { GmailOutboundMail, OUTBOUND_MAIL } from './outbound-mail.port';
+import { GmailOutboundMail, OUTBOUND_MAIL, SimulatedOutboundMail } from './outbound-mail.port';
 
 @Module({
   imports: [
@@ -22,7 +22,14 @@ import { GmailOutboundMail, OUTBOUND_MAIL } from './outbound-mail.port';
     }),
   ],
   controllers: [IntegrationsController, IntegrationsCallbackController],
-  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService, ConnectorStatusService, GmailOutboundMail, { provide: OUTBOUND_MAIL, useExisting: GmailOutboundMail }],
+  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService, ConnectorStatusService, GmailOutboundMail,
+    SimulatedOutboundMail,
+    {
+      provide: OUTBOUND_MAIL,
+      inject: [ORBIT_ENV, GmailOutboundMail, SimulatedOutboundMail],
+      useFactory: (env: OrbitEnv, gmail: GmailOutboundMail, simulated: SimulatedOutboundMail) => (env.OUTBOUND_MAIL_MODE === 'simulated' ? simulated : gmail),
+    },
+  ],
   // GmailConnectorService exported for GmailPollAdapter (ChannelSyncModule, Increment C) — the
   // only other consumer of this service besides IntegrationsController/-CallbackController.
   exports: [IntegrationsService, GmailConnectorService, OUTBOUND_MAIL],

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { GmailConnectorService } from './gmail-connector.service';
 import type { OutgoingMessage } from './rfc822';
@@ -30,5 +31,18 @@ export class GmailOutboundMail implements OutboundMailPort {
   async send(tenantId: string, message: OutboundMessage): Promise<OutboundMailResult> {
     const sent = await this.gmail.sendMessage(tenantId, message);
     return { ...sent, executionMode: 'LIVE' };
+  }
+}
+
+/**
+ * Mock transport (CLAUDE.md: a missing external permission is a documented blocker, never a fake "live"). Nothing leaves
+ * ORBIT; the result is labelled SIMULATED, so receipts, the orchestration view and the evidence say so. Selected with
+ * OUTBOUND_MAIL_MODE=simulated.
+ */
+@Injectable()
+export class SimulatedOutboundMail implements OutboundMailPort {
+  async send(_tenantId: string, message: OutboundMessage): Promise<OutboundMailResult> {
+    const id = randomUUID();
+    return { providerMessageId: `sim-${id}`, threadId: message.threadId ?? `sim-thread-${id}`, rfcMessageId: `<sim-${id}@orbit.invalid>`, from: 'simulation@orbit.invalid', executionMode: 'SIMULATED' };
   }
 }

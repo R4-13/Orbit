@@ -7,6 +7,7 @@ import { SIMULATED_TRIAGE_SCENARIOS, SIMULATED_TRIAGE_SCENARIO_LABELS, type Simu
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError, errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
+import { ExcludedIntakeSection } from '../../../components/excluded-intake-section';
 import { useEmailMessages, useSimulateIncomingEmail } from '../../../lib/hooks/use-email-messages';
 
 /** `EmailMessage.classification` holds the semantic triage category (registry key); the legacy FINANCE/SALES/OTHER values remain readable for older rows. */
@@ -244,6 +245,8 @@ export default function InboxPage() {
         </table>
       </Card>
       )}
+
+      <ExcludedIntakeSection />
     </div>
   );
 }

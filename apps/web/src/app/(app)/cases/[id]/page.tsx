@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { CaseStatus } from '@orbit/domain';
 import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { CaseHistory } from '../../../../components/orchestration/case-history';
+import { OrchestrationPanel } from '../../../../components/orchestration/orchestration-panel';
 import { errorMessage } from '../../../../lib/api-client';
 import { formatAmount, formatDateTime } from '../../../../lib/format';
 import { useCase, useUpdateCaseStatus } from '../../../../lib/hooks/use-cases';
@@ -15,6 +18,7 @@ export default function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: c, isLoading, isError, error, refetch } = useCase(id);
   const updateStatus = useUpdateCaseStatus(id);
+  const [tab, setTab] = useState<'orchestration' | 'overview' | 'history' | null>(null);
 
   if (isLoading) {
     return <p className="text-sm text-slate-500">Wird geladen …</p>;
@@ -27,9 +31,17 @@ export default function CaseDetailPage() {
   }
 
   const status = statusLabel(c.status);
+  // A case that runs on a process is steered by the process: its state is shown, never set by hand.
+  const orchestrated = Boolean(c.blueprintKey) || c.orchestrationStatus !== 'RECEIVED';
+  const activeTab = tab ?? (orchestrated ? 'orchestration' : 'overview');
+  const TABS = [
+    ...(orchestrated ? ([['orchestration', 'Orchestrierung']] as const) : []),
+    ['overview', 'Übersicht & Dokumente'] as const,
+    ...(orchestrated ? ([['history', 'Historie']] as const) : []),
+  ];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className={`mx-auto space-y-6 ${orchestrated ? 'max-w-7xl' : 'max-w-4xl'}`}>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -41,7 +53,7 @@ export default function CaseDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={status.tone}>{status.label}</Badge>
-          <select
+          {orchestrated ? null : <select
             className="rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             value={c.status}
             disabled={updateStatus.isPending}
@@ -52,9 +64,32 @@ export default function CaseDetailPage() {
                 {statusLabel(option).label}
               </option>
             ))}
-          </select>
+          </select>}
         </div>
       </div>
+
+      {TABS.length > 1 ? (
+        <div role="tablist" aria-label="Bereiche des Vorgangs" className="flex gap-1 border-b border-slate-200">
+          {TABS.map(([id2, label]) => (
+            <button
+              key={id2}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === id2}
+              onClick={() => setTab(id2)}
+              className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${activeTab === id2 ? 'border-brand text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {activeTab === 'orchestration' ? <OrchestrationPanel caseId={id} /> : null}
+      {activeTab === 'history' ? <CaseHistory caseId={id} /> : null}
+
+      {activeTab === 'overview' ? (
+        <>
 
       {c.emailMessages.length > 0 ? (
         <Card>
@@ -188,6 +223,8 @@ export default function CaseDetailPage() {
             })}
           </CardContent>
         </Card>
+      ) : null}
+        </>
       ) : null}
     </div>
   );

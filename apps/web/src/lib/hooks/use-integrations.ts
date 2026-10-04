@@ -25,8 +25,11 @@ export function useConnectors() {
 /** Startet den OAuth-Flow (aktuell nur GMAIL, siehe `liveConnectSupported`) und liefert die Google-Autorisierungs-URL, zu der die aufrufende Seite weiterleiten muss. */
 export function useStartConnect() {
   return useMutation({
-    mutationFn: (connectorType: IntegrationConnectorType) =>
-      apiFetch<{ authorizationUrl: string }>(`/v1/integrations/${connectorType}/connect`, { method: 'POST' }),
+    // `send: true` additionally asks for the Gmail send permission (an explicit, separate consent).
+    mutationFn: (input: IntegrationConnectorType | { connectorType: IntegrationConnectorType; send?: boolean }) => {
+      const { connectorType, send } = typeof input === 'string' ? { connectorType: input, send: false } : input;
+      return apiFetch<{ authorizationUrl: string }>(`/v1/integrations/${connectorType}/connect${send ? '?send=true' : ''}`, { method: 'POST' });
+    },
   });
 }
 

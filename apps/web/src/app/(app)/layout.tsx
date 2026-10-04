@@ -76,6 +76,7 @@ const NAV: NavEntry[] = [
     children: [
       { href: '/admin/agents', label: 'Agenten-Konfiguration', permission: PERMISSIONS.AGENT_MANAGE },
       { href: '/admin/workflows', label: 'Orchestrierung', permission: PERMISSIONS.AGENT_MANAGE },
+      { href: '/admin/processes', label: 'Prozessdefinitionen', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/policies', label: 'Agent-Autonomie', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/retention', label: 'Datenaufbewahrung', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/ai-providers', label: 'KI-Provider', permission: PERMISSIONS.INTEGRATION_CONFIGURE },

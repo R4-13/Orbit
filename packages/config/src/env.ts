@@ -102,6 +102,10 @@ export const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-5'),
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4o'),
+  /** Amendment 02 §19.2: show the "Kein Geschäftsprozess ausgelöst" view by default. Unset = visible outside production, hidden (explicit filter) in production. */
+  /** Outbound mail transport of the process engine. `simulated` records sends as SIMULATED receipts and sends nothing — for tests and demos without a mailbox that granted the send permission. */
+  OUTBOUND_MAIL_MODE: z.enum(['gmail', 'simulated']).default('gmail'),
+  UI_SHOW_EXCLUDED_INTAKE: z.enum(['true', 'false']).optional(),
   /** Optional. Reasoning models (e.g. gpt-6-luna) only accept function tools on Chat Completions with 'none'. Unset = send nothing. */
   OPENAI_REASONING_EFFORT: z.enum(['none', 'minimal', 'low', 'medium', 'high']).optional(),
 

@@ -1,6 +1,8 @@
-import { Body, Controller, DefaultValuePipe, Get, HttpCode, HttpStatus, Param, ParseEnumPipe, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, DefaultValuePipe, Get, HttpCode, HttpStatus, Param, ParseEnumPipe, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { OrbitEnv } from '@orbit/config';
 import { PERMISSIONS } from '@orbit/shared';
+import { ORBIT_ENV } from '../config/env.token';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,7 +20,18 @@ type View = (typeof ViewEnum)[keyof typeof ViewEnum];
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'intake-decisions' })
 export class IntakeDecisionsController {
-  constructor(private readonly decisions: IntakeDecisionsService) {}
+  constructor(
+    private readonly decisions: IntakeDecisionsService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+  ) {}
+
+  /** Whether the "Kein Geschäftsprozess ausgelöst" view is shown by default (test operation) or only as an explicit filter (production). */
+  @Get('visibility')
+  @RequirePermissions(PERMISSIONS.CASE_READ)
+  visibility(): { showExcludedByDefault: boolean } {
+    const configured = this.env.UI_SHOW_EXCLUDED_INTAKE;
+    return { showExcludedByDefault: configured ? configured === 'true' : process.env.NODE_ENV !== 'production' };
+  }
 
   @Get()
   @RequirePermissions(PERMISSIONS.CASE_READ)

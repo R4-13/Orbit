@@ -1,5 +1,6 @@
 'use client';
 
+import { CASE_ORCHESTRATION_LABELS } from '@orbit/shared';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -259,7 +260,8 @@ export default function DashboardPage() {
       email,
       linkedCase,
       agentLabel: agentRun ? (AGENT_TYPE_LABELS[agentRun.agentType] ?? agentRun.agentType) : '–',
-      needsHumanAction: linkedCase ? openTaskCaseIds.has(linkedCase.id) : false,
+      // A case on a process needs a person when the process says so (approval, review) — not only when a task is open.
+      needsHumanAction: linkedCase ? openTaskCaseIds.has(linkedCase.id) || ['WAITING_FOR_APPROVAL', 'MANUAL_REVIEW'].includes(linkedCase.orchestrationStatus) : false,
     };
   });
 
@@ -374,14 +376,15 @@ export default function DashboardPage() {
                     <th className="px-4 py-2.5 font-medium">Klassifikation</th>
                     <th className="px-4 py-2.5 font-medium">Fall</th>
                     <th className="px-4 py-2.5 font-medium">Workflow-Status</th>
-                    <th className="px-4 py-2.5 font-medium">Zugewiesener Agent</th>
+                    <th className="px-4 py-2.5 font-medium">Orchestrierung</th>
                     <th className="px-4 py-2.5 font-medium">Menschl. Aktion</th>
                     <th className="px-4 py-2.5 font-medium">Zeitpunkt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {inboxTableRows.map(({ email, linkedCase, agentLabel, needsHumanAction }) => {
+                  {inboxTableRows.map(({ email, linkedCase, needsHumanAction }) => {
                     const caseStatus = linkedCase ? statusLabel(linkedCase.status) : null;
+                    const onProcess = linkedCase ? Boolean(linkedCase.blueprintKey) || linkedCase.orchestrationStatus !== 'RECEIVED' : false;
                     return (
                       <tr key={email.id} className="hover:bg-slate-50">
                         <td className="px-4 py-2.5 text-slate-700">{email.fromAddress}</td>
@@ -399,9 +402,23 @@ export default function DashboardPage() {
                           )}
                         </td>
                         <td className="px-4 py-2.5">
-                          {caseStatus ? <Badge tone={caseStatus.tone}>{caseStatus.label}</Badge> : <span className="text-slate-300">–</span>}
+                          {linkedCase && onProcess ? (
+                            <Badge tone={caseStatus?.tone}>{CASE_ORCHESTRATION_LABELS[linkedCase.orchestrationStatus] ?? caseStatus?.label}</Badge>
+                          ) : caseStatus ? (
+                            <Badge tone={caseStatus.tone}>{caseStatus.label}</Badge>
+                          ) : (
+                            <span className="text-slate-300">–</span>
+                          )}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-2.5 text-slate-500">{agentLabel}</td>
+                        <td className="whitespace-nowrap px-4 py-2.5">
+                          {linkedCase ? (
+                            <Link href={`/cases/${linkedCase.id}`} className="text-brand hover:underline" aria-label={`Orchestrierung des Vorgangs ${linkedCase.title} ansehen`}>
+                              {onProcess ? 'Orchestrierung ansehen' : 'Vorgang ansehen'}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-300">–</span>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">
                           <Badge tone={needsHumanAction ? 'warning' : 'neutral'}>{needsHumanAction ? 'Ja' : 'Nein'}</Badge>
                         </td>

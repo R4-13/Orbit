@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { OrbitEnv } from '@orbit/config';
 import type { ToolDefinition, ToolRegistry } from '@orbit/agent-core';
 import {
   CapabilityDefinitionSchema,
@@ -9,6 +10,7 @@ import {
   type PolicyMode,
 } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
+import { ORBIT_ENV } from '../config/env.token';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -31,6 +33,7 @@ export class CapabilityRegistryService {
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
     private readonly policy: PolicyEnforcementService,
     private readonly prisma: PrismaService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
 
   /** Registers an additional capability. Fails fast on a bad shape, a duplicate key or an unknown policy action. */
@@ -104,6 +107,8 @@ export class CapabilityRegistryService {
       if (missing.length === cap.toolBindings.length) reasons.push(`Die Umsetzung (${missing.join(', ')}) ist nicht installiert.`);
 
       for (const requirement of cap.connectorRequirements ?? []) {
+        // Simulated outbound mail needs no mailbox permission — nothing is sent; every receipt is labelled SIMULATED.
+        if (this.env.OUTBOUND_MAIL_MODE === 'simulated' && requirement.connectorType === 'GMAIL' && requirement.capability === 'email.send') continue;
         const integration = integrations.find((i) => i.connectorType === requirement.connectorType);
         const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
         if (!integration || integration.status !== 'CONNECTED') reasons.push(`Keine aktive ${requirement.connectorType}-Verbindung.`);
