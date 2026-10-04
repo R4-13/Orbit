@@ -32,6 +32,7 @@ export class SondeCaseContextService {
 
     const lines: string[] = [
       'Aktueller Vorgangs-Kontext (nur lesend, serverseitig für diesen Nutzer geprüft):',
+      `- Vorgangs-ID: ${context.caseId} (für das Tool get_case; eine andere ID ist nicht nötig)`,
       `- Status: ${CASE_ORCHESTRATION_LABELS[graph.overallStatus] ?? graph.overallStatus}${graph.blueprint ? `; Prozess: ${graph.blueprint.title} (${graph.blueprint.key} ${graph.blueprint.version})` : '; Ad-hoc-Plan'}; Planrevision ${graph.planRevision ?? '–'}`,
     ];
     if (graph.attentionReasons.length > 0) lines.push(`- Braucht Aufmerksamkeit: ${graph.attentionReasons.join(' | ')}`);
@@ -54,6 +55,7 @@ export class SondeCaseContextService {
     }
     const caseActions = graph.availableActions.map((a) => a.title);
     if (caseActions.length > 0) lines.push(`- Vorgangsweite Aktionen in der Oberfläche: ${caseActions.join(', ')}.`);
+    lines.push('Beantworte Fragen zu diesem Vorgang zuerst aus diesem Kontext; rufe Tools nur auf, wenn er nicht reicht, und verwende dann ausschließlich die oben genannte Vorgangs-ID.');
     lines.push('Regeln: Erkläre und fasse zusammen. Führe keine Freigabe, keinen Versand und keine Statusänderung selbst aus; verweise dafür auf die genannten Schaltflächen im Vorgang. Der Kontext enthält keine Rohtexte externer Nachrichten.');
     return lines.join('\n');
   }

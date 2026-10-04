@@ -116,7 +116,9 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
   );
 
   const { fitView, setCenter } = useReactFlow();
-  const currentId = graph.currentNodeIds[0];
+  // The step to open on: the one needing attention; for a finished case the last step that actually ran.
+  const lastExecuted = [...graph.nodes].filter((n) => n.state === 'SUCCEEDED').sort((a, b) => (positions.get(b.id)?.x ?? 0) - (positions.get(a.id)?.x ?? 0))[0];
+  const currentId = graph.currentNodeIds[0] ?? lastExecuted?.id;
   const currentPosition = currentId ? positions.get(currentId) : undefined;
   useEffect(() => {
     // Initial view: a small graph is shown whole; a long process opens on the step that needs attention at a readable zoom
@@ -131,7 +133,7 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
 
   return (
     <div className="relative h-[520px] w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50" role="group" aria-label="Prozessgraph des Vorgangs">
-      <FocusButton currentIds={graph.currentNodeIds} positions={positions} />
+      <FocusButton currentIds={graph.currentNodeIds.length > 0 ? graph.currentNodeIds : graph.nodes.filter((n) => n.state === "SUCCEEDED").sort((a, b) => (positions.get(b.id)?.x ?? 0) - (positions.get(a.id)?.x ?? 0)).slice(0, 1).map((n) => n.id)} positions={positions} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
