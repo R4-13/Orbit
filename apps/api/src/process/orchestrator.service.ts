@@ -722,12 +722,11 @@ export class OrchestratorService {
 
   /** The evaluation context of the active plan — also used by the read model to decide which edges are taken. */
   async buildEvalContext(tenantId: string, caseRow: Case, graph: PlanGraph): Promise<EvalContext> {
-    const [current, executability, confirmed, blueprint] = await Promise.all([
-      this.facts.getCurrent(tenantId, caseRow.id),
-      this.capabilities.executabilityFor(tenantId),
-      this.ledger.confirmedEffects(tenantId, caseRow.id),
-      this.blueprintFor(tenantId, caseRow),
-    ]);
+    // Sequential: each read is its own short tenant transaction; a fan-out can starve a small connection pool under load.
+    const current = await this.facts.getCurrent(tenantId, caseRow.id);
+    const executability = await this.capabilities.executabilityFor(tenantId);
+    const confirmed = await this.ledger.confirmedEffects(tenantId, caseRow.id);
+    const blueprint = await this.blueprintFor(tenantId, caseRow);
     const facts: Record<string, unknown> = {};
     for (const fact of current) if (fact.status === 'CONFIRMED') facts[fact.key] = fact.value;
 

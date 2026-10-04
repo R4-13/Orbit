@@ -23,6 +23,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
   let salesToken: string;
   let prisma: PrismaService;
   let tenantId: string;
+  let pausedActivationIds: string[] = [];
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
@@ -39,9 +40,21 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
     };
     financeToken = await login('finance@musterwerk.example');
     salesToken = await login('sales@musterwerk.example');
+
+    // This suite verifies the pre-existing domain workflows. If the demo tenant has an active process blueprint for the
+    // same intent (Amendment 02), the intake correctly starts that process instead — so the activation is paused for the
+    // duration of this suite and restored afterwards (the legacy path itself is unchanged and must keep working).
+    const active = await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.findMany({ where: { tenantId, enabled: true }, select: { id: true } }));
+    pausedActivationIds = active.map((a) => a.id);
+    if (pausedActivationIds.length > 0) {
+      await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.updateMany({ where: { id: { in: pausedActivationIds } }, data: { enabled: false } }));
+    }
   });
 
   afterAll(async () => {
+    if (pausedActivationIds.length > 0) {
+      await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.updateMany({ where: { id: { in: pausedActivationIds } }, data: { enabled: true } }));
+    }
     await app.close();
   });
 

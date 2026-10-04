@@ -183,3 +183,10 @@ verifiziert** (kein Zugriff in der Entwicklungsumgebung dieser Session)
 Modell und Mailtransport sind in diesen Tests bewusst Doubles (skriptierter Mock-Provider, aufzeichnender Mail-Port); alles andere läuft gegen die echte
 Datenbank. **Diese Tests sind kein Live-Nachweis** – der Stand je Pfad (implementiert / automatisiert getestet / live nachgewiesen) steht in `IMPLEMENTATION_STATUS.md`.
 Ausführung der E2E-Suite: `set -a && source .env && set +a && pnpm --filter @orbit/api exec jest --config ./test/jest-e2e.json --runInBand` (`.env` muss geladen sein, sonst scheitern die Suiten, die `loadEnv()` direkt aufrufen).
+
+### Hinweis: E2E-Läufe und der laufende Worker
+
+Der Worker führt periodisch `ProcessSweepService` aus – mandantenübergreifend und mit den Werkzeugen **seines** Containers (echtes Modell, ohne die Test-Fixture-Capabilities).
+Läuft er gegen dieselbe Datenbank wie die E2E-Suite, kann er die Testmandanten mitbearbeiten (z. B. Fälle mit `fx.*`-Fähigkeiten blockieren) und zusätzlich den Prisma-Verbindungspool belasten
+(„Unable to start a transaction in the given time“). Für einen aussagekräftigen Regressionslauf den Worker anhalten: `docker stop orbit-worker`, danach `docker start orbit-worker`.
+Außerdem pausiert `intake-workflow.e2e-spec.ts` für die Dauer des Laufs die Prozess-Aktivierung des Demo-Mandanten (und stellt sie wieder her), weil dort sonst – korrekt – der Blueprint statt des Legacy-Workflows startet.

@@ -78,12 +78,12 @@ export class PlannerService {
 
   /** The validation context built from the tenant's real state — also used by the orchestrator right before it runs a node. */
   async buildContext(tenantId: string, caseId: string, blueprint?: BlueprintDefinition): Promise<PlanValidationContext> {
-    const [executability, policyModes, currentFacts, confirmed] = await Promise.all([
-      this.capabilities.executabilityFor(tenantId),
-      this.capabilities.policyModesFor(tenantId),
-      this.facts.getCurrent(tenantId, caseId),
-      this.ledger.confirmedEffects(tenantId, caseId),
-    ]);
+    // Sequential on purpose: every tenant-scoped read is its own short transaction, and fanning four of them out at once
+    // can starve a small connection pool when other workers are busy (observed as "Unable to start a transaction").
+    const executability = await this.capabilities.executabilityFor(tenantId);
+    const policyModes = await this.capabilities.policyModesFor(tenantId);
+    const currentFacts = await this.facts.getCurrent(tenantId, caseId);
+    const confirmed = await this.ledger.confirmedEffects(tenantId, caseId);
     return {
       blueprint,
       capabilities: this.capabilities.catalogue(),
