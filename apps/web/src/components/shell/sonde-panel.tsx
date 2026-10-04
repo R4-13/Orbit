@@ -6,6 +6,7 @@ import { Loader2, Plus, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { Badge, Button } from '@orbit/ui';
 import type { ConversationMessage } from '@orbit/domain';
 import { ApiError } from '../../lib/api-client';
+import { useSondeCaseContext } from '../../lib/sonde-context';
 import {
   COPILOT_CONVERSATION_LIST_KEY,
   copilotMessagesKey,
@@ -46,6 +47,7 @@ const QUICK_PROMPTS = ['Was braucht heute meine Aufmerksamkeit?', 'Zeige offene 
  */
 export function SondePanel({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
+  const { context: caseContext } = useSondeCaseContext();
   const { data: capabilities } = useCopilotCapabilities();
   const { data: conversations } = useConversations();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -134,7 +136,10 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
       },
     ]);
 
-    await streamCopilotMessage(conversationId, content, {
+    await streamCopilotMessage(
+      conversationId,
+      content,
+      {
       onToolStarted: (toolName) => setStreamingStatus(`Sonde ruft „${toolName}" auf …`),
       onToolCompleted: () => setStreamingStatus('Sonde wertet das Ergebnis aus …'),
       onMessageCompleted: () => {
@@ -149,7 +154,9 @@ export function SondePanel({ onClose }: { onClose: () => void }) {
         setError(message);
         void queryClient.invalidateQueries({ queryKey: copilotMessagesKey(conversationId) });
       },
-    });
+      },
+      caseContext,
+    );
   }
 
   return (

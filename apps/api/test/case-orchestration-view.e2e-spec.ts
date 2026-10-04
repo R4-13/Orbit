@@ -177,6 +177,33 @@ describe('Case orchestration view (e2e)', () => {
     expect(actual.nodes.map((n) => n.id)).not.toContain('deliver');
   });
 
+  it('Sonde gets the case, step and revision as server-validated, read-only context (and none for a case the user may not read)', async () => {
+    const conversation = await request(app.getHttpServer()).post('/api/v1/copilot/conversations').set(auth()).send({ title: 'Kontext' }).expect(201);
+    const send = async (context: Record<string, unknown>, bearer = token) => {
+      llm.seedResponse({ text: 'Antwort', toolCalls: [], stopReason: 'end_turn' });
+      await request(app.getHttpServer()).post(`/api/v1/copilot/conversations/${conversation.body.id}/messages`).set(auth(bearer)).send({ content: 'Warum wartet dieser Fall?', context }).expect(201);
+      return llm.getRequests().at(-1)!.systemPrompt ?? '';
+    };
+
+    const withContext = await send({ caseId, nodeId: 'ask' });
+    expect(withContext).toContain('Vorgangs-Kontext');
+    expect(withContext).toContain('Rückfrage senden');
+    expect(withContext).toContain('Ausgewählter Schritt');
+    expect(withContext).toContain(SENDER);
+    expect(withContext).toContain('Führe keine Freigabe');
+
+    // A foreign case id: no context block, no error detail leaks.
+    const foreign = await send({ caseId: randomUUID() });
+    expect(foreign).not.toContain('Vorgangs-Kontext');
+    // The other tenant's user cannot get this tenant's case as context either.
+    const otherConversation = await request(app.getHttpServer()).post('/api/v1/copilot/conversations').set(auth(otherTenantToken)).send({ title: 'Fremd' }).expect(201);
+    llm.seedResponse({ text: 'Antwort', toolCalls: [], stopReason: 'end_turn' });
+    await request(app.getHttpServer()).post(`/api/v1/copilot/conversations/${otherConversation.body.id}/messages`).set(auth(otherTenantToken)).send({ content: 'Was ist hier los?', context: { caseId } }).expect(201);
+    expect(llm.getRequests().at(-1)!.systemPrompt ?? '').not.toContain('Vorgangs-Kontext');
+    // Malformed context is rejected by validation.
+    await request(app.getHttpServer()).post(`/api/v1/copilot/conversations/${conversation.body.id}/messages`).set(auth()).send({ content: 'x', context: { caseId: 'kein-uuid' } }).expect(400);
+  });
+
   it('is tenant-bound: another tenant gets 404 for graph, node, events and stream; an unknown node is 404', async () => {
     for (const path of [`/orchestration`, `/orchestration/nodes/ask`, `/events`, `/events/stream`]) {
       await request(app.getHttpServer()).get(`/api/v1/cases/${caseId}${path}`).set(auth(otherTenantToken)).expect(404);

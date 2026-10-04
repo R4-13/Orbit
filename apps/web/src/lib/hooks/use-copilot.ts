@@ -112,12 +112,13 @@ export async function streamCopilotMessage(
   conversationId: string,
   content: string,
   handlers: CopilotStreamHandlers,
+  context?: { caseId: string; nodeId?: string; planRevision?: number } | null,
 ): Promise<void> {
   let response: Response;
   try {
     response = await apiFetchStream(`/v1/copilot/conversations/${conversationId}/messages/stream`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, ...(context ? { context } : {}) }),
     });
   } catch (err) {
     handlers.onError?.(err instanceof ApiError ? err.message : 'Die Verbindung zu Sonde ist fehlgeschlagen.');

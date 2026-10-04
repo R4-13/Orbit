@@ -19,6 +19,7 @@ import {
 import { PERMISSIONS } from '@orbit/shared';
 import { AppHeader } from '../../components/shell/app-header';
 import { SondePanel } from '../../components/shell/sonde-panel';
+import { SondeContextProvider } from '../../lib/sonde-context';
 import { TenantLogo } from '../../components/shell/tenant-logo';
 import { useAuth } from '../../lib/auth-context';
 import { useApplyTenantTheme, useTenantBranding } from '../../lib/hooks/use-tenant-branding';
@@ -88,6 +89,14 @@ const NAV: NavEntry[] = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SondeContextProvider>
+      <AppShell>{children}</AppShell>
+    </SondeContextProvider>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, hasPermission, logout } = useAuth();

@@ -7,6 +7,7 @@ import { Badge, ErrorState, type BadgeTone } from '@orbit/ui';
 import { errorMessage } from '../../lib/api-client';
 import { formatDateTime } from '../../lib/format';
 import { useCaseEventStream, useOrchestration, type OrchestrationMode, type StreamStatus } from '../../lib/hooks/use-case-orchestration';
+import { useSondeCaseContext } from '../../lib/sonde-context';
 import { ActionButtons } from './action-controls';
 import { NodeDetailPanel } from './node-detail-panel';
 import { SimulateReply } from './simulate-reply';
@@ -68,6 +69,12 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
   const effectiveView = view ?? (wide ? 'GRAPH' : 'LIST');
 
   const { data: graph, isLoading, isError, error, refetch } = useOrchestration(caseId, { mode, planRevision });
+  // Sonde sees what the user sees: the case, the selected step and the revision (the server re-validates this hint).
+  const { setContext } = useSondeCaseContext();
+  useEffect(() => {
+    setContext({ caseId, nodeId: selected ?? undefined, planRevision });
+    return () => setContext(null);
+  }, [caseId, selected, planRevision, setContext]);
   const stream = useCaseEventStream(caseId, mode !== 'DEFINITION');
 
   if (isLoading) return <p className="text-sm text-slate-500">Orchestrierung wird geladen …</p>;

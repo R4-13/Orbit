@@ -7,12 +7,20 @@ import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.
 import { ApprovalsService } from '../approvals/approvals.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { Permission } from '@orbit/shared';
+import { SondeCaseContextService, type SondeCaseContext } from './case-context.service';
 import { CopilotConversationService } from './copilot-conversation.service';
 import type { CopilotStreamEvent } from './copilot-stream-event';
 import { SONDE_ACT_TOOL_NAMES, SONDE_ASK_TOOL_NAMES, SONDE_PREPARE_TOOL_NAMES } from './tools/sonde.tools';
 
 /** §31 des Master-Dokuments ("Sonde memory") — "recent messages... Do not send unlimited history." Ein fester, dokumentierter Wert statt einer echten Zusammenfassungs-Kompression (siehe docs/ASSUMPTIONS.md, ConversationSummary bewusst nicht Teil dieser Phase). */
 const MAX_HISTORY_MESSAGES = 10;
+
+/** Who is asking, and which case they are looking at — both come from the authenticated request, never from message text. */
+export interface SondeViewer {
+  permissions: readonly Permission[];
+  context?: SondeCaseContext;
+}
 
 /** §51 des Master-Dokuments ("Provider Failure Behaviour") — wörtlich vorgeschriebener Text, kein eigener Wortlaut. */
 const PROVIDER_UNAVAILABLE_MESSAGE = 'Der KI-Dienst ist momentan nicht verfügbar. Ich habe keine Aktion ausgeführt.';
@@ -49,10 +57,11 @@ export class CopilotRuntimeService {
     private readonly policy: PolicyEnforcementService,
     private readonly runs: AgentRunRecorderService,
     private readonly approvals: ApprovalsService,
+    private readonly caseContext: SondeCaseContextService,
   ) {}
 
-  sendMessage(tenantId: string, actorUserId: string, conversationId: string, content: string): Promise<ConversationMessage> {
-    return this.runAskTurn(tenantId, actorUserId, conversationId, content);
+  sendMessage(tenantId: string, actorUserId: string, conversationId: string, content: string, viewer?: SondeViewer): Promise<ConversationMessage> {
+    return this.runAskTurn(tenantId, actorUserId, conversationId, content, undefined, viewer);
   }
 
   /**
@@ -70,6 +79,7 @@ export class CopilotRuntimeService {
     conversationId: string,
     content: string,
     emit: (event: CopilotStreamEvent) => void,
+    viewer?: SondeViewer,
   ): Promise<void> {
     try {
       const assistantMessage = await this.runAskTurn(tenantId, actorUserId, conversationId, content, (event) => {
@@ -78,7 +88,7 @@ export class CopilotRuntimeService {
         } else {
           emit({ type: 'tool.completed', data: { toolName: event.toolName, decision: event.decision, error: event.error } });
         }
-      });
+      }, viewer);
       emit({ type: 'message.completed', data: assistantMessage });
     } catch (error) {
       emit({ type: 'error', data: { message: error instanceof Error ? error.message : String(error) } });
@@ -91,6 +101,7 @@ export class CopilotRuntimeService {
     conversationId: string,
     content: string,
     onToolEvent?: (event: AgentTurnEvent) => void,
+    viewer?: SondeViewer,
   ): Promise<ConversationMessage> {
     // Validates that this conversation belongs to actorUserId — throws NotFoundError otherwise (§29: conversations are personal).
     await this.conversations.getConversation(tenantId, actorUserId, conversationId);
@@ -111,7 +122,9 @@ export class CopilotRuntimeService {
     const llm = await this.aiProviders.resolveForTenant(tenantId);
     const scopedTools = this.toolRegistry.subset([...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES, ...SONDE_ACT_TOOL_NAMES]);
     const runtime = new AgentRuntime(llm, scopedTools, (action, ctx) => this.policy.resolveMode(ctx.tenantId, action));
-    const systemPrompt = buildLayeredSystemPrompt(SONDE_SYSTEM_PROMPT);
+    // Case context (Amendment 02 §17.4): built on the server for this user, read-only; absent when the user may not read the case.
+    const contextBlock = viewer?.context ? await this.caseContext.build(tenantId, viewer.permissions, viewer.context) : null;
+    const systemPrompt = buildLayeredSystemPrompt(contextBlock ? `${SONDE_SYSTEM_PROMPT}\n\n${contextBlock}` : SONDE_SYSTEM_PROMPT);
 
     const agentRun = await this.runs.start({
       tenantId,

@@ -72,7 +72,7 @@ export class CopilotController {
 
   @Post('conversations/:id/messages')
   sendMessage(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: SendMessageDto) {
-    return this.runtime.sendMessage(user.tenantId, user.id, id, dto.content);
+    return this.runtime.sendMessage(user.tenantId, user.id, id, dto.content, { permissions: user.permissions, context: dto.context });
   }
 
   @Post('conversations/:id/messages/stream')
@@ -102,7 +102,7 @@ export class CopilotController {
       res.write(`event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`);
     };
 
-    await this.runtime.streamMessage(user.tenantId, user.id, id, dto.content, emit);
+    await this.runtime.streamMessage(user.tenantId, user.id, id, dto.content, emit, { permissions: user.permissions, context: dto.context });
     res.end();
   }
 
