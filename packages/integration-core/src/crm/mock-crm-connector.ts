@@ -54,8 +54,20 @@ export class MockCrmConnector implements CrmConnector {
     return record;
   }
 
+  /**
+   * A real CRM keeps its records across ORBIT restarts; this in-memory mock
+   * does not, but ORBIT persists the `mock-contact-*` ids it was handed
+   * (`Contact.crmExternalId`). Accepting ids carrying the mock's own prefix
+   * keeps a restart from turning every known contact into "unknown" —
+   * found live: a returning sender's `create_lead` failed after a worker
+   * restart. Ids that never looked like ours are still rejected.
+   */
+  private knowsContact(externalId: string): boolean {
+    return this.contactsById.has(externalId) || externalId.startsWith('mock-contact-');
+  }
+
   async createLead(input: CreateLeadInput): Promise<CreateLeadResult> {
-    if (!this.contactsById.has(input.contactExternalId)) {
+    if (!this.knowsContact(input.contactExternalId)) {
       throw new Error(`Mock CRM: unknown contact "${input.contactExternalId}".`);
     }
     this.leads.push(input);
@@ -63,7 +75,7 @@ export class MockCrmConnector implements CrmConnector {
   }
 
   async logActivity(input: LogActivityInput): Promise<void> {
-    if (!this.contactsById.has(input.contactExternalId)) {
+    if (!this.knowsContact(input.contactExternalId)) {
       throw new Error(`Mock CRM: unknown contact "${input.contactExternalId}".`);
     }
     this.activities.push(input);

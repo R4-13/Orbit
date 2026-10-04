@@ -277,6 +277,15 @@ export class WorkflowRunnerService {
         outcomes = result.toolCallOutcomes;
         await this.runs.recordToolCalls(tenantId, agentRun.id, outcomes);
         await this.runs.complete(tenantId, agentRun.id, result);
+
+        // AgentRunRecorderService.complete() already marks the AgentRun FAILED when any tool
+        // errored (runTurn() itself doesn't throw for that) — the workflow must agree, otherwise
+        // a run whose step failed is reported COMPLETED (found live: a Sales intake whose
+        // create_lead failed showed WorkflowRun COMPLETED).
+        const failedTool = outcomes.find((outcome) => outcome.error);
+        if (failedTool) {
+          failureMessage = `Step ${step.order} (${step.agentDefinitionKey}): Tool "${failedTool.toolName}" failed: ${failedTool.error}`;
+        }
       } catch (error) {
         await this.runs.fail(tenantId, agentRun.id, error instanceof Error ? error.message : String(error));
         failureMessage = `Step ${step.order} (${step.agentDefinitionKey}) failed: ${error instanceof Error ? error.message : String(error)}`;

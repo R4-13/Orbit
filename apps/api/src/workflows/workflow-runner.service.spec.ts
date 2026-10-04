@@ -7,7 +7,7 @@ import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRunnerService } from './workflow-runner.service';
 
-function fakeRuntime(outcomes: Array<{ toolCallId: string; toolName: string; decision: string; output?: unknown }>) {
+function fakeRuntime(outcomes: Array<{ toolCallId: string; toolName: string; decision: string; output?: unknown; error?: string }>) {
   return { runTurn: jest.fn().mockResolvedValue({ finalText: undefined, toolCallOutcomes: outcomes, iterations: 1 }) } as unknown as AgentRuntime;
 }
 
@@ -292,6 +292,28 @@ describe('WorkflowRunnerService', () => {
 
     expect(result.status).toBe('FAILED');
     expect(runs.fail).toHaveBeenCalledWith('tenant_1', 'run_1', 'boom');
+  });
+
+  it('marks the run FAILED when a tool inside the step errored, even though runTurn() itself did not throw', async () => {
+    scoped.workflowDefinition.findUnique.mockResolvedValue({
+      id: 'wfd_1',
+      status: 'ACTIVE',
+      steps: [{ order: 1, agentDefinitionKey: 'sales-intake', inputMapping: null, condition: null }],
+    });
+    resolver.resolve.mockResolvedValue({
+      systemPrompt: 'x',
+      baseType: 'SALES',
+      runtime: fakeRuntime([{ toolCallId: 'tc_1', toolName: 'create_lead', decision: 'ALLOW', error: 'Mock CRM: unknown contact "x".' }]),
+    });
+
+    const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+    expect(result.status).toBe('FAILED');
+    expect(scoped.workflowRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED', errorMessage: expect.stringContaining('create_lead') }),
+      }),
+    );
   });
 
   describe('createQueuedRun / executeQueuedRun (docs/SCALABILITY_CONCEPT.md)', () => {

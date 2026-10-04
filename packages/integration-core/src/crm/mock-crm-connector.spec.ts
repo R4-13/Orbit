@@ -39,6 +39,13 @@ describe('MockCrmConnector', () => {
     ).rejects.toThrow(/unknown contact/i);
   });
 
+  it('createLead() accepts a mock-contact id issued by an earlier process lifetime (ORBIT persists crmExternalId across restarts)', async () => {
+    const connector = new MockCrmConnector();
+    await expect(
+      connector.createLead({ contactExternalId: 'mock-contact-issued-before-restart', source: 'EMAIL' }),
+    ).resolves.toMatchObject({ externalId: expect.stringMatching(/^mock-lead-/) });
+  });
+
   it('createLead() succeeds for a real contact and is recorded', async () => {
     const connector = new MockCrmConnector();
     const contact = await connector.upsertContact({ firstName: 'Kim', lastName: 'Kunde' });

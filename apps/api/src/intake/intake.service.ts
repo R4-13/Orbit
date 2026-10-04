@@ -23,6 +23,12 @@ export interface IntakeResult {
 }
 
 /** Low-confidence or ambiguous triage verdicts are forced to UNKNOWN_REQUIRES_REVIEW here — deterministic application logic, not left to the LLM/tool's own judgment (§4 of docs/CHANNEL_EVENT_RUNTIME_PLAN.md). */
+interface DomainHandlerResult {
+  agentRunId?: string;
+  /** Set when the durable workflow ended FAILED — the IntakeEvent must then end FAILED, not COMPLETED. */
+  failureMessage?: string;
+}
+
 const RELEVANCE_CONFIDENCE_THRESHOLD = 0.5;
 
 /** Parses the JSON payload AgentRuntime appends as `[tool_result:toolName] {...}`. */
@@ -204,9 +210,11 @@ export class IntakeService {
 
     const handler = this.domainWorkflowHandlers[category];
     let agentRunIds: string[] = [];
+    let workflowFailure: string | undefined;
     try {
-      const agentRunId = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEvent.id) : null;
-      agentRunIds = agentRunId ? [agentRunId] : [];
+      const handled = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEvent.id) : null;
+      agentRunIds = handled?.agentRunId ? [handled.agentRunId] : [];
+      workflowFailure = handled?.failureMessage;
     } catch (error) {
       await this.prisma.forTenantId(tenantId).intakeEvent.update({
         where: { id: intakeEvent.id },
@@ -215,7 +223,12 @@ export class IntakeService {
       throw error;
     }
 
-    await this.prisma.forTenantId(tenantId).intakeEvent.update({ where: { id: intakeEvent.id }, data: { status: 'COMPLETED' } });
+    // A failed workflow is not a completed intake — without this the IntakeEvent (and anything
+    // derived from it, e.g. the connector's operational status) would claim success.
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+      where: { id: intakeEvent.id },
+      data: workflowFailure ? { status: 'FAILED', errorMessage: workflowFailure } : { status: 'COMPLETED' },
+    });
     return { case: businessCase, category, agentRunIds, intakeEventId: intakeEvent.id };
   }
 
@@ -344,7 +357,7 @@ export class IntakeService {
     businessCase: Case,
     event: NormalizedIntakeEvent,
     intakeEventId: string,
-  ): Promise<string | undefined> {
+  ): Promise<DomainHandlerResult> {
     const attachment = event.attachments?.[0];
     if (!attachment) {
       throw new Error('runFinanceAgent called without an attachment — caller (domainWorkflowHandlers.FINANCE) must guard this.');
@@ -423,7 +436,7 @@ export class IntakeService {
     businessCase: Case,
     event: NormalizedIntakeEvent,
     intakeEventId: string,
-  ): Promise<string | undefined> {
+  ): Promise<DomainHandlerResult> {
     const fromAddress = event.sender?.address ?? '';
     const domain = fromAddress.split('@')[1] ?? 'unbekannt.example';
     const companyNameGuess = domain.split('.')[0];
@@ -503,13 +516,18 @@ export class IntakeService {
     caseId: string,
     intakeEventId: string,
     triggerInput: Record<string, unknown>,
-  ): Promise<string | undefined> {
+  ): Promise<DomainHandlerResult> {
     const result = await this.workflowRunner.trigger(tenantId, actorUserId ?? '', workflowKey, triggerInput, caseId);
     await this.prisma.forTenantId(tenantId).intakeEvent.update({
       where: { id: intakeEventId },
       data: { workflowRunId: result.workflowRunId },
     });
-    return result.steps[0]?.agentRunId;
+    const failureMessage =
+      result.status === 'FAILED'
+        ? ((await this.prisma.forTenantId(tenantId).workflowRun.findUnique({ where: { id: result.workflowRunId } }))?.errorMessage ??
+          'Der Workflow ist fehlgeschlagen.')
+        : undefined;
+    return { agentRunId: result.steps[0]?.agentRunId, failureMessage };
   }
 
   /**
@@ -533,7 +551,7 @@ export class IntakeService {
       businessCase: Case,
       event: NormalizedIntakeEvent,
       intakeEventId: string,
-    ) => Promise<string | null | undefined>
+    ) => Promise<DomainHandlerResult | null>
   > = {
     FINANCE: (tenantId, actorUserId, businessCase, event, intakeEventId) => {
       if (!event.attachments?.length) return Promise.resolve(null);
