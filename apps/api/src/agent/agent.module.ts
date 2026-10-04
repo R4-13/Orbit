@@ -84,7 +84,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
               'LLM_PROVIDER=openai requires OPENAI_API_KEY — see docs/AGENT_ARCHITECTURE.md.',
             );
           }
-          return selected(new OpenAILLMProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL));
+          return selected(new OpenAILLMProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL, { reasoningEffort: env.OPENAI_REASONING_EFFORT }));
         }
         throw new IntegrationUnavailableError(`LLMProvider "${env.LLM_PROVIDER}" is not implemented yet.`);
       },

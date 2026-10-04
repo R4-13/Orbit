@@ -297,7 +297,12 @@ BYOK-Verbindung geliefert. Es gibt keinen zweiten Pfad und keine in OpenAI gehos
   `LLM_PROVIDER=mock`, damit Host-seitige Jest-/E2E-Tests deterministisch den skriptbaren Mock nutzen.
 - **Der Schlüssel** gehört ausschließlich dorthin — nicht in den Chat, nicht in `.env.example`, nicht in Quellcode.
 - **Übernehmen:** `docker compose up -d --force-recreate api worker` (ein Neubau ist nur nötig, wenn sich Code ändert).
-- **Laufzeitnachweis:** `GET /api/v1/ai-providers/runtime` (Provider, Modell, `executionMode`), `POST /api/v1/ai-providers/verify`
+- **Laufzeitnachweis:** `GET /api/v1/ai-providers/status` (Provider, Modell, `executionMode`, Health), `POST /api/v1/ai-providers/verify`
   (echter, minimaler Aufruf) und pro Modellaufruf eine Logzeile `llm.call provider=… model=… executionMode=LIVE ok=… durationMs=…`
   (`LoggingLLMProvider`; protokolliert nie Prompt, Antwort oder Schlüssel). Beim Start steht `llm.provider.selected …` im Log.
 - Der Mock ist nur noch aktiv, wenn `LLM_PROVIDER=mock`; die Oberfläche kennzeichnet ihn dann als „Simuliert“.
+- **Reasoning-Modelle (gpt-6-luna):** Die Chat-Completions-API lehnt Function-Tools ab, solange das Modell Reasoning nutzt
+  („use /v1/responses or set reasoning_effort to 'none'“, live beobachtet). `OPENAI_REASONING_EFFORT=none` setzt das explizit;
+  ohne Variable wird nichts gesendet. Folge: für Tool-Aufrufe läuft das Modell ohne Reasoning-Phase. Eine Umstellung des
+  Adapters auf die Responses-API wäre die Alternative (offene Entscheidung, siehe IMPLEMENTATION_STATUS). Verbindungen, die
+  Mandanten selbst hinterlegen (BYOK, `buildProviderAdapter`), senden bisher keinen `reasoning_effort`.

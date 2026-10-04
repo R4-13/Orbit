@@ -102,6 +102,8 @@ export const envSchema = z.object({
   ANTHROPIC_MODEL: z.string().default('claude-sonnet-5'),
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4o'),
+  /** Optional. Reasoning models (e.g. gpt-6-luna) only accept function tools on Chat Completions with 'none'. Unset = send nothing. */
+  OPENAI_REASONING_EFFORT: z.enum(['none', 'minimal', 'low', 'medium', 'high']).optional(),
 
   // Semantic triage thresholds (Amendment 02 §14.3) — configurable defaults to be calibrated on an evaluation catalogue, not product constants.
   TRIAGE_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),

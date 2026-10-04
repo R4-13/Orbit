@@ -10,6 +10,15 @@ import type {
   ProviderValidationResult,
 } from './types';
 
+export type OpenAIReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high';
+type ChatCompletionReasoningEffort = 'low' | 'medium' | 'high';
+
+export interface OpenAIProviderOptions {
+  reasoningEffort?: OpenAIReasoningEffort;
+  /** Test seam: replaces the SDK client. */
+  client?: OpenAI;
+}
+
 function toStopReason(reason: string): LLMStopReason {
   if (reason === 'tool_calls') return 'tool_use';
   if (reason === 'length') return 'max_tokens';
@@ -46,13 +55,26 @@ export class OpenAILLMProvider implements LLMProvider {
   readonly providerName = 'openai';
   private readonly client: OpenAI;
 
+  private readonly reasoningEffort?: OpenAIReasoningEffort;
+
   constructor(
     apiKey: string,
     private readonly model: string,
-    /** Injectable for tests; production always builds the official SDK client from the key. */
-    client?: OpenAI,
+    options: OpenAIProviderOptions = {},
   ) {
-    this.client = client ?? new OpenAI({ apiKey });
+    // The client is injectable for tests; production always builds the official SDK client from the key.
+    this.client = options.client ?? new OpenAI({ apiKey });
+    this.reasoningEffort = options.reasoningEffort;
+  }
+
+  /**
+   * Reasoning models (e.g. gpt-6-luna) reject function tools on Chat Completions while reasoning is active
+   * ("use /v1/responses or set reasoning_effort to 'none'"). The effort is therefore an explicit, optional
+   * setting (OPENAI_REASONING_EFFORT); when unset nothing is sent and non-reasoning models behave as before.
+   * The SDK's type does not list 'none' yet, hence the cast.
+   */
+  private reasoningParams(): { reasoning_effort?: ChatCompletionReasoningEffort } {
+    return this.reasoningEffort ? { reasoning_effort: this.reasoningEffort as ChatCompletionReasoningEffort } : {};
   }
 
   get modelName(): string {
@@ -77,6 +99,7 @@ export class OpenAILLMProvider implements LLMProvider {
         model: this.model,
         // `max_tokens` is rejected by current OpenAI models; `max_completion_tokens` is the supported parameter.
         max_completion_tokens: request.maxTokens ?? 4096,
+        ...this.reasoningParams(),
         messages,
         tools: tools.length > 0 ? tools : undefined,
       });
@@ -108,6 +131,7 @@ export class OpenAILLMProvider implements LLMProvider {
       await this.client.chat.completions.create({
         model: this.model,
         max_completion_tokens: 16,
+        ...this.reasoningParams(),
         messages: [{ role: 'user', content: 'ping' }],
       });
       return { valid: true };

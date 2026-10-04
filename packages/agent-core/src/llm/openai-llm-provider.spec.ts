@@ -9,7 +9,7 @@ function fakeClient(create: (params: Record<string, unknown>) => unknown): OpenA
 describe('OpenAILLMProvider', () => {
   it('reports provider and model name and uses max_completion_tokens (not the rejected max_tokens)', async () => {
     const create = vi.fn().mockReturnValue({ choices: [{ message: { content: 'Hallo', tool_calls: [] }, finish_reason: 'stop' }] });
-    const provider = new OpenAILLMProvider('sk-test', 'gpt-test-model', fakeClient(create));
+    const provider = new OpenAILLMProvider('sk-test', 'gpt-test-model', { client: fakeClient(create) });
     expect(provider.providerName).toBe('openai');
     expect(provider.modelName).toBe('gpt-test-model');
 
@@ -26,7 +26,7 @@ describe('OpenAILLMProvider', () => {
     const ok = new OpenAILLMProvider(
       'k',
       'm',
-      fakeClient(() => ({ choices: [{ message: { content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 't', arguments: '{"a":1}' } }] }, finish_reason: 'tool_calls' }] })),
+      { client: fakeClient(() => ({ choices: [{ message: { content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 't', arguments: '{"a":1}' } }] }, finish_reason: 'tool_calls' }] })) },
     );
     const result = await ok.complete({ messages: [{ role: 'user', content: 'x' }], tools: [{ name: 't', description: 'd', inputSchema: { type: 'object' } }] });
     expect(result.stopReason).toBe('tool_use');
@@ -35,14 +35,33 @@ describe('OpenAILLMProvider', () => {
     const bad = new OpenAILLMProvider(
       'k',
       'm',
-      fakeClient(() => ({ choices: [{ message: { content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 't', arguments: 'not json' } }] }, finish_reason: 'tool_calls' }] })),
+      { client: fakeClient(() => ({ choices: [{ message: { content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 't', arguments: 'not json' } }] }, finish_reason: 'tool_calls' }] })) },
     );
     await expect(bad.complete({ messages: [{ role: 'user', content: 'x' }], tools: [] })).rejects.toThrow('malformed tool arguments');
   });
 
   it('wraps API failures without leaking more than the provider message', async () => {
-    const provider = new OpenAILLMProvider('k', 'm', fakeClient(() => Promise.reject(new Error('401 Incorrect API key'))));
+    const provider = new OpenAILLMProvider('k', 'm', { client: fakeClient(() => Promise.reject(new Error('401 Incorrect API key'))) });
     await expect(provider.complete({ messages: [{ role: 'user', content: 'x' }], tools: [] })).rejects.toThrow('OpenAI API request failed');
     await expect(provider.validateConfiguration()).resolves.toMatchObject({ valid: false });
+  });
+});
+
+describe('OpenAILLMProvider reasoning effort', () => {
+  const ok = { choices: [{ message: { content: 'x', tool_calls: [] }, finish_reason: 'stop' }] };
+
+  it('sends nothing by default, so non-reasoning models are unaffected', async () => {
+    const create = vi.fn().mockReturnValue(ok);
+    await new OpenAILLMProvider('k', 'm', { client: fakeClient(create) }).complete({ messages: [{ role: 'user', content: 'x' }], tools: [] });
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty('reasoning_effort');
+  });
+
+  it('passes the configured effort for completions and for the validation call', async () => {
+    const create = vi.fn().mockReturnValue(ok);
+    const provider = new OpenAILLMProvider('k', 'm', { reasoningEffort: 'none', client: fakeClient(create) });
+    await provider.complete({ messages: [{ role: 'user', content: 'x' }], tools: [] });
+    await provider.validateConfiguration();
+    expect((create.mock.calls[0]?.[0] as Record<string, unknown>).reasoning_effort).toBe('none');
+    expect((create.mock.calls[1]?.[0] as Record<string, unknown>).reasoning_effort).toBe('none');
   });
 });
