@@ -11,6 +11,7 @@ import { BrandingModule } from './branding/branding.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
+import { ChannelSyncModule } from './channel-sync/channel-sync.module';
 import { CompaniesModule } from './companies/companies.module';
 import { EnvModule } from './config/env.module';
 import { ORBIT_ENV } from './config/env.token';
@@ -112,6 +113,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     FollowUpsModule,
     IntakeModule,
     IntegrationsModule,
+    ChannelSyncModule,
     WebhooksModule,
     HealthModule,
   ],

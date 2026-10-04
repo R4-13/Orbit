@@ -21,6 +21,8 @@ import { OAuth2Service } from './oauth2.service';
   ],
   controllers: [IntegrationsController, IntegrationsCallbackController],
   providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService],
-  exports: [IntegrationsService],
+  // GmailConnectorService exported for GmailPollAdapter (ChannelSyncModule, Increment C) — the
+  // only other consumer of this service besides IntegrationsController/-CallbackController.
+  exports: [IntegrationsService, GmailConnectorService],
 })
 export class IntegrationsModule {}
