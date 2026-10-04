@@ -58,6 +58,8 @@ export const AUDIT_EVENT_TYPES = [
   'WEBHOOK_RECEIVED',
   /** docs/CHANNEL_EVENT_RUNTIME_PLAN.md — WebhookIdempotencyService.recordIfNew() used for a polling-sourced (not push/webhook-delivered) event; keeps the audit trail honest about which delivery mechanism actually occurred. */
   'CHANNEL_EVENT_RECEIVED',
+  /** Amendment 02 §24.3 — an earlier, provably wrong terminal status was corrected; payload carries the old/new state, reason and executor. */
+  'STATUS_CORRECTED',
   'TENANT_DATA_EXPORTED',
   'TENANT_DELETE_REQUESTED',
   'TENANT_DELETE_COMPLETED',

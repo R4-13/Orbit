@@ -99,35 +99,57 @@ function ConnectedDetails({ integration }: { integration: IntegrationSummary }) 
   );
 }
 
-/** docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 (Increment H): "Ein erfolgreicher OAuth-Connect allein ist niemals gleichbedeutend mit einem funktionierenden automatischen Intake-Kanal." — daher eine eigene, aus echten Nachweisen berechnete Betriebsstatus-Zeile statt nur dem "Verbunden"-Badge oben. */
-const OPERATIONAL_STATUS_LABELS: Record<ConnectorOperationalStatus, string> = {
-  AUTHENTICATION_CONNECTED: 'Authentifiziert — Kanal noch nicht aktiv',
-  INPUT_TRIGGER_ACTIVE: 'Eingang wird abgerufen',
-  INTAKE_PIPELINE_ACTIVE: 'Intake-Pipeline aktiv',
-  DOMAIN_WORKFLOW_ACTIVE: 'Fachlicher Workflow aktiv',
-  LIVE_END_TO_END_TESTED: 'Live Ende-zu-Ende getestet',
-};
-
-const OPERATIONAL_STATUS_TONES: Record<ConnectorOperationalStatus, BadgeTone> = {
-  AUTHENTICATION_CONNECTED: 'warning',
-  INPUT_TRIGGER_ACTIVE: 'warning',
-  INTAKE_PIPELINE_ACTIVE: 'info',
-  DOMAIN_WORKFLOW_ACTIVE: 'info',
-  LIVE_END_TO_END_TESTED: 'success',
-};
+/**
+ * docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 und Amendment 02 §19.4: "Ein erfolgreicher OAuth-Connect allein ist niemals
+ * gleichbedeutend mit einem funktionierenden automatischen Intake-Kanal." — daher drei getrennte, aus echten Nachweisen
+ * berechnete Aussagen statt eines einzelnen "Verbunden"-Badges. Der aktuelle Betriebszustand steht bewusst separat von
+ * den historischen Nachweisen. Jede Aussage trägt Text + Symbol, nie nur Farbe.
+ */
+const OPERATIONAL_CHECKS: Array<{ level: ConnectorOperationalStatus; label: string }> = [
+  { level: 'AUTHENTICATION_CONNECTED', label: 'Verbindung geprüft' },
+  { level: 'INTAKE_PIPELINE_ACTIVE', label: 'Echter Eingang empfangen' },
+  { level: 'LIVE_END_TO_END_TESTED', label: 'Fachlicher Prozess erfolgreich getestet' },
+];
 
 function OperationalStatusRow({ connectorId, enabled }: { connectorId: ConnectorMetadata['id']; enabled: boolean }) {
   const { data } = useConnectorOperationalStatus(connectorId, enabled);
   if (!enabled) return null;
+  if (!data) return <p className="mt-1.5 text-xs text-slate-400">Betriebsstatus wird geladen …</p>;
+
+  const health = data.health;
+  const hasCurrentProblem = Boolean(health && (health.latestRunFailed || health.lastErrorCode || health.syncLastErrorCode));
   return (
-    <p className="mt-1.5 flex items-center gap-1.5 text-xs">
-      <span className="text-slate-500">Betriebsstatus:</span>
-      {data?.highestLevelReached ? (
-        <Badge tone={OPERATIONAL_STATUS_TONES[data.highestLevelReached]}>{OPERATIONAL_STATUS_LABELS[data.highestLevelReached]}</Badge>
-      ) : (
-        <Badge tone="neutral">{data ? 'Noch keine Aktivität' : 'Wird geladen …'}</Badge>
-      )}
-    </p>
+    <div className="mt-1.5 space-y-1 text-xs" data-testid="operational-status">
+      <ul className="space-y-0.5" aria-label="Betriebsnachweise">
+        {OPERATIONAL_CHECKS.map(({ level, label }) => {
+          const reached = data.levels[level].reached;
+          return (
+            <li key={level} className="flex items-center gap-1.5" data-level={level} data-reached={reached}>
+              <span aria-hidden="true" className={reached ? 'text-emerald-600' : 'text-slate-400'}>
+                {reached ? '✓' : '○'}
+              </span>
+              <span className={reached ? 'text-slate-700' : 'text-slate-500'}>
+                {label}
+                <span className="sr-only">{reached ? ': nachgewiesen' : ': noch nicht nachgewiesen'}</span>
+                {reached && data.levels[level].at ? <span className="text-slate-400"> · {formatDateTime(data.levels[level].at)}</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {data.verifiedRun ? (
+        <p className="text-slate-500" data-testid="execution-summary">
+          Nachweis-Umfang: {data.verifiedRun.executionSummary}
+          {data.verifiedRun.execution?.buildCommit ? ` · Build ${data.verifiedRun.execution.buildCommit}` : ' · Build nicht erfasst'}
+        </p>
+      ) : null}
+      {hasCurrentProblem ? (
+        <p className="text-amber-700" role="status">
+          Aktuell: {health?.latestRunFailed ? 'der letzte echte Lauf ist fehlgeschlagen' : 'Betriebsfehler'}
+          {health?.lastErrorCode || health?.syncLastErrorCode ? ` (${health.lastErrorCode ?? health.syncLastErrorCode})` : ''}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

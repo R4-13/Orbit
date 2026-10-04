@@ -2,21 +2,44 @@ import { Injectable } from '@nestjs/common';
 import type { IntegrationConnectorType } from '@orbit/domain';
 import {
   CONNECTOR_OPERATIONAL_STATUS_LEVELS,
+  describeExecutionModes,
+  type ConnectorCurrentHealth,
   type ConnectorOperationalStatus,
   type ConnectorOperationalStatusLevel,
   type ConnectorOperationalStatusResult,
+  type ConnectorVerifiedRun,
+  type ExecutionEvidenceSnapshot,
 } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 const UNREACHED: ConnectorOperationalStatusLevel = { reached: false, at: null };
 
+/** How many of the newest candidate runs are inspected when looking for a verifying run. */
+const VERIFICATION_CANDIDATE_LIMIT = 25;
+
+function readExecution(metadata: unknown): ExecutionEvidenceSnapshot | null {
+  if (typeof metadata !== 'object' || metadata === null) return null;
+  const execution = (metadata as { execution?: unknown }).execution;
+  return typeof execution === 'object' && execution !== null ? (execution as ExecutionEvidenceSnapshot) : null;
+}
+
 /**
- * docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 / Increment H — computes the five
- * operational-status levels from real evidence (Integration/ConnectorSync/
- * IntakeEvent/WorkflowRun rows), never from configuration intent. Lives in
- * `IntegrationsModule` (not `ChannelSyncModule`, which already depends on
- * `IntegrationsModule` for `GmailConnectorService` — importing it back
- * here would be circular) since this only ever needs `PrismaService`.
+ * docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 and Amendment 02 §19.4 — computes the
+ * operational-status levels from real evidence (Integration / ConnectorSync /
+ * IntakeEvent / WorkflowRun / StepRun / AgentRun / ToolInvocation rows), never
+ * from configuration intent and never from `IntakeEvent.status = COMPLETED`
+ * alone.
+ *
+ * `LIVE_END_TO_END_TESTED` needs one concrete run where *everything* holds:
+ * intake COMPLETED, WorkflowRun COMPLETED, every step SUCCEEDED/SKIPPED, every
+ * step's AgentRun COMPLETED and no failed/uncertain tool invocation. A run that
+ * was wrongly marked COMPLETED while a tool failed therefore never counts —
+ * and a later success does not retroactively heal it (it simply is not a
+ * verifying run). Current health is reported separately from that proof.
+ *
+ * Lives in `IntegrationsModule` (not `ChannelSyncModule`, which already
+ * depends on `IntegrationsModule` for `GmailConnectorService`) since this
+ * only ever needs `PrismaService`.
  */
 @Injectable()
 export class ConnectorStatusService {
@@ -35,16 +58,12 @@ export class ConnectorStatusService {
     };
 
     if (!integration) {
-      return { connectorType, highestLevelReached: null, currentlyConnected: false, levels };
+      return { connectorType, highestLevelReached: null, currentlyConnected: false, levels, verifiedRun: null, health: null };
     }
 
-    // Level 1 — prefer `lastSuccessAt` (only ever set after a real completed
-    // OAuth token exchange or a real successful testConnection() call, see
-    // GmailConnectorService) as the more precise timestamp; fall back to a
-    // current `CONNECTED` status (set by the generic credentials-upsert
-    // path for non-OAuth connectors, which have no separate "test" step)
-    // so a manually-configured API-key connector isn't permanently stuck
-    // at "never authenticated".
+    // Level 1 — prefer `lastSuccessAt` (only ever set after a real completed OAuth token exchange or a real
+    // successful testConnection() call, see GmailConnectorService); fall back to a current `CONNECTED` status
+    // (set by the generic credentials-upsert path for non-OAuth connectors, which have no separate "test" step).
     if (integration.lastSuccessAt) {
       levels.AUTHENTICATION_CONNECTED = { reached: true, at: integration.lastSuccessAt.toISOString() };
     } else if (integration.status === 'CONNECTED') {
@@ -72,23 +91,80 @@ export class ConnectorStatusService {
       levels.DOMAIN_WORKFLOW_ACTIVE = { reached: true, at: firstWorkflowTriggeringEvent.occurredAt.toISOString() };
     }
 
-    const firstFullyCompletedEvent = await scoped.intakeEvent.findFirst({
-      where: { connectionId: integration.id, status: 'COMPLETED', workflowRun: { status: 'COMPLETED' } },
-      orderBy: { occurredAt: 'asc' },
-    });
-    if (firstFullyCompletedEvent) {
-      levels.LIVE_END_TO_END_TESTED = { reached: true, at: firstFullyCompletedEvent.occurredAt.toISOString() };
+    const verifiedRun = await this.findVerifiedRun(tenantId, integration.id);
+    if (verifiedRun) {
+      levels.LIVE_END_TO_END_TESTED = { reached: true, at: verifiedRun.completedAt };
     }
 
-    // The longest reached *prefix* — a gap (e.g. real intake events present
-    // without the scheduler ever having recorded a successful poll) must
-    // never be presented as a more advanced status than it honestly is.
+    // The longest reached *prefix* — a gap (e.g. real intake events without the scheduler ever having recorded a
+    // successful poll) must never be presented as a more advanced status than it honestly is.
     let highestLevelReached: ConnectorOperationalStatus | null = null;
     for (const level of CONNECTOR_OPERATIONAL_STATUS_LEVELS) {
       if (!levels[level].reached) break;
       highestLevelReached = level;
     }
 
-    return { connectorType, highestLevelReached, currentlyConnected: integration.status === 'CONNECTED', levels };
+    const latestRun = await scoped.intakeEvent.findFirst({
+      where: { connectionId: integration.id, workflowRunId: { not: null } },
+      orderBy: { occurredAt: 'desc' },
+    });
+    const health: ConnectorCurrentHealth = {
+      connectionStatus: integration.status,
+      lastErrorAt: integration.lastErrorAt?.toISOString() ?? null,
+      lastErrorCode: integration.lastErrorCode ?? null,
+      syncStatus: connectorSync?.status ?? null,
+      syncLastErrorCode: connectorSync?.lastErrorCode ?? null,
+      latestRunFailed: latestRun?.status === 'FAILED' || latestRun?.status === 'NEEDS_REVIEW',
+    };
+
+    return {
+      connectorType,
+      highestLevelReached,
+      currentlyConnected: integration.status === 'CONNECTED',
+      levels,
+      verifiedRun,
+      health,
+    };
+  }
+
+  /** Newest real run of this connection that passes every verification criterion — or null. */
+  private async findVerifiedRun(tenantId: string, connectionId: string): Promise<ConnectorVerifiedRun | null> {
+    const candidates = await this.prisma.forTenantId(tenantId).intakeEvent.findMany({
+      where: { connectionId, status: 'COMPLETED', workflowRun: { status: 'COMPLETED' } },
+      orderBy: { occurredAt: 'desc' },
+      take: VERIFICATION_CANDIDATE_LIMIT,
+      include: {
+        workflowRun: {
+          include: {
+            workflowDefinition: true,
+            stepRuns: { include: { agentRun: { include: { toolInvocations: true } } } },
+          },
+        },
+      },
+    });
+
+    for (const candidate of candidates) {
+      const run = candidate.workflowRun;
+      if (!run || run.stepRuns.length === 0) continue;
+
+      const everyStepVerified = run.stepRuns.every((step) => {
+        if (step.status === 'SKIPPED') return true;
+        if (step.status !== 'SUCCEEDED') return false;
+        if (!step.agentRun || step.agentRun.status !== 'COMPLETED') return false;
+        return step.agentRun.toolInvocations.every((tool) => tool.status === 'SUCCESS');
+      });
+      if (!everyStepVerified) continue;
+
+      const execution = readExecution(candidate.metadata);
+      return {
+        intakeEventId: candidate.id,
+        workflowRunId: run.id,
+        workflowKey: run.workflowDefinition?.key ?? null,
+        completedAt: (run.completedAt ?? candidate.updatedAt).toISOString(),
+        execution,
+        executionSummary: execution ? describeExecutionModes(execution) : 'Ausführungsmodus nicht erfasst',
+      };
+    }
+    return null;
   }
 }

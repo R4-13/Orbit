@@ -88,6 +88,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      args:
+        ORBIT_BUILD_COMMIT: "${ORBIT_BUILD_COMMIT:-}"
     container_name: orbit-api
     restart: unless-stopped
     env_file:
@@ -122,6 +124,8 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      args:
+        ORBIT_BUILD_COMMIT: "${ORBIT_BUILD_COMMIT:-}"
     container_name: orbit-worker
     restart: unless-stopped
     command: ["node", "apps/api/dist/worker/main.js"]

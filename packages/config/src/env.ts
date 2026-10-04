@@ -103,6 +103,9 @@ export const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4o'),
 
+  // Build identity (set at image build time) — recorded as part of live-test evidence (Amendment 02 §19.4).
+  ORBIT_BUILD_COMMIT: z.string().optional().default(''),
+
   // OCR / STT
   OCR_PROVIDER: z.enum(['mock', 'tesseract']).default('mock'),
   STT_PROVIDER: z.enum(['mock', 'whisper']).default('mock'),

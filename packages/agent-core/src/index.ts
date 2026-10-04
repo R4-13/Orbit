@@ -15,6 +15,7 @@ export * from './llm/anthropic-llm-provider';
 export * from './llm/openai-llm-provider';
 export * from './tools/types';
 export * from './tools/tool-registry';
+export * from './tools/tool-result';
 export * from './policy/policy-engine';
 export * from './runtime/agent-runtime';
 export * from './prompt/prompt-layers';

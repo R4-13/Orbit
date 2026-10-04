@@ -40,7 +40,7 @@ export class CompaniesService {
       return existing;
     }
 
-    const crmCompany = await this.crmConnector.upsertCompany({ name: input.name, domain: input.domain });
+    const crmCompany = await this.crmConnector.upsertCompany({ tenantId, name: input.name, domain: input.domain });
 
     const company = await this.prisma.forTenantId(tenantId).company.create({
       data: {

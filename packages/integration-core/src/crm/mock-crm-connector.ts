@@ -11,14 +11,17 @@ import type {
 } from './types';
 
 /**
- * Deterministic in-memory CRM connector (CRM_CONNECTOR=mock, the default —
- * see @orbit/config/env.ts). Upserts are keyed the same way the real
- * HubSpot connector will be (email for contacts, domain for companies) so
- * Sales-workflow logic written against this mock transfers unchanged.
+ * Deterministic in-memory CRM connector for unit tests. The running API's
+ * `CRM_CONNECTOR=mock` uses the Postgres-backed `PersistentMockCrmConnector`
+ * (apps/api) instead, so stored `crmExternalId` references survive restarts
+ * (Amendment 02 §12.5) — this class deliberately does not try to fake that
+ * by accepting "formally similar" ids. Upserts are keyed the same way the
+ * real HubSpot connector will be (email for contacts, domain for companies).
  */
 export class MockCrmConnector implements CrmConnector {
   readonly providerName = 'mock';
 
+  // Every map is keyed by `${tenantId}|…`, so a reference issued to one tenant can never resolve for another.
   private readonly contactsByEmail = new Map<string, CrmContactRecord>();
   private readonly contactsById = new Map<string, CrmContactRecord>();
   private readonly companiesByDomain = new Map<string, CrmCompanyRecord>();
@@ -31,43 +34,31 @@ export class MockCrmConnector implements CrmConnector {
   }
 
   async upsertContact(input: UpsertContactInput): Promise<CrmContactRecord> {
-    const existing = input.email ? this.contactsByEmail.get(input.email) : undefined;
+    const existing = input.email ? this.contactsByEmail.get(`${input.tenantId}|${input.email}`) : undefined;
     const record: CrmContactRecord = {
       externalId: existing?.externalId ?? `mock-contact-${randomUUID()}`,
       email: input.email,
       firstName: input.firstName,
       lastName: input.lastName,
     };
-    this.contactsById.set(record.externalId, record);
-    if (input.email) this.contactsByEmail.set(input.email, record);
+    this.contactsById.set(`${input.tenantId}|${record.externalId}`, record);
+    if (input.email) this.contactsByEmail.set(`${input.tenantId}|${input.email}`, record);
     return record;
   }
 
   async upsertCompany(input: UpsertCompanyInput): Promise<CrmCompanyRecord> {
-    const existing = input.domain ? this.companiesByDomain.get(input.domain) : undefined;
+    const existing = input.domain ? this.companiesByDomain.get(`${input.tenantId}|${input.domain}`) : undefined;
     const record: CrmCompanyRecord = {
       externalId: existing?.externalId ?? `mock-company-${randomUUID()}`,
       name: input.name,
     };
-    this.companiesById.set(record.externalId, record);
-    if (input.domain) this.companiesByDomain.set(input.domain, record);
+    this.companiesById.set(`${input.tenantId}|${record.externalId}`, record);
+    if (input.domain) this.companiesByDomain.set(`${input.tenantId}|${input.domain}`, record);
     return record;
   }
 
-  /**
-   * A real CRM keeps its records across ORBIT restarts; this in-memory mock
-   * does not, but ORBIT persists the `mock-contact-*` ids it was handed
-   * (`Contact.crmExternalId`). Accepting ids carrying the mock's own prefix
-   * keeps a restart from turning every known contact into "unknown" —
-   * found live: a returning sender's `create_lead` failed after a worker
-   * restart. Ids that never looked like ours are still rejected.
-   */
-  private knowsContact(externalId: string): boolean {
-    return this.contactsById.has(externalId) || externalId.startsWith('mock-contact-');
-  }
-
   async createLead(input: CreateLeadInput): Promise<CreateLeadResult> {
-    if (!this.knowsContact(input.contactExternalId)) {
+    if (!this.contactsById.has(`${input.tenantId}|${input.contactExternalId}`)) {
       throw new Error(`Mock CRM: unknown contact "${input.contactExternalId}".`);
     }
     this.leads.push(input);
@@ -75,7 +66,7 @@ export class MockCrmConnector implements CrmConnector {
   }
 
   async logActivity(input: LogActivityInput): Promise<void> {
-    if (!this.knowsContact(input.contactExternalId)) {
+    if (!this.contactsById.has(`${input.tenantId}|${input.contactExternalId}`)) {
       throw new Error(`Mock CRM: unknown contact "${input.contactExternalId}".`);
     }
     this.activities.push(input);

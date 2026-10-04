@@ -235,6 +235,24 @@ enum ToolInvocationStatus {
   FAILED
   BLOCKED_AWAITING_APPROVAL
   DENIED
+  /// Amendment 02 §15.2 — die externe Wirkung ist möglicherweise eingetreten (z. B. Timeout nach Versand); niemals blind wiederholen.
+  OUTCOME_UNKNOWN
+}
+
+/// Amendment 02 §12.1 — Schrittzustände. Der Zustand eines StepRun ist die Quelle der Wahrheit dafür, ob ein Schritt wirklich erfolgreich war (nicht „es gab keine Exception").
+enum WorkflowStepRunStatus {
+  PLANNED
+  READY
+  RUNNING
+  WAITING
+  AWAITING_APPROVAL
+  SUCCEEDED
+  SKIPPED
+  BLOCKED
+  FAILED
+  CANCELLED
+  SUPERSEDED
+  OUTCOME_UNKNOWN
 }
 
 /// Agenten-Konfiguration (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1).
@@ -305,6 +323,7 @@ model Tenant {
   intakeEvents            IntakeEvent[]
 
   @@map("tenants")
+  mockCrmRecords MockCrmRecord[]
 }
 
 model User {
@@ -1382,6 +1401,14 @@ model WorkflowStepRun {
   stepOrder     Int      @map("step_order")
   agentRunId    String?  @map("agent_run_id")
   skipped       Boolean  @default(false)
+  /// Tatsächliches Ergebnis des Schritts (siehe WorkflowStepRunStatus). Ein zurückgegebener Tool-Fehler macht den Schritt FAILED, auch wenn keine Exception flog.
+  status        WorkflowStepRunStatus @default(SUCCEEDED)
+  attempt       Int      @default(1)
+  /// Sicherer, maschinenlesbarer Fehlercode (z. B. TOOL_RETURNED_ERROR, POLICY_BLOCKED) — nie eine rohe Provider-Meldung.
+  errorCode     String?  @map("error_code")
+  errorMessage  String?  @map("error_message")
+  /// Name des Tools, dessen Ergebnis den Schritt scheitern ließ (Nachvollziehbarkeit Tool → StepRun).
+  failedToolName String? @map("failed_tool_name")
   createdAt     DateTime @default(now()) @map("created_at")
 
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1468,4 +1495,36 @@ model RetentionPolicy {
 
   @@unique([tenantId, category])
   @@map("retention_policies")
+}
+
+// ============================================================================
+// Test-/Mock-System-of-Record (Amendment 02 §10, §12.5)
+// ============================================================================
+
+enum MockCrmRecordKind {
+  CONTACT
+  COMPANY
+  LEAD
+  ACTIVITY
+}
+
+/// Dauerhafte, tenantgebundene Datensätze des Mock-CRM (`CRM_CONNECTOR=mock`). Ersetzt den reinen
+/// Arbeitsspeicher-Zustand von `MockCrmConnector`: in Postgres gespeicherte `crmExternalId`-Referenzen
+/// bleiben über Worker-/Container-Neustarts hinweg gültig und werden bei jedem Zugriff gegen diese
+/// Tabelle (inkl. Mandantenbindung durch RLS) geprüft — eine formal ähnlich aussehende ID genügt nie.
+model MockCrmRecord {
+  id         String            @id @default(uuid())
+  tenantId   String            @map("tenant_id")
+  kind       MockCrmRecordKind
+  externalId String            @map("external_id")
+  /// Abgleichsschlüssel für Upserts: E-Mail (CONTACT) bzw. Domain (COMPANY).
+  matchKey   String?           @map("match_key")
+  data       Json?
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, kind, externalId])
+  @@index([tenantId, kind, matchKey])
+  @@map("mock_crm_records")
 }

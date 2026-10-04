@@ -139,7 +139,7 @@ describe('Workflow approval resume (e2e)', () => {
       .expect(201);
 
     expect(trigger.body.status).toBe('WAITING_FOR_APPROVAL');
-    expect(trigger.body.steps).toEqual([{ order: 1, agentDefinitionKey: blockedAgentKey, skipped: false, agentRunId: expect.any(String) }]);
+    expect(trigger.body.steps).toEqual([{ order: 1, agentDefinitionKey: blockedAgentKey, skipped: false, agentRunId: expect.any(String), status: 'AWAITING_APPROVAL' }]);
 
     const runsAfterPause = await request(app.getHttpServer())
       .get(`/api/v1/workflow-definitions/${workflowKey}/runs`)

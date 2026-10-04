@@ -36,6 +36,7 @@ export class ContactsService {
     }
 
     const crmContact = await this.crmConnector.upsertContact({
+      tenantId,
       email: input.email,
       firstName: input.firstName,
       lastName: input.lastName,

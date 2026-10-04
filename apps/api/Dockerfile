@@ -32,6 +32,9 @@ RUN pnpm --filter @orbit/domain prisma:generate
 RUN pnpm --filter @orbit/api... build
 
 FROM node:22-alpine AS runtime
+# Build identity for live-test evidence (Amendment 02 §19.4); empty when not provided.
+ARG ORBIT_BUILD_COMMIT=""
+ENV ORBIT_BUILD_COMMIT=$ORBIT_BUILD_COMMIT
 ENV NODE_ENV=production
 WORKDIR /repo
 COPY --from=build /repo /repo

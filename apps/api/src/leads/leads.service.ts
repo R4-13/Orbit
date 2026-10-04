@@ -44,6 +44,7 @@ export class LeadsService {
     }
 
     const crmLead = await this.crmConnector.createLead({
+      tenantId,
       contactExternalId: contact.crmExternalId ?? contact.id,
       companyExternalId: input.companyId,
       source: input.source,

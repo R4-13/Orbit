@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
 import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
+import { ExecutionEvidenceService } from './execution-evidence.service';
 import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 
@@ -27,6 +28,8 @@ interface DomainHandlerResult {
   agentRunId?: string;
   /** Set when the durable workflow ended FAILED — the IntakeEvent must then end FAILED, not COMPLETED. */
   failureMessage?: string;
+  /** An external effect may have happened (Amendment 02 §15.2) — the IntakeEvent needs review, not a retry. */
+  outcomeUnknown?: boolean;
 }
 
 const RELEVANCE_CONFIDENCE_THRESHOLD = 0.5;
@@ -85,6 +88,7 @@ export class IntakeService {
     private readonly tasks: TasksService,
     private readonly prisma: PrismaService,
     private readonly workflowRunner: WorkflowRunnerService,
+    private readonly executionEvidence: ExecutionEvidenceService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -139,6 +143,16 @@ export class IntakeService {
         emailMessageId: inboundEmail.id,
         status: 'RECEIVED',
       },
+    });
+
+    // Record what is real vs. simulated for THIS run now (Amendment 02 §19.4), before anything can fail.
+    const execution = await this.executionEvidence.capture(tenantId, {
+      channelProvider: event.provider,
+      simulatedChannel: event.channel === 'SIMULATED',
+    });
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+      where: { id: intakeEvent.id },
+      data: { metadata: { execution } as unknown as Prisma.InputJsonValue },
     });
 
     const triage = await this.assessRelevance(tenantId, actorUserId, event);
@@ -211,10 +225,12 @@ export class IntakeService {
     const handler = this.domainWorkflowHandlers[category];
     let agentRunIds: string[] = [];
     let workflowFailure: string | undefined;
+    let workflowOutcomeUnknown = false;
     try {
       const handled = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEvent.id) : null;
       agentRunIds = handled?.agentRunId ? [handled.agentRunId] : [];
       workflowFailure = handled?.failureMessage;
+      workflowOutcomeUnknown = handled?.outcomeUnknown ?? false;
     } catch (error) {
       await this.prisma.forTenantId(tenantId).intakeEvent.update({
         where: { id: intakeEvent.id },
@@ -227,7 +243,9 @@ export class IntakeService {
     // derived from it, e.g. the connector's operational status) would claim success.
     await this.prisma.forTenantId(tenantId).intakeEvent.update({
       where: { id: intakeEvent.id },
-      data: workflowFailure ? { status: 'FAILED', errorMessage: workflowFailure } : { status: 'COMPLETED' },
+      data: workflowFailure
+        ? { status: workflowOutcomeUnknown ? 'NEEDS_REVIEW' : 'FAILED', errorMessage: workflowFailure }
+        : { status: 'COMPLETED' },
     });
     return { case: businessCase, category, agentRunIds, intakeEventId: intakeEvent.id };
   }
@@ -527,7 +545,11 @@ export class IntakeService {
         ? ((await this.prisma.forTenantId(tenantId).workflowRun.findUnique({ where: { id: result.workflowRunId } }))?.errorMessage ??
           'Der Workflow ist fehlgeschlagen.')
         : undefined;
-    return { agentRunId: result.steps[0]?.agentRunId, failureMessage };
+    return {
+      agentRunId: result.steps[0]?.agentRunId,
+      failureMessage,
+      outcomeUnknown: result.steps.some((step) => step.status === 'OUTCOME_UNKNOWN'),
+    };
   }
 
   /**

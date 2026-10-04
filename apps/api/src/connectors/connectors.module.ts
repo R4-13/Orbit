@@ -2,13 +2,14 @@ import { Global, Module } from '@nestjs/common';
 import { IntegrationUnavailableError } from '@orbit/shared';
 import {
   MockCalendarConnector,
-  MockCrmConnector,
   MockFinanceConnector,
   MockMailConnector,
   MockOcrProvider,
 } from '@orbit/integration-core';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
+import { PrismaService } from '../prisma/prisma.service';
+import { PersistentMockCrmConnector } from './persistent-mock-crm.connector';
 import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
 
 /**
@@ -47,14 +48,14 @@ import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, O
     },
     {
       provide: CRM_CONNECTOR,
-      inject: [ORBIT_ENV],
-      useFactory: (env: OrbitEnv) => {
+      inject: [ORBIT_ENV, PrismaService],
+      useFactory: (env: OrbitEnv, prisma: PrismaService) => {
         if (env.CRM_CONNECTOR !== 'mock') {
           throw new IntegrationUnavailableError(
             `CrmConnector "${env.CRM_CONNECTOR}" is not implemented yet — see docs/INTEGRATIONS.md.`,
           );
         }
-        return new MockCrmConnector();
+        return new PersistentMockCrmConnector(prisma);
       },
     },
     {

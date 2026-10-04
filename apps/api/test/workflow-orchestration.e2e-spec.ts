@@ -107,8 +107,8 @@ describe('Workflow orchestration (e2e)', () => {
 
     expect(response.body.status).toBe('COMPLETED');
     expect(response.body.steps).toEqual([
-      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: expect.any(String) },
-      { order: 2, agentDefinitionKey: followUpAgentKey, skipped: false, agentRunId: expect.any(String) },
+      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: expect.any(String), status: 'SUCCEEDED' },
+      { order: 2, agentDefinitionKey: followUpAgentKey, skipped: false, agentRunId: expect.any(String), status: 'SUCCEEDED' },
     ]);
 
     const runsResponse = await request(app.getHttpServer())
@@ -136,8 +136,8 @@ describe('Workflow orchestration (e2e)', () => {
 
     expect(response.body.status).toBe('COMPLETED');
     expect(response.body.steps).toEqual([
-      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: expect.any(String) },
-      { order: 2, agentDefinitionKey: followUpAgentKey, skipped: true },
+      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: expect.any(String), status: 'SUCCEEDED' },
+      { order: 2, agentDefinitionKey: followUpAgentKey, skipped: true, status: 'SKIPPED' },
     ]);
   });
 

@@ -4,6 +4,15 @@
  * lead/opportunity record, and logging an activity against a contact.
  */
 
+/**
+ * Every call carries the owning tenant. A real CRM connection is per-tenant
+ * (Amendment 01 §2.3), so the tenant is part of the call context; mocks use
+ * it to keep reference lookups tenant-bound (Amendment 02 §12.5).
+ */
+export interface CrmCallContext {
+  tenantId: string;
+}
+
 export interface CrmContactRecord {
   externalId: string;
   email?: string;
@@ -11,7 +20,7 @@ export interface CrmContactRecord {
   lastName: string;
 }
 
-export interface UpsertContactInput {
+export interface UpsertContactInput extends CrmCallContext {
   email?: string;
   firstName: string;
   lastName: string;
@@ -24,12 +33,12 @@ export interface CrmCompanyRecord {
   name: string;
 }
 
-export interface UpsertCompanyInput {
+export interface UpsertCompanyInput extends CrmCallContext {
   name: string;
   domain?: string;
 }
 
-export interface CreateLeadInput {
+export interface CreateLeadInput extends CrmCallContext {
   contactExternalId: string;
   companyExternalId?: string;
   source: string;
@@ -40,7 +49,7 @@ export interface CreateLeadResult {
   externalId: string;
 }
 
-export interface LogActivityInput {
+export interface LogActivityInput extends CrmCallContext {
   contactExternalId: string;
   activityType: string;
   summary: string;

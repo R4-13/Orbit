@@ -229,8 +229,9 @@ export class SalesAgentTools {
       description: 'Dokumentiert eine Aktivität (z. B. eingehende Anfrage) am CRM-Kontakt.',
       inputSchema,
       policyAction: POLICY_ACTIONS.CRM_ACTIVITY_LOG,
-      execute: async (input) =>
+      execute: async (input, context) =>
         this.crmConnector.logActivity({
+          tenantId: context.tenantId,
           contactExternalId: input.contactExternalId,
           activityType: input.activityType,
           summary: input.summary,

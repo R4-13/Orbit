@@ -44,7 +44,7 @@ describe('CompaniesService', () => {
 
     const result = await service.upsert('tenant_1', 'user_1', { name: 'Neu GmbH', domain: 'neu.example' });
 
-    expect(crmConnector.upsertCompany).toHaveBeenCalledWith({ name: 'Neu GmbH', domain: 'neu.example' });
+    expect(crmConnector.upsertCompany).toHaveBeenCalledWith({ tenantId: 'tenant_1', name: 'Neu GmbH', domain: 'neu.example' });
     expect(scoped.company.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ crmExternalId: 'mock-company-1' }),
     });

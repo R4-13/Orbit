@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ToolCallOutcome } from '@orbit/agent-core';
-import type { Prisma, WorkflowRun } from '@orbit/domain';
+import type { Prisma, WorkflowRun, WorkflowStepRunStatus } from '@orbit/domain';
 import { NotFoundError, ValidationFailedError } from '@orbit/shared';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
@@ -13,7 +13,15 @@ import type { WorkflowDefinitionWithSteps } from './workflow-definitions.service
 export interface WorkflowRunResult {
   workflowRunId: string;
   status: 'COMPLETED' | 'FAILED' | 'WAITING_FOR_APPROVAL' | 'REJECTED';
-  steps: Array<{ order: number; agentDefinitionKey: string; skipped: boolean; agentRunId?: string }>;
+  steps: Array<{
+    order: number;
+    agentDefinitionKey: string;
+    skipped: boolean;
+    agentRunId?: string;
+    /** Amendment 02 §12.1 — the step's real outcome; `FAILED`/`OUTCOME_UNKNOWN`/`BLOCKED` prevent a COMPLETED run. */
+    status?: WorkflowStepRunStatus;
+    errorCode?: string;
+  }>;
 }
 
 export type WorkflowRunWithStepRuns = Prisma.WorkflowRunGetPayload<{ include: { stepRuns: true } }>;
@@ -149,6 +157,8 @@ export class WorkflowRunnerService {
         agentDefinitionKey: stepDef?.agentDefinitionKey ?? '',
         skipped: stepRun.skipped,
         agentRunId: stepRun.agentRunId ?? undefined,
+        status: stepRun.status,
+        errorCode: stepRun.errorCode ?? undefined,
       };
     });
 
@@ -251,9 +261,9 @@ export class WorkflowRunnerService {
 
       if (step.condition && !evaluateWorkflowCondition(context, step.condition as unknown as WorkflowStepConditionExpr)) {
         await this.prisma.forTenantId(tenantId).workflowStepRun.create({
-          data: { tenantId, workflowRunId: workflowRun.id, stepOrder: step.order, skipped: true },
+          data: { tenantId, workflowRunId: workflowRun.id, stepOrder: step.order, skipped: true, status: 'SKIPPED' },
         });
-        stepResults.push({ order: step.order, agentDefinitionKey: step.agentDefinitionKey, skipped: true });
+        stepResults.push({ order: step.order, agentDefinitionKey: step.agentDefinitionKey, skipped: true, status: 'SKIPPED' });
         continue;
       }
 
@@ -262,6 +272,17 @@ export class WorkflowRunnerService {
         resolved = await this.resolver.resolve(tenantId, step.agentDefinitionKey);
       } catch (error) {
         failureMessage = `Step ${step.order} (${step.agentDefinitionKey}): ${error instanceof Error ? error.message : String(error)}`;
+        await this.prisma.forTenantId(tenantId).workflowStepRun.create({
+          data: {
+            tenantId,
+            workflowRunId: workflowRun.id,
+            stepOrder: step.order,
+            status: 'FAILED',
+            errorCode: 'AGENT_UNAVAILABLE',
+            errorMessage: failureMessage,
+          },
+        });
+        stepResults.push({ order: step.order, agentDefinitionKey: step.agentDefinitionKey, skipped: false, status: 'FAILED', errorCode: 'AGENT_UNAVAILABLE' });
         break;
       }
 
@@ -269,6 +290,9 @@ export class WorkflowRunnerService {
       const agentRun = await this.runs.start({ tenantId, agentType: resolved.baseType, triggerType: 'MANUAL' });
 
       let outcomes: ToolCallOutcome[] = [];
+      let stepStatus: WorkflowStepRunStatus = 'SUCCEEDED';
+      let stepErrorCode: string | undefined;
+      let failedToolName: string | undefined;
       try {
         const result = await resolved.runtime.runTurn(
           { tenantId, agentRunId: agentRun.id, actorUserId },
@@ -278,23 +302,34 @@ export class WorkflowRunnerService {
         await this.runs.recordToolCalls(tenantId, agentRun.id, outcomes);
         await this.runs.complete(tenantId, agentRun.id, result);
 
-        // AgentRunRecorderService.complete() already marks the AgentRun FAILED when any tool
-        // errored (runTurn() itself doesn't throw for that) — the workflow must agree, otherwise
-        // a run whose step failed is reported COMPLETED (found live: a Sales intake whose
-        // create_lead failed showed WorkflowRun COMPLETED).
-        const failedTool = outcomes.find((outcome) => outcome.error);
-        if (failedTool) {
+        // runTurn() does not throw for a tool that errored or returned a failure (Amendment 02 §12.5):
+        // the step's real status comes from the typed tool results. Uncertain outcomes outrank plain
+        // failures because they must be reconciled, never retried blindly.
+        const unknownTool = outcomes.find((outcome) => outcome.result?.status === 'OUTCOME_UNKNOWN');
+        const failedTool = outcomes.find((outcome) => outcome.result?.status === 'FAILED' || (outcome.error && !outcome.result));
+        const blockedTool = outcomes.find((outcome) => outcome.decision === 'DENY' && !outcome.error);
+        if (unknownTool) {
+          stepStatus = 'OUTCOME_UNKNOWN';
+          stepErrorCode = unknownTool.result?.errorCode ?? 'OUTCOME_UNKNOWN';
+          failedToolName = unknownTool.toolName;
+          failureMessage = `Step ${step.order} (${step.agentDefinitionKey}): Das Ergebnis von "${unknownTool.toolName}" ist ungewiss — Abgleich/Prüfung erforderlich, nicht blind wiederholen.`;
+        } else if (failedTool) {
+          stepStatus = 'FAILED';
+          stepErrorCode = failedTool.result?.errorCode ?? 'TOOL_RETURNED_ERROR';
+          failedToolName = failedTool.toolName;
           failureMessage = `Step ${step.order} (${step.agentDefinitionKey}): Tool "${failedTool.toolName}" failed: ${failedTool.error}`;
+        } else if (blockedTool) {
+          stepStatus = 'BLOCKED';
+          stepErrorCode = 'POLICY_BLOCKED';
+          failedToolName = blockedTool.toolName;
+          failureMessage = `Step ${step.order} (${step.agentDefinitionKey}): Aktion "${blockedTool.toolName}" ist per Policy gesperrt (POLICY_BLOCKED).`;
         }
       } catch (error) {
         await this.runs.fail(tenantId, agentRun.id, error instanceof Error ? error.message : String(error));
+        stepStatus = 'FAILED';
+        stepErrorCode = 'STEP_EXCEPTION';
         failureMessage = `Step ${step.order} (${step.agentDefinitionKey}) failed: ${error instanceof Error ? error.message : String(error)}`;
       }
-
-      await this.prisma.forTenantId(tenantId).workflowStepRun.create({
-        data: { tenantId, workflowRunId: workflowRun.id, stepOrder: step.order, agentRunId: agentRun.id },
-      });
-      stepResults.push({ order: step.order, agentDefinitionKey: step.agentDefinitionKey, skipped: false, agentRunId: agentRun.id });
 
       const stepOutput: Record<string, unknown> = { ...(context.steps[step.order]?.output ?? {}) };
       for (const outcome of outcomes) {
@@ -314,6 +349,28 @@ export class WorkflowRunnerService {
           reason: `Workflow-Vorschlag „${outcome.toolName}" (Schritt ${step.order}) wartet auf Freigabe.`,
         });
       }
+      if (stepStatus === 'SUCCEEDED' && stepHasPendingApproval) stepStatus = 'AWAITING_APPROVAL';
+
+      await this.prisma.forTenantId(tenantId).workflowStepRun.create({
+        data: {
+          tenantId,
+          workflowRunId: workflowRun.id,
+          stepOrder: step.order,
+          agentRunId: agentRun.id,
+          status: stepStatus,
+          errorCode: stepErrorCode,
+          errorMessage: stepStatus === 'FAILED' || stepStatus === 'OUTCOME_UNKNOWN' || stepStatus === 'BLOCKED' ? failureMessage : undefined,
+          failedToolName,
+        },
+      });
+      stepResults.push({
+        order: step.order,
+        agentDefinitionKey: step.agentDefinitionKey,
+        skipped: false,
+        agentRunId: agentRun.id,
+        status: stepStatus,
+        errorCode: stepErrorCode,
+      });
 
       if (failureMessage) break;
       if (stepHasPendingApproval) {

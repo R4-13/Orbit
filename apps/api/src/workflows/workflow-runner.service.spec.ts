@@ -7,7 +7,9 @@ import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WorkflowRunnerService } from './workflow-runner.service';
 
-function fakeRuntime(outcomes: Array<{ toolCallId: string; toolName: string; decision: string; output?: unknown; error?: string }>) {
+function fakeRuntime(
+  outcomes: Array<{ toolCallId: string; toolName: string; decision: string; output?: unknown; error?: string; result?: { status: string; errorCode?: string } }>,
+) {
   return { runTurn: jest.fn().mockResolvedValue({ finalText: undefined, toolCallOutcomes: outcomes, iterations: 1 }) } as unknown as AgentRuntime;
 }
 
@@ -97,8 +99,8 @@ describe('WorkflowRunnerService', () => {
 
     expect(result.status).toBe('COMPLETED');
     expect(result.steps).toEqual([
-      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: 'run_1' },
-      { order: 2, agentDefinitionKey: 'finance-intake', skipped: true },
+      { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: 'run_1', status: 'SUCCEEDED' },
+      { order: 2, agentDefinitionKey: 'finance-intake', skipped: true, status: 'SKIPPED' },
     ]);
     // step 2 never resolved an agent since its condition (category === FINANCE) wasn't met (actual: SALES)
     expect(resolver.resolve).toHaveBeenCalledTimes(1);
@@ -187,7 +189,9 @@ describe('WorkflowRunnerService', () => {
     const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
 
     expect(result.status).toBe('WAITING_FOR_APPROVAL');
-    expect(result.steps).toEqual([{ order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1' }]);
+    expect(result.steps).toEqual([
+      { order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1', status: 'AWAITING_APPROVAL' },
+    ]);
     // step 2 must never run while step 1's call is still pending approval
     expect(resolver.resolve).toHaveBeenCalledTimes(1);
     expect(scoped.workflowRun.update).toHaveBeenCalledWith(
@@ -218,8 +222,8 @@ describe('WorkflowRunnerService', () => {
 
     expect(result.status).toBe('COMPLETED');
     expect(result.steps).toEqual([
-      { order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1' },
-      { order: 2, agentDefinitionKey: 'sales-intake', skipped: false, agentRunId: 'run_1' },
+      expect.objectContaining({ order: 1, agentDefinitionKey: 'finance-intake', skipped: false, agentRunId: 'run_1' }),
+      { order: 2, agentDefinitionKey: 'sales-intake', skipped: false, agentRunId: 'run_1', status: 'SUCCEEDED' },
     ]);
     // only step 2 actually re-runs an agent turn — step 1 is not replayed
     expect(resolver.resolve).toHaveBeenCalledTimes(1);
@@ -316,6 +320,89 @@ describe('WorkflowRunnerService', () => {
     );
   });
 
+  describe('step status (Amendment 02 §12.1/§12.5)', () => {
+    const oneStepWorkflow = () =>
+      scoped.workflowDefinition.findUnique.mockResolvedValue({
+        id: 'wfd_1',
+        status: 'ACTIVE',
+        steps: [{ order: 1, agentDefinitionKey: 'sales-intake', inputMapping: null, condition: null }],
+      });
+
+    it('records a returned tool failure as a FAILED StepRun carrying the tool name and a safe error code', async () => {
+      oneStepWorkflow();
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'SALES',
+        runtime: fakeRuntime([
+          { toolCallId: 'tc_1', toolName: 'create_lead', decision: 'ALLOW', error: 'CRM lehnt ab.', result: { status: 'FAILED', errorCode: 'CRM_REJECTED' } },
+        ]),
+      });
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+      expect(result.status).toBe('FAILED');
+      expect(result.steps[0]).toMatchObject({ status: 'FAILED', errorCode: 'CRM_REJECTED' });
+      expect(scoped.workflowStepRun.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ status: 'FAILED', errorCode: 'CRM_REJECTED', failedToolName: 'create_lead' }),
+      });
+    });
+
+    it('records an uncertain external effect as OUTCOME_UNKNOWN (never COMPLETED, never a blind retry)', async () => {
+      oneStepWorkflow();
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'SALES',
+        runtime: fakeRuntime([
+          { toolCallId: 'tc_1', toolName: 'send_email', decision: 'ALLOW', error: 'Timeout nach Versand', result: { status: 'OUTCOME_UNKNOWN', errorCode: 'OUTCOME_UNKNOWN' } },
+        ]),
+      });
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+      expect(result.status).toBe('FAILED');
+      expect(result.steps[0]?.status).toBe('OUTCOME_UNKNOWN');
+      expect(scoped.workflowRun.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ errorMessage: expect.stringContaining('ungewiss') }) }),
+      );
+    });
+
+    it('records a policy-denied tool as a BLOCKED step and does not report COMPLETED', async () => {
+      oneStepWorkflow();
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'SALES',
+        runtime: fakeRuntime([{ toolCallId: 'tc_1', toolName: 'transfer_invoice_to_finance', decision: 'DENY' }]),
+      });
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+      expect(result.status).toBe('FAILED');
+      expect(result.steps[0]).toMatchObject({ status: 'BLOCKED', errorCode: 'POLICY_BLOCKED' });
+    });
+
+    it('records a thrown exception as a FAILED step with STEP_EXCEPTION', async () => {
+      oneStepWorkflow();
+      resolver.resolve.mockResolvedValue({
+        systemPrompt: 'x',
+        baseType: 'SALES',
+        runtime: { runTurn: jest.fn().mockRejectedValue(new Error('boom')) } as unknown as AgentRuntime,
+      });
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+      expect(result.steps[0]).toMatchObject({ status: 'FAILED', errorCode: 'STEP_EXCEPTION' });
+    });
+
+    it('records an unresolvable agent as a FAILED step instead of leaving no trace', async () => {
+      oneStepWorkflow();
+      resolver.resolve.mockRejectedValue(new Error('not-configured'));
+
+      const result = await service.trigger('tenant_1', 'user_1', 'wf-1', {});
+
+      expect(result.steps[0]).toMatchObject({ status: 'FAILED', errorCode: 'AGENT_UNAVAILABLE' });
+    });
+  });
+
   describe('createQueuedRun / executeQueuedRun (docs/SCALABILITY_CONCEPT.md)', () => {
     it('createQueuedRun() creates the run but never resolves an agent or runs a turn', async () => {
       scoped.workflowDefinition.findUnique.mockResolvedValue({
@@ -387,7 +474,7 @@ describe('WorkflowRunnerService', () => {
       expect(result.status).toBe('COMPLETED');
       expect(result.workflowRunId).toBe('wfr_1');
       expect(result.steps).toEqual([
-        { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: 'run_1' },
+        { order: 1, agentDefinitionKey: 'communication-intake', skipped: false, agentRunId: 'run_1', status: 'SUCCEEDED' },
       ]);
     });
   });

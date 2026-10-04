@@ -1,0 +1,11 @@
+{
+  "tenantId": "f101a3b0-8d1c-4480-95b0-c22c3a91feed",
+  "connectionId": "6ab7b263-7a4f-4391-acf1-6c00a0fd3144",
+  "externalEventId": "1a10729c475e4835",
+  "intakeEventId": "690e4e0d-ea84-4ee7-9189-6f06aa3949bd",
+  "workflowRunId": "0c9156ee-c8f6-47eb-934e-522992f9f23a",
+  "agentRunId": "01769dbf-9411-434e-9e74-2cad3fa1194e",
+  "failedToolName": "create_lead",
+  "reason": "Real Gmail sales inquiry: create_lead failed (Mock CRM: unknown contact after worker restart) while WorkflowRun and IntakeEvent were reported COMPLETED. Reported in commit b1ece22; correction per Amendment 02 section 24.3.",
+  "executedBy": "Claude Code under the task authorization to implement Amendment 02 Rev. 1.1 (section 24.3)"
+}

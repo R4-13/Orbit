@@ -3,12 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { MockLLMProvider } from '../llm/mock-llm-provider';
 import type { LLMCompletionResult } from '../llm/types';
 import { ToolRegistry } from '../tools/tool-registry';
+import { ToolOutcomeUnknownError } from '../tools/tool-result';
 import type { ToolDefinition } from '../tools/types';
 import { AgentRuntime } from './agent-runtime';
 
 const CONTEXT = { tenantId: 'tenant_1', agentRunId: 'run_1' };
 
-function buildLogActivityTool(execute = vi.fn(async () => ({ logged: true }))): ToolDefinition {
+function buildLogActivityTool(execute: ToolDefinition["execute"] = vi.fn(async () => ({ logged: true }))): ToolDefinition {
   return {
     name: 'log_activity',
     description: 'Logs a CRM activity.',
@@ -54,6 +55,7 @@ describe('AgentRuntime.runTurn', () => {
         decision: 'ALLOW',
         input: { summary: 'Anruf erledigt' },
         output: { logged: true },
+        result: { status: 'SUCCEEDED' },
         durationMs: expect.any(Number),
       },
     ]);
@@ -186,5 +188,46 @@ describe('AgentRuntime.runTurn', () => {
     await runtime.runTurn(CONTEXT, { messages: [] });
 
     expect(resolvePolicyMode).toHaveBeenCalledWith('crm.activity.log', CONTEXT);
+  });
+
+  it('reports a returned failure ({ success: false }) as an error without any thrown exception (Amendment 02 §12.5)', async () => {
+    const tools = new ToolRegistry();
+    tools.register(buildLogActivityTool(vi.fn(async () => ({ success: false, message: 'CRM lehnt ab.' }))));
+    const llm = new MockLLMProvider([
+      { toolCalls: [{ toolCallId: 'call_1', toolName: 'log_activity', input: { summary: 'x' } }], stopReason: 'tool_use' },
+      { toolCalls: [], stopReason: 'end_turn', text: 'Alles erledigt.' },
+    ]);
+
+    const result = await new AgentRuntime(llm, tools, async () => 'AUTONOMOUS').runTurn(CONTEXT, {
+      messages: [{ role: 'user', content: 'go' }],
+    });
+
+    // The agent's own cheerful summary must not hide the tool failure.
+    expect(result.finalText).toBe('Alles erledigt.');
+    expect(result.toolCallOutcomes[0]).toMatchObject({
+      error: 'CRM lehnt ab.',
+      result: { status: 'FAILED', errorCode: 'TOOL_RETURNED_ERROR' },
+    });
+  });
+
+  it('reports a thrown ToolOutcomeUnknownError as OUTCOME_UNKNOWN, never retryable', async () => {
+    const tools = new ToolRegistry();
+    tools.register(
+      buildLogActivityTool(
+        vi.fn(async () => {
+          throw new ToolOutcomeUnknownError('Timeout nach Versand');
+        }),
+      ),
+    );
+    const llm = new MockLLMProvider([
+      { toolCalls: [{ toolCallId: 'call_1', toolName: 'log_activity', input: { summary: 'x' } }], stopReason: 'tool_use' },
+      { toolCalls: [], stopReason: 'end_turn' },
+    ]);
+
+    const result = await new AgentRuntime(llm, tools, async () => 'AUTONOMOUS').runTurn(CONTEXT, {
+      messages: [{ role: 'user', content: 'go' }],
+    });
+
+    expect(result.toolCallOutcomes[0]?.result).toMatchObject({ status: 'OUTCOME_UNKNOWN', retryable: false });
   });
 });

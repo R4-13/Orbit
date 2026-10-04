@@ -3,6 +3,7 @@ import type { LLMMessage, LLMProvider } from '../llm/types';
 import { decidePolicyAction, type PolicyDecision } from '../policy/policy-engine';
 import type { ToolExecutionContext } from '../tools/types';
 import type { ToolRegistry } from '../tools/tool-registry';
+import { classifyThrownToolError, normalizeToolOutput, type ToolResultContract } from '../tools/tool-result';
 
 /** Resolves a tenant's currently configured mode for a policy action (DB lookup lives in apps/api). */
 export type PolicyModeResolver = (
@@ -49,7 +50,15 @@ export interface ToolCallOutcome {
    */
   input?: Record<string, unknown>;
   output?: unknown;
+  /**
+   * Set whenever the tool did not succeed — a thrown exception, a returned
+   * failure (`success: false`, error object, HTTP status) or an unknown
+   * outcome. Kept alongside `result` so every consumer written before the
+   * typed contract existed still sees the failure.
+   */
   error?: string;
+  /** Amendment 02 §12.5 — typed result of an ALLOWed, executed tool call. Absent for blocked/denied calls (the tool never ran). */
+  result?: ToolResultContract;
   /** Wall-clock time spent inside `ToolRegistry.execute()` — undefined for non-ALLOW decisions (the tool never ran). Feeds `tool_invocation_duration_seconds`, docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2. */
   durationMs?: number;
 }
@@ -149,14 +158,26 @@ export class AgentRuntime {
     const startedAt = Date.now();
     try {
       const output = await this.tools.execute(tool.name, toolCall.input, context);
-      return { toolCallId: toolCall.toolCallId, toolName: tool.name, decision, input: toolCall.input, output, durationMs: Date.now() - startedAt };
-    } catch (error) {
+      const result = normalizeToolOutput(output);
       return {
         toolCallId: toolCall.toolCallId,
         toolName: tool.name,
         decision,
         input: toolCall.input,
-        error: error instanceof Error ? error.message : String(error),
+        output,
+        result,
+        error: result.status === 'SUCCEEDED' ? undefined : (result.message ?? result.errorCode ?? 'Das Tool war nicht erfolgreich.'),
+        durationMs: Date.now() - startedAt,
+      };
+    } catch (error) {
+      const result = classifyThrownToolError(error);
+      return {
+        toolCallId: toolCall.toolCallId,
+        toolName: tool.name,
+        decision,
+        input: toolCall.input,
+        error: result.message,
+        result,
         durationMs: Date.now() - startedAt,
       };
     }

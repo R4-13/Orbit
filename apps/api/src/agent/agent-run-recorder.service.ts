@@ -69,9 +69,11 @@ export class AgentRunRecorderService {
           ? 'DENIED'
           : outcome.decision !== 'ALLOW'
             ? 'BLOCKED_AWAITING_APPROVAL'
-            : outcome.error
-              ? 'FAILED'
-              : 'SUCCESS';
+            : outcome.result?.status === 'OUTCOME_UNKNOWN'
+              ? 'OUTCOME_UNKNOWN'
+              : outcome.error
+                ? 'FAILED'
+                : 'SUCCESS';
 
       await this.prisma.forTenantId(tenantId).toolInvocation.create({
         data: {
@@ -88,7 +90,7 @@ export class AgentRunRecorderService {
           // finding BLOCKED_AWAITING_APPROVAL rows to resume, see
           // docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md.
           status,
-          output: { decision: outcome.decision, output: outcome.output, error: outcome.error } as Prisma.InputJsonValue,
+          output: { decision: outcome.decision, output: outcome.output, error: outcome.error, result: outcome.result } as Prisma.InputJsonValue,
         },
       });
 
