@@ -1,17 +1,17 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import type { LLMCompletionRequest, LLMProvider, ToolCallOutcome } from '@orbit/agent-core';
+import type { LLMCompletionRequest, LLMProvider } from '@orbit/agent-core';
 import { MockLLMProvider, wrapUntrustedContent } from '@orbit/agent-core';
 import type { Case, IntakeRelevance, Prisma } from '@orbit/domain';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
-import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
+import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
 import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 
@@ -59,13 +59,13 @@ function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T 
  * guessing a domain; `NON_ACTIONABLE`/`PRIVATE_PERSONAL` are logged and
  * skipped; `BUSINESS_INFORMATIONAL` is logged with no automatic workflow.
  *
- * **Known, explicitly flagged scope boundary** (Increment F/G of the plan):
- * Finance/Sales still execute via the pre-existing, proven `runAgentTurn()`
- * path below — NOT yet via the durable `WorkflowDefinition`/`WorkflowRun`
- * engine. Migrating onto it is Increment G, mandatory before Finance/Sales
- * automated intake may be marked anything beyond `PARTIAL` in
- * docs/IMPLEMENTATION_STATUS.md, regardless of whether the live Gmail path
- * (Increment F) already works end to end.
+ * **Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md):** Finance/Sales now
+ * execute via `triggerWorkflow()` -> `WorkflowRunnerService.trigger()`, the
+ * durable `WorkflowDefinition`/`WorkflowRun`/`WorkflowStepRun` engine —
+ * not the bespoke per-service agent-turn+approval orchestration this file
+ * used before. Document upload, name-guessing, and MockLLMProvider seeding
+ * in `runFinanceAgent()`/`runSalesAgent()` are unchanged; only the final
+ * dispatch call moved.
  */
 @Injectable()
 export class IntakeService {
@@ -74,11 +74,11 @@ export class IntakeService {
     private readonly agentDefinitions: AgentDefinitionResolverService,
     private readonly runs: AgentRunRecorderService,
     private readonly cases: CasesService,
-    private readonly approvals: ApprovalsService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
     private readonly tasks: TasksService,
     private readonly prisma: PrismaService,
+    private readonly workflowRunner: WorkflowRunnerService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -205,7 +205,7 @@ export class IntakeService {
     const handler = this.domainWorkflowHandlers[category];
     let agentRunIds: string[] = [];
     try {
-      const agentRunId = handler ? await handler(tenantId, actorUserId, businessCase, event) : null;
+      const agentRunId = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEvent.id) : null;
       agentRunIds = agentRunId ? [agentRunId] : [];
     } catch (error) {
       await this.prisma.forTenantId(tenantId).intakeEvent.update({
@@ -343,7 +343,8 @@ export class IntakeService {
     actorUserId: string | undefined,
     businessCase: Case,
     event: NormalizedIntakeEvent,
-  ): Promise<string> {
+    intakeEventId: string,
+  ): Promise<string | undefined> {
     const attachment = event.attachments?.[0];
     if (!attachment) {
       throw new Error('runFinanceAgent called without an attachment — caller (domainWorkflowHandlers.FINANCE) must guard this.');
@@ -409,15 +410,11 @@ export class IntakeService {
       // No trailing manual end_turn seed — see the comment in classify().
     }
 
-    return this.runAgentTurn(
-      tenantId,
-      actorUserId,
-      'FINANCE',
-      businessCase.id,
-      'finance-intake',
-      `Neue Rechnung eingegangen: ${wrapUntrustedContent(event.subject ?? '')}. Dokument-ID: ${document.id}.`,
-      3,
-    );
+    return this.triggerWorkflow(tenantId, actorUserId, 'finance-invoice-intake', businessCase.id, intakeEventId, {
+      documentId: document.id,
+      caseId: businessCase.id,
+      subject: event.subject ?? '',
+    });
   }
 
   private async runSalesAgent(
@@ -425,7 +422,8 @@ export class IntakeService {
     actorUserId: string | undefined,
     businessCase: Case,
     event: NormalizedIntakeEvent,
-  ): Promise<string> {
+    intakeEventId: string,
+  ): Promise<string | undefined> {
     const fromAddress = event.sender?.address ?? '';
     const domain = fromAddress.split('@')[1] ?? 'unbekannt.example';
     const companyNameGuess = domain.split('.')[0];
@@ -479,69 +477,39 @@ export class IntakeService {
       // No trailing manual end_turn seed — see the comment in classify().
     }
 
-    return this.runAgentTurn(
-      tenantId,
-      actorUserId,
-      'SALES',
-      businessCase.id,
-      'sales-intake',
-      `Neue Interessenten-E-Mail: ${wrapUntrustedContent(`${event.subject ?? ''}\n\n${event.content ?? ''}`)}`,
-      4,
-    );
-  }
-
-  private async runAgentTurn(
-    tenantId: string,
-    actorUserId: string | undefined,
-    agentType: 'FINANCE' | 'SALES',
-    caseId: string,
-    agentDefinitionKey: string,
-    userMessage: string,
-    maxToolIterations: number,
-  ): Promise<string> {
-    const run = await this.runs.start({ tenantId, agentType, triggerType: 'EMAIL', caseId });
-
-    let outcomes: ToolCallOutcome[] = [];
-    try {
-      const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, agentDefinitionKey);
-      const result = await runtime.runTurn(
-        { tenantId, agentRunId: run.id, actorUserId },
-        { systemPrompt, messages: [{ role: 'user', content: userMessage }], maxToolIterations },
-      );
-      outcomes = result.toolCallOutcomes;
-      await this.runs.recordToolCalls(tenantId, run.id, outcomes);
-      await this.runs.complete(tenantId, run.id, result);
-    } catch (error) {
-      await this.runs.fail(tenantId, run.id, error instanceof Error ? error.message : String(error));
-      throw error;
-    }
-
-    await this.createApprovalsForBlockedCalls(tenantId, actorUserId, outcomes);
-    return run.id;
+    return this.triggerWorkflow(tenantId, actorUserId, 'sales-lead-intake', businessCase.id, intakeEventId, {
+      subject: event.subject ?? '',
+      content: event.content ?? '',
+      caseId: businessCase.id,
+    });
   }
 
   /**
-   * AgentRuntime never executes a tool whose policy decision isn't ALLOW
-   * (see its own doc comment) — it's the caller's job to act on that.
-   * Most of this MVP's tools default to AUTONOMOUS, so this normally has
-   * nothing to do; it matters once a tenant (or a future tool) is
-   * configured for REQUIRE_APPROVAL/SUGGEST_ONLY.
+   * Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) — the single dispatch
+   * point both `runFinanceAgent()`/`runSalesAgent()` now call instead of
+   * the removed bespoke `runAgentTurn()`. `WorkflowRunnerService.trigger()`
+   * already does everything that method used to do by hand: starts the
+   * `AgentRun`, runs the turn, and creates `FOLLOW_UP` `Approval` rows for
+   * any non-ALLOW/non-DENY tool outcome (identical shape to the removed
+   * `createApprovalsForBlockedCalls()` — safe to delete, not reimplemented).
+   * Also links the resulting `WorkflowRun` back onto the `IntakeEvent` that
+   * triggered it (the `workflowRunId` field added in Increment A for
+   * exactly this purpose).
    */
-  private async createApprovalsForBlockedCalls(
+  private async triggerWorkflow(
     tenantId: string,
     actorUserId: string | undefined,
-    outcomes: ToolCallOutcome[],
-  ): Promise<void> {
-    for (const outcome of outcomes) {
-      if (outcome.decision === 'ALLOW' || outcome.decision === 'DENY') continue;
-      await this.approvals.create(tenantId, {
-        entityType: 'FOLLOW_UP',
-        entityId: outcome.toolCallId,
-        policyAction: outcome.toolName,
-        requestedByUserId: actorUserId,
-        reason: `Agent-Vorschlag „${outcome.toolName}“ wartet auf Freigabe.`,
-      });
-    }
+    workflowKey: string,
+    caseId: string,
+    intakeEventId: string,
+    triggerInput: Record<string, unknown>,
+  ): Promise<string | undefined> {
+    const result = await this.workflowRunner.trigger(tenantId, actorUserId ?? '', workflowKey, triggerInput, caseId);
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+      where: { id: intakeEventId },
+      data: { workflowRunId: result.workflowRunId },
+    });
+    return result.steps[0]?.agentRunId;
   }
 
   /**
@@ -559,12 +527,19 @@ export class IntakeService {
    */
   private readonly domainWorkflowHandlers: Record<
     string,
-    (tenantId: string, actorUserId: string | undefined, businessCase: Case, event: NormalizedIntakeEvent) => Promise<string | null>
+    (
+      tenantId: string,
+      actorUserId: string | undefined,
+      businessCase: Case,
+      event: NormalizedIntakeEvent,
+      intakeEventId: string,
+    ) => Promise<string | null | undefined>
   > = {
-    FINANCE: (tenantId, actorUserId, businessCase, event) => {
+    FINANCE: (tenantId, actorUserId, businessCase, event, intakeEventId) => {
       if (!event.attachments?.length) return Promise.resolve(null);
-      return this.runFinanceAgent(tenantId, actorUserId, businessCase, event);
+      return this.runFinanceAgent(tenantId, actorUserId, businessCase, event, intakeEventId);
     },
-    SALES: (tenantId, actorUserId, businessCase, event) => this.runSalesAgent(tenantId, actorUserId, businessCase, event),
+    SALES: (tenantId, actorUserId, businessCase, event, intakeEventId) =>
+      this.runSalesAgent(tenantId, actorUserId, businessCase, event, intakeEventId),
   };
 }

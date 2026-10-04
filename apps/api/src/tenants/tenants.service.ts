@@ -4,6 +4,7 @@ import {
   DEFAULT_AGENT_DEFINITIONS,
   DEFAULT_POLICY_CONFIG,
   DEFAULT_ROLE_PERMISSIONS,
+  DEFAULT_WORKFLOW_DEFINITIONS,
   NotFoundError,
   PolicyViolationError,
   ROLES,
@@ -193,6 +194,34 @@ export class TenantsService {
             changeNote: 'Initiale Konfiguration bei Tenant-Bootstrap.',
           },
         });
+      }
+
+      // Channel Event Runtime Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) —
+      // the two durable WorkflowDefinitions Finance/Sales intake runs through
+      // via WorkflowRunnerService instead of IntakeService's own bespoke
+      // agent-turn orchestration.
+      for (const def of DEFAULT_WORKFLOW_DEFINITIONS) {
+        const workflowDefinition = await tx.workflowDefinition.create({
+          data: {
+            tenantId: tenant.id,
+            key: def.key,
+            name: def.name,
+            description: def.description,
+            triggerType: def.triggerType,
+            status: 'ACTIVE',
+          },
+        });
+        for (const [index, step] of def.steps.entries()) {
+          await tx.workflowStepDefinition.create({
+            data: {
+              tenantId: tenant.id,
+              workflowDefinitionId: workflowDefinition.id,
+              order: index + 1,
+              agentDefinitionKey: step.agentDefinitionKey,
+              inputMapping: step.inputMapping,
+            },
+          });
+        }
       }
 
       const passwordHash = await argon2.hash(input.adminPassword);

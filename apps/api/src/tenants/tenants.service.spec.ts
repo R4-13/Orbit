@@ -14,6 +14,8 @@ describe('TenantsService', () => {
     policyConfig: { createMany: jest.Mock };
     agentDefinition: { create: jest.Mock };
     agentDefinitionVersion: { create: jest.Mock };
+    workflowDefinition: { create: jest.Mock };
+    workflowStepDefinition: { create: jest.Mock };
     user: { create: jest.Mock };
     userRole: { create: jest.Mock };
     auditLog: { create: jest.Mock };
@@ -63,6 +65,12 @@ describe('TenantsService', () => {
         ),
       },
       agentDefinitionVersion: { create: jest.fn().mockResolvedValue({ id: 'agent_def_version_1' }) },
+      workflowDefinition: {
+        create: jest.fn().mockImplementation(({ data }: { data: { key: string } }) =>
+          Promise.resolve({ id: `workflow_def_${data.key}`, ...data }),
+        ),
+      },
+      workflowStepDefinition: { create: jest.fn().mockResolvedValue({ id: 'workflow_step_def_1' }) },
       user: {
         create: jest.fn().mockResolvedValue({ id: 'user_1', email: 'admin@musterwerk.example' }),
       },

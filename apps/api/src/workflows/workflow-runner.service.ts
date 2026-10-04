@@ -65,9 +65,15 @@ export class WorkflowRunnerService {
     private readonly metrics: MetricsService,
   ) {}
 
-  /** Synchronous execution (existing behavior, unchanged) — validates, creates the run, and walks it to completion (or a pause) before returning. */
-  async trigger(tenantId: string, actorUserId: string, key: string, triggerInput: Record<string, unknown>): Promise<WorkflowRunResult> {
-    const { definition, workflowRun } = await this.createRun(tenantId, key, triggerInput);
+  /** Synchronous execution (existing behavior, unchanged) — validates, creates the run, and walks it to completion (or a pause) before returning. `caseId` links the created `WorkflowRun` to a `Case` from creation (e.g. Channel Event Runtime Increment G's Finance/Sales intake) — optional, `undefined` for a standalone/admin-triggered run with no owning Case. */
+  async trigger(
+    tenantId: string,
+    actorUserId: string,
+    key: string,
+    triggerInput: Record<string, unknown>,
+    caseId?: string,
+  ): Promise<WorkflowRunResult> {
+    const { definition, workflowRun } = await this.createRun(tenantId, key, triggerInput, caseId);
     const context: WorkflowPathContext = { trigger: { input: triggerInput }, steps: {} };
     return this.runStepsFrom(tenantId, actorUserId, definition, workflowRun, context, 0, []);
   }
@@ -193,6 +199,7 @@ export class WorkflowRunnerService {
     tenantId: string,
     key: string,
     triggerInput: Record<string, unknown>,
+    caseId?: string,
   ): Promise<{ definition: WorkflowDefinitionWithSteps; workflowRun: WorkflowRun }> {
     const definition = await this.prisma.forTenantId(tenantId).workflowDefinition.findUnique({
       where: { tenantId_key: { tenantId, key } },
@@ -206,7 +213,13 @@ export class WorkflowRunnerService {
     }
 
     const workflowRun = await this.prisma.forTenantId(tenantId).workflowRun.create({
-      data: { tenantId, workflowDefinitionId: definition.id, status: 'RUNNING', input: triggerInput as Prisma.InputJsonValue },
+      data: {
+        tenantId,
+        workflowDefinitionId: definition.id,
+        caseId,
+        status: 'RUNNING',
+        input: triggerInput as Prisma.InputJsonValue,
+      },
     });
 
     return { definition, workflowRun };

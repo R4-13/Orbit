@@ -28,6 +28,7 @@ import {
   DEFAULT_AGENT_DEFINITIONS,
   DEFAULT_POLICY_CONFIG,
   DEFAULT_ROLE_PERMISSIONS,
+  DEFAULT_WORKFLOW_DEFINITIONS,
   ROLES,
   type AuditEventType,
   type RoleName,
@@ -133,6 +134,32 @@ async function main(): Promise<void> {
           changeNote: 'Initiale Konfiguration bei Tenant-Bootstrap.',
         },
       });
+    }
+
+    // Channel Event Runtime Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) —
+    // mirrors TenantsService.bootstrapTenant(), see the comment there.
+    for (const def of DEFAULT_WORKFLOW_DEFINITIONS) {
+      const workflowDefinition = await tx.workflowDefinition.create({
+        data: {
+          tenantId: tenant.id,
+          key: def.key,
+          name: def.name,
+          description: def.description,
+          triggerType: def.triggerType,
+          status: 'ACTIVE',
+        },
+      });
+      for (const [index, step] of def.steps.entries()) {
+        await tx.workflowStepDefinition.create({
+          data: {
+            tenantId: tenant.id,
+            workflowDefinitionId: workflowDefinition.id,
+            order: index + 1,
+            agentDefinitionKey: step.agentDefinitionKey,
+            inputMapping: step.inputMapping,
+          },
+        });
+      }
     }
 
     // --- Users ---

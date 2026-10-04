@@ -5,11 +5,12 @@ import { ApprovalsModule } from '../approvals/approvals.module';
 import { CasesModule } from '../cases/cases.module';
 import { StorageModule } from '../storage/storage.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { WorkflowsModule } from '../workflows/workflows.module';
 import { IntakeController } from './intake.controller';
 import { IntakeService } from './intake.service';
 
 @Module({
-  imports: [AgentModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule],
+  imports: [AgentModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule],
   controllers: [IntakeController],
   providers: [IntakeService],
   // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector
