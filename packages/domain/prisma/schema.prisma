@@ -324,6 +324,7 @@ model Tenant {
 
   @@map("tenants")
   mockCrmRecords MockCrmRecord[]
+  intakeDecisions IntakeDecision[]
 }
 
 model User {
@@ -547,6 +548,15 @@ model EmailMessage {
   subject           String?
   bodyPreview       String?        @map("body_preview")
   providerMessageId String?        @map("provider_message_id")
+  /// Amendment 02 §5.1 — normalisierter Volltext (begrenzt) als Grundlage für Triage-Wiederholung und Faktenextraktion; `bodyPreview` bleibt die Kurzfassung für Listen.
+  bodyText          String?        @map("body_text")
+  /// SHA-256 des normalisierten Inhalts (Betreff + Text + Anhangsnamen) — Duplikat-/Replay-Erkennung.
+  contentHash       String?        @map("content_hash")
+  /// Provider-Thread (z. B. Gmail threadId) und RFC-5322-Kopfzeilen für die Case Correlation (§13.1).
+  threadId          String?        @map("thread_id")
+  rfcMessageId      String?        @map("rfc_message_id")
+  inReplyTo         String?        @map("in_reply_to")
+  references        String[]       @default([])
   /// Grobklassifikation durch den Communication-Agent, z. B. "invoice", "sales_inquiry".
   classification    String?
   receivedAt        DateTime?      @map("received_at")
@@ -559,6 +569,8 @@ model EmailMessage {
 
   @@unique([tenantId, providerMessageId])
   @@index([tenantId, direction])
+  @@index([tenantId, threadId])
+  @@index([tenantId, rfcMessageId])
   @@index([caseId])
   @@map("email_messages")
 }
@@ -954,6 +966,8 @@ enum IntakeRelevance {
 
 enum IntakeEventStatus {
   RECEIVED
+  /// Amendment 02 §5.3 — die semantische Triage konnte (noch) nicht laufen (Provider-Ausfall); der Eingang geht nicht verloren und wird erneut versucht.
+  PENDING_TRIAGE
   TRIAGED
   ROUTED
   PROCESSING
@@ -1012,6 +1026,7 @@ model IntakeEvent {
   emailMessage EmailMessage? @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
   case         Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
   workflowRun  WorkflowRun?  @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+  decision     IntakeDecision?
 
   @@unique([tenantId, provider, externalEventId])
   @@index([tenantId, status])
@@ -1527,4 +1542,53 @@ model MockCrmRecord {
   @@unique([tenantId, kind, externalId])
   @@index([tenantId, kind, matchKey])
   @@map("mock_crm_records")
+}
+
+// ============================================================================
+// Business Process Framework — Intake Decision (Amendment 02 §5, §6, §19)
+// ============================================================================
+
+enum IntakeDecisionStatus {
+  /// Triage lieferte ein gültiges, schema-validiertes Ergebnis.
+  DECIDED
+  /// Provider nicht verfügbar / Ausgabe auch nach Repair ungültig — wird erneut versucht, nichts geht verloren.
+  PENDING_TRIAGE
+  /// Menschliche Entscheidung nötig (Unsicherheit oder Simulation ohne Fixture).
+  REVIEW_REQUIRED
+  /// Ein berechtigter Mensch hat die Entscheidung auditiert korrigiert.
+  OVERRIDDEN
+}
+
+/// Die dokumentierte Relevanz-/Zielentscheidung zu genau einem Eingang. Eigenständig von einem Business-Case:
+/// ein sicher nicht geschäftsrelevanter Eingang erzeugt nur diese Entscheidung (Testbereich „Kein Geschäftsprozess
+/// ausgelöst"), niemals einen künstlich abgeschlossenen Case.
+model IntakeDecision {
+  id                String               @id @default(uuid())
+  tenantId          String               @map("tenant_id")
+  intakeEventId     String               @unique @map("intake_event_id")
+  status            IntakeDecisionStatus
+  /// Validiertes TriageResult (siehe @orbit/shared process-schemas) — null solange keine gültige Triage vorliegt.
+  result            Json?
+  /// Aus dem Ergebnis abgeleitete, deterministisch durchgesetzte Relevanz (Konfidenz-Schwelle angewandt).
+  appliedRelevance  IntakeRelevance?     @map("applied_relevance")
+  failureReason     String?              @map("failure_reason")
+  /// Provider, Modell, LIVE/SIMULATED, Laufzeit, Versuche — nie Secrets.
+  execution         Json?
+  /// Rein deterministische Hinweise (Header, Muster); sie entscheiden nie, sie informieren nur.
+  hints             Json?
+  retryCount        Int                  @default(0) @map("retry_count")
+  nextRetryAt       DateTime?            @map("next_retry_at")
+  reviewedByUserId  String?              @map("reviewed_by_user_id")
+  reviewedAt        DateTime?            @map("reviewed_at")
+  reviewNote        String?              @map("review_note")
+  previousRelevance IntakeRelevance?     @map("previous_relevance")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  intakeEvent IntakeEvent @relation(fields: [intakeEventId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, appliedRelevance])
+  @@map("intake_decisions")
 }

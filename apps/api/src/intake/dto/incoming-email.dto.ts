@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { SIMULATED_TRIAGE_SCENARIOS, type SimulatedTriageScenario } from '@orbit/shared';
 
 export class EmailAttachmentDto {
   @IsString()
@@ -44,4 +45,13 @@ export class IncomingEmailDto {
   @ValidateNested()
   @Type(() => EmailAttachmentDto)
   attachment?: EmailAttachmentDto;
+
+  /**
+   * Demo/test only: pick the structured result the *simulated* AI provider returns for this message
+   * (Amendment 02 §22.4). Rejected when a real provider is connected — a user can never inject a
+   * triage verdict into a live AI run.
+   */
+  @IsOptional()
+  @IsIn(SIMULATED_TRIAGE_SCENARIOS)
+  simulatedTriageScenario?: SimulatedTriageScenario;
 }

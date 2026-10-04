@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { ToolOutcomeUnknownError, type ToolRegistry } from '@orbit/agent-core';
-import { TOOL_REGISTRY } from '../src/agent/agent.tokens';
+import { MockLLMProvider, ToolOutcomeUnknownError, type ToolRegistry } from '@orbit/agent-core';
+import { triageFixtureForScenario } from '@orbit/shared';
+import { LLM_PROVIDER, TOOL_REGISTRY } from '../src/agent/agent.tokens';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { IntakeService } from '../src/intake/intake.service';
 import { ConnectorStatusService } from '../src/integrations/connector-status.service';
@@ -23,6 +24,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
   let intake: IntakeService;
   let status: ConnectorStatusService;
   let tools: ToolRegistry;
+  let llm: MockLLMProvider;
   let tenantsService: TenantsService;
   const tenants: string[] = [];
 
@@ -52,6 +54,19 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
       },
     });
     return { tenantId: tenant.id, connectionId: integration.id };
+  }
+
+  /** Scripts the simulated AI's structured triage answer for the NEXT intake event (a scenario fixture, not keyword logic). */
+  function seedSalesTriage(): void {
+    llm.seedResponse({
+      toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_triage_result', input: triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown> }],
+      stopReason: 'tool_use',
+    });
+  }
+
+  async function driveSalesEvent(tenantId: string, connectionId: string) {
+    seedSalesTriage();
+    return intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
   }
 
   function salesEvent(tenantId: string, connectionId: string): NormalizedIntakeEvent {
@@ -90,6 +105,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     intake = app.get(IntakeService);
     status = app.get(ConnectorStatusService);
     tools = app.get(TOOL_REGISTRY);
+    llm = app.get(LLM_PROVIDER);
     tenantsService = app.get(TenantsService);
   });
 
@@ -129,7 +145,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     const { tenantId, connectionId } = await setupTenantWithGmail();
     const restore = forceToolOutcome('returned-failure');
     try {
-      const result = await intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
+      const result = await driveSalesEvent(tenantId, connectionId);
       await assertChain(tenantId, result.intakeEventId, { intake: 'FAILED', step: 'FAILED', tool: 'FAILED' });
     } finally {
       restore();
@@ -141,7 +157,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     const { tenantId, connectionId } = await setupTenantWithGmail();
     const restore = forceToolOutcome('throws');
     try {
-      const result = await intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
+      const result = await driveSalesEvent(tenantId, connectionId);
       await assertChain(tenantId, result.intakeEventId, { intake: 'FAILED', step: 'FAILED', tool: 'FAILED' });
     } finally {
       restore();
@@ -153,7 +169,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     const { tenantId, connectionId } = await setupTenantWithGmail();
     const restore = forceToolOutcome('unknown');
     try {
-      const result = await intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
+      const result = await driveSalesEvent(tenantId, connectionId);
       await assertChain(tenantId, result.intakeEventId, { intake: 'NEEDS_REVIEW', step: 'OUTCOME_UNKNOWN', tool: 'OUTCOME_UNKNOWN' });
     } finally {
       restore();
@@ -168,7 +184,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     // 1. an earlier failed run
     const restore = forceToolOutcome('returned-failure');
     try {
-      await intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
+      await driveSalesEvent(tenantId, connectionId);
     } finally {
       restore();
     }
@@ -195,7 +211,7 @@ describe('Failure propagation Tool → StepRun → WorkflowRun → IntakeEvent �
     expect(result.levels.LIVE_END_TO_END_TESTED.reached).toBe(false); // the wrongly-COMPLETED row is not a verifying run
 
     // 3. now a real success
-    const success = await intake.handleIntakeEvent(tenantId, undefined, salesEvent(tenantId, connectionId));
+    const success = await driveSalesEvent(tenantId, connectionId);
     const event = await scoped.intakeEvent.findUniqueOrThrow({ where: { id: success.intakeEventId } });
     expect(event.status).toBe('COMPLETED');
 

@@ -31,6 +31,10 @@ export class AnthropicLLMProvider implements LLMProvider {
     this.client = new Anthropic({ apiKey });
   }
 
+  get modelName(): string {
+    return this.model;
+  }
+
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     let response;
     try {

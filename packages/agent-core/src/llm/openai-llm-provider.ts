@@ -42,6 +42,10 @@ export class OpenAILLMProvider implements LLMProvider {
     this.client = new OpenAI({ apiKey });
   }
 
+  get modelName(): string {
+    return this.model;
+  }
+
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     const messages: ChatCompletionMessageParam[] = [];
     if (request.systemPrompt) {

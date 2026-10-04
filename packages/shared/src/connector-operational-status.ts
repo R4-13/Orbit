@@ -95,3 +95,17 @@ export interface ConnectorOperationalStatusResult {
   verifiedRun: ConnectorVerifiedRun | null;
   health: ConnectorCurrentHealth | null;
 }
+
+/**
+ * Amendment 02 §5.3 — "ORBIT-Managed AI" names a *configuration kind*. Whether a real model is actually called, and
+ * whether that has been verified, are separate facts. `SIMULATED` means no external model is involved at all.
+ */
+export type AiHealthState = 'SIMULATED' | 'NOT_VERIFIED' | 'VERIFIED' | 'ERROR';
+
+export interface AiRuntimeStatus {
+  /** The provider that would actually serve the next AI request for this tenant, e.g. `anthropic`, `openai`, `mock`. */
+  provider: string;
+  model: string | null;
+  executionMode: ExecutionMode;
+  health: { state: AiHealthState; checkedAt: string | null; detail: string | null };
+}

@@ -16,7 +16,7 @@ describe('ChannelSyncProcessor', () => {
   let processor: ChannelSyncProcessor;
   let concurrency: { acquireSlot: jest.Mock; releaseSlot: jest.Mock };
   let idempotency: { recordIfNew: jest.Mock };
-  let intake: { handleIntakeEvent: jest.Mock };
+  let intake: { handleIntakeEvent: jest.Mock; retryPendingTriage: jest.Mock };
   let adapter: { connectorType: string; poll: jest.Mock };
   let connectorSync: { findUnique: jest.Mock; update: jest.Mock };
   let prisma: { forTenantId: jest.Mock; withRlsBypass: jest.Mock };
@@ -31,7 +31,10 @@ describe('ChannelSyncProcessor', () => {
   beforeEach(async () => {
     concurrency = { acquireSlot: jest.fn().mockResolvedValue(true), releaseSlot: jest.fn().mockResolvedValue(undefined) };
     idempotency = { recordIfNew: jest.fn().mockResolvedValue(true) };
-    intake = { handleIntakeEvent: jest.fn().mockResolvedValue({ category: 'OTHER', agentRunIds: [], intakeEventId: 'ie_1' }) };
+    intake = {
+      handleIntakeEvent: jest.fn().mockResolvedValue({ category: 'OTHER', agentRunIds: [], intakeEventId: 'ie_1' }),
+      retryPendingTriage: jest.fn().mockResolvedValue(undefined),
+    };
     adapter = { connectorType: 'GMAIL', poll: jest.fn().mockResolvedValue({ events: [], nextCursor: null }) };
     connectorSync = { findUnique: jest.fn().mockResolvedValue({ cursor: null }), update: jest.fn().mockResolvedValue(undefined) };
     prisma = {
@@ -62,6 +65,40 @@ describe('ChannelSyncProcessor', () => {
   it('registers the repeatable scan job on module init', async () => {
     await processor.onModuleInit();
     expect(queue.add).toHaveBeenCalledWith('scan', {}, { repeat: { every: 60000 }, jobId: 'channel-sync-scan' });
+  });
+
+  it('also registers the repeatable triage-retry job (parked PENDING_TRIAGE inputs are retried, not lost)', async () => {
+    await processor.onModuleInit();
+    expect(queue.add).toHaveBeenCalledWith('triage-retry', {}, { repeat: { every: 60000 }, jobId: 'channel-sync-triage-retry' });
+  });
+
+  describe("'triage-retry' job", () => {
+    it('retries every due PENDING_TRIAGE decision through IntakeService, tenant by tenant', async () => {
+      prisma.withRlsBypass.mockResolvedValueOnce([
+        { tenantId: 'tenant_a', intakeEventId: 'ie_a' },
+        { tenantId: 'tenant_b', intakeEventId: 'ie_b' },
+      ]);
+
+      await processor.process({ name: 'triage-retry', data: {} } as Job<Record<string, never>>);
+
+      expect(intake.retryPendingTriage).toHaveBeenCalledWith('tenant_a', 'ie_a');
+      expect(intake.retryPendingTriage).toHaveBeenCalledWith('tenant_b', 'ie_b');
+    });
+
+    it('one failing retry neither stops the others nor hot-loops: its next attempt is pushed back', async () => {
+      prisma.withRlsBypass
+        .mockResolvedValueOnce([
+          { tenantId: 'tenant_a', intakeEventId: 'ie_a' },
+          { tenantId: 'tenant_b', intakeEventId: 'ie_b' },
+        ])
+        .mockResolvedValue(undefined);
+      intake.retryPendingTriage.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+
+      await processor.process({ name: 'triage-retry', data: {} } as Job<Record<string, never>>);
+
+      expect(intake.retryPendingTriage).toHaveBeenCalledTimes(2);
+      expect(prisma.withRlsBypass).toHaveBeenCalledTimes(2); // the due-list lookup + the back-off update for the failed one
+    });
   });
 
   it("dispatches a 'poll' job to the adapter, dedupes new events via WebhookIdempotencyService, and feeds each new event into IntakeService", async () => {

@@ -4,6 +4,7 @@ import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialEncryptionService } from '../security/credential-encryption.service';
 import { buildProviderAdapter } from './ai-provider-adapter-factory';
+import { AiProviderResolverService } from './ai-provider-resolver.service';
 import { AiProvidersService } from './ai-providers.service';
 
 jest.mock('./ai-provider-adapter-factory');
@@ -16,6 +17,8 @@ describe('AiProvidersService', () => {
   let prisma: { forTenantId: jest.Mock };
   let audit: { record: jest.Mock };
   let encryption: { encrypt: jest.Mock; decrypt: jest.Mock };
+  let resolver: { resolveForTenant: jest.Mock };
+  let effectiveProvider: { providerName: string; modelName?: string; validateConfiguration?: jest.Mock };
 
   beforeEach(async () => {
     scoped = {
@@ -25,6 +28,8 @@ describe('AiProvidersService', () => {
     audit = { record: jest.fn().mockResolvedValue(undefined) };
     encryption = { encrypt: jest.fn().mockReturnValue(Buffer.from('cipher-bytes')), decrypt: jest.fn().mockReturnValue('sk-real-key') };
     mockedBuildProviderAdapter.mockReset();
+    effectiveProvider = { providerName: 'mock' };
+    resolver = { resolveForTenant: jest.fn().mockImplementation(async () => effectiveProvider) };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -33,6 +38,7 @@ describe('AiProvidersService', () => {
         { provide: AuditService, useValue: audit },
         { provide: CredentialEncryptionService, useValue: encryption },
         { provide: ORBIT_ENV, useValue: { ANTHROPIC_MODEL: 'claude-default', OPENAI_MODEL: 'gpt-default' } },
+        { provide: AiProviderResolverService, useValue: resolver },
       ],
     }).compile();
 
@@ -43,7 +49,7 @@ describe('AiProvidersService', () => {
     it('reports ORBIT_MANAGED when no connection row exists', async () => {
       scoped.aIProviderConnection.findUnique.mockResolvedValue(null);
       const status = await service.getStatus('tenant_1');
-      expect(status).toEqual({ mode: 'ORBIT_MANAGED', connection: null });
+      expect(status).toMatchObject({ mode: 'ORBIT_MANAGED', connection: null });
     });
 
     it('reports ORBIT_MANAGED when the row exists but is not CONNECTED (e.g. after disconnect)', async () => {
@@ -69,6 +75,70 @@ describe('AiProvidersService', () => {
       expect(status.mode).toBe('TENANT_MANAGED');
       expect(status.connection).not.toHaveProperty('encryptedCredentials');
       expect(status.connection?.hasCredentials).toBe(true);
+    });
+  });
+
+  describe('runtime status (Amendment 02 §5.3: configuration kind ≠ operating mode ≠ health)', () => {
+    it('ORBIT-Managed AI on the simulated provider is "active" as a configuration but SIMULATED at runtime — and can never be verified', async () => {
+      scoped.aIProviderConnection.findUnique.mockResolvedValue(null);
+
+      const status = await service.getStatus('tenant_1');
+
+      expect(status.mode).toBe('ORBIT_MANAGED');
+      expect(status.runtime).toMatchObject({ provider: 'mock', executionMode: 'SIMULATED', health: { state: 'SIMULATED' } });
+
+      const verified = await service.verifyRuntime('tenant_1');
+      expect(verified.health.state).toBe('SIMULATED'); // nothing external exists to verify
+    });
+
+    it('ORBIT-Managed AI with a real platform provider is LIVE but NOT_VERIFIED until it was actually called', async () => {
+      effectiveProvider = { providerName: 'anthropic', modelName: 'claude-test', validateConfiguration: jest.fn().mockResolvedValue({ valid: true }) };
+      scoped.aIProviderConnection.findUnique.mockResolvedValue(null);
+
+      expect((await service.getStatus('tenant_1')).runtime).toMatchObject({
+        provider: 'anthropic',
+        model: 'claude-test',
+        executionMode: 'LIVE',
+        health: { state: 'NOT_VERIFIED', checkedAt: null },
+      });
+
+      const verified = await service.verifyRuntime('tenant_1');
+      expect(effectiveProvider.validateConfiguration).toHaveBeenCalledTimes(1);
+      expect(verified.health.state).toBe('VERIFIED');
+      expect(verified.health.checkedAt).toEqual(expect.any(String));
+      expect((await service.getStatus('tenant_1')).runtime.health.state).toBe('VERIFIED');
+    });
+
+    it('a failed live verification is reported as ERROR with the provider message', async () => {
+      effectiveProvider = { providerName: 'anthropic', validateConfiguration: jest.fn().mockResolvedValue({ valid: false, error: 'invalid x-api-key' }) };
+      scoped.aIProviderConnection.findUnique.mockResolvedValue(null);
+
+      const verified = await service.verifyRuntime('tenant_1');
+
+      expect(verified.health).toMatchObject({ state: 'ERROR', detail: 'invalid x-api-key' });
+    });
+
+    it('a BYOK connection takes its health from the persisted test result, never from "CONNECTED" alone', async () => {
+      effectiveProvider = { providerName: 'openai', modelName: 'gpt-x' };
+      scoped.aIProviderConnection.findUnique.mockResolvedValue({
+        id: 'c',
+        providerKey: 'OPENAI',
+        status: 'CONNECTED',
+        encryptedCredentials: Buffer.from('s'),
+        lastTestedAt: null,
+        lastTestStatus: null,
+      });
+      expect((await service.getStatus('tenant_1')).runtime.health.state).toBe('NOT_VERIFIED');
+
+      scoped.aIProviderConnection.findUnique.mockResolvedValue({
+        id: 'c',
+        providerKey: 'OPENAI',
+        status: 'CONNECTED',
+        encryptedCredentials: Buffer.from('s'),
+        lastTestedAt: new Date('2026-10-04T10:00:00Z'),
+        lastTestStatus: 'OK',
+      });
+      expect((await service.getStatus('tenant_1')).runtime.health).toMatchObject({ state: 'VERIFIED', checkedAt: '2026-10-04T10:00:00.000Z' });
     });
   });
 

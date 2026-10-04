@@ -65,7 +65,18 @@ describe('AI providers (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(response.body).toEqual({ mode: 'ORBIT_MANAGED', connection: null });
+    expect(response.body).toMatchObject({ mode: 'ORBIT_MANAGED', connection: null });
+    // The configuration kind is "ORBIT-Managed", but with LLM_PROVIDER=mock nothing external is called — the runtime says so.
+    expect(response.body.runtime).toMatchObject({ provider: 'mock', executionMode: 'SIMULATED', health: { state: 'SIMULATED' } });
+  });
+
+  it('POST /ai-providers/verify never claims a simulated provider as verified', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/ai-providers/verify')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+
+    expect(response.body).toMatchObject({ provider: 'mock', executionMode: 'SIMULATED', health: { state: 'SIMULATED', checkedAt: null } });
   });
 
   it('POST /ai-providers/test 404s when no BYOK connection is configured', async () => {

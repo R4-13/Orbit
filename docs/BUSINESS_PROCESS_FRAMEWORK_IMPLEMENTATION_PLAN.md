@@ -97,8 +97,8 @@ ohne Kernänderung, Ad-hoc → Review.
 
 | ID | Status vor Start | Zuordnung |
 |---|---|---|
-| BP-01 | PARTIAL (Provider-Code real; Triage = Keywords; kein Key) → live BLOCKED | BP-1 |
-| BP-02 | PARTIAL (`IntakeEvent`/`Case` ohne Facts/Decisions) | BP-1 |
+| BP-01 | PARTIAL → Code/Pfad ✅ (BP-1a): Triage über Provider-Resolver/AgentRuntime, Mock sichtbar getrennt (SIMULATED, Fixtures). **Live BLOCKED_BY_EXTERNAL_CREDENTIALS** (kein LLM-Key); Modellprofile fehlen | BP-1 |
+| BP-02 | PARTIAL → `IntakeDecision`, Thread-/Body-Daten ✅ (BP-1a); generischer Case, Facts, Correlation **offen** (BP-1b) | BP-1 |
 | BP-03 | MISSING | BP-2 |
 | BP-04 | MISSING | BP-2 |
 | BP-05 | MISSING | BP-2 |
@@ -107,9 +107,9 @@ ohne Kernänderung, Ad-hoc → Review.
 | BP-08 | MISSING | BP-3 |
 | BP-09 | MISSING | BP-3 |
 | BP-10 | PARTIAL (Policy/Approval vorhanden, keine Bindung) | BP-2/3 |
-| BP-11 | PARTIAL (NON_ACTIONABLE stoppt Workflow) | BP-1 |
-| BP-12 | MISSING (kein Testbereich/Produktivfilter) | BP-1/3 |
-| BP-13 | PARTIAL (UNKNOWN_REQUIRES_REVIEW → Task) | BP-1 |
+| BP-11 | ✅ implementiert + automatisiert getestet (`triage-resilience`: kein Prozess, keine Aktion bei Ausschluss) | BP-1 |
+| BP-12 | PARTIAL: API `GET /intake-decisions?view=EXCLUDED` ✅ getestet; **UI „Kein Geschäftsprozess ausgelöst" und Produktiv-Standard „ausgeblendet" offen** (BP-3) | BP-1/3 |
+| BP-13 | ✅ implementiert + getestet: unsicher / nicht konfigurierte Kategorie / fehlende Voraussetzung → sichtbare Prüfaufgabe | BP-1 |
 | BP-14 | MISSING („Zugewiesener Agent" auf Dashboard) | BP-3 |
 | BP-15–17 | MISSING | BP-3 |
 | BP-18 | PARTIAL (Sonde nutzt gleiche Policy) | BP-3 |

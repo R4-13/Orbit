@@ -9,12 +9,15 @@ import { TasksModule } from '../tasks/tasks.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
 import { ExecutionEvidenceService } from './execution-evidence.service';
 import { IntakeController } from './intake.controller';
+import { IntakeDecisionsController } from './intake-decisions.controller';
+import { IntakeDecisionsService } from './intake-decisions.service';
 import { IntakeService } from './intake.service';
+import { SemanticTriageService } from './semantic-triage.service';
 
 @Module({
   imports: [AgentModule, AiProvidersModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule],
-  controllers: [IntakeController],
-  providers: [IntakeService, ExecutionEvidenceService],
+  controllers: [IntakeController, IntakeDecisionsController],
+  providers: [IntakeService, ExecutionEvidenceService, SemanticTriageService, IntakeDecisionsService],
   // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector
   // sync event is fed into, same entry point `handleIncomingEmail()` already uses.
   exports: [IntakeService],

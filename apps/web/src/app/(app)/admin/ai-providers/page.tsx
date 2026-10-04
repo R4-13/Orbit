@@ -10,6 +10,7 @@ import {
   useDisconnectAiProvider,
   useTestAiProviderConnection,
   useUpsertAiProviderConnection,
+  useVerifyAiRuntime,
 } from '../../../../lib/hooks/use-ai-providers';
 
 const PROVIDER_LABELS: Record<AIProviderKey, string> = {
@@ -23,6 +24,60 @@ const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   ERROR: { label: 'Fehler', tone: 'danger' },
   NOT_CONFIGURED: { label: 'Nicht konfiguriert', tone: 'neutral' },
 };
+
+const HEALTH_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
+  SIMULATED: { label: 'Simuliert — kein echtes Modell', tone: 'warning' },
+  NOT_VERIFIED: { label: 'Ausführbarkeit nicht geprüft', tone: 'warning' },
+  VERIFIED: { label: 'Ausführbarkeit geprüft', tone: 'success' },
+  ERROR: { label: 'Prüfung fehlgeschlagen', tone: 'danger' },
+};
+
+/** Amendment 02 §5.3: "Aktiv" beschreibt nur die Konfiguration — hier steht, was wirklich ausgeführt wird und ob das geprüft wurde. */
+function RuntimeBox({ runtime }: { runtime: NonNullable<ReturnType<typeof useAiProviderStatus>['data']>['runtime'] }) {
+  const verify = useVerifyAiRuntime();
+  const [error, setError] = useState<string | null>(null);
+  const health = HEALTH_LABELS[runtime.health.state] ?? HEALTH_LABELS.NOT_VERIFIED;
+  const simulated = runtime.executionMode === 'SIMULATED';
+
+  async function handleVerify() {
+    setError(null);
+    try {
+      await verify.mutateAsync();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Die Prüfung ist fehlgeschlagen.');
+    }
+  }
+
+  return (
+    <div
+      className={`rounded-md border px-4 py-3 ${simulated ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+      data-testid="ai-runtime"
+      data-execution-mode={runtime.executionMode}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-medium text-slate-900">Tatsächlicher Betrieb</p>
+          <p className="text-xs text-slate-600" data-testid="ai-runtime-summary">
+            {simulated
+              ? 'Simuliert: Es wird derzeit kein echtes KI-Modell aufgerufen. Einstufungen und Antworten stammen nicht von einer echten KI.'
+              : `Live: ${runtime.provider}${runtime.model ? ` · ${runtime.model}` : ''}`}
+          </p>
+          {runtime.health.checkedAt ? <p className="text-xs text-slate-500">Zuletzt geprüft: {formatDateTime(runtime.health.checkedAt)}</p> : null}
+          {runtime.health.detail && runtime.health.state !== 'SIMULATED' ? <p className="text-xs text-slate-500">{runtime.health.detail}</p> : null}
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Badge tone={health.tone}>{health.label}</Badge>
+          {!simulated ? (
+            <Button variant="secondary" disabled={verify.isPending} onClick={handleVerify}>
+              Ausführbarkeit prüfen
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+    </div>
+  );
+}
 
 function ByokForm({ onSaved }: { onSaved: () => void }) {
   const upsert = useUpsertAiProviderConnection();
@@ -139,8 +194,10 @@ export default function AdminAiProvidersPage() {
                   <p className="font-medium text-slate-900">ORBIT-Managed AI</p>
                   <p className="text-xs text-slate-500">Kein eigener API-Key erforderlich — von ORBIT betrieben und geprüft.</p>
                 </div>
-                <Badge tone={!isTenantManaged ? 'success' : 'neutral'}>{!isTenantManaged ? 'Aktiv' : 'Inaktiv'}</Badge>
+                <Badge tone={!isTenantManaged ? 'info' : 'neutral'}>{!isTenantManaged ? 'Konfiguration aktiv' : 'Inaktiv'}</Badge>
               </div>
+
+              {status ? <RuntimeBox runtime={status.runtime} /> : null}
 
               <div className="rounded-md border border-slate-200 px-4 py-3">
                 <div className="flex items-center justify-between">

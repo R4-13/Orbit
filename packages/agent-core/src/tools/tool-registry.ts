@@ -93,7 +93,13 @@ export class ToolRegistry {
 
     const parsed = tool.inputSchema.safeParse(rawInput);
     if (!parsed.success) {
-      throw new ValidationFailedError(`Invalid input for tool "${name}".`, {
+      // Field-level detail in the message itself: it is what AgentRuntime feeds back to the model so it can
+      // correct the call within the same turn (and what ends up on the ToolInvocation) — bounded in length.
+      const detail = parsed.error.issues
+        .slice(0, 8)
+        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+        .join('; ');
+      throw new ValidationFailedError(`Invalid input for tool "${name}": ${detail}`.slice(0, 600), {
         issues: parsed.error.issues,
       });
     }

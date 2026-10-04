@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { POLICY_ACTIONS } from '@orbit/shared';
+import { POLICY_ACTIONS, TriageResultSchema, type TriageResult } from '@orbit/shared';
 import type { ToolDefinition, ToolRegistry } from '@orbit/agent-core';
 import { FINANCE_KEYWORDS, SALES_KEYWORDS } from './communication.tools';
 
@@ -31,6 +31,22 @@ const MARKETING_PATTERNS = ['unsubscribe', 'abmelden', 'newsletter', 'no-reply',
 export class TriageAgentTools {
   register(registry: ToolRegistry): void {
     registry.register(this.assessRelevanceTool());
+    registry.register(this.submitTriageResultTool());
+  }
+
+  /**
+   * Amendment 02 §5 — provider-neutral structured output: the model answers by calling this tool whose input IS the
+   * `TriageResult` schema. The tool performs no business action and applies no thresholds; it only hands the
+   * schema-validated proposal back to `SemanticTriageService`.
+   */
+  private submitTriageResultTool(): ToolDefinition {
+    return {
+      name: 'submit_triage_result',
+      description: 'Übermittelt das strukturierte Triage-Ergebnis (TriageResult, schemaVersion 1.0) zu genau diesem Eingang. Führt keine Aktion aus.',
+      inputSchema: TriageResultSchema as unknown as z.ZodType<TriageResult>,
+      policyAction: POLICY_ACTIONS.EMAIL_TRIAGE,
+      execute: async (input: TriageResult) => input,
+    };
   }
 
   private assessRelevanceTool(): ToolDefinition {

@@ -46,6 +46,8 @@ export interface ProviderValidationResult {
 
 export interface LLMProvider {
   readonly providerName: string;
+  /** Configured model identifier, when the provider has one (recorded in live-test evidence, Amendment 02 §5.3). */
+  readonly modelName?: string;
   complete(request: LLMCompletionRequest): Promise<LLMCompletionResult>;
   /**
    * §38 of docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md ("LLM Provider

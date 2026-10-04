@@ -60,6 +60,8 @@ export const AUDIT_EVENT_TYPES = [
   'CHANNEL_EVENT_RECEIVED',
   /** Amendment 02 §24.3 — an earlier, provably wrong terminal status was corrected; payload carries the old/new state, reason and executor. */
   'STATUS_CORRECTED',
+  /** Amendment 02 §17.2 / §19.3 — a reviewer overrode an exclusion ("Als geschäftsrelevant prüfen"); payload carries the previous relevance and the note. */
+  'INTAKE_DECISION_OVERRIDDEN',
   'TENANT_DATA_EXPORTED',
   'TENANT_DELETE_REQUESTED',
   'TENANT_DELETE_COMPLETED',

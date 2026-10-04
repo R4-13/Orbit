@@ -103,6 +103,10 @@ export const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_MODEL: z.string().default('gpt-4o'),
 
+  // Semantic triage thresholds (Amendment 02 §14.3) — configurable defaults to be calibrated on an evaluation catalogue, not product constants.
+  TRIAGE_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),
+  TRIAGE_EXCLUSION_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.85),
+
   // Build identity (set at image build time) — recorded as part of live-test evidence (Amendment 02 §19.4).
   ORBIT_BUILD_COMMIT: z.string().optional().default(''),
 

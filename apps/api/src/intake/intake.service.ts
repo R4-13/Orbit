@@ -1,29 +1,34 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { LLMCompletionRequest, LLMProvider } from '@orbit/agent-core';
-import { MockLLMProvider, wrapUntrustedContent } from '@orbit/agent-core';
-import type { Case, IntakeRelevance, Prisma } from '@orbit/domain';
+import { MockLLMProvider } from '@orbit/agent-core';
+import type { OrbitEnv } from '@orbit/config';
+import type { Case, IntakeEventStatus, IntakeRelevance, Prisma } from '@orbit/domain';
+import { NotFoundError, ValidationFailedError, triageFixtureForScenario, type SimulatedTriageScenario, type TriageResult } from '@orbit/shared';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
-import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
-import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
+import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
+import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
 import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
-import { ExecutionEvidenceService } from './execution-evidence.service';
 import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
+import { ExecutionEvidenceService } from './execution-evidence.service';
+import { SUBMIT_TRIAGE_TOOL, SemanticTriageService, type TriageOutcome } from './semantic-triage.service';
+import { deriveAppliedRelevance, routeForCategory } from './triage-decision';
 
 export interface IntakeResult {
   case?: Case;
   category: 'FINANCE' | 'SALES' | 'OTHER';
   agentRunIds: string[];
   intakeEventId: string;
+  /** Final processing state of the IntakeEvent — the caller must not have to infer "what happened" from `category`. */
+  intakeStatus?: IntakeEventStatus;
 }
 
-/** Low-confidence or ambiguous triage verdicts are forced to UNKNOWN_REQUIRES_REVIEW here — deterministic application logic, not left to the LLM/tool's own judgment (§4 of docs/CHANNEL_EVENT_RUNTIME_PLAN.md). */
 interface DomainHandlerResult {
   agentRunId?: string;
   /** Set when the durable workflow ended FAILED — the IntakeEvent must then end FAILED, not COMPLETED. */
@@ -32,7 +37,19 @@ interface DomainHandlerResult {
   outcomeUnknown?: boolean;
 }
 
-const RELEVANCE_CONFIDENCE_THRESHOLD = 0.5;
+/** What `persistIntake()` stored — everything a later retry needs, so a pending triage never loses an input. */
+interface PersistedIntake {
+  inboundEmailId: string;
+  intakeEventId: string;
+  documentIds: string[];
+}
+
+/** Stored full-text cap: enough for triage/extraction, not an unbounded copy of arbitrary mail (retention applies, Amendment 02 §19.3). */
+const MAX_STORED_BODY_CHARS = 100_000;
+/** After this many failed triage attempts the input goes to a human instead of retrying forever. */
+const MAX_TRIAGE_RETRIES = 6;
+const TRIAGE_RETRY_BASE_MS = 60_000;
+const TRIAGE_RETRY_MAX_MS = 30 * 60_000;
 
 /** Parses the JSON payload AgentRuntime appends as `[tool_result:toolName] {...}`. */
 function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T | undefined {
@@ -46,42 +63,40 @@ function parseToolResult<T>(request: LLMCompletionRequest, toolName: string): T 
   return undefined;
 }
 
+function retryDelayMs(retryCount: number): number {
+  return Math.min(TRIAGE_RETRY_BASE_MS * 2 ** Math.max(0, retryCount - 1), TRIAGE_RETRY_MAX_MS);
+}
+
 /**
  * Channel Event Runtime (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) — the single
  * true entry point for every inbound intake source is `handleIntakeEvent()`.
- * `handleIncomingEmail()` (the `/inbox` "simulate incoming email" form's
- * target, and still `IntakeController`'s public contract) is now a thin
- * adapter that builds a `NormalizedIntakeEvent` and calls it — simulation
- * is "just another source" into the same pipeline, not a parallel path.
- * A real channel adapter (Increment C's `GmailPollAdapter`) converges on
- * the exact same method.
+ * `handleIncomingEmail()` (the `/inbox` "simulate incoming email" form) is a
+ * thin adapter onto it; a real channel adapter (`GmailPollAdapter`) converges
+ * on the same method.
  *
- * Pipeline per event: persist `EmailMessage` (full source data) +
- * `IntakeEvent` (orchestration/audit record, references only — see its
- * schema doc comment) → Relevance/Triage (`assessRelevance()`, a dedicated
- * `AgentRun`, BEFORE any domain classification) → only
- * `BUSINESS_ACTIONABLE` proceeds to the existing FINANCE/SALES/OTHER
- * `classify()` step, unchanged → `Case` creation → domain-specific agent
- * turn via `DOMAIN_WORKFLOW_HANDLERS` (a lookup table, not nested if/else —
- * a future domain registers one new entry, no change to this dispatch
- * loop). `UNKNOWN_REQUIRES_REVIEW` creates a human-review `Task` instead of
- * guessing a domain; `NON_ACTIONABLE`/`PRIVATE_PERSONAL` are logged and
- * skipped; `BUSINESS_INFORMATIONAL` is logged with no automatic workflow.
+ * Pipeline (Amendment 02 §5/§6): persist the source (full normalized body,
+ * thread headers, attachments as Documents) + an `IntakeEvent` →
+ * deterministic safety gates (own outbound message, auto-generated mail) →
+ * **semantic triage** through the real provider path (`SemanticTriageService`)
+ * → an `IntakeDecision` → deterministic thresholds (`deriveAppliedRelevance`)
+ * → only a confidently relevant message with a configured route becomes a
+ * `Case` and runs the existing Finance/Sales workflow. Everything uncertain,
+ * unsupported or unroutable stays visible as a review item; only a *safely*
+ * non-business input is filtered, and then it still has a decision record.
+ * A provider outage never filters or completes anything: the input waits as
+ * `PENDING_TRIAGE` and is retried.
  *
- * **Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md):** Finance/Sales now
- * execute via `triggerWorkflow()` -> `WorkflowRunnerService.trigger()`, the
- * durable `WorkflowDefinition`/`WorkflowRun`/`WorkflowStepRun` engine —
- * not the bespoke per-service agent-turn+approval orchestration this file
- * used before. Document upload, name-guessing, and MockLLMProvider seeding
- * in `runFinanceAgent()`/`runSalesAgent()` are unchanged; only the final
- * dispatch call moved.
+ * Keyword matching no longer decides relevance or routing. The remaining
+ * mock-mode seeding below drives the *domain agents'* tool calls in
+ * simulation only and is recorded as SIMULATED execution evidence.
  */
 @Injectable()
 export class IntakeService {
   constructor(
     @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
-    private readonly agentDefinitions: AgentDefinitionResolverService,
-    private readonly runs: AgentRunRecorderService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+    private readonly aiProviders: AiProviderResolverService,
+    private readonly triage: SemanticTriageService,
     private readonly cases: CasesService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
@@ -92,6 +107,9 @@ export class IntakeService {
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
+    if (input.simulatedTriageScenario) {
+      await this.seedSimulatedTriage(tenantId, input.simulatedTriageScenario);
+    }
     const event: NormalizedIntakeEvent = {
       tenantId,
       channel: 'SIMULATED',
@@ -107,15 +125,94 @@ export class IntakeService {
     return this.handleIntakeEvent(tenantId, actorUserId, event);
   }
 
+  /** Demo/test hook: a chosen scenario becomes the simulated provider's scripted structured answer. Impossible with a real provider. */
+  private async seedSimulatedTriage(tenantId: string, scenario: SimulatedTriageScenario): Promise<void> {
+    const provider = await this.aiProviders.resolveForTenant(tenantId);
+    if (!(provider instanceof MockLLMProvider)) {
+      throw new ValidationFailedError(
+        'Simulationsszenarien sind nur mit einem simulierten KI-Provider möglich; ein echter Provider entscheidet selbst.',
+        { scenario },
+      );
+    }
+    provider.seedResponse({
+      toolCalls: [{ toolCallId: randomUUID(), toolName: SUBMIT_TRIAGE_TOOL, input: triageFixtureForScenario(scenario) as unknown as Record<string, unknown> }],
+      stopReason: 'tool_use',
+    });
+  }
+
   async handleIntakeEvent(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<IntakeResult> {
-    const inboundEmail = await this.prisma.forTenantId(tenantId).emailMessage.create({
+    const persisted = await this.persistIntake(tenantId, actorUserId, event);
+    return this.withFinalStatus(tenantId, await this.processIntake(tenantId, actorUserId, event, persisted));
+  }
+
+  private async withFinalStatus(tenantId: string, result: IntakeResult): Promise<IntakeResult> {
+    const final = await this.prisma.forTenantId(tenantId).intakeEvent.findUnique({ where: { id: result.intakeEventId }, select: { status: true } });
+    return { ...result, intakeStatus: final?.status };
+  }
+
+  /**
+   * Re-runs a `PENDING_TRIAGE` input from what was persisted (body, thread data, Documents) — no re-poll of the
+   * provider needed, so an outage can never lose an input. Called by the channel-sync worker once `nextRetryAt` passes.
+   */
+  async retryPendingTriage(tenantId: string, intakeEventId: string): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const intake = await scoped.intakeEvent.findUnique({ where: { id: intakeEventId }, include: { decision: true, emailMessage: true } });
+    if (!intake?.emailMessage) throw new NotFoundError('IntakeEvent with a stored message not found.', { intakeEventId });
+    if (intake.decision?.status !== 'PENDING_TRIAGE') {
+      throw new ValidationFailedError('IntakeEvent is not waiting for triage.', { intakeEventId, status: intake.decision?.status });
+    }
+    const documents = await scoped.document.findMany({ where: { id: { in: intake.documentIds } } });
+    const sender = (intake.senderRef ?? {}) as { address?: string; displayName?: string };
+    const event: NormalizedIntakeEvent = {
+      tenantId,
+      connectionId: intake.connectionId ?? undefined,
+      channel: intake.channel,
+      provider: intake.provider,
+      externalEventId: intake.externalEventId,
+      occurredAt: intake.occurredAt,
+      sender,
+      recipients: ((intake.recipientRefs ?? []) as Array<{ address?: string }>) ?? [],
+      subject: intake.subject ?? undefined,
+      content: intake.emailMessage.bodyText ?? intake.emailMessage.bodyPreview ?? '',
+      // Attachment bytes already live in storage as Documents; triage only needs name and type.
+      attachments: documents.map((d) => ({ fileName: d.fileName, mimeType: d.mimeType, contentBase64: '' })),
+      threadId: intake.emailMessage.threadId ?? undefined,
+      rfcMessageId: intake.emailMessage.rfcMessageId ?? undefined,
+      inReplyTo: intake.emailMessage.inReplyTo ?? undefined,
+      references: intake.emailMessage.references,
+    };
+    return this.withFinalStatus(
+      tenantId,
+      await this.processIntake(tenantId, undefined, event, {
+        inboundEmailId: intake.emailMessage.id,
+        intakeEventId: intake.id,
+        documentIds: intake.documentIds,
+      }),
+    );
+  }
+
+  private async persistIntake(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<PersistedIntake> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const body = (event.content ?? '').slice(0, MAX_STORED_BODY_CHARS);
+    const contentHash = createHash('sha256')
+      .update([event.subject ?? '', body, ...(event.attachments ?? []).map((a) => `${a.fileName}:${a.contentBase64.length}`)].join('\n'))
+      .digest('hex');
+    const direction = event.direction ?? 'INBOUND';
+
+    const inboundEmail = await scoped.emailMessage.create({
       data: {
         tenantId,
-        direction: 'INBOUND',
+        direction,
         fromAddress: event.sender?.address ?? '',
         toAddresses: (event.recipients ?? []).map((r) => r.address ?? '').filter(Boolean),
         subject: event.subject,
         bodyPreview: event.content?.slice(0, 500),
+        bodyText: body,
+        contentHash,
+        threadId: event.threadId,
+        rfcMessageId: event.rfcMessageId,
+        inReplyTo: event.inReplyTo,
+        references: event.references ?? [],
         providerMessageId: event.channel === 'SIMULATED' ? null : event.externalEventId,
         receivedAt: event.occurredAt,
       },
@@ -126,10 +223,39 @@ export class IntakeService {
       actorType: 'AGENT',
       entityType: 'EmailMessage',
       entityId: inboundEmail.id,
-      payload: { fromAddress: event.sender?.address, subject: event.subject },
+      payload: { fromAddress: event.sender?.address, subject: event.subject, direction },
     });
 
-    const intakeEvent = await this.prisma.forTenantId(tenantId).intakeEvent.create({
+    // Attachments become Documents immediately (before triage), so a pending triage still holds every input byte.
+    const documentIds: string[] = [];
+    for (const attachment of event.attachments ?? []) {
+      const bytes = Buffer.from(attachment.contentBase64, 'base64');
+      const storageKey = this.storage.buildStorageKey(tenantId, attachment.fileName);
+      await this.storage.putObjectBytes(storageKey, bytes, attachment.mimeType);
+      const document = await scoped.document.create({
+        data: {
+          tenantId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          sizeBytes: bytes.byteLength,
+          storageKey,
+          checksum: createHash('sha256').update(bytes).digest('hex'),
+          uploadedByUserId: actorUserId,
+        },
+      });
+      await this.audit.record({
+        tenantId,
+        eventType: 'DOCUMENT_UPLOADED',
+        actorType: 'AGENT',
+        actorUserId,
+        entityType: 'Document',
+        entityId: document.id,
+        payload: { fileName: document.fileName },
+      });
+      documentIds.push(document.id);
+    }
+
+    const intakeEvent = await scoped.intakeEvent.create({
       data: {
         tenantId,
         connectionId: event.connectionId,
@@ -141,6 +267,7 @@ export class IntakeService {
         recipientRefs: event.recipients as Prisma.InputJsonValue | undefined,
         subject: event.subject,
         emailMessageId: inboundEmail.id,
+        documentIds,
         status: 'RECEIVED',
       },
     });
@@ -150,223 +277,270 @@ export class IntakeService {
       channelProvider: event.provider,
       simulatedChannel: event.channel === 'SIMULATED',
     });
-    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+    await scoped.intakeEvent.update({
       where: { id: intakeEvent.id },
       data: { metadata: { execution } as unknown as Prisma.InputJsonValue },
     });
 
-    const triage = await this.assessRelevance(tenantId, actorUserId, event);
-    const relevance = this.enforceRelevanceThreshold(triage);
-    await this.prisma.forTenantId(tenantId).intakeEvent.update({
-      where: { id: intakeEvent.id },
-      data: { relevance, status: 'TRIAGED' },
-    });
+    return { inboundEmailId: inboundEmail.id, intakeEventId: intakeEvent.id, documentIds };
+  }
 
-    if (relevance === 'NON_ACTIONABLE' || relevance === 'PRIVATE_PERSONAL') {
-      await this.prisma.forTenantId(tenantId).intakeEvent.update({
-        where: { id: intakeEvent.id },
-        data: { status: 'SKIPPED_NON_ACTIONABLE' },
+  private async processIntake(
+    tenantId: string,
+    actorUserId: string | undefined,
+    event: NormalizedIntakeEvent,
+    persisted: PersistedIntake,
+  ): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const { intakeEventId } = persisted;
+    const skipped: IntakeResult = { category: 'OTHER', agentRunIds: [], intakeEventId };
+
+    // Gate 1 — our own outbound message: recorded for correlation, never a customer request (Amendment 02 §5.1, E19).
+    if (event.direction === 'OUTBOUND') {
+      await scoped.intakeEvent.update({
+        where: { id: intakeEventId },
+        data: { status: 'SKIPPED_NON_ACTIONABLE', metadata: await this.mergeMetadata(tenantId, intakeEventId, { skipReason: 'OWN_OUTBOUND_MESSAGE' }) },
       });
-      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
+      return skipped;
     }
 
-    if (relevance === 'UNKNOWN_REQUIRES_REVIEW') {
-      await this.tasks.create(
+    // Gate 2 — auto-generated mail (out-of-office, delivery report): deterministic, still gets a visible decision record
+    // and — crucially for later wait/resume — can never be mistaken for a customer's answer (E18).
+    if (event.hints?.autoGenerated) {
+      await this.saveDecision(tenantId, intakeEventId, {
+        status: 'DECIDED',
+        appliedRelevance: 'NON_ACTIONABLE',
+        hints: { skipReason: 'AUTO_GENERATED', ...event.hints },
+      });
+      await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { relevance: 'NON_ACTIONABLE', status: 'SKIPPED_NON_ACTIONABLE' } });
+      return skipped;
+    }
+
+    const outcome = await this.triage.triage(tenantId, actorUserId, event);
+    const hints = event.hints ? ({ ...event.hints } as Prisma.InputJsonValue) : undefined;
+    const executionJson = outcome.execution as unknown as Prisma.InputJsonValue;
+
+    if (outcome.status === 'PENDING_TRIAGE') {
+      return this.handlePendingTriage(tenantId, actorUserId, event, persisted, outcome, hints, executionJson);
+    }
+
+    if (outcome.status === 'REVIEW_REQUIRED') {
+      await this.saveDecision(tenantId, intakeEventId, {
+        status: 'REVIEW_REQUIRED',
+        appliedRelevance: 'UNKNOWN_REQUIRES_REVIEW',
+        failureReason: `${outcome.failureReason}: ${outcome.detail}`,
+        execution: executionJson,
+        hints,
+      });
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, outcome.detail, 'UNKNOWN_REQUIRES_REVIEW');
+      return skipped;
+    }
+
+    const applied = deriveAppliedRelevance(outcome.result, {
+      minConfidence: this.env.TRIAGE_MIN_CONFIDENCE,
+      exclusionMinConfidence: this.env.TRIAGE_EXCLUSION_MIN_CONFIDENCE,
+    });
+    await this.saveDecision(tenantId, intakeEventId, {
+      status: 'DECIDED',
+      result: outcome.result as unknown as Prisma.InputJsonValue,
+      appliedRelevance: applied.relevance,
+      execution: executionJson,
+      hints: { ...(hints as object | undefined), basis: applied.basis } as Prisma.InputJsonValue,
+    });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { relevance: applied.relevance, status: 'TRIAGED' } });
+
+    if (applied.relevance === 'NON_ACTIONABLE' || applied.relevance === 'PRIVATE_PERSONAL') {
+      await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { status: 'SKIPPED_NON_ACTIONABLE' } });
+      return skipped;
+    }
+
+    if (applied.relevance === 'UNKNOWN_REQUIRES_REVIEW') {
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, `${applied.basis} Begründung der KI: ${outcome.result.conciseReason}`, applied.relevance);
+      return skipped;
+    }
+
+    return this.routeBusinessInput(tenantId, actorUserId, event, persisted, outcome.result);
+  }
+
+  private async routeBusinessInput(
+    tenantId: string,
+    actorUserId: string | undefined,
+    event: NormalizedIntakeEvent,
+    persisted: PersistedIntake,
+    triage: TriageResult,
+  ): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const { intakeEventId, inboundEmailId, documentIds } = persisted;
+    const route = routeForCategory(triage.category);
+
+    // A relevant business input with no configured process is NOT filtered out (Amendment 02 §6.1, E11-E14/E24).
+    if (!route) {
+      await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
+      await this.sendToReview(
         tenantId,
         actorUserId,
-        {
-          title: `Prüfung erforderlich: ${event.subject ?? '(ohne Betreff)'}`,
-          description: `Der Triage-Agent konnte die Relevanz nicht sicher einstufen (Begründung: ${triage.reasoning}). Bitte manuell prüfen, ob dies ein geschäftlicher Vorgang ist.`,
-        },
-        'AGENT',
-        'AGENT',
+        event,
+        intakeEventId,
+        `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`,
+        'BUSINESS_ACTIONABLE',
       );
-      await this.prisma.forTenantId(tenantId).intakeEvent.update({
-        where: { id: intakeEvent.id },
-        data: { status: 'NEEDS_REVIEW' },
-      });
-      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
+      return { category: 'OTHER', agentRunIds: [], intakeEventId };
     }
 
-    if (relevance === 'BUSINESS_INFORMATIONAL') {
-      await this.prisma.forTenantId(tenantId).intakeEvent.update({
-        where: { id: intakeEvent.id },
-        data: { status: 'COMPLETED' },
-      });
-      return { category: 'OTHER', agentRunIds: [], intakeEventId: intakeEvent.id };
-    }
-
-    // relevance === 'BUSINESS_ACTIONABLE' — proceed to the existing domain classification/routing, unchanged.
-    const category = await this.classify(tenantId, actorUserId, {
-      subject: event.subject ?? '',
-      bodyText: event.content ?? '',
-      hasAttachment: Boolean(event.attachments?.length),
-    });
-    await this.prisma.forTenantId(tenantId).emailMessage.update({ where: { id: inboundEmail.id }, data: { classification: category } });
-    await this.prisma
-      .forTenantId(tenantId)
-      .intakeEvent.update({ where: { id: intakeEvent.id }, data: { domainCategory: category, status: 'ROUTED' } });
-
-    if (category === 'OTHER') {
-      await this.prisma.forTenantId(tenantId).intakeEvent.update({ where: { id: intakeEvent.id }, data: { status: 'COMPLETED' } });
-      return { category, agentRunIds: [], intakeEventId: intakeEvent.id };
-    }
+    await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { domainCategory: route, status: 'ROUTED' } });
 
     const businessCase = await this.cases.create(tenantId, actorUserId ?? '', {
-      type: category,
-      title: category === 'FINANCE' ? `Rechnungseingang: ${event.subject ?? ''}` : `Neue Anfrage: ${event.subject ?? ''}`,
+      type: route,
+      title: route === 'FINANCE' ? `Rechnungseingang: ${event.subject ?? ''}` : `Neue Anfrage: ${event.subject ?? ''}`,
       description: event.content?.slice(0, 1000),
     });
-    await this.prisma.forTenantId(tenantId).emailMessage.update({ where: { id: inboundEmail.id }, data: { caseId: businessCase.id } });
-    await this.prisma
-      .forTenantId(tenantId)
-      .intakeEvent.update({ where: { id: intakeEvent.id }, data: { caseId: businessCase.id, status: 'PROCESSING' } });
+    await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: businessCase.id } });
+    if (documentIds.length > 0) {
+      await scoped.document.updateMany({ where: { id: { in: documentIds } }, data: { caseId: businessCase.id } });
+    }
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: businessCase.id, status: 'PROCESSING' } });
 
-    const handler = this.domainWorkflowHandlers[category];
+    const handler = this.domainWorkflowHandlers[route];
     let agentRunIds: string[] = [];
     let workflowFailure: string | undefined;
     let workflowOutcomeUnknown = false;
+    let handled: DomainHandlerResult | null = null;
     try {
-      const handled = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEvent.id) : null;
+      handled = handler ? await handler(tenantId, actorUserId, businessCase, event, intakeEventId, documentIds) : null;
       agentRunIds = handled?.agentRunId ? [handled.agentRunId] : [];
       workflowFailure = handled?.failureMessage;
       workflowOutcomeUnknown = handled?.outcomeUnknown ?? false;
     } catch (error) {
-      await this.prisma.forTenantId(tenantId).intakeEvent.update({
-        where: { id: intakeEvent.id },
+      await scoped.intakeEvent.update({
+        where: { id: intakeEventId },
         data: { status: 'FAILED', errorMessage: error instanceof Error ? error.message : String(error) },
       });
       throw error;
     }
 
+    // The category is routed but the handler had nothing to act on (e.g. an invoice mail without attachment): visible review, not "done".
+    if (handled === null) {
+      await this.sendToReview(
+        tenantId,
+        actorUserId,
+        event,
+        intakeEventId,
+        `Kategorie ${triage.category} erkannt, aber die Voraussetzungen für den automatischen Ablauf fehlen (z. B. kein Anhang).`,
+        'BUSINESS_ACTIONABLE',
+      );
+      return { case: businessCase, category: route, agentRunIds, intakeEventId };
+    }
+
     // A failed workflow is not a completed intake — without this the IntakeEvent (and anything
     // derived from it, e.g. the connector's operational status) would claim success.
-    await this.prisma.forTenantId(tenantId).intakeEvent.update({
-      where: { id: intakeEvent.id },
+    await scoped.intakeEvent.update({
+      where: { id: intakeEventId },
       data: workflowFailure
         ? { status: workflowOutcomeUnknown ? 'NEEDS_REVIEW' : 'FAILED', errorMessage: workflowFailure }
         : { status: 'COMPLETED' },
     });
-    return { case: businessCase, category, agentRunIds, intakeEventId: intakeEvent.id };
+    return { case: businessCase, category: route, agentRunIds, intakeEventId };
   }
 
-  /**
-   * Relevance/Triage — runs BEFORE domain classification, its own
-   * `AgentRun` (no `caseId`, same shape as `classify()`'s own run — a
-   * `Case` may not even exist yet at this point, matches how
-   * `AgentRun.caseId` is already nullable for exactly this reason).
-   * Resolves the dedicated "triage" `AgentDefinition` — a 4th key next to
-   * communication-intake/finance-intake/sales-intake, same resolver, no
-   * special-casing needed (§5 of the user's design: a dedicated Triage
-   * agent reusing AgentRuntime/ToolRegistry/AgentDefinitionResolverService
-   * is fine).
-   */
-  private async assessRelevance(
+  private async handlePendingTriage(
     tenantId: string,
     actorUserId: string | undefined,
     event: NormalizedIntakeEvent,
-  ): Promise<{ relevance: IntakeRelevance; confidence: number; reasoning: string }> {
-    if (this.llm instanceof MockLLMProvider) {
-      this.llm.seedResponse({
-        toolCalls: [
-          {
-            toolCallId: randomUUID(),
-            toolName: 'assess_relevance',
-            input: { subject: event.subject ?? '', content: event.content ?? '' },
-          },
-        ],
-        stopReason: 'tool_use',
+    persisted: PersistedIntake,
+    outcome: Extract<TriageOutcome, { status: 'PENDING_TRIAGE' }>,
+    hints: Prisma.InputJsonValue | undefined,
+    executionJson: Prisma.InputJsonValue,
+  ): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const { intakeEventId } = persisted;
+    const existing = await scoped.intakeDecision.findUnique({ where: { intakeEventId } });
+    const retryCount = (existing?.retryCount ?? 0) + 1;
+
+    if (retryCount >= MAX_TRIAGE_RETRIES) {
+      await this.saveDecision(tenantId, intakeEventId, {
+        status: 'REVIEW_REQUIRED',
+        appliedRelevance: 'UNKNOWN_REQUIRES_REVIEW',
+        failureReason: `${outcome.failureReason}: ${outcome.detail} (nach ${retryCount} Versuchen)`,
+        execution: executionJson,
+        hints,
+        retryCount,
       });
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, `Die KI-Triage war auch nach ${retryCount} Versuchen nicht möglich: ${outcome.detail}`, 'UNKNOWN_REQUIRES_REVIEW');
+      return { category: 'OTHER', agentRunIds: [], intakeEventId };
     }
 
-    const run = await this.runs.start({
-      tenantId,
-      agentType: 'COMMUNICATION',
-      triggerType: event.channel === 'SIMULATED' ? 'MANUAL' : 'EMAIL',
-      input: { subject: event.subject },
+    await this.saveDecision(tenantId, intakeEventId, {
+      status: 'PENDING_TRIAGE',
+      failureReason: `${outcome.failureReason}: ${outcome.detail}`,
+      execution: executionJson,
+      hints,
+      retryCount,
+      nextRetryAt: new Date(Date.now() + retryDelayMs(retryCount)),
     });
-
-    const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, 'triage');
-    const result = await runtime.runTurn(
-      { tenantId, agentRunId: run.id, actorUserId },
-      {
-        systemPrompt,
-        messages: [{ role: 'user', content: wrapUntrustedContent(`Betreff: ${event.subject ?? ''}\n\n${event.content ?? ''}`) }],
-        maxToolIterations: 2,
-      },
-    );
-
-    await this.runs.recordToolCalls(tenantId, run.id, result.toolCallOutcomes);
-    await this.runs.complete(tenantId, run.id, result);
-
-    const outcome = result.toolCallOutcomes.find((o) => o.toolName === 'assess_relevance');
-    const output = outcome?.output as { relevance?: IntakeRelevance; confidence?: number; reasoning?: string } | undefined;
-    return {
-      relevance: output?.relevance ?? 'UNKNOWN_REQUIRES_REVIEW',
-      confidence: output?.confidence ?? 0,
-      reasoning: output?.reasoning ?? 'Keine Einstufung durch den Triage-Agenten erhalten.',
-    };
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { status: 'PENDING_TRIAGE', errorMessage: outcome.detail } });
+    return { category: 'OTHER', agentRunIds: [], intakeEventId };
   }
 
-  /** Deterministic enforcement, independent of what the tool/LLM itself returned — §4: "thresholds and consequences of low confidence must be enforced deterministically by application/policy logic." */
-  private enforceRelevanceThreshold(triage: { relevance: IntakeRelevance; confidence: number }): IntakeRelevance {
-    if (triage.confidence < RELEVANCE_CONFIDENCE_THRESHOLD) {
-      return 'UNKNOWN_REQUIRES_REVIEW';
-    }
-    return triage.relevance;
-  }
-
-  private async classify(
+  private async sendToReview(
     tenantId: string,
     actorUserId: string | undefined,
-    input: { subject: string; bodyText: string; hasAttachment: boolean },
-  ): Promise<'FINANCE' | 'SALES' | 'OTHER'> {
-    if (this.llm instanceof MockLLMProvider) {
-      // Deliberately seeds only this one response, not a trailing
-      // "end_turn" too: MockLLMProvider.complete() already returns a safe
-      // empty end_turn once its queue runs dry, so a manually-seeded
-      // trailing entry would only ever be *right* when the tool call
-      // before it happens to lead to exactly one more iteration — wrong
-      // whenever it doesn't, since MockLLMProvider is a single
-      // process-wide singleton and a leftover unconsumed seed then
-      // corrupts the *next*, unrelated intake call's first response.
-      // Found live via apps/api/test/intake-workflow.e2e-spec.ts — see
-      // docs/ASSUMPTIONS.md Phase 18.
-      this.llm.seedResponse({
-        toolCalls: [
-          {
-            toolCallId: randomUUID(),
-            toolName: 'classify_message',
-            input: { subject: input.subject, bodyText: input.bodyText, hasAttachment: input.hasAttachment },
-          },
-        ],
-        stopReason: 'tool_use',
-      });
-    }
-
-    const run = await this.runs.start({
+    event: NormalizedIntakeEvent,
+    intakeEventId: string,
+    reason: string,
+    relevance: IntakeRelevance,
+  ): Promise<void> {
+    await this.tasks.create(
       tenantId,
-      agentType: 'COMMUNICATION',
-      triggerType: 'EMAIL',
-      input: { subject: input.subject },
-    });
-
-    const { systemPrompt, runtime } = await this.agentDefinitions.resolve(tenantId, 'communication-intake');
-    const result = await runtime.runTurn(
-      { tenantId, agentRunId: run.id, actorUserId },
+      actorUserId,
       {
-        systemPrompt,
-        messages: [{ role: 'user', content: wrapUntrustedContent(`Betreff: ${input.subject}\n\n${input.bodyText}`) }],
-        maxToolIterations: 2,
+        title: `Prüfung erforderlich: ${event.subject ?? '(ohne Betreff)'}`,
+        description: `${reason} Bitte manuell prüfen, wie mit diesem Eingang verfahren wird.`,
       },
+      'AGENT',
+      'AGENT',
     );
+    await this.prisma.forTenantId(tenantId).intakeEvent.update({
+      where: { id: intakeEventId },
+      data: { relevance, status: 'NEEDS_REVIEW' },
+    });
+  }
 
-    await this.runs.recordToolCalls(tenantId, run.id, result.toolCallOutcomes);
-    await this.runs.complete(tenantId, run.id, result);
+  private async saveDecision(
+    tenantId: string,
+    intakeEventId: string,
+    data: {
+      status: 'DECIDED' | 'PENDING_TRIAGE' | 'REVIEW_REQUIRED';
+      result?: Prisma.InputJsonValue;
+      appliedRelevance?: IntakeRelevance;
+      failureReason?: string;
+      execution?: Prisma.InputJsonValue;
+      hints?: Prisma.InputJsonValue;
+      retryCount?: number;
+      nextRetryAt?: Date;
+    },
+  ): Promise<void> {
+    const common = {
+      status: data.status,
+      result: data.result,
+      appliedRelevance: data.appliedRelevance,
+      failureReason: data.failureReason ?? null,
+      execution: data.execution,
+      hints: data.hints,
+      retryCount: data.retryCount ?? 0,
+      nextRetryAt: data.nextRetryAt ?? null,
+    };
+    await this.prisma.forTenantId(tenantId).intakeDecision.upsert({
+      where: { intakeEventId },
+      create: { tenantId, intakeEventId, ...common },
+      update: common,
+    });
+  }
 
-    const classification = result.toolCallOutcomes.find((o) => o.toolName === 'classify_message');
-    const output = classification?.output as { category?: 'FINANCE' | 'SALES' | 'OTHER' } | undefined;
-    return output?.category ?? 'OTHER';
+  private async mergeMetadata(tenantId: string, intakeEventId: string, extra: Record<string, unknown>): Promise<Prisma.InputJsonValue> {
+    const current = await this.prisma.forTenantId(tenantId).intakeEvent.findUnique({ where: { id: intakeEventId }, select: { metadata: true } });
+    const base = current?.metadata && typeof current.metadata === 'object' && !Array.isArray(current.metadata) ? current.metadata : {};
+    return { ...base, ...extra } as Prisma.InputJsonValue;
   }
 
   private async runFinanceAgent(
@@ -375,50 +549,20 @@ export class IntakeService {
     businessCase: Case,
     event: NormalizedIntakeEvent,
     intakeEventId: string,
+    documentIds: string[],
   ): Promise<DomainHandlerResult> {
-    const attachment = event.attachments?.[0];
-    if (!attachment) {
-      throw new Error('runFinanceAgent called without an attachment — caller (domainWorkflowHandlers.FINANCE) must guard this.');
+    const documentId = documentIds[0];
+    if (!documentId) {
+      throw new Error('runFinanceAgent called without a stored document — caller (domainWorkflowHandlers.FINANCE) must guard this.');
     }
-    const bytes = Buffer.from(attachment.contentBase64, 'base64');
-    const checksum = createHash('sha256').update(bytes).digest('hex');
-    const storageKey = this.storage.buildStorageKey(tenantId, attachment.fileName);
-    await this.storage.putObjectBytes(storageKey, bytes, attachment.mimeType);
-
-    const document = await this.prisma.forTenantId(tenantId).document.create({
-      data: {
-        tenantId,
-        caseId: businessCase.id,
-        fileName: attachment.fileName,
-        mimeType: attachment.mimeType,
-        sizeBytes: bytes.byteLength,
-        storageKey,
-        checksum,
-        uploadedByUserId: actorUserId,
-      },
-    });
-    await this.audit.record({
-      tenantId,
-      eventType: 'DOCUMENT_UPLOADED',
-      actorType: 'AGENT',
-      actorUserId,
-      entityType: 'Document',
-      entityId: document.id,
-      payload: { fileName: document.fileName },
-    });
 
     if (this.llm instanceof MockLLMProvider) {
       this.llm.seedResponse({
-        toolCalls: [
-          { toolCallId: randomUUID(), toolName: 'extract_invoice', input: { documentId: document.id, caseId: businessCase.id } },
-        ],
+        toolCalls: [{ toolCallId: randomUUID(), toolName: 'extract_invoice', input: { documentId, caseId: businessCase.id } }],
         stopReason: 'tool_use',
       });
       this.llm.seedResponse((request) => {
-        const invoice = parseToolResult<{ id: string; amountGross?: string | number | null }>(
-          request,
-          'extract_invoice',
-        );
+        const invoice = parseToolResult<{ id: string; amountGross?: string | number | null }>(request, 'extract_invoice');
         if (!invoice || invoice.amountGross === null || invoice.amountGross === undefined) {
           return { toolCalls: [], stopReason: 'end_turn' };
         }
@@ -438,11 +582,12 @@ export class IntakeService {
           stopReason: 'tool_use',
         };
       });
-      // No trailing manual end_turn seed — see the comment in classify().
+      // No trailing manual end_turn seed: MockLLMProvider returns a safe empty end_turn once its queue runs dry, and a
+      // leftover unconsumed seed would corrupt the next, unrelated call on this process-wide singleton.
     }
 
     return this.triggerWorkflow(tenantId, actorUserId, 'finance-invoice-intake', businessCase.id, intakeEventId, {
-      documentId: document.id,
+      documentId,
       caseId: businessCase.id,
       subject: event.subject ?? '',
     });
@@ -505,7 +650,6 @@ export class IntakeService {
           stopReason: 'tool_use',
         };
       });
-      // No trailing manual end_turn seed — see the comment in classify().
     }
 
     return this.triggerWorkflow(tenantId, actorUserId, 'sales-lead-intake', businessCase.id, intakeEventId, {
@@ -516,16 +660,9 @@ export class IntakeService {
   }
 
   /**
-   * Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) — the single dispatch
-   * point both `runFinanceAgent()`/`runSalesAgent()` now call instead of
-   * the removed bespoke `runAgentTurn()`. `WorkflowRunnerService.trigger()`
-   * already does everything that method used to do by hand: starts the
-   * `AgentRun`, runs the turn, and creates `FOLLOW_UP` `Approval` rows for
-   * any non-ALLOW/non-DENY tool outcome (identical shape to the removed
-   * `createApprovalsForBlockedCalls()` — safe to delete, not reimplemented).
-   * Also links the resulting `WorkflowRun` back onto the `IntakeEvent` that
-   * triggered it (the `workflowRunId` field added in Increment A for
-   * exactly this purpose).
+   * Increment G (docs/CHANNEL_EVENT_RUNTIME_PLAN.md) — the single dispatch point for domain workflows:
+   * `WorkflowRunnerService.trigger()` starts the AgentRun, runs the turn and creates FOLLOW_UP approvals for any
+   * non-ALLOW outcome, then this links the resulting `WorkflowRun` back onto the triggering `IntakeEvent`.
    */
   private async triggerWorkflow(
     tenantId: string,
@@ -553,17 +690,9 @@ export class IntakeService {
   }
 
   /**
-   * Domain routing as a lookup table, not nested if/else (§8 of
-   * docs/CHANNEL_EVENT_RUNTIME_PLAN.md: "Do not overfit to the current two
-   * domains... extensible so future workflow types can be registered
-   * without rebuilding the... runtime"). A future domain adds one entry
-   * here and one private method above — `handleIntakeEvent()`'s dispatch
-   * loop itself never changes. Each handler decides internally whether it
-   * has enough to act (e.g. FINANCE needs an attachment) — the generic
-   * dispatcher doesn't encode any domain-specific precondition. A class
-   * field (not a module-level const) so the arrow functions can close
-   * over `this` and call the private `runFinanceAgent`/`runSalesAgent`
-   * methods directly, no awkward external-access workaround needed.
+   * Domain routing as a lookup table, not nested if/else: a future domain adds one entry here and one private method
+   * above — the dispatch in `routeBusinessInput()` never changes. Each handler decides internally whether it has enough
+   * to act (e.g. FINANCE needs a stored document); returning `null` sends the input to visible review.
    */
   private readonly domainWorkflowHandlers: Record<
     string,
@@ -573,11 +702,12 @@ export class IntakeService {
       businessCase: Case,
       event: NormalizedIntakeEvent,
       intakeEventId: string,
+      documentIds: string[],
     ) => Promise<DomainHandlerResult | null>
   > = {
-    FINANCE: (tenantId, actorUserId, businessCase, event, intakeEventId) => {
-      if (!event.attachments?.length) return Promise.resolve(null);
-      return this.runFinanceAgent(tenantId, actorUserId, businessCase, event, intakeEventId);
+    FINANCE: (tenantId, actorUserId, businessCase, event, intakeEventId, documentIds) => {
+      if (documentIds.length === 0) return Promise.resolve(null);
+      return this.runFinanceAgent(tenantId, actorUserId, businessCase, event, intakeEventId, documentIds);
     },
     SALES: (tenantId, actorUserId, businessCase, event, intakeEventId) =>
       this.runSalesAgent(tenantId, actorUserId, businessCase, event, intakeEventId),

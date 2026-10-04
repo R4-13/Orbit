@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AIProviderConnection, AIProviderKey } from '@orbit/domain';
+import type { AiRuntimeStatus } from '@orbit/shared';
 import { apiFetch } from '../api-client';
 
 export type AiProviderConnectionSummary = Omit<AIProviderConnection, 'encryptedCredentials'> & {
@@ -9,6 +10,8 @@ export type AiProviderConnectionSummary = Omit<AIProviderConnection, 'encryptedC
 export interface AiProviderStatus {
   mode: 'ORBIT_MANAGED' | 'TENANT_MANAGED';
   connection: AiProviderConnectionSummary | null;
+  /** What actually serves AI requests and whether that was verified — separate from the configuration kind above. */
+  runtime: AiRuntimeStatus;
 }
 
 export function useAiProviderStatus() {
@@ -34,6 +37,15 @@ export function useTestAiProviderConnection() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<AiProviderConnectionSummary>('/v1/ai-providers/test', { method: 'POST' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-providers', 'status'] }),
+  });
+}
+
+/** Really calls the provider serving this tenant (a simulated provider is reported as such, never as verified). */
+export function useVerifyAiRuntime() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<AiRuntimeStatus>('/v1/ai-providers/verify', { method: 'POST' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ai-providers', 'status'] }),
   });
 }

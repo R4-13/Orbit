@@ -31,6 +31,12 @@ export class AiProvidersController {
     return this.aiProviders.getStatus(user.tenantId);
   }
 
+  /** Really calls the provider serving this tenant and reports the result — the "Ausführbarkeit prüfen" action. */
+  @Post('verify')
+  verifyRuntime(@CurrentUser() user: AuthenticatedUser) {
+    return this.aiProviders.verifyRuntime(user.tenantId);
+  }
+
   @Put(':providerKey')
   upsertConnection(
     @CurrentUser() user: AuthenticatedUser,

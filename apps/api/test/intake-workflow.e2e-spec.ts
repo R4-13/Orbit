@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { MockOcrProvider } from '@orbit/integration-core';
 import { OCR_PROVIDER } from '../src/connectors/connectors.tokens';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 
 /**
@@ -20,16 +21,20 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
   let ocrProvider: MockOcrProvider;
   let financeToken: string;
   let salesToken: string;
+  let prisma: PrismaService;
+  let tenantId: string;
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
     ocrProvider = app.get(OCR_PROVIDER);
+    prisma = app.get(PrismaService);
 
     const login = async (email: string) => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({ email, password: 'Musterwerk#2026!' })
         .expect(200);
+      tenantId = response.body.user.tenantId as string;
       return response.body.accessToken as string;
     };
     financeToken = await login('finance@musterwerk.example');
@@ -71,6 +76,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
           mimeType: 'application/pdf',
           contentBase64: attachmentBytes.toString('base64'),
         },
+        simulatedTriageScenario: 'INVOICE_RECEIVED',
       })
       .expect(201);
 
@@ -114,6 +120,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
         toAddresses: ['vertrieb@musterwerk.example'],
         subject: 'Anfrage zu Ihrem Angebot',
         bodyText: 'Wir haben Interesse an einer Beratung zu Ihren Produkten. Bitte melden Sie sich.',
+        simulatedTriageScenario: 'REQUEST_FOR_QUOTE',
       })
       .expect(201);
 
@@ -155,7 +162,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
     expect(followUpTask).toBeDefined();
   });
 
-  it('returns OTHER and creates no case for content unrelated to Finance or Sales (caught by the Relevance/Triage stage as NON_ACTIONABLE, before domain classification ever runs)', async () => {
+  it('returns OTHER and creates no case for a message the (simulated) AI triage judged non-business — no keyword logic involved', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/v1/intake/emails')
       .set('Authorization', `Bearer ${financeToken}`)
@@ -164,6 +171,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
         toAddresses: ['info@musterwerk.example'],
         subject: 'Wöchentlicher Branchen-Newsletter',
         bodyText: 'Hier sind die aktuellen Neuigkeiten aus der Branche diese Woche.',
+        simulatedTriageScenario: 'NEWSLETTER',
       })
       .expect(201);
 
@@ -171,7 +179,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
     expect(response.body.case).toBeUndefined();
   });
 
-  it('routes ambiguous content with no recognizable business or marketing signal to UNKNOWN_REQUIRES_REVIEW and creates a human-review Task instead of guessing a domain', async () => {
+  it('routes an uncertain triage result to review and creates a human-review Task instead of guessing a domain', async () => {
     const runId = randomUUID();
     const response = await request(app.getHttpServer())
       .post('/api/v1/intake/emails')
@@ -181,6 +189,7 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
         toAddresses: ['info@musterwerk.example'],
         subject: `Kurze Frage ${runId}`,
         bodyText: 'Könnten wir das kurz telefonisch besprechen? Ich melde mich die Tage.',
+        simulatedTriageScenario: 'UNCERTAIN',
       })
       .expect(201);
 
@@ -194,5 +203,50 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
     const reviewTask = (tasks.body as Array<{ title: string }>).find((task) => task.title.includes(runId));
     expect(reviewTask).toBeDefined();
     expect(reviewTask?.title).toContain('Prüfung erforderlich');
+  });
+
+  it('never lets a keyword stand in for AI judgement: with the simulated provider and no scripted result the input goes to review, even if it screams "Rechnung"', async () => {
+    const runId = randomUUID();
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/intake/emails')
+      .set('Authorization', `Bearer ${financeToken}`)
+      .send({
+        fromAddress: `rechnung-${runId}@keyword-e2e.example`,
+        toAddresses: ['info@musterwerk.example'],
+        subject: `Rechnung Angebot Preis ${runId}`,
+        bodyText: 'Rechnung, Angebot, Preis, Zahlung, Interesse, Anfrage.',
+      })
+      .expect(201);
+
+    expect(response.body.category).toBe('OTHER');
+    expect(response.body.case).toBeUndefined();
+
+    const scoped = prisma.forTenantId(tenantId);
+    const decision = await scoped.intakeDecision.findUniqueOrThrow({ where: { intakeEventId: response.body.intakeEventId } });
+    expect(decision.status).toBe('REVIEW_REQUIRED');
+    expect(decision.failureReason).toContain('SIMULATION_WITHOUT_FIXTURE');
+    expect((decision.execution as { mode: string }).mode).toBe('SIMULATED');
+    const event = await scoped.intakeEvent.findUniqueOrThrow({ where: { id: response.body.intakeEventId } });
+    expect(event.status).toBe('NEEDS_REVIEW');
+  });
+
+  it('records a decision with the validated structured result, provider and SIMULATED mode — and hides nothing on low confidence', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/intake/emails')
+      .set('Authorization', `Bearer ${salesToken}`)
+      .send({
+        fromAddress: `decision-${randomUUID()}@decision-e2e.example`,
+        toAddresses: ['vertrieb@musterwerk.example'],
+        subject: 'Anfrage für Entscheidungsprotokoll',
+        bodyText: 'Bitte um ein Angebot.',
+        simulatedTriageScenario: 'REQUEST_FOR_QUOTE',
+      })
+      .expect(201);
+
+    const decision = await prisma.forTenantId(tenantId).intakeDecision.findUniqueOrThrow({ where: { intakeEventId: response.body.intakeEventId } });
+    expect(decision.status).toBe('DECIDED');
+    expect(decision.appliedRelevance).toBe('BUSINESS_ACTIONABLE');
+    expect(decision.result).toMatchObject({ schemaVersion: '1.0', businessRelevance: 'RELEVANT', category: 'REQUEST_FOR_QUOTE' });
+    expect(decision.execution).toMatchObject({ provider: 'mock', mode: 'SIMULATED', promptVersion: expect.any(String) });
   });
 });

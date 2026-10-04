@@ -15,6 +15,10 @@ import type { ChannelPollAdapter } from '../src/channel-sync/channel-poll-adapte
 
 const CONCURRENCY_CATEGORY = 'channel-sync';
 const SCAN_JOB_ID = 'channel-sync-scan';
+const TRIAGE_RETRY_JOB_ID = 'channel-sync-triage-retry';
+const TRIAGE_RETRY_BATCH = 20;
+/** A retry that throws (not a provider outage — those are handled inside IntakeService) is pushed back so it cannot hot-loop every tick. */
+const TRIAGE_RETRY_ERROR_BACKOFF_MS = 5 * 60_000;
 const REQUEUE_DELAY_MS = 2000;
 
 interface PollJobData {
@@ -73,6 +77,12 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
       {},
       { repeat: { every: this.env.CHANNEL_SYNC_POLL_INTERVAL_MS }, jobId: SCAN_JOB_ID },
     );
+    // Amendment 02 §5.3: an input parked as PENDING_TRIAGE (AI outage) is retried from what was persisted, not lost.
+    await this.queue.add(
+      'triage-retry',
+      {},
+      { repeat: { every: this.env.CHANNEL_SYNC_POLL_INTERVAL_MS }, jobId: TRIAGE_RETRY_JOB_ID },
+    );
   }
 
   async process(job: Job<PollJobData | Record<string, never>>): Promise<void> {
@@ -82,6 +92,37 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     }
     if (job.name === 'poll') {
       await this.pollConnection(job.data as PollJobData);
+      return;
+    }
+    if (job.name === 'triage-retry') {
+      await this.retryPendingTriage();
+    }
+  }
+
+  /** Cross-tenant by necessity (documented RLS bypass, like the scan); every retry itself runs tenant-scoped inside IntakeService. */
+  private async retryPendingTriage(): Promise<void> {
+    const due = await this.prisma.withRlsBypass((tx) =>
+      tx.intakeDecision.findMany({
+        where: { status: 'PENDING_TRIAGE', nextRetryAt: { lte: new Date() } },
+        orderBy: { nextRetryAt: 'asc' },
+        take: TRIAGE_RETRY_BATCH,
+        select: { tenantId: true, intakeEventId: true },
+      }),
+    );
+    for (const { tenantId, intakeEventId } of due) {
+      try {
+        await this.intake.retryPendingTriage(tenantId, intakeEventId);
+      } catch (error) {
+        this.logger.warn(`Triage retry failed for intake event ${intakeEventId}: ${error instanceof Error ? error.message : String(error)}`);
+        await this.prisma
+          .withRlsBypass((tx) =>
+            tx.intakeDecision.update({
+              where: { intakeEventId },
+              data: { nextRetryAt: new Date(Date.now() + TRIAGE_RETRY_ERROR_BACKOFF_MS) },
+            }),
+          )
+          .catch(() => undefined);
+      }
     }
   }
 
