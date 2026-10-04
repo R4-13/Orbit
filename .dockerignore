@@ -1,0 +1,16 @@
+# Build context hygiene: dependencies are installed inside the image, build output is rebuilt there,
+# and no local secret file may ever enter the context (and thereby a layer or the build cache).
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/playwright-report
+**/test-results
+.git
+.pnpm-store
+
+# Secrets and local environment files (the container receives them via compose `env_file`, never via COPY)
+.env
+.env.*
+!.env.example

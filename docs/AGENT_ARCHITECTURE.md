@@ -285,3 +285,19 @@ Beide Schichten sind über dieselbe `AGENT_MANAGE`-Permission gegated und
 lassen die Policy Engine als einzige Ausführungsfreigabe-Instanz
 unangetastet — ein Tool, das ein Agent sehen darf, kann trotzdem nur
 so autonom laufen, wie `/admin/policies` es erlaubt.
+
+## OpenAI aktivieren (Plattform-Standard der Container)
+
+Der Plattform-Standardprovider wird beim Start aus `LLM_PROVIDER` / `OPENAI_API_KEY` / `OPENAI_MODEL` gebildet
+(`AgentModule`, Token `LLM_PROVIDER`) und von `AiProviderResolverService` für jeden Mandanten ohne eigene
+BYOK-Verbindung geliefert. Es gibt keinen zweiten Pfad und keine in OpenAI gehosteten Agenten.
+
+- **Wo die Werte stehen:** in der lokalen, gitignorierten Datei `.env.llm.local` im Repo-Root (Muster `.env.*.local`).
+  `docker-compose.yml` lädt sie nach `.env` für `api` **und** `worker` (`required: false`). `.env` selbst bleibt auf
+  `LLM_PROVIDER=mock`, damit Host-seitige Jest-/E2E-Tests deterministisch den skriptbaren Mock nutzen.
+- **Der Schlüssel** gehört ausschließlich dorthin — nicht in den Chat, nicht in `.env.example`, nicht in Quellcode.
+- **Übernehmen:** `docker compose up -d --force-recreate api worker` (ein Neubau ist nur nötig, wenn sich Code ändert).
+- **Laufzeitnachweis:** `GET /api/v1/ai-providers/runtime` (Provider, Modell, `executionMode`), `POST /api/v1/ai-providers/verify`
+  (echter, minimaler Aufruf) und pro Modellaufruf eine Logzeile `llm.call provider=… model=… executionMode=LIVE ok=… durationMs=…`
+  (`LoggingLLMProvider`; protokolliert nie Prompt, Antwort oder Schlüssel). Beim Start steht `llm.provider.selected …` im Log.
+- Der Mock ist nur noch aktiv, wenn `LLM_PROVIDER=mock`; die Oberfläche kennzeichnet ihn dann als „Simuliert“.
