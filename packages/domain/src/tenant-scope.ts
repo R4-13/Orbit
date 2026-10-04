@@ -63,6 +63,16 @@ export const TENANT_SCOPED_MODELS = [
   'IntakeDecision',
   'CaseFact',
   'CaseCorrelation',
+  'ProcessBlueprint',
+  'TenantProcessActivation',
+  'ProcessPlan',
+  'ProcessPlanNode',
+  'ProcessPlanEdge',
+  'ActionIntent',
+  'ActionReceipt',
+  'WaitSubscription',
+  'CaseEvent',
+  'CaseCommand',
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);

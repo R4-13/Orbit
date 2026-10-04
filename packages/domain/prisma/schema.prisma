@@ -329,6 +329,16 @@ model Tenant {
   intakeDecisions IntakeDecision[]
   caseFacts       CaseFact[]
   caseCorrelations CaseCorrelation[]
+  processBlueprints ProcessBlueprint[]
+  processActivations TenantProcessActivation[]
+  processPlans ProcessPlan[]
+  processPlanNodes ProcessPlanNode[]
+  processPlanEdges ProcessPlanEdge[]
+  actionIntents ActionIntent[]
+  actionReceipts ActionReceipt[]
+  waitSubscriptions WaitSubscription[]
+  caseEvents CaseEvent[]
+  caseCommands CaseCommand[]
 }
 
 model User {
@@ -492,6 +502,11 @@ model Case {
   /// Nur gesetzt, wenn die Abschlusskriterien nachweislich erfüllt sind: `{ code, evidenceRefs }`.
   outcome             Json?
   completedAt         DateTime?               @map("completed_at")
+  /// Zähler für `CaseEvent.sequence` (pro Case lückenlos, wird in derselben Transaktion wie das Event erhöht).
+  eventSequence       Int                     @default(0) @map("event_sequence")
+  /// Orchestrator-Lease (§12.3): nur ein Worker bearbeitet einen Case; Ablauf wiederholt keine bereits gestartete externe Wirkung blind.
+  leaseOwner          String?                 @map("lease_owner")
+  leaseExpiresAt      DateTime?               @map("lease_expires_at")
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignee User?  @relation("CaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -506,6 +521,11 @@ model Case {
   intakeEvents  IntakeEvent[]
   facts         CaseFact[]
   correlations  CaseCorrelation[]
+  processPlans  ProcessPlan[]
+  actionIntents ActionIntent[]
+  waitSubscriptions WaitSubscription[]
+  caseEvents    CaseEvent[]
+  caseCommands  CaseCommand[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -1713,4 +1733,323 @@ model CaseCorrelation {
 
   @@index([tenantId, caseId])
   @@map("case_correlations")
+}
+
+// ============================================================================
+// Amendment 02 - Business Process Framework: Blueprint-Registry, Plaene, Ledger, Events (BP-2b)
+// ============================================================================
+
+enum ProcessBlueprintStatus {
+  DRAFT
+  VALIDATING
+  TESTING
+  STAGED
+  PUBLISHED
+  SUSPENDED
+  DEPRECATED
+  ARCHIVED
+}
+
+enum ProcessPlanStatus {
+  PROPOSED
+  VALIDATED
+  AWAITING_APPROVAL
+  ACTIVE
+  SUPERSEDED
+  REJECTED
+}
+
+enum ProcessPlanSource {
+  BLUEPRINT_INSTANTIATION
+  LLM_PLANNER
+  HUMAN
+}
+
+enum ProcessNodeState {
+  PLANNED
+  READY
+  RUNNING
+  WAITING
+  AWAITING_APPROVAL
+  SUCCEEDED
+  SKIPPED
+  BLOCKED
+  FAILED
+  CANCELLED
+  SUPERSEDED
+  OUTCOME_UNKNOWN
+}
+
+enum ActionIntentStatus {
+  PREPARED
+  AWAITING_APPROVAL
+  APPROVED
+  DISPATCHING
+  CONFIRMED
+  FAILED
+  OUTCOME_UNKNOWN
+  CANCELLED
+}
+
+enum ActionReceiptStatus {
+  CONFIRMED
+  FAILED
+  OUTCOME_UNKNOWN
+}
+
+enum WaitSubscriptionStatus {
+  WAITING
+  SATISFIED
+  TIMED_OUT
+  CANCELLED
+}
+
+enum CaseCommandStatus {
+  ACCEPTED
+  REJECTED
+  CONFLICT
+}
+
+/// Section 8: versionierter Prozess-Blueprint (mandantenbezogen). Eine veroeffentlichte Version ist unveraenderlich (`definitionHash`).
+model ProcessBlueprint {
+  id              String                 @id @default(uuid())
+  tenantId        String                 @map("tenant_id")
+  key             String
+  version         String
+  status          ProcessBlueprintStatus @default(DRAFT)
+  definition      Json
+  definitionHash  String                 @map("definition_hash")
+  /// Letztes Validierungsergebnis (Befunde), nur zur Anzeige.
+  validation      Json?
+  createdByUserId String?                @map("created_by_user_id")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+  publishedAt     DateTime?              @map("published_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key, version])
+  @@index([tenantId, status])
+  @@map("process_blueprints")
+}
+
+/// Section 8.2 Mandantenaktivierung: welche veroeffentlichte Version eines Blueprints neue Cases tatsaechlich startet.
+model TenantProcessActivation {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  blueprintKey      String   @map("blueprint_key")
+  activeVersion     String   @map("active_version")
+  enabled           Boolean  @default(true)
+  activatedByUserId String?  @map("activated_by_user_id")
+  activatedAt       DateTime @default(now()) @map("activated_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, blueprintKey])
+  @@map("tenant_process_activations")
+}
+
+/// Section 11: konkreter Plan eines Cases; jede Revision ist unveraenderlich, Aenderungen erzeugen eine neue Revision (`parentPlanId`).
+model ProcessPlan {
+  id                     String            @id @default(uuid())
+  tenantId               String            @map("tenant_id")
+  caseId                 String            @map("case_id")
+  revision               Int
+  parentPlanId           String?           @map("parent_plan_id")
+  status                 ProcessPlanStatus
+  source                 ProcessPlanSource
+  blueprintKey           String?           @map("blueprint_key")
+  blueprintVersion       String?           @map("blueprint_version")
+  goalKeys               String[]          @default([]) @map("goal_keys")
+  basedOnCaseRevision    Int               @map("based_on_case_revision")
+  explanation            String
+  assumptions            Json              @default("[]")
+  unresolvedRequirements String[]          @default([]) @map("unresolved_requirements")
+  /// Hash ueber Knoten+Kanten; Freigaben binden an Plan-ID + Hash (Section 14.4).
+  planHash               String            @map("plan_hash")
+  /// Ergebnis des Plan-Validators (Befunde je Pruefung aus Section 11.3).
+  validation             Json
+  createdByUserId        String?           @map("created_by_user_id")
+  approvalId             String?           @map("approval_id")
+  /// Kompakter Planvergleich zur Vorgaengerrevision (Section 11.5).
+  diffFromParent         Json?             @map("diff_from_parent")
+  createdAt              DateTime          @default(now()) @map("created_at")
+  activatedAt            DateTime?         @map("activated_at")
+
+  tenant Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  nodes  ProcessPlanNode[]
+  edges  ProcessPlanEdge[]
+
+  @@unique([caseId, revision])
+  @@index([tenantId, caseId, status])
+  @@map("process_plans")
+}
+
+model ProcessPlanNode {
+  id            String           @id @default(uuid())
+  tenantId      String           @map("tenant_id")
+  planId        String           @map("plan_id")
+  nodeKey       String           @map("node_key")
+  type          String
+  title         String
+  /// Vollstaendige validierte Knotendefinition (PlanNode).
+  definition    Json
+  state         ProcessNodeState @default(PLANNED)
+  attempts      Int              @default(0)
+  output        Json?
+  errorCode     String?          @map("error_code")
+  errorMessage  String?          @map("error_message")
+  /// LIVE | SIMULATED - gilt fuer die tatsaechliche Ausfuehrung dieses Knotens (Section 16.6).
+  executionMode String?          @map("execution_mode")
+  agentRunId    String?          @map("agent_run_id")
+  startedAt     DateTime?        @map("started_at")
+  completedAt   DateTime?        @map("completed_at")
+  /// Fruehester Zeitpunkt der naechsten Wiederholung.
+  retryAt       DateTime?        @map("retry_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   ProcessPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, nodeKey])
+  @@index([tenantId, state])
+  @@map("process_plan_nodes")
+}
+
+model ProcessPlanEdge {
+  id        String  @id @default(uuid())
+  tenantId  String  @map("tenant_id")
+  planId    String  @map("plan_id")
+  edgeKey   String  @map("edge_key")
+  sourceKey String  @map("source_key")
+  targetKey String  @map("target_key")
+  label     String?
+  condition Json?
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   ProcessPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, edgeKey])
+  @@map("process_plan_edges")
+}
+
+/// Section 15 Action-Ledger: jede externe Wirkung wird VOR der Ausfuehrung mit stabilem Idempotenzschluessel persistiert.
+model ActionIntent {
+  id             String             @id @default(uuid())
+  tenantId       String             @map("tenant_id")
+  caseId         String             @map("case_id")
+  planId         String             @map("plan_id")
+  planRevision   Int                @map("plan_revision")
+  caseRevision   Int                @map("case_revision")
+  nodeKey        String             @map("node_key")
+  capabilityKey  String             @map("capability_key")
+  purpose        String?
+  payload        Json
+  /// SHA-256 ueber die kanonische Nutzlast; eine Freigabe bindet daran (Section 14.4).
+  payloadHash    String             @map("payload_hash")
+  idempotencyKey String             @map("idempotency_key")
+  status         ActionIntentStatus @default(PREPARED)
+  approvalId     String?            @map("approval_id")
+  errorCode      String?            @map("error_code")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case     Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  receipts ActionReceipt[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, caseId, status])
+  @@map("action_intents")
+}
+
+model ActionReceipt {
+  id            String              @id @default(uuid())
+  tenantId      String              @map("tenant_id")
+  intentId      String              @map("intent_id")
+  status        ActionReceiptStatus
+  /// z. B. Gmail-Message-ID/ThreadId; bei simulierten Wirkungen ist `executionMode` SIMULATED.
+  providerRef   String?             @map("provider_ref")
+  evidence      Json
+  executionMode String              @map("execution_mode")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  intent ActionIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, intentId])
+  @@map("action_receipts")
+}
+
+/// Section 13.2 wartet auf ein korreliertes Ereignis (z. B. Antwort im selben Thread); ueberlebt Neustarts.
+model WaitSubscription {
+  id                 String                 @id @default(uuid())
+  tenantId           String                 @map("tenant_id")
+  caseId             String                 @map("case_id")
+  planId             String?                @map("plan_id")
+  nodeKey            String?                @map("node_key")
+  eventType          String                 @map("event_type")
+  /// z. B. { providerThreadId, rfcMessageId } der ausgehenden Nachricht.
+  correlation        Json
+  status             WaitSubscriptionStatus @default(WAITING)
+  deadlineAt         DateTime?              @map("deadline_at")
+  satisfiedByEventId String?                @map("satisfied_by_event_id")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  resolvedAt         DateTime?              @map("resolved_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, caseId, status])
+  @@index([status, deadlineAt])
+  @@map("wait_subscriptions")
+}
+
+/// Section 12.3 / 18 Ereignisprotokoll je Case: Inbox (eingehend, dedupliziert) und Outbox (Zustandsaenderung -> UI/SSE).
+/// `sequence` ist je Case lueckenlos und dient dem SSE-Cursor.
+model CaseEvent {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  caseId      String    @map("case_id")
+  sequence    Int
+  type        String
+  payload     Json
+  /// Eindeutige Ereignis-ID zur Deduplizierung eingehender Ereignisse.
+  dedupeKey   String?   @map("dedupe_key")
+  /// true = Eingangsereignis (Inbox), false = Ausgangs-/Protokollereignis.
+  inbound     Boolean   @default(false)
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, sequence])
+  @@unique([tenantId, dedupeKey])
+  @@index([tenantId, inbound, processedAt])
+  @@map("case_events")
+}
+
+/// Section 14.5 / 21.2 jede menschliche Intervention ist ein validierter, idempotenter Command mit Versionsbindung.
+model CaseCommand {
+  id                   String            @id @default(uuid())
+  tenantId             String            @map("tenant_id")
+  caseId               String            @map("case_id")
+  commandId            String            @map("command_id")
+  type                 String
+  payload              Json
+  expectedCaseRevision Int               @map("expected_case_revision")
+  status               CaseCommandStatus
+  resultCaseRevision   Int?              @map("result_case_revision")
+  actorUserId          String            @map("actor_user_id")
+  errors               Json?
+  createdAt            DateTime          @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, commandId])
+  @@index([tenantId, caseId])
+  @@map("case_commands")
 }
