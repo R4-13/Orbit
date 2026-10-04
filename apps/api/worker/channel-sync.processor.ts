@@ -10,12 +10,14 @@ import { TenantConcurrencyService } from '../src/queue/tenant-concurrency.servic
 import { PrismaService } from '../src/prisma/prisma.service';
 import { WebhookIdempotencyService } from '../src/webhooks/webhook-idempotency.service';
 import { IntakeService } from '../src/intake/intake.service';
+import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { CHANNEL_POLL_ADAPTERS } from '../src/channel-sync/channel-sync.tokens';
 import type { ChannelPollAdapter } from '../src/channel-sync/channel-poll-adapter';
 
 const CONCURRENCY_CATEGORY = 'channel-sync';
 const SCAN_JOB_ID = 'channel-sync-scan';
 const TRIAGE_RETRY_JOB_ID = 'channel-sync-triage-retry';
+const PROCESS_SWEEP_JOB_ID = 'channel-sync-process-sweep';
 const TRIAGE_RETRY_BATCH = 20;
 /** A retry that throws (not a provider outage — those are handled inside IntakeService) is pushed back so it cannot hot-loop every tick. */
 const TRIAGE_RETRY_ERROR_BACKOFF_MS = 5 * 60_000;
@@ -63,6 +65,7 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     private readonly concurrency: TenantConcurrencyService,
     private readonly idempotency: WebhookIdempotencyService,
     private readonly intake: IntakeService,
+    private readonly processSweep: ProcessSweepService,
     @Inject(CHANNEL_POLL_ADAPTERS) private readonly adapters: ChannelPollAdapter[],
     @InjectQueue(CHANNEL_SYNC_QUEUE) private readonly queue: Queue<PollJobData | Record<string, never>>,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
@@ -83,6 +86,8 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
       {},
       { repeat: { every: this.env.CHANNEL_SYNC_POLL_INTERVAL_MS }, jobId: TRIAGE_RETRY_JOB_ID },
     );
+    // Amendment 02 §12.3: cases with work but nobody working on them (restart, overdue wait, abandoned lease) are advanced.
+    await this.queue.add('process-sweep', {}, { repeat: { every: this.env.CHANNEL_SYNC_POLL_INTERVAL_MS }, jobId: PROCESS_SWEEP_JOB_ID });
   }
 
   async process(job: Job<PollJobData | Record<string, never>>): Promise<void> {
@@ -96,6 +101,10 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     }
     if (job.name === 'triage-retry') {
       await this.retryPendingTriage();
+      return;
+    }
+    if (job.name === 'process-sweep') {
+      await this.processSweep.sweep();
     }
   }
 

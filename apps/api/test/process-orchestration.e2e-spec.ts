@@ -13,6 +13,7 @@ import { CaseEventsService } from '../src/process/case-events.service';
 import { CaseFactsService } from '../src/process/case-facts.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
+import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 
@@ -490,6 +491,60 @@ describe('Process orchestration engine (e2e)', () => {
       const start = await orchestrator.startCase(tenantId, c.id, { intentSummary: 'Unbekannt' });
       expect(start.outcome).toBe('MANUAL_REVIEW');
       expect((await caseOf(tenantId, c.id)).orchestrationStatus).toBe('MANUAL_REVIEW');
+    });
+  });
+
+  describe('durability (BP-19): nothing lives only in memory', () => {
+    async function waitingCase(): Promise<{ tenantId: string; caseId: string }> {
+      const tenantId = await newTenant();
+      await publish(tenantId, requestBlueprint());
+      const c = await newCase(tenantId);
+      await facts.setByHuman(tenantId, c.id, 'u1', { key: 'contact.email', value: 'kunde@kunde.example', valueType: 'email' });
+      await orchestrator.startCase(tenantId, c.id, { blueprintKey: 'FX_REQUEST' });
+      await orchestrator.advance(tenantId, c.id);
+      const [intent] = await ledger.openIntents(tenantId, c.id);
+      await commands.execute(actor(tenantId), c.id, cmd('APPROVE_ACTION', (await caseOf(tenantId, c.id)).revision, { intentId: intent!.id }));
+      expect(await nodeState(tenantId, c.id, 'wait')).toBe('WAITING');
+      return { tenantId, caseId: c.id };
+    }
+
+    it('after a restart the sweep picks up an unprocessed inbound event and finishes the case', async () => {
+      const { tenantId, caseId } = await waitingCase();
+      await facts.setByHuman(tenantId, caseId, 'u1', { key: 'request.detail', value: 'Details', valueType: 'string' });
+      // The process died right after the event was stored: nothing advanced it.
+      await orchestrator.receiveInbound(tenantId, caseId, { type: 'communication.received', payload: { emailMessageId: 'late-1' }, dedupeKey: 'inbound:late-1' });
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
+
+      const result = await app.get(ProcessSweepService).sweep();
+
+      expect(result.advanced).toBeGreaterThanOrEqual(1);
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
+    });
+
+    it('a wait past its deadline fails visibly instead of waiting forever', async () => {
+      const { tenantId, caseId } = await waitingCase();
+      await prisma.withRlsBypass((tx) => tx.waitSubscription.updateMany({ where: { caseId }, data: { deadlineAt: new Date(Date.now() - 60_000) } }));
+
+      await app.get(ProcessSweepService).sweep();
+
+      expect(await nodeState(tenantId, caseId, 'wait')).toBe('FAILED');
+      const row = await caseOf(tenantId, caseId);
+      expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+      expect(row.attentionReasons.join()).toContain('nicht rechtzeitig');
+      expect(await prisma.forTenantId(tenantId).waitSubscription.findFirstOrThrow({ where: { caseId } })).toMatchObject({ status: 'TIMED_OUT' });
+    });
+
+    it('a case left IN_PROGRESS with an expired lease (crashed worker) is taken over, and a live lease is respected', async () => {
+      const { tenantId, caseId } = await waitingCase();
+      await facts.setByHuman(tenantId, caseId, 'u1', { key: 'request.detail', value: 'Details', valueType: 'string' });
+      await orchestrator.receiveInbound(tenantId, caseId, { type: 'communication.received', payload: { emailMessageId: 'late-2' }, dedupeKey: 'inbound:late-2' });
+      // Another worker holds a live lease: this advance must not interfere.
+      await prisma.withRlsBypass((tx) => tx.case.update({ where: { id: caseId }, data: { leaseOwner: 'other-worker', leaseExpiresAt: new Date(Date.now() + 60_000) } }));
+      expect(await orchestrator.advance(tenantId, caseId)).toMatchObject({ status: 'LEASED_ELSEWHERE' });
+      // The lease expires (the worker crashed): the next advance takes over.
+      await prisma.withRlsBypass((tx) => tx.case.update({ where: { id: caseId }, data: { leaseExpiresAt: new Date(Date.now() - 1000) } }));
+      await orchestrator.advance(tenantId, caseId);
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
     });
   });
 

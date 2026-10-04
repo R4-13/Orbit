@@ -17,6 +17,7 @@ import { OrchestratorService } from './orchestrator.service';
 import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
 import { ProcessBlueprintsController } from './process-blueprints.controller';
+import { ProcessSweepService } from './process-sweep.service';
 import { DraftEditingService } from './reference/draft-editing.service';
 import { ReferenceProcessService } from './reference/reference-process.service';
 import { ReferenceProcessTools } from './reference/reference-process.tools';
@@ -48,6 +49,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     ReferenceProcessService,
     ReferenceProcessTools,
     DraftEditingService,
+    ProcessSweepService,
   ],
   exports: [
     CaseFactsService,
@@ -62,6 +64,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     OrchestratorService,
     CaseCommandsService,
     ReferenceProcessService,
+    ProcessSweepService,
   ],
 })
 export class ProcessModule {}

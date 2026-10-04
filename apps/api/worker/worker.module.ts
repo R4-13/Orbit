@@ -7,6 +7,7 @@ import { EnvModule } from '../src/config/env.module';
 import { IntakeModule } from '../src/intake/intake.module';
 import { MetricsModule } from '../src/metrics/metrics.module';
 import { PolicyModule } from '../src/policy/policy.module';
+import { ProcessModule } from '../src/process/process.module';
 import { PrismaModule } from '../src/prisma/prisma.module';
 import { QueueModule } from '../src/queue/queue.module';
 import { SecurityModule } from '../src/security/security.module';
@@ -49,6 +50,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     SecurityModule,
     WorkflowsModule,
     IntakeModule,
+    ProcessModule,
     ChannelSyncModule,
     WebhooksModule,
   ],
