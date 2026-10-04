@@ -285,4 +285,56 @@ describe('GmailConnectorService', () => {
       expect(oauth2.revokeToken).not.toHaveBeenCalled();
     });
   });
+
+  describe("sendMessage (reference process)", () => {
+    const connected = { status: "CONNECTED", credentialReference: "ref_1", externalAccountDisplayName: "firma@example.com", grantedCapabilities: ["email.read", "email.send"] };
+    const message = { to: "kunde@kunde.example", subject: "Rückfrage", bodyText: "Hallo", threadId: "thread_9", inReplyTo: "<orig@mail.example>" };
+    const tokenOk = () => vault.readSecret.mockResolvedValue({ value: { accessToken: "tok", refreshToken: "r", expiresAt: new Date(Date.now() + 3_600_000).toISOString() } });
+
+    it("refuses to send without the send capability (read-only connection)", async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ ...connected, grantedCapabilities: ["email.read"] });
+      await expect(service.sendMessage("tenant_1", message)).rejects.toThrow(IntegrationUnavailableError);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("sends the raw RFC 822 message into the thread and reads the real Message-ID back", async () => {
+      scopedIntegration.findUnique.mockResolvedValue(connected);
+      tokenOk();
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: "gm_1", threadId: "thread_9" }) })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ payload: { headers: [{ name: "Message-ID", value: "<sent-1@mail.gmail.com>" }] } }) });
+
+      const result = await service.sendMessage("tenant_1", message);
+
+      expect(result).toEqual({ providerMessageId: "gm_1", threadId: "thread_9", rfcMessageId: "<sent-1@mail.gmail.com>", from: "firma@example.com" });
+      const [url, init] = fetchMock.mock.calls[0] as [string, { method: string; body: string; headers: Record<string, string> }];
+      expect(url).toBe("https://gmail.googleapis.com/gmail/v1/users/me/messages/send");
+      expect(init.headers.Authorization).toBe("Bearer tok");
+      const body = JSON.parse(init.body) as { raw: string; threadId: string };
+      expect(body.threadId).toBe("thread_9");
+      const decoded = Buffer.from(body.raw.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+      expect(decoded).toContain("From: firma@example.com");
+      expect(decoded).toContain("In-Reply-To: <orig@mail.example>");
+    });
+
+    it("classifies a 5xx, a timeout and a missing id as UNKNOWN, and a 4xx as a definite rejection", async () => {
+      scopedIntegration.findUnique.mockResolvedValue(connected);
+      tokenOk();
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) });
+      await expect(service.sendMessage("tenant_1", message)).rejects.toMatchObject({ name: "GmailSendOutcomeUnknownError" });
+      fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
+      await expect(service.sendMessage("tenant_1", message)).rejects.toMatchObject({ name: "GmailSendOutcomeUnknownError" });
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) });
+      await expect(service.sendMessage("tenant_1", message)).rejects.toMatchObject({ name: "GmailSendOutcomeUnknownError" });
+      fetchMock.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) });
+      await expect(service.sendMessage("tenant_1", message)).rejects.toMatchObject({ name: "ExternalSystemError" });
+    });
+
+    it("keeps a successful send successful even if reading the Message-ID back fails", async () => {
+      scopedIntegration.findUnique.mockResolvedValue(connected);
+      tokenOk();
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: "gm_2", threadId: "t" }) }).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
+      await expect(service.sendMessage("tenant_1", message)).resolves.toMatchObject({ providerMessageId: "gm_2", rfcMessageId: undefined });
+    });
+  });
 });

@@ -659,10 +659,27 @@ export class OrchestratorService {
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: [`${node.title}: abgelehnt.`] }, { type: 'USER', userId });
       return true;
     }
-    await this.store.transitionNode(tenantId, caseId, graph.plan.id, nodeKey, ['WAITING'], { state: 'SUCCEEDED', output: asJson(result), executionMode: 'LIVE', completedAt: new Date() });
+    await this.store.transitionNode(tenantId, caseId, graph.plan.id, nodeKey, ['WAITING'], { state: 'SUCCEEDED', output: asJson({ ...result, completed: true }), executionMode: 'LIVE', completedAt: new Date() });
     await this.prisma.forTenantId(tenantId).task.updateMany({ where: { caseId, title: node.title, status: 'OPEN' }, data: { status: 'DONE' } });
     await this.lifecycle.transition(tenantId, caseId, { to: 'IN_PROGRESS' }, { type: 'USER', userId });
     return true;
+  }
+
+  /**
+   * An input of a node changed after an action was prepared or approved for it (e.g. the draft text was edited): the old
+   * intent and its approval are void (§14.4), the node is reset and will prepare a fresh intent from the new input.
+   */
+  async invalidateNodeApprovals(tenantId: string, caseId: string, nodeKey: string): Promise<void> {
+    const intents = await this.prisma.forTenantId(tenantId).actionIntent.findMany({ where: { caseId, nodeKey, status: { in: ['PREPARED', 'AWAITING_APPROVAL', 'APPROVED'] } } });
+    for (const intent of intents) {
+      await this.prisma.forTenantId(tenantId).actionIntent.updateMany({ where: { id: intent.id, status: { in: ['PREPARED', 'AWAITING_APPROVAL', 'APPROVED'] } }, data: { status: 'CANCELLED', errorCode: 'INPUT_CHANGED' } });
+      await this.approvals.markDecided(tenantId, 'PROCESS_ACTION', intent.id, 'system', 'REJECTED').catch(() => undefined);
+    }
+    const graph = await this.store.getActive(tenantId, caseId);
+    if (graph) {
+      await this.store.transitionNode(tenantId, caseId, graph.plan.id, nodeKey, ['AWAITING_APPROVAL', 'BLOCKED', 'FAILED'], { state: 'PLANNED', errorCode: null, errorMessage: null, completedAt: null });
+    }
+    await this.lifecycle.transition(tenantId, caseId, { to: 'IN_PROGRESS' });
   }
 
   async pause(tenantId: string, caseId: string, userId: string): Promise<void> {
@@ -707,11 +724,12 @@ export class OrchestratorService {
       if (node.type === 'EVALUATE_REQUIREMENTS' && reported && node.state === 'SUCCEEDED') Object.assign(requirements, reported);
     }
     Object.assign(requirements, this.requirementStates(blueprint, current));
-    const latestInbound = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId: caseRow.id, type: CASE_EVENT_TYPES.COMMUNICATION_RECEIVED }, orderBy: { sequence: 'desc' } });
-    const payload = (latestInbound?.payload ?? {}) as Record<string, unknown>;
-    const sourceRefs: Record<string, unknown> = { 'case.id': caseRow.id };
-    if (payload.emailMessageId) sourceRefs['inbound.latestMessageId'] = payload.emailMessageId;
-    if (payload.threadId) sourceRefs['inbound.latestThreadId'] = payload.threadId;
+    const sourceRefs: Record<string, unknown> = { "case.id": caseRow.id };
+    const latestInbound = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: caseRow.id, direction: "INBOUND" }, orderBy: { createdAt: "desc" } });
+    if (latestInbound) {
+      sourceRefs["inbound.latestMessageId"] = latestInbound.id;
+      if (latestInbound.threadId) sourceRefs["inbound.latestThreadId"] = latestInbound.threadId;
+    }
 
     return {
       facts,

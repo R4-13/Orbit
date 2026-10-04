@@ -21,5 +21,11 @@ export const GOOGLE_OAUTH_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 export const GOOGLE_OAUTH_REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
 export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
+/**
+ * Sending (Amendment 02 reference process): requested only when the tenant explicitly connects with send permission
+ * ("Minimal notwendige Berechtigungen", Integration Amendment §7.4). Scope list: https://developers.google.com/gmail/api/auth/scopes;
+ * endpoint `users.messages.send`: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/send
+ */
+export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1';

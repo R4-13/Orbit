@@ -1,0 +1,60 @@
+{
+  "catalog": [
+    {
+      "sku": "FENSTER-STD",
+      "name": "Kunststofffenster Standard",
+      "category": "WINDOWS",
+      "unit": "Stk",
+      "unitPrice": "420.00",
+      "currency": "EUR",
+      "taxRate": 19,
+      "priceTiers": [
+        {
+          "minQuantity": 10,
+          "unitPrice": "395.00"
+        }
+      ]
+    },
+    {
+      "sku": "TUER-HAUS",
+      "name": "Haustür Aluminium",
+      "category": "DOORS",
+      "unit": "Stk",
+      "unitPrice": "1890.00",
+      "currency": "EUR",
+      "taxRate": 19
+    },
+    {
+      "sku": "MONTAGE-STD",
+      "name": "Montage (Stundensatz)",
+      "category": "SERVICES",
+      "unit": "h",
+      "unitPrice": "68.00",
+      "currency": "EUR",
+      "taxRate": 19
+    }
+  ],
+  "requirementRules": [
+    {
+      "category": "WINDOWS",
+      "factKey": "request.delivery_address",
+      "valueType": "string",
+      "question": "An welche Adresse sollen die Fenster geliefert werden?",
+      "orderIndex": 1
+    },
+    {
+      "category": "DOORS",
+      "factKey": "request.delivery_address",
+      "valueType": "string",
+      "question": "An welche Adresse soll die Tür geliefert werden?",
+      "orderIndex": 1
+    },
+    {
+      "category": "SERVICES",
+      "factKey": "request.delivery_address",
+      "valueType": "string",
+      "question": "An welcher Adresse soll die Leistung erbracht werden?",
+      "orderIndex": 1
+    }
+  ]
+}

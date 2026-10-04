@@ -1,0 +1,537 @@
+{
+  "schemaVersion": "1.0",
+  "key": "REQUEST_FOR_QUOTE",
+  "version": "1.0.0",
+  "status": "DRAFT",
+  "title": "Angebotsanfrage",
+  "description": "Referenzprozess: Anfrage prüfen, fehlende Angaben erfragen, Preis aus der Preisquelle ermitteln, Angebot erstellen und kontrolliert versenden.",
+  "goals": [
+    "quote.delivered"
+  ],
+  "triggers": [
+    {
+      "type": "communication.received",
+      "direction": "INBOUND"
+    }
+  ],
+  "intentHints": [
+    "REQUEST_FOR_QUOTE"
+  ],
+  "requiredFacts": [
+    {
+      "key": "contact.email",
+      "type": "email",
+      "validation": "verified_reply_target",
+      "question": "Unter welcher E-Mail-Adresse erreichen wir Sie?"
+    },
+    {
+      "key": "request.product_sku",
+      "type": "string",
+      "question": "Für welche Leistung oder welches Produkt wünschen Sie ein Angebot?"
+    },
+    {
+      "key": "request.quantity",
+      "type": "number",
+      "question": "Welche Menge benötigen Sie?"
+    }
+  ],
+  "dynamicRequirements": {
+    "resolverCapability": "requirements.resolve"
+  },
+  "allowedCapabilities": [
+    "context.lookup",
+    "facts.extract_from_message",
+    "requirements.resolve",
+    "communication.draft",
+    "email.send",
+    "pricing.resolve",
+    "quote.create",
+    "quote.render"
+  ],
+  "maxAutonomy": "REQUIRE_APPROVAL",
+  "planMode": "CONSTRAINED_ADAPTIVE",
+  "referenceGraph": {
+    "nodes": [
+      {
+        "id": "interpret",
+        "type": "INTERPRET",
+        "title": "Anfrage verstehen"
+      },
+      {
+        "id": "context",
+        "type": "RESOLVE_CONTEXT",
+        "title": "Absender und Vorgeschichte prüfen",
+        "capability": {
+          "key": "context.lookup"
+        }
+      },
+      {
+        "id": "extract",
+        "type": "PREPARE",
+        "title": "Angaben aus der Anfrage entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        }
+      },
+      {
+        "id": "reqs",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Fehlende Angaben ermitteln",
+        "capability": {
+          "key": "requirements.resolve"
+        }
+      },
+      {
+        "id": "ask_draft",
+        "type": "PREPARE",
+        "title": "Rückfrage vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "missing": {
+            "stepOutput": {
+              "node": "reqs",
+              "path": "missing"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ask",
+        "type": "ACTION",
+        "title": "Rückfrage senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "ask_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "wait",
+        "type": "WAIT_EVENT",
+        "title": "Auf Antwort warten",
+        "config": {
+          "eventType": "communication.received"
+        },
+        "timeout": {
+          "hours": 72,
+          "policyRef": "default-72h"
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "extract2",
+        "type": "PREPARE",
+        "title": "Angaben aus der Antwort entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "reqs2",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Angaben erneut prüfen",
+        "capability": {
+          "key": "requirements.resolve"
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "review",
+        "type": "MANUAL_TASK",
+        "title": "Angaben manuell prüfen",
+        "purpose": "Nach der Antwort fehlen noch Angaben. Bitte ergänzen oder klären.",
+        "preconditions": [
+          {
+            "all": [
+              {
+                "eq": [
+                  {
+                    "stepOutput": {
+                      "node": "reqs",
+                      "path": "complete"
+                    }
+                  },
+                  {
+                    "literal": false
+                  }
+                ]
+              },
+              {
+                "eq": [
+                  {
+                    "stepOutput": {
+                      "node": "reqs2",
+                      "path": "complete"
+                    }
+                  },
+                  {
+                    "literal": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "price",
+        "type": "ACTION",
+        "title": "Preis aus der Preisquelle ermitteln",
+        "capability": {
+          "key": "pricing.resolve"
+        },
+        "inputs": {
+          "sku": {
+            "fact": "request.product_sku"
+          },
+          "quantity": {
+            "fact": "request.quantity"
+          }
+        },
+        "preconditions": [
+          {
+            "any": [
+              {
+                "eq": [
+                  {
+                    "stepOutput": {
+                      "node": "reqs",
+                      "path": "complete"
+                    }
+                  },
+                  {
+                    "literal": true
+                  }
+                ]
+              },
+              {
+                "eq": [
+                  {
+                    "stepOutput": {
+                      "node": "reqs2",
+                      "path": "complete"
+                    }
+                  },
+                  {
+                    "literal": true
+                  }
+                ]
+              },
+              {
+                "exists": {
+                  "stepOutput": {
+                    "node": "review",
+                    "path": "completed"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "quote",
+        "type": "ACTION",
+        "title": "Angebot erstellen",
+        "capability": {
+          "key": "quote.create"
+        },
+        "inputs": {
+          "lines": {
+            "stepOutput": {
+              "node": "price",
+              "path": "lines"
+            }
+          },
+          "currency": {
+            "stepOutput": {
+              "node": "price",
+              "path": "currency"
+            }
+          },
+          "priceSource": {
+            "stepOutput": {
+              "node": "price",
+              "path": "priceSource"
+            }
+          }
+        }
+      },
+      {
+        "id": "render",
+        "type": "ACTION",
+        "title": "Angebotsdokument erzeugen",
+        "capability": {
+          "key": "quote.render"
+        },
+        "inputs": {
+          "quoteId": {
+            "stepOutput": {
+              "node": "quote",
+              "path": "quoteId"
+            }
+          }
+        }
+      },
+      {
+        "id": "deliver_draft",
+        "type": "PREPARE",
+        "title": "Angebotsnachricht vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "QUOTE_DELIVERY"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "quoteId": {
+            "stepOutput": {
+              "node": "quote",
+              "path": "quoteId"
+            }
+          },
+          "documentId": {
+            "stepOutput": {
+              "node": "render",
+              "path": "documentId"
+            }
+          }
+        }
+      },
+      {
+        "id": "deliver",
+        "type": "ACTION",
+        "title": "Angebot senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "QUOTE_DELIVERY"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "deliver_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "done",
+        "type": "COMPLETE",
+        "title": "Abschluss prüfen"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "interpret",
+        "target": "context"
+      },
+      {
+        "id": "e2",
+        "source": "context",
+        "target": "extract"
+      },
+      {
+        "id": "e3",
+        "source": "extract",
+        "target": "reqs"
+      },
+      {
+        "id": "e4",
+        "source": "reqs",
+        "target": "ask_draft"
+      },
+      {
+        "id": "e5",
+        "source": "ask_draft",
+        "target": "ask"
+      },
+      {
+        "id": "e6",
+        "source": "ask",
+        "target": "wait"
+      },
+      {
+        "id": "e7",
+        "source": "wait",
+        "target": "extract2"
+      },
+      {
+        "id": "e8",
+        "source": "extract2",
+        "target": "reqs2"
+      },
+      {
+        "id": "e9",
+        "source": "reqs2",
+        "target": "review"
+      },
+      {
+        "id": "e10",
+        "source": "review",
+        "target": "price"
+      },
+      {
+        "id": "e11",
+        "source": "price",
+        "target": "quote"
+      },
+      {
+        "id": "e12",
+        "source": "quote",
+        "target": "render"
+      },
+      {
+        "id": "e13",
+        "source": "render",
+        "target": "deliver_draft"
+      },
+      {
+        "id": "e14",
+        "source": "deliver_draft",
+        "target": "deliver"
+      },
+      {
+        "id": "e15",
+        "source": "deliver",
+        "target": "done"
+      }
+    ]
+  },
+  "constraints": {
+    "forbid_unverified_prices": true,
+    "require_policy_before_writes": true,
+    "prevent_duplicate_deliveries": true,
+    "require_human_resolution_for_fact_conflicts": true
+  },
+  "limits": {
+    "maxReplans": 3,
+    "maxSteps": 30,
+    "maxAutoQuestions": 1,
+    "maxRuntimeHours": 720
+  },
+  "waitRules": [
+    {
+      "eventType": "communication.received",
+      "correlation": "SAME_CASE",
+      "timeoutPolicyRef": "default-72h"
+    }
+  ],
+  "completionCriteria": {
+    "receiptConfirmed": {
+      "purpose": "QUOTE_DELIVERY"
+    }
+  },
+  "metadata": {
+    "owner": "fixtures",
+    "note": "Referenzprozess; alle Inhalte sind Daten, keine Engine-Logik."
+  }
+}

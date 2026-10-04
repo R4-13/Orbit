@@ -193,6 +193,16 @@ export class PlanStoreService {
     });
   }
 
+  /** Replaces the recorded output of a finished node (a person edited what it produced); the change is a case event. */
+  async setNodeOutput(tenantId: string, caseId: string, planId: string, nodeKey: string, output: Prisma.InputJsonValue): Promise<boolean> {
+    return this.prisma.inTenantTransaction(tenantId, async (tx) => {
+      const result = await tx.processPlanNode.updateMany({ where: { tenantId, planId, nodeKey }, data: { output } });
+      if (result.count !== 1) return false;
+      await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.NODE_STATE_CHANGED, payload: { planId, nodeKey, outputChanged: true } });
+      return true;
+    });
+  }
+
   private async loadInTx(tx: Prisma.TransactionClient, tenantId: string, planId: string): Promise<PlanGraph> {
     const plan = await tx.processPlan.findFirst({ where: { id: planId, tenantId } });
     if (!plan) throw new NotFoundError('Plan not found.', { planId });

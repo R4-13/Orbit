@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, ParseEnumPipe, Post, Put, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, ParseEnumPipe, Post, Put, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { IntegrationConnectorType } from '@orbit/domain';
@@ -59,9 +59,11 @@ export class IntegrationsController {
   startConnect(
     @CurrentUser() user: AuthenticatedUser,
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
+    @Query('send') send?: string,
   ) {
     this.assertOAuthCapable(connectorType, 'OAuth-Connect');
-    return this.gmailConnector.startConnection(user.tenantId, user.id);
+    // `?send=true` additionally requests the gmail.send scope (explicit, minimal-permission opt-in).
+    return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true' });
   }
 
   @Post(':connectorType/test')

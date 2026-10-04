@@ -9,6 +9,7 @@ import { IntegrationsController } from './integrations.controller';
 import { IntegrationsService } from './integrations.service';
 import { OAuthStateService } from './oauth-state.service';
 import { OAuth2Service } from './oauth2.service';
+import { GmailOutboundMail, OUTBOUND_MAIL } from './outbound-mail.port';
 
 @Module({
   imports: [
@@ -21,9 +22,9 @@ import { OAuth2Service } from './oauth2.service';
     }),
   ],
   controllers: [IntegrationsController, IntegrationsCallbackController],
-  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService, ConnectorStatusService],
+  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService, ConnectorStatusService, GmailOutboundMail, { provide: OUTBOUND_MAIL, useExisting: GmailOutboundMail }],
   // GmailConnectorService exported for GmailPollAdapter (ChannelSyncModule, Increment C) — the
   // only other consumer of this service besides IntegrationsController/-CallbackController.
-  exports: [IntegrationsService, GmailConnectorService],
+  exports: [IntegrationsService, GmailConnectorService, OUTBOUND_MAIL],
 })
 export class IntegrationsModule {}

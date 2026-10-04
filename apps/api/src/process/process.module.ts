@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { AgentModule } from '../agent/agent.module';
 import { AiProvidersModule } from '../ai-providers/ai-providers.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
+import { IntegrationsModule } from '../integrations/integrations.module';
+import { StorageModule } from '../storage/storage.module';
 import { ActionLedgerService } from './action-ledger.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
@@ -15,6 +17,9 @@ import { OrchestratorService } from './orchestrator.service';
 import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
 import { ProcessBlueprintsController } from './process-blueprints.controller';
+import { DraftEditingService } from './reference/draft-editing.service';
+import { ReferenceProcessService } from './reference/reference-process.service';
+import { ReferenceProcessTools } from './reference/reference-process.tools';
 
 /**
  * Business Process Framework (Amendment 02). Everything here builds on the
@@ -26,7 +31,7 @@ import { ProcessBlueprintsController } from './process-blueprints.controller';
  *    the generic orchestrator and the command surface.
  */
 @Module({
-  imports: [AgentModule, AiProvidersModule, ApprovalsModule],
+  imports: [AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
   controllers: [ProcessBlueprintsController, CaseCommandsController],
   providers: [
     CaseFactsService,
@@ -40,6 +45,9 @@ import { ProcessBlueprintsController } from './process-blueprints.controller';
     PlannerService,
     OrchestratorService,
     CaseCommandsService,
+    ReferenceProcessService,
+    ReferenceProcessTools,
+    DraftEditingService,
   ],
   exports: [
     CaseFactsService,
@@ -53,6 +61,7 @@ import { ProcessBlueprintsController } from './process-blueprints.controller';
     PlannerService,
     OrchestratorService,
     CaseCommandsService,
+    ReferenceProcessService,
   ],
 })
 export class ProcessModule {}

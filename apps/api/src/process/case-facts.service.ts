@@ -125,6 +125,24 @@ export class CaseFactsService {
     return updated;
   }
 
+  /**
+   * The reply target is taken from the transport headers of the inbound message (From / Reply-To), never from text in the
+   * body (a mail that says "send it to x@evil" must not redirect the answer). A header-sourced address that is a valid
+   * e-mail value is confirmed; anything else stays a candidate.
+   */
+  async confirmReplyTargetFromHeader(tenantId: string, factId: string): Promise<CaseFact> {
+    const fact = await this.requireFact(tenantId, factId);
+    if (fact.sourceType !== "EMAIL" || !(fact.sourceRef ?? "").startsWith("header:")) {
+      throw new ValidationFailedError("Only a value read from a message header can be confirmed as the reply target.", { factId });
+    }
+    const validation = validateFactValue("email", fact.value);
+    if (!validation.valid) throw new ValidationFailedError(`Not a valid e-mail address: ${validation.reason}`, { factId });
+    if (fact.status === "CONFLICTED") return fact;
+    const updated = await this.prisma.forTenantId(tenantId).caseFact.update({ where: { id: factId }, data: { status: "CONFIRMED", verifiedBy: "provider-header" } });
+    await this.bumpRevision(tenantId, fact.caseId);
+    return updated;
+  }
+
   /** A person states or corrects a value. Supersedes every current row for the key, which also resolves any conflict. */
   async setByHuman(tenantId: string, caseId: string, userId: string, input: Omit<FactInput, 'sourceType'>): Promise<CaseFact> {
     const validation = validateFactValue(input.valueType, input.value);

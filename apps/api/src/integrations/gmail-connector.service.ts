@@ -6,9 +6,10 @@ import { ORBIT_ENV } from '../config/env.token';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialVaultService } from '../security/credential-vault.service';
-import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
+import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
 import { base64UrlToBase64, extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
 import { OAuth2Service, type OAuth2ProviderConfig } from './oauth2.service';
+import { buildRfc822Message, toBase64Url, type OutgoingMessage } from './rfc822';
 import { OAuthStateService } from './oauth-state.service';
 
 interface StoredGmailSecret {
@@ -75,11 +76,11 @@ export class GmailConnectorService {
     }
   }
 
-  startConnection(tenantId: string, userId: string): { authorizationUrl: string } {
+  startConnection(tenantId: string, userId: string, options: { includeSend?: boolean } = {}): { authorizationUrl: string } {
     this.assertPlatformConfigured();
     const state = this.state.sign({ tenantId, userId, connectorType: 'GMAIL' });
     const authorizationUrl = this.oauth2.buildAuthorizationUrl(this.providerConfig, {
-      scope: GMAIL_READONLY_SCOPE,
+      scope: options.includeSend ? `${GMAIL_READONLY_SCOPE} ${GMAIL_SEND_SCOPE}` : GMAIL_READONLY_SCOPE,
       state,
       accessType: 'offline',
       // Forces Google to reissue a refresh_token even on a reconnect — without this, a second
@@ -95,6 +96,9 @@ export class GmailConnectorService {
 
     const tokens = await this.oauth2.exchangeCodeForTokens(this.providerConfig, code);
     const profile = await this.fetchProfile(tokens.accessToken);
+    // The capability list reflects what Google actually granted (the user can untick scopes), not what was requested.
+    const grantedScopes = (tokens.scope ?? GMAIL_READONLY_SCOPE).split(/s+/);
+    const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : [])];
 
     const existing = await this.prisma
       .forTenantId(tenantId)
@@ -122,7 +126,7 @@ export class GmailConnectorService {
         credentialReference,
         externalAccountId: profile.emailAddress,
         externalAccountDisplayName: profile.emailAddress,
-        grantedCapabilities: ['email.read'],
+        grantedCapabilities: grantedCapabilities,
         lastSuccessAt: new Date(),
       },
       update: {
@@ -130,7 +134,7 @@ export class GmailConnectorService {
         credentialReference,
         externalAccountId: profile.emailAddress,
         externalAccountDisplayName: profile.emailAddress,
-        grantedCapabilities: ['email.read'],
+        grantedCapabilities: grantedCapabilities,
         lastSuccessAt: new Date(),
         lastErrorAt: null,
         lastErrorCode: null,
@@ -238,6 +242,54 @@ export class GmailConnectorService {
     return emails;
   }
 
+  /**
+   * Sends a message through the connected mailbox (`users.messages.send`). Requires the `email.send` capability, i.e. the
+   * tenant connected with the gmail.send scope. Errors are classified so the caller can tell a definite failure (the
+   * provider rejected the request) from an UNKNOWN outcome (network/timeout/5xx after the request left — the mail may
+   * have been sent) and must never blindly retry the latter.
+   */
+  async sendMessage(tenantId: string, message: Omit<OutgoingMessage, 'from'> & { threadId?: string }): Promise<{ providerMessageId: string; threadId?: string; rfcMessageId?: string; from: string }> {
+    const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
+    if (!integration || integration.status !== 'CONNECTED' || !granted.includes('email.send') || !integration.externalAccountDisplayName) {
+      throw new IntegrationUnavailableError('Gmail ist nicht mit Sendeberechtigung verbunden. Bitte unter Integrationen erneut mit der Berechtigung zum Senden verbinden.');
+    }
+    const from = integration.externalAccountDisplayName;
+    const accessToken = await this.getValidAccessToken(tenantId);
+    const raw = toBase64Url(buildRfc822Message({ ...message, from }));
+
+    let response: Response;
+    try {
+      response = await fetch(`${GMAIL_API_BASE}/users/me/messages/send`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw, ...(message.threadId ? { threadId: message.threadId } : {}) }),
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch {
+      throw new GmailSendOutcomeUnknownError('Die Anfrage an Gmail ist ohne Antwort geblieben; ob die Nachricht versendet wurde, ist ungewiss.');
+    }
+    if (response.status >= 500 || response.status === 429 || response.status === 408) {
+      throw new GmailSendOutcomeUnknownError(`Gmail hat mit ${response.status} geantwortet; ob die Nachricht versendet wurde, ist ungewiss.`);
+    }
+    if (!response.ok) {
+      throw new ExternalSystemError(`Gmail hat den Versand abgelehnt (${response.status}).`, { status: response.status });
+    }
+    const sent = (await response.json()) as { id?: string; threadId?: string };
+    if (!sent.id) throw new GmailSendOutcomeUnknownError('Gmail hat den Versand ohne Nachrichtenkennung bestätigt.');
+
+    // Best effort: read the real RFC Message-ID so a reply can be correlated by In-Reply-To. A failure here does not undo the send.
+    let rfcMessageId: string | undefined;
+    try {
+      const meta = await this.gmailFetch(accessToken, `/users/me/messages/${sent.id}?format=metadata&metadataHeaders=Message-ID`);
+      const body = (await meta.json()) as { payload?: { headers?: Array<{ name: string; value: string }> } };
+      rfcMessageId = body.payload?.headers?.find((h) => h.name.toLowerCase() === 'message-id')?.value;
+    } catch {
+      rfcMessageId = undefined;
+    }
+    return { providerMessageId: sent.id, threadId: sent.threadId, rfcMessageId, from };
+  }
+
   private async getValidAccessToken(tenantId: string): Promise<string> {
     const integration = await this.prisma
       .forTenantId(tenantId)
@@ -293,5 +345,13 @@ export class GmailConnectorService {
       throw new ExternalSystemError(`Gmail API request failed (${response.status}): ${path}`, { status: response.status });
     }
     return response;
+  }
+}
+
+/** The send request may or may not have reached the mailbox — the caller records OUTCOME_UNKNOWN and reconciles. */
+export class GmailSendOutcomeUnknownError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GmailSendOutcomeUnknownError';
   }
 }

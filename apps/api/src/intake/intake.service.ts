@@ -11,8 +11,11 @@ import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
+import { BlueprintRegistryService } from '../process/blueprint-registry.service';
+import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
+import { OrchestratorService } from '../process/orchestrator.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
 import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
@@ -20,7 +23,7 @@ import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 import { ExecutionEvidenceService } from './execution-evidence.service';
 import { SUBMIT_TRIAGE_TOOL, SemanticTriageService, type TriageOutcome } from './semantic-triage.service';
-import { deriveAppliedRelevance, routeForCategory } from './triage-decision';
+import { deriveAppliedRelevance, routeForCategory, type DomainRoute } from './triage-decision';
 
 export interface IntakeResult {
   case?: Case;
@@ -110,6 +113,9 @@ export class IntakeService {
     private readonly executionEvidence: ExecutionEvidenceService,
     private readonly facts: CaseFactsService,
     private readonly lifecycle: CaseLifecycleService,
+    private readonly correlation: CaseCorrelationService,
+    private readonly blueprints: BlueprintRegistryService,
+    private readonly orchestrator: OrchestratorService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -205,7 +211,15 @@ export class IntakeService {
       .digest('hex');
     const direction = event.direction ?? 'INBOUND';
 
-    const inboundEmail = await scoped.emailMessage.create({
+    // Our own sent message comes back through the mailbox sync: it was already stored when it was sent (with its case),
+    // so it is reused instead of violating the provider-id uniqueness or creating a second copy.
+    const knownOwn =
+      direction === 'OUTBOUND' && event.channel !== 'SIMULATED'
+        ? await scoped.emailMessage.findFirst({ where: { providerMessageId: event.externalEventId, direction: 'OUTBOUND' } })
+        : null;
+    const inboundEmail =
+      knownOwn ??
+      (await scoped.emailMessage.create({
       data: {
         tenantId,
         direction,
@@ -222,8 +236,8 @@ export class IntakeService {
         providerMessageId: event.channel === 'SIMULATED' ? null : event.externalEventId,
         receivedAt: event.occurredAt,
       },
-    });
-    await this.audit.record({
+    }));
+    if (!knownOwn) await this.audit.record({
       tenantId,
       eventType: 'EMAIL_RECEIVED',
       actorType: 'AGENT',
@@ -321,6 +335,10 @@ export class IntakeService {
       await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { relevance: 'NON_ACTIONABLE', status: 'SKIPPED_NON_ACTIONABLE' } });
       return skipped;
     }
+
+    // Gate 3 — a reply to a process-bound case continues that case (Amendment 02 §13): strong references only.
+    const continued = await this.continueCorrelatedCase(tenantId, actorUserId, event, persisted);
+    if (continued) return continued;
 
     const outcome = await this.triage.triage(tenantId, actorUserId, event);
     const hints = event.hints ? ({ ...event.hints } as Prisma.InputJsonValue) : undefined;
@@ -429,6 +447,11 @@ export class IntakeService {
     );
     await this.lifecycle.transition(tenantId, businessCase.id, { to: 'IN_PROGRESS' }, { type: 'AGENT' });
 
+    // A tenant with an active, published blueprint for this intent runs the generic process engine; otherwise the
+    // pre-existing domain workflow stays exactly as it was.
+    const blueprint = await this.blueprints.findActiveForIntent(tenantId, triage.category);
+    if (blueprint) return this.runBlueprintProcess(tenantId, actorUserId, businessCase, intakeEventId, blueprint.row.key, route, event.subject ?? '');
+
     const handler = this.domainWorkflowHandlers[route];
     let agentRunIds: string[] = [];
     let workflowFailure: string | undefined;
@@ -488,6 +511,88 @@ export class IntakeService {
         : { status: 'COMPLETED' },
     });
     return { case: businessCase, category: route, agentRunIds, intakeEventId };
+  }
+
+  private async runBlueprintProcess(
+    tenantId: string,
+    actorUserId: string | undefined,
+    businessCase: Case,
+    intakeEventId: string,
+    blueprintKey: string,
+    route: DomainRoute,
+    subject: string,
+  ): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    let failure: string | undefined;
+    let outcome: Awaited<ReturnType<OrchestratorService['startCase']>> | undefined;
+    try {
+      outcome = await this.orchestrator.startCase(tenantId, businessCase.id, { userId: actorUserId, blueprintKey, intentSummary: subject });
+      await this.orchestrator.advance(tenantId, businessCase.id);
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    const fresh = (await scoped.case.findUnique({ where: { id: businessCase.id } })) ?? businessCase;
+    // The intake is done once the process owns the case; what the case still needs is visible on the case itself.
+    const needsReview = failure !== undefined || outcome?.outcome === 'MANUAL_REVIEW';
+    await scoped.intakeEvent.update({
+      where: { id: intakeEventId },
+      data: failure
+        ? { status: 'FAILED', errorMessage: failure.slice(0, 300) }
+        : needsReview
+          ? { status: 'NEEDS_REVIEW', errorMessage: (outcome?.reasons ?? []).join(' ').slice(0, 300) || null }
+          : { status: 'COMPLETED' },
+    });
+    return { case: fresh, category: route, agentRunIds: [], intakeEventId };
+  }
+
+  /** Returns a result when the message was handled as part of an existing case (or sent to review), otherwise null. */
+  private async continueCorrelatedCase(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent, persisted: PersistedIntake): Promise<IntakeResult | null> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const { intakeEventId, inboundEmailId } = persisted;
+    const result = await this.correlation.correlate({
+      tenantId,
+      emailMessageId: inboundEmailId,
+      threadId: event.threadId,
+      inReplyTo: event.inReplyTo,
+      references: event.references,
+      senderAddress: event.sender?.address,
+    });
+
+    if (result.status === 'AMBIGUOUS') {
+      await this.saveDecision(tenantId, intakeEventId, {
+        status: 'REVIEW_REQUIRED',
+        appliedRelevance: 'UNKNOWN_REQUIRES_REVIEW',
+        failureReason: 'CORRELATION_AMBIGUOUS: ' + (result.note ?? 'Mehrere Vorgänge kommen in Frage.'),
+        hints: { candidateCaseIds: result.candidateCaseIds },
+      });
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, 'Die Nachricht passt zu mehreren Vorgängen und wurde nicht automatisch zugeordnet.', 'UNKNOWN_REQUIRES_REVIEW');
+      return { category: 'OTHER', agentRunIds: [], intakeEventId };
+    }
+    if (result.status !== 'MATCHED' || !result.caseId) return null;
+
+    const matched = await scoped.case.findUnique({ where: { id: result.caseId } });
+    // Only cases that run on a blueprint are continued here; legacy cases keep their pre-existing behaviour.
+    if (!matched?.blueprintKey) return null;
+
+    await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: matched.id } });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: matched.id, status: 'PROCESSING' } });
+    await this.saveDecision(tenantId, intakeEventId, { status: 'DECIDED', appliedRelevance: 'BUSINESS_ACTIONABLE', hints: { correlation: result.rule, caseId: matched.id } });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { relevance: 'BUSINESS_ACTIONABLE' } });
+
+    let failure: string | undefined;
+    try {
+      await this.orchestrator.receiveInbound(tenantId, matched.id, {
+        type: 'communication.received',
+        payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: result.rule },
+        dedupeKey: 'inbound:' + inboundEmailId,
+      });
+      await this.orchestrator.advance(tenantId, matched.id);
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: failure ? { status: 'FAILED', errorMessage: failure.slice(0, 300) } : { status: 'COMPLETED' } });
+    const fresh = (await scoped.case.findUnique({ where: { id: matched.id } })) ?? matched;
+    return { case: fresh, category: matched.type === 'FINANCE' ? 'FINANCE' : 'SALES', agentRunIds: [], intakeEventId };
   }
 
   private async handlePendingTriage(
