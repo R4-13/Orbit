@@ -115,12 +115,19 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
     [graph.edges],
   );
 
-  const { fitView } = useReactFlow();
+  const { fitView, setCenter } = useReactFlow();
+  const currentId = graph.currentNodeIds[0];
+  const currentPosition = currentId ? positions.get(currentId) : undefined;
   useEffect(() => {
-    // Re-fit when the set of nodes changes (a new plan revision), not on every state update.
-    const handle = setTimeout(() => void fitView({ padding: 0.15 }), 50);
+    // Initial view: a small graph is shown whole; a long process opens on the step that needs attention at a readable zoom
+    // ("Alles anzeigen" gives the overview). Re-run only when the plan or the set of nodes changes, not on every state update.
+    const handle = setTimeout(() => {
+      if (graph.nodes.length > 7 && currentPosition) void setCenter(currentPosition.x + 112, currentPosition.y + 40, { zoom: 0.9 });
+      else void fitView({ padding: 0.15 });
+    }, 50);
     return () => clearTimeout(handle);
-  }, [graph.planId, graph.mode, graph.nodes.length, fitView]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.planId, graph.mode, graph.nodes.length, fitView, setCenter]);
 
   return (
     <div className="relative h-[520px] w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50" role="group" aria-label="Prozessgraph des Vorgangs">

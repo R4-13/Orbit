@@ -176,7 +176,7 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
       {graph.nodes.length === 0 ? (
         <p className="rounded-md border border-dashed border-slate-300 p-6 text-sm text-slate-600">Für diesen Vorgang gibt es noch keinen Plan. Sobald einer erstellt wurde, erscheint er hier.</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0">
             {effectiveView === 'GRAPH' ? <OrchestrationGraph graph={graph as CaseGraphView} selectedId={selected} onSelect={setSelected} /> : <OrchestrationTimeline graph={graph} selectedId={selected} onSelect={setSelected} />}
           </div>
