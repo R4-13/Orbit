@@ -126,7 +126,7 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
     const handle = setTimeout(() => {
       if (graph.nodes.length > 7 && currentPosition) void setCenter(currentPosition.x + 112, currentPosition.y + 40, { zoom: 0.9 });
       else void fitView({ padding: 0.15 });
-    }, 50);
+    }, 250);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph.planId, graph.mode, graph.nodes.length, fitView, setCenter]);
@@ -139,7 +139,7 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
         edges={edges}
         nodeTypes={NODE_TYPES}
         onNodeClick={(_, node) => onSelect(node.id)}
-        fitView
+        fitView={graph.nodes.length <= 7}
         minZoom={0.2}
         maxZoom={1.6}
         nodesDraggable={false}
