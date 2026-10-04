@@ -101,21 +101,21 @@ Drei Aussagen, bewusst getrennt: **implementiert** (Code vorhanden), **automatis
 |---|---|---|---|---|
 | BP-01 | ja | ja (Mock-getrennt, Fixtures) | **ja** – Triage mit `gpt-6-luna` (`mode=LIVE`, Newsletter/Anfrage/Injection) am 2026-10-04 | Modellprofile/Evaluationskatalog fehlen |
 | BP-02 | ja | ja (`case-facts-and-correlation`) | ja (Anfrage → Case mit Fakten live) |  |
-| BP-03 | ja (Registry, Lebenszyklus, Hash, Aktivierung) | ja (`process-orchestration`) | siehe Live-Abschnitt |  |
+| BP-03 | ja (Registry, Lebenszyklus, Hash, Aktivierung) | ja (`process-orchestration`) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-04 | ja (Planer/Capability-Bindung) | ja (Validator + E2E zwei Prozesse) | – | KI-Planer live nur durch Stichproben |
 | BP-05 | ja (11 Prüfungen) | ja (47+ Unit, E2E Ad-hoc-Gate) | – |  |
-| BP-06 | ja (Blueprint-`requiredFacts`, Regeln und Preise als Daten) | ja (`reference-process`) | siehe Live-Abschnitt | Preisquelle = Test-SoR |
+| BP-06 | ja (Blueprint-`requiredFacts`, Regeln und Preise als Daten) | ja (`reference-process`) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Preisquelle = Test-SoR |
 | BP-07 | ja (Rückfrage-Entwurf, Freigabe, Gmail-Versand) | ja (mit Mail-Double), Gmail-Versand per Unit | **BLOCKIERT** für echten Versand: braucht Zustimmung „Sendeberechtigung erteilen“ (`gmail.send`); im Testbetrieb **simuliert** | Echter Versand nicht live belegt |
 | BP-08 | ja (Korrelation, WaitSubscription, Fortsetzung) | ja (`reference-process`, Sweep) | simuliert live; echte Antwort-Mail nicht ausgelöst |  |
-| BP-09 | ja (Preis → Angebot → PDF → Freigabe → Versand) | ja | siehe Live-Abschnitt | Versand simuliert |
-| BP-10 | ja (Policy je Zweck, Freigabe an Nutzlast-Hash) | ja | siehe Live-Abschnitt |  |
+| BP-09 | ja (Preis → Angebot → PDF → Freigabe → Versand) | ja | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Versand simuliert |
+| BP-10 | ja (Policy je Zweck, Freigabe an Nutzlast-Hash) | ja | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-11 | ja | ja (`triage-resilience`) | **ja** (Newsletter: keine Aktion) |  |
-| BP-12 | ja (API + UI-Bereich, Produktivstandard „ausgeblendet“) | API getestet; Sichtbarkeit per Konfig | siehe Live-Abschnitt |  |
+| BP-12 | ja (API + UI-Bereich, Produktivstandard „ausgeblendet“) | API getestet; Sichtbarkeit per Konfig | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-13 | ja | ja | **ja** (Prompt-Injection → Prüfung) |  |
-| BP-14 | ja (Dashboard/Case) | Typecheck/Lint; Browser siehe Live-Abschnitt | siehe Live-Abschnitt | Posteingangs-Tabelle: Link über Mail-Zeile in Dashboard |
-| BP-15 | ja (Ebenen Gesamt/Tatsächlich/Definition, Kantenstatus) | ja (`case-orchestration-view`) | siehe Live-Abschnitt |  |
-| BP-16 | ja (Details, Vorschau, Evidenz, Receipts) | ja | siehe Live-Abschnitt |  |
-| BP-17 | ja (alle Commands) | ja (Commands, 409, Replay) | siehe Live-Abschnitt |  |
+| BP-14 | ja (Dashboard/Case) | Typecheck/Lint; Browser **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Posteingangs-Tabelle: Link über Mail-Zeile in Dashboard |
+| BP-15 | ja (Ebenen Gesamt/Tatsächlich/Definition, Kantenstatus) | ja (`case-orchestration-view`) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
+| BP-16 | ja (Details, Vorschau, Evidenz, Receipts) | ja | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
+| BP-17 | ja (alle Commands) | ja (Commands, 409, Replay) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-18 | ja (Server prüft Berechtigung/Revision) | ja (Berechtigungen, Fremdmandant) | – | Sonde hat keinen Case-Kontext |
 | BP-19 | ja (Sweep, Lease, Events in Postgres) | ja (Restart/Frist/Lease) | – |  |
 | BP-20 | ja (Ledger, Exactly-once-Dispatch) | ja (parallele advance, Replay) | – |  |
@@ -124,11 +124,29 @@ Drei Aussagen, bewusst getrennt: **implementiert** (Code vorhanden), **automatis
 | BP-23 | ja | ja (Tool → Node → Case → Intake → Graph → Badge) | Teil live (Gate G) |  |
 | BP-24 | ja | ja (zweiter Mandant + zweiter Blueprint, Fixture-Capabilities) | – |  |
 | BP-25 | ja | ja (Ad-hoc-Plan, Bestätigung, Ablehnung) | – |  |
-| BP-26 | ja (Liste als Alternative, ARIA, Responsivität) | Typecheck/Lint; Browser siehe Live-Abschnitt | siehe Live-Abschnitt | Kein automatisierter UI-Test (Playwright) |
+| BP-26 | ja (Liste als Alternative, ARIA, Responsivität) | Typecheck/Lint; Browser **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Kein automatisierter UI-Test (Playwright) |
 | BP-27 | ja | ja | Teil live (Gate G, KI-Status) |  |
 | BP-28 | ja | bestehende Tests grün | – |  |
 | BP-29 | ja | ja (siehe Abschlussbericht) | – |  |
 | BP-30 | ja | – | – | diese Datei, `IMPLEMENTATION_STATUS.md`, `KNOWN_LIMITATIONS.md` |
+
+## 5a. Live-Nachweis (2026-10-04, Docker-Stack, echtes Modell `gpt-6-luna`, Versand **simuliert**)
+
+Durchgeführt im laufenden System über die Oberfläche bzw. die HTTP-API des Demo-Mandanten (Build `3b21576` und folgende; API-/Worker-Container mit `LLM_PROVIDER=openai`, `OUTBOUND_MAIL_MODE=simulated`).
+
+| Pfad / Nachweis | Ergebnis |
+|---|---|
+| **Pfad 1 – kein Geschäftsprozess** | Newsletter → `NON_ACTIONABLE` (KI `gpt-6-luna`, Sicherheit 97 %), erscheint nur unter „Kein Geschäftsprozess ausgelöst“, Aktion: *Keine*. Prompt-Injection-Mail → Risikoflags `PROMPT_INJECTION_SUSPECTED`/`PHISHING_SUSPECTED`, Prüfung, keine Aktion. |
+| **Pfad 2 – unvollständig → Rückfrage → Antwort → Angebot** | Eingabe im Posteingang (Fenster, ohne Menge/Adresse) → Triage live → Case auf Blueprint → Extraktion live (SKU `FENSTER-STD` mit Beleg) → Rückfrage-Entwurf mit genau den zwei offenen Fragen an die Kopfzeilen-Adresse → Freigabe im Dialog (Empfänger/Betreff/Text sichtbar) → Versand **simuliert** (Beleg `sim-…`) → Antwort über „Antwort simulieren“ durch den normalen Eingang mit In-Reply-To → Zuordnung `IN_REPLY_TO`, **keine zweite Triage** → Extraktion der Antwort live (14 Stück, Lieferadresse) → Preis 14 × 395,00 € (Staffel) = 5.530,00 € netto, 6.580,70 € brutto → Angebot `ANG-2026-0001` + PDF → Freigabe mit Betragsvorschau → Versand simuliert → Case **Abgeschlossen** mit Nachweis. |
+| **Pfad 3 – vollständig → Angebot** | Anfrage (2 Haustüren, Lieferadresse) → keine Rückfrage (Schritte übersprungen) → Angebot `ANG-2026-0002` über 4.498,20 € brutto → Freigabe → **Abgeschlossen**. |
+| Oberfläche | Orchestrierungs-Tab (Liste/Graph, Zustände mit Symbol und Wort, Live/Simuliert je Schritt), Knotendetails mit Nachweis, Dashboard-Spalte „Orchestrierung“ statt „Zugewiesener Agent“, Bereich „Kein Geschäftsprozess ausgelöst“, Prozessdefinitionen (Capabilities mit Ausführbarkeit), Sonde mit Case-Kontext (antwortet ehrlich: „simuliert versendet – kein tatsächlicher Versand bestätigt“). Playwright-Abnahme `apps/web/e2e/orchestration.spec.ts` (5 Tests, inkl. 390 px ohne horizontales Scrollen, schreibgeschützter Nutzer ohne Aktionen) gegen den laufenden Stack grün. |
+| Modell-Evaluation | 16 Fälle live (siehe `docs/evaluation/README.md`): 13/16 → 16/16 nach Prompt-Regel, **kein unabhängiger Holdout**. |
+
+**Nicht live bewiesen / Blocker**
+
+* **Echter Gmail-Versand und echte Antwort-Mail:** blockiert durch die fehlende Zustimmung `gmail.send` („Sendeberechtigung erteilen“ unter Integrationen) und `OUTBOUND_MAIL_MODE=gmail`. Implementiert und per Unit-/E2E-Test mit Doubles belegt, aber **nicht live**.
+* Preisquelle ist ein Test-SoR; `OUTCOME_UNKNOWN`, Worker-Neustart während einer Wartephase und Fremdmandanten-Zugriff sind automatisiert, nicht live erzwungen.
+* Sonde führt keine Commands aus (nur erklären/zusammenfassen).
 
 ## 6. Migration/Risiko
 
