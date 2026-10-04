@@ -98,6 +98,8 @@ services:
       # tests keep using the mock provider from `.env`. See docs/AGENT_ARCHITECTURE.md ("OpenAI aktivieren").
       - path: .env.llm.local
         required: false
+      - path: .env.runtime.local
+        required: false
     environment:
       DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
       DATABASE_URL_APP: "postgresql://orbit_app:${DATABASE_APP_PASSWORD:-orbit_app_local_dev}@postgres:5432/orbit?schema=public&connection_limit=20"
@@ -136,6 +138,8 @@ services:
     env_file:
       - .env
       - path: .env.llm.local
+        required: false
+      - path: .env.runtime.local
         required: false
     environment:
       DATABASE_URL: "postgresql://orbit:orbit_local_dev@postgres:5432/orbit?schema=public"
