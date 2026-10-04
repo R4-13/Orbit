@@ -166,3 +166,20 @@ verifiziert** (kein Zugriff in der Entwicklungsumgebung dieser Session)
   blockiert, siehe oben) — `@orbit/api`-Teil läuft davon unbeeinträchtigt
   durch, `apps/web`s E2E-Suite wird stattdessen direkt via
   `npx playwright test` gegen den laufenden Dev-Server verifiziert.
+
+## Amendment 02 — Business Process Framework: Testschichten
+
+| Ebene | Wo | Was |
+|---|---|---|
+| Unit (rein) | `packages/shared/src/process-schemas/*.spec.ts` | Ausdrucksgrammatik (Sicherheit, Tiefe, Pfade), Plan-Validator (alle 11 Prüfungen), Blueprint-Validator, Planlauf-Regeln (`nextActions`), Command-Schemas |
+| Unit | `apps/api/src/integrations/rfc822.spec.ts`, `gmail-connector.service.spec.ts` | MIME/Threading/Header-Injection, Gmail-Versand inkl. Fehlerklassifikation (abgelehnt vs. ungewiss) |
+| Unit | `apps/api/src/process/reference/*.spec.ts` | Geld in Cent-Ganzzahlen, PDF-Struktur, Referenz-Blueprint und Testdaten gegen Validator/Schema |
+| Unit | `apps/web/src/lib/graph-layout.spec.ts` | Schichtlayout des Graphen |
+| API-E2E | `process-orchestration.e2e-spec.ts` | Registry/Lebenszyklus/Unveränderlichkeit, Lauf mit Freigabe → Exactly-once → Warten → Fortsetzen → Abschluss, `OUTCOME_UNKNOWN` mit Abgleich, Ad-hoc-Plan, Plan-Gate, Sweep/Neustart/Fristen/Lease, zwei Mandanten + zwei Blueprints (Fixture-Capabilities) |
+| API-E2E | `reference-process.e2e-spec.ts` | Referenzpfade: unvollständige Anfrage → Rückfrage → korrelierte Antwort → Preis → Angebot → Versand mit PDF; vollständige Anfrage; Fehlinformation/Injection; Fremdantwort |
+| API-E2E | `case-orchestration-view.e2e-spec.ts` | Graph-Projektion, serverseitige Aktionen je Berechtigung, Knotendetails mit Vorschau, Commands (409/Replay), Ebenen, Mandantenbindung, Events und SSE-Cursor |
+| API-E2E | `case-facts-and-correlation.e2e-spec.ts` | Fakten mit Herkunft/Konflikten, Case-Korrelation (E15/E16/E18/E19) |
+
+Modell und Mailtransport sind in diesen Tests bewusst Doubles (skriptierter Mock-Provider, aufzeichnender Mail-Port); alles andere läuft gegen die echte
+Datenbank. **Diese Tests sind kein Live-Nachweis** – der Stand je Pfad (implementiert / automatisiert getestet / live nachgewiesen) steht in `IMPLEMENTATION_STATUS.md`.
+Ausführung der E2E-Suite: `set -a && source .env && set +a && pnpm --filter @orbit/api exec jest --config ./test/jest-e2e.json --runInBand` (`.env` muss geladen sein, sonst scheitern die Suiten, die `loadEnv()` direkt aufrufen).

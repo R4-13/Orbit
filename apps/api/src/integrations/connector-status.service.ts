@@ -91,7 +91,7 @@ export class ConnectorStatusService {
       levels.DOMAIN_WORKFLOW_ACTIVE = { reached: true, at: firstWorkflowTriggeringEvent.occurredAt.toISOString() };
     }
 
-    const verifiedRun = await this.findVerifiedRun(tenantId, integration.id);
+    const verifiedRun = await this.newestVerifiedRun(tenantId, integration.id);
     if (verifiedRun) {
       levels.LIVE_END_TO_END_TESTED = { reached: true, at: verifiedRun.completedAt };
     }
@@ -125,6 +125,51 @@ export class ConnectorStatusService {
       verifiedRun,
       health,
     };
+  }
+
+  /** The newest verified run of either kind: a durable workflow run or a completed business process (Amendment 02). */
+  private async newestVerifiedRun(tenantId: string, connectionId: string): Promise<ConnectorVerifiedRun | null> {
+    const [workflow, process] = await Promise.all([this.findVerifiedRun(tenantId, connectionId), this.findVerifiedProcessRun(tenantId, connectionId)]);
+    if (workflow && process) return new Date(process.completedAt).getTime() > new Date(workflow.completedAt).getTime() ? process : workflow;
+    return workflow ?? process;
+  }
+
+  /**
+   * A business process counts as verified only when its case is COMPLETED on verified criteria, every node of the active plan
+   * ended SUCCEEDED/SKIPPED, and every action intent has a confirmed receipt — a returned tool error or an unknown outcome
+   * anywhere keeps it out (BP-23/BP-27). The receipts' execution modes are part of the statement.
+   */
+  private async findVerifiedProcessRun(tenantId: string, connectionId: string): Promise<ConnectorVerifiedRun | null> {
+    const candidates = await this.prisma.forTenantId(tenantId).intakeEvent.findMany({
+      where: { connectionId, status: 'COMPLETED', case: { orchestrationStatus: 'COMPLETED', blueprintKey: { not: null } } },
+      orderBy: { occurredAt: 'desc' },
+      take: VERIFICATION_CANDIDATE_LIMIT,
+      include: { case: true },
+    });
+    for (const candidate of candidates) {
+      const c = candidate.case;
+      if (!c || !c.completedAt) continue;
+      const plan = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId: c.id, status: 'ACTIVE' }, include: { nodes: true } });
+      if (!plan || plan.nodes.length === 0) continue;
+      if (!plan.nodes.every((n) => n.state === 'SUCCEEDED' || n.state === 'SKIPPED')) continue;
+      const intents = await this.prisma.forTenantId(tenantId).actionIntent.findMany({ where: { caseId: c.id, planId: plan.id } });
+      // A cancelled intent (approval voided by an edit or a replan) is history; it only counts if its step never got a confirmed effect.
+      const confirmedNodes = new Set(intents.filter((i) => i.status === 'CONFIRMED').map((i) => i.nodeKey));
+      if (!intents.every((i) => i.status === 'CONFIRMED' || (i.status === 'CANCELLED' && confirmedNodes.has(i.nodeKey)))) continue;
+      const receipts = await this.prisma.forTenantId(tenantId).actionReceipt.findMany({ where: { intentId: { in: intents.map((i) => i.id) }, status: 'CONFIRMED' } });
+      const modes = [...new Set(receipts.map((r) => r.executionMode))];
+      const execution = readExecution(candidate.metadata);
+      const base = execution ? describeExecutionModes(execution) : 'Ausführungsmodus nicht erfasst';
+      return {
+        intakeEventId: candidate.id,
+        workflowRunId: c.id,
+        workflowKey: `Prozess ${c.blueprintKey} ${c.blueprintVersion ?? ''}`.trim(),
+        completedAt: c.completedAt.toISOString(),
+        execution,
+        executionSummary: modes.length > 0 ? `${base} · Versand: ${modes.map((m) => (m === 'LIVE' ? 'live' : 'simuliert')).join(', ')}` : base,
+      };
+    }
+    return null;
   }
 
   /** Newest real run of this connection that passes every verification criterion — or null. */

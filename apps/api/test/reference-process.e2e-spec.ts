@@ -13,6 +13,7 @@ import { ActionLedgerService } from '../src/process/action-ledger.service';
 import { BlueprintRegistryService } from '../src/process/blueprint-registry.service';
 import { CaseCommandsService, type CommandActor } from '../src/process/case-commands.service';
 import { CaseFactsService } from '../src/process/case-facts.service';
+import { ConnectorStatusService } from '../src/integrations/connector-status.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { ReferenceProcessService } from '../src/process/reference/reference-process.service';
 import { TenantsService } from '../src/tenants/tenants.service';
@@ -40,6 +41,7 @@ describe('Reference process: request for quote (e2e)', () => {
   let sent: Array<{ to: string; subject: string; bodyText: string; threadId?: string; inReplyTo?: string; attachments?: Array<{ fileName: string; mimeType: string; content: Buffer }> }>;
   let sendSpy: jest.SpyInstance;
   const tenants: string[] = [];
+  const connectionByTenant = new Map<string, string>();
 
   async function newTenant(): Promise<string> {
     const suffix = randomUUID();
@@ -53,9 +55,10 @@ describe('Reference process: request for quote (e2e)', () => {
     });
     tenants.push(tenant.id);
     // Gmail connected WITH send permission (the capability is only executable then).
-    await prisma.forTenantId(tenant.id).integration.create({
+    const integration = await prisma.forTenantId(tenant.id).integration.create({
       data: { tenantId: tenant.id, connectorType: 'GMAIL', status: 'CONNECTED', externalAccountDisplayName: 'firma@e2e.example', grantedCapabilities: ['email.read', 'email.send'] },
     });
+    connectionByTenant.set(tenant.id, integration.id);
     await reference.loadFixture(tenant.id, JSON.parse(readFileSync(join(FIXTURES, 'reference-data.demo.json'), 'utf8')));
     const blueprint = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.blueprint.json'), 'utf8')) as { key: string; version: string };
     await blueprints.importDraft(tenant.id, 'u1', blueprint);
@@ -129,7 +132,7 @@ describe('Reference process: request for quote (e2e)', () => {
     const first = await intake.handleIntakeEvent(
       tenantId,
       undefined,
-      mail({ subject: 'Angebot Fenster Bürogebäude', content: 'Guten Tag, wir möchten ein Angebot für neue Fenster in unserem Bürogebäude. Viele Grüße, Thomas Meier', threadId: 'thr-1', rfcMessageId: '<m1@firma-meier.example>' }),
+      mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Angebot Fenster Bürogebäude', content: 'Guten Tag, wir möchten ein Angebot für neue Fenster in unserem Bürogebäude. Viele Grüße, Thomas Meier', threadId: 'thr-1', rfcMessageId: '<m1@firma-meier.example>' }),
     );
     const caseId = first.case!.id;
     expect(first.intakeStatus ?? (await prisma.forTenantId(tenantId).intakeEvent.findUniqueOrThrow({ where: { id: first.intakeEventId } })).status).toBe('COMPLETED');
@@ -182,7 +185,7 @@ describe('Reference process: request for quote (e2e)', () => {
     const reply = await intake.handleIntakeEvent(
       tenantId,
       undefined,
-      mail({ subject: 'Re: Angebot Fenster Bürogebäude', content: 'Es sind 12 Fenster. Die Lieferadresse ist Hauptstr. 5, 12345 Berlin. Farbe weiß.', threadId: 'thr-1', rfcMessageId: '<m2@firma-meier.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@firma-meier.example>', '<sent-1@mail.example>'] }),
+      mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Re: Angebot Fenster Bürogebäude', content: 'Es sind 12 Fenster. Die Lieferadresse ist Hauptstr. 5, 12345 Berlin. Farbe weiß.', threadId: 'thr-1', rfcMessageId: '<m2@firma-meier.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@firma-meier.example>', '<sent-1@mail.example>'] }),
     );
     expect(reply.case!.id).toBe(caseId);
     // Only the extraction (2 model calls) happened — no second triage.
@@ -224,6 +227,13 @@ describe('Reference process: request for quote (e2e)', () => {
     expect(evidence).toContain('email.send/QUOTE_DELIVERY:gm-2');
     expect((await ledger.receipts(tenantId, deliveryIntent!.id))[0]).toMatchObject({ status: 'CONFIRMED', executionMode: 'SIMULATED' });
     expect(await prisma.forTenantId(tenantId).quote.findUniqueOrThrow({ where: { id: quote.id } })).toMatchObject({ status: 'SENT' });
+
+    // The integration badge may call this a verified business process only now — and says which parts were simulated.
+    const status = await app.get(ConnectorStatusService).getStatus(tenantId, 'GMAIL');
+    expect(status.verifiedRun).toMatchObject({ workflowRunId: caseId });
+    expect(status.verifiedRun?.workflowKey).toContain('REQUEST_FOR_QUOTE');
+    expect(status.verifiedRun?.executionSummary).toContain('Versand: simuliert');
+    expect((await prisma.forTenantId(tenantId).intakeEvent.findMany({ where: { caseId } })).every((e) => e.status === 'COMPLETED')).toBe(true);
   });
 
   it('complete request → no question; verified price → quote → controlled delivery', async () => {

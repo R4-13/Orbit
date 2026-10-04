@@ -52,6 +52,10 @@ export class CaseLifecycleService {
       return { updated: changed, previous: existing.orchestrationStatus };
     });
 
+    // The intake/processing status must not claim success while the process behind it failed or needs a person
+    // (Amendment 02 BP-23): the IntakeEvent of this case follows the case outcome, and with it the integration badge.
+    await this.mirrorToIntakeEvents(tenantId, caseId, transition);
+
     if (previous !== transition.to) {
       await this.audit.record({
         tenantId,
@@ -64,6 +68,19 @@ export class CaseLifecycleService {
       });
     }
     return updated;
+  }
+
+  private async mirrorToIntakeEvents(tenantId: string, caseId: string, transition: CaseTransition): Promise<void> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const reason = (transition.attentionReasons ?? []).join(' ').slice(0, 300) || null;
+    if (transition.to === 'FAILED') {
+      await scoped.intakeEvent.updateMany({ where: { caseId, status: { in: ['PROCESSING', 'COMPLETED', 'NEEDS_REVIEW'] } }, data: { status: 'FAILED', errorMessage: reason } });
+    } else if (transition.to === 'MANUAL_REVIEW') {
+      await scoped.intakeEvent.updateMany({ where: { caseId, status: { in: ['PROCESSING', 'COMPLETED'] } }, data: { status: 'NEEDS_REVIEW', errorMessage: reason } });
+    } else if (['IN_PROGRESS', 'WAITING_FOR_INFORMATION', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_EXTERNAL_SYSTEM', 'COMPLETED'].includes(transition.to)) {
+      // The problem was dealt with (retry, correction, approval): the processing state is healthy again.
+      await scoped.intakeEvent.updateMany({ where: { caseId, status: 'NEEDS_REVIEW' }, data: { status: 'COMPLETED', errorMessage: null } });
+    }
   }
 
   /** Applies a fact-/goal-level update without changing the process state. */

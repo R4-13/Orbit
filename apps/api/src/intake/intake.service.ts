@@ -533,14 +533,18 @@ export class IntakeService {
     }
     const fresh = (await scoped.case.findUnique({ where: { id: businessCase.id } })) ?? businessCase;
     // The intake is done once the process owns the case; what the case still needs is visible on the case itself.
-    const needsReview = failure !== undefined || outcome?.outcome === 'MANUAL_REVIEW';
+    // The processing status follows the case's real state: a failed or review-bound process is never reported as completed.
+    const caseFailed = fresh.orchestrationStatus === 'FAILED';
+    const needsReview = failure !== undefined || outcome?.outcome === 'MANUAL_REVIEW' || fresh.orchestrationStatus === 'MANUAL_REVIEW';
     await scoped.intakeEvent.update({
       where: { id: intakeEventId },
       data: failure
         ? { status: 'FAILED', errorMessage: failure.slice(0, 300) }
-        : needsReview
-          ? { status: 'NEEDS_REVIEW', errorMessage: (outcome?.reasons ?? []).join(' ').slice(0, 300) || null }
-          : { status: 'COMPLETED' },
+        : caseFailed
+          ? { status: 'FAILED', errorMessage: fresh.attentionReasons.join(' ').slice(0, 300) || null }
+          : needsReview
+            ? { status: 'NEEDS_REVIEW', errorMessage: ((outcome?.reasons ?? []).length > 0 ? (outcome?.reasons ?? []) : fresh.attentionReasons).join(' ').slice(0, 300) || null }
+            : { status: 'COMPLETED' },
     });
     return { case: fresh, category: route, agentRunIds: [], intakeEventId };
   }

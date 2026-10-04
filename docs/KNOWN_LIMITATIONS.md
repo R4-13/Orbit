@@ -104,3 +104,19 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
   Presigned-URL-Request.
 - **Demo-Rechnungen** haben keine echten Dokument-Anhänge (siehe
   `docs/DEMO_DATA.md` "Bekannte Einschränkung").
+
+## Business Process Framework (Amendment 02)
+
+* **Live-Nachweis Versand:** Gmail-Versand ist vollständig implementiert und per Unit-/E2E-Test mit Doubles belegt. Ein echter Versand
+  braucht die Berechtigung `gmail.send` (Integrationen → „Sendeberechtigung erteilen“, bewusste Zustimmung der Mailbox-Inhaberin bzw. des -Inhabers)
+  und `OUTBOUND_MAIL_MODE=gmail`. Ohne diese Zustimmung ist die Fähigkeit `email.send` für den Mandanten **nicht ausführbar** (mit Begründung in der Oberfläche) –
+  sie wird nicht „live“ genannt. Im Testbetrieb läuft der Versand mit `OUTBOUND_MAIL_MODE=simulated` und ist überall als **Simuliert** gekennzeichnet.
+* **Preisquelle:** der Referenzprozess liest Preise aus einem Test-System-of-Record (`reference_catalog_items`, aus Fixtures). Ein echtes Warenwirtschafts-/ERP-System
+  ist nicht angebunden; die Capability-Verträge (`pricing.resolve`) bleiben gleich, die Quelle ist austauschbar. Angebote tragen „Preise aus einem Testdatenbestand – nicht verbindlich“.
+* **Reasoning-Modell:** `gpt-6-luna` wird für Tool-Aufrufe mit `reasoning_effort=none` betrieben (Chat Completions lehnt Function-Tools sonst ab). Eine Umstellung auf die Responses-API wäre die Alternative.
+  BYOK-Verbindungen senden bisher keinen `reasoning_effort`.
+* **Qualität der KI-Extraktion/Planung** ist nur mit wenigen Live-Stichproben geprüft, nicht systematisch bewertet (kein Evaluationskatalog).
+* **Anhänge in der Triage** (E21): Anhangsinhalt fließt noch nicht in die Triage/Extraktion ein.
+* **Zweite Wartephase:** der Referenz-Blueprint stellt eine automatische Rückfrage (`maxAutoQuestions: 1`); bleiben Angaben nach der Antwort offen, entsteht eine manuelle Prüfaufgabe statt einer zweiten Rückfrage.
+* **Graph:** automatisches Schichtlayout ohne Kantenkreuzungs-Optimierung; sehr große Pläne (> 60 Knoten) sind per Validator ausgeschlossen. Kein Drag-and-drop-Editor für Pläne (Aktionen laufen nur über Commands).
+* **Aufbewahrung** von `bodyText`/Fakten ist noch nicht an die Retention-Konfiguration gekoppelt.

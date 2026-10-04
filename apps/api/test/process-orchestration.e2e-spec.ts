@@ -12,6 +12,8 @@ import { CaseCommandsService, type CommandActor } from '../src/process/case-comm
 import { CaseEventsService } from '../src/process/case-events.service';
 import { CaseFactsService } from '../src/process/case-facts.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
+import { ConnectorStatusService } from '../src/integrations/connector-status.service';
+import { CaseOrchestrationService } from '../src/process/case-orchestration.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { TenantsService } from '../src/tenants/tenants.service';
@@ -39,6 +41,7 @@ describe('Process orchestration engine (e2e)', () => {
 
   const calls = { notify: 0, lookup: 0, unsure: 0 };
   let unsureBehaviour: 'UNKNOWN' | 'OK' = 'UNKNOWN';
+  let lookupBehaviour: 'OK' | 'RETURNS_ERROR' = 'OK';
 
   const fxCapabilities: CapabilityDefinition[] = [
     {
@@ -205,6 +208,7 @@ describe('Process orchestration engine (e2e)', () => {
       policyAction: 'context.lookup',
       execute: async (input: { key: string }) => {
         calls.lookup += 1;
+        if (lookupBehaviour === 'RETURNS_ERROR') return { success: false, error: 'Quellsystem lehnt die Anfrage ab', executionMode: 'LIVE' };
         return { found: true, echo: input.key, executionMode: 'LIVE' };
       },
     });
@@ -491,6 +495,54 @@ describe('Process orchestration engine (e2e)', () => {
       const start = await orchestrator.startCase(tenantId, c.id, { intentSummary: 'Unbekannt' });
       expect(start.outcome).toBe('MANUAL_REVIEW');
       expect((await caseOf(tenantId, c.id)).orchestrationStatus).toBe('MANUAL_REVIEW');
+    });
+  });
+
+  describe('errors and statuses agree everywhere (BP-23 / BP-27)', () => {
+    it('a tool that RETURNS an error (no exception) fails the node, stops the case, and shows up in the graph, the intake status and the connector badge', async () => {
+      const tenantId = await newTenant();
+      await publish(tenantId, requestBlueprint());
+      const integration = await prisma.forTenantId(tenantId).integration.create({ data: { tenantId, connectorType: 'GMAIL', status: 'CONNECTED', externalAccountDisplayName: 'firma@e2e.example', grantedCapabilities: ['email.read'] } });
+      const c = await newCase(tenantId);
+      await facts.setByHuman(tenantId, c.id, 'u1', { key: 'contact.email', value: 'kunde@kunde.example', valueType: 'email' });
+      await facts.setByHuman(tenantId, c.id, 'u1', { key: 'request.detail', value: 'komplett', valueType: 'string' });
+      const intakeEvent = await prisma.forTenantId(tenantId).intakeEvent.create({
+        data: { tenantId, connectionId: integration.id, channel: 'EMAIL', provider: 'gmail', externalEventId: randomUUID(), occurredAt: new Date(), status: 'COMPLETED', caseId: c.id },
+      });
+      lookupBehaviour = 'RETURNS_ERROR';
+      try {
+        await orchestrator.startCase(tenantId, c.id, { blueprintKey: 'FX_REQUEST' });
+        await orchestrator.advance(tenantId, c.id);
+      } finally {
+        lookupBehaviour = 'OK';
+      }
+
+      // node → case → intake event
+      expect(await nodeState(tenantId, c.id, 'lookup')).toBe('FAILED');
+      const row = await caseOf(tenantId, c.id);
+      expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+      expect(row.completedAt).toBeNull();
+      expect(await nodeState(tenantId, c.id, 'done')).toBe('PLANNED'); // no completion path past a failed required step
+      expect(await prisma.forTenantId(tenantId).intakeEvent.findUniqueOrThrow({ where: { id: intakeEvent.id } })).toMatchObject({ status: 'NEEDS_REVIEW' });
+
+      // graph projection tells the same story and offers a retry
+      const graph = await app.get(CaseOrchestrationService).projection({ tenantId, permissions: [PERMISSIONS.CASE_READ, PERMISSIONS.CASE_MANAGE] }, c.id);
+      const lookup = graph.nodes.find((n) => n.id === 'lookup')!;
+      expect(lookup.state).toBe('FAILED');
+      expect(lookup.conciseReason).toContain('Quellsystem lehnt die Anfrage ab');
+      expect(lookup.availableActions.map((a) => a.commandKey)).toEqual(['RETRY_STEP']);
+
+      // the connector badge never counts this run as a verified business process
+      const status = await app.get(ConnectorStatusService).getStatus(tenantId, 'GMAIL');
+      expect(status.verifiedRun).toBeNull();
+
+      // a person retries after the source works again → the same run completes and only now becomes verifiable
+      await commands.execute(actor(tenantId), c.id, cmd('RETRY_STEP', row.revision, { stepRunId: 'lookup' }));
+      expect((await caseOf(tenantId, c.id)).orchestrationStatus).toBe('COMPLETED');
+      expect(await prisma.forTenantId(tenantId).intakeEvent.findUniqueOrThrow({ where: { id: intakeEvent.id } })).toMatchObject({ status: 'COMPLETED' });
+      const healed = await app.get(ConnectorStatusService).getStatus(tenantId, 'GMAIL');
+      expect(healed.verifiedRun).toMatchObject({ workflowRunId: c.id });
+      expect(healed.verifiedRun?.workflowKey).toContain('FX_REQUEST');
     });
   });
 
