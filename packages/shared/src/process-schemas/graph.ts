@@ -58,6 +58,8 @@ export interface ActionDescriptor {
   /** Version binding: the case revision this action was computed for. */
   expectedCaseRevision: number;
   targetRef?: string;
+  /** Values the command always carries (e.g. the intent id, or "happened: true") — the user does not type them. */
+  payload?: Record<string, unknown>;
   destructive?: boolean;
   /** `APPROVAL` actions run through the existing approval API, referenced here; commands do not reimplement it. */
   approvalId?: string;
@@ -102,5 +104,44 @@ export interface CaseGraphView {
   attentionReasons: string[];
   nodes: CaseGraphNode[];
   edges: CaseGraphEdge[];
+  availableActions: ActionDescriptor[];
+  /** All plan revisions of the case, oldest first — the revision selector (§16.4). */
+  revisions: Array<{ revision: number; status: string; source: string; createdAt: string; explanation: string; diff: { added: string[]; removed: string[]; changed: string[]; kept: string[] } | null }>;
+  /** The blueprint the case runs on, if any. */
+  blueprint?: { key: string; version: string; title: string };
+}
+
+/** What the user sees before confirming an outgoing message or a quote (§17.2: recipient, text, attachment, amount). */
+export interface ActionPreview {
+  kind: 'COMMUNICATION' | 'QUOTE' | 'GENERIC';
+  recipient?: string;
+  subject?: string;
+  bodyText?: string;
+  attachments?: Array<{ fileName: string; mimeType: string }>;
+  quote?: { number: string; currency: string; netAmount: string; taxAmount: string; grossAmount: string; validUntil: string; priceSource: string; lines: Array<{ name: string; sku: string; quantity: number; unit: string; unitPrice: string; net: string }> };
+  /** Where the prices come from, in business words — e.g. a test data set is labelled as such. */
+  sourceNote?: string;
+}
+
+export interface CaseNodeDetail {
+  nodeId: string;
+  title: string;
+  type: string;
+  state: NodeState;
+  purpose?: string;
+  capability?: { key: string; description: string; sideEffect: string };
+  /** Business explanation of the current state, derived from facts — never raw model output. */
+  stateExplanation: string;
+  attempts: number;
+  startedAt?: string;
+  completedAt?: string;
+  executionMode?: ExecutionMode;
+  error?: { code: string; message: string };
+  inputs: Array<{ name: string; source: string; value?: unknown }>;
+  output?: unknown;
+  facts: Array<{ key: string; value: unknown; status: string; sourceType: string; evidence?: string[] }>;
+  action?: { intentId: string; status: string; purpose?: string; approvalId?: string; payloadHash: string; receipts: Array<{ status: string; providerRef?: string; executionMode: string; at: string }> };
+  wait?: { eventType: string; status: string; deadlineAt?: string };
+  preview?: ActionPreview;
   availableActions: ActionDescriptor[];
 }

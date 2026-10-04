@@ -8,6 +8,8 @@ import { ActionLedgerService } from './action-ledger.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseCommandsController } from './case-commands.controller';
+import { CaseOrchestrationController } from './case-orchestration.controller';
+import { CaseOrchestrationService } from './case-orchestration.service';
 import { CaseCommandsService } from './case-commands.service';
 import { CaseCorrelationService } from './case-correlation.service';
 import { CaseEventsService } from './case-events.service';
@@ -33,7 +35,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
  */
 @Module({
   imports: [AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
-  controllers: [ProcessBlueprintsController, CaseCommandsController],
+  controllers: [ProcessBlueprintsController, CaseCommandsController, CaseOrchestrationController],
   providers: [
     CaseFactsService,
     CaseCorrelationService,
@@ -50,6 +52,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     ReferenceProcessTools,
     DraftEditingService,
     ProcessSweepService,
+    CaseOrchestrationService,
   ],
   exports: [
     CaseFactsService,
@@ -65,6 +68,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     CaseCommandsService,
     ReferenceProcessService,
     ProcessSweepService,
+    CaseOrchestrationService,
   ],
 })
 export class ProcessModule {}

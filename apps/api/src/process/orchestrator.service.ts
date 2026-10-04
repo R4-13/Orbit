@@ -704,7 +704,8 @@ export class OrchestratorService {
 
   // ── Context, leases ─────────────────────────────────────────────────────────
 
-  private async buildEvalContext(tenantId: string, caseRow: Case, graph: PlanGraph): Promise<EvalContext> {
+  /** The evaluation context of the active plan — also used by the read model to decide which edges are taken. */
+  async buildEvalContext(tenantId: string, caseRow: Case, graph: PlanGraph): Promise<EvalContext> {
     const [current, executability, confirmed, blueprint] = await Promise.all([
       this.facts.getCurrent(tenantId, caseRow.id),
       this.capabilities.executabilityFor(tenantId),
