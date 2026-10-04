@@ -16,6 +16,17 @@ function toStopReason(reason: string): LLMStopReason {
   return 'end_turn';
 }
 
+function parseToolArguments(raw: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+  } catch {
+    // fall through to the typed error below
+  }
+  // A malformed tool call is a provider failure, never silently an empty input that a tool could act on.
+  throw new ExternalSystemError('OpenAI returned malformed tool arguments.');
+}
+
 /**
  * §39 des Unified-Evolution-Konzepts ("Provider Adapters") — zweiter
  * echter LLMProvider neben AnthropicLLMProvider, gegen die offizielle
@@ -38,8 +49,10 @@ export class OpenAILLMProvider implements LLMProvider {
   constructor(
     apiKey: string,
     private readonly model: string,
+    /** Injectable for tests; production always builds the official SDK client from the key. */
+    client?: OpenAI,
   ) {
-    this.client = new OpenAI({ apiKey });
+    this.client = client ?? new OpenAI({ apiKey });
   }
 
   get modelName(): string {
@@ -62,7 +75,8 @@ export class OpenAILLMProvider implements LLMProvider {
     try {
       response = await this.client.chat.completions.create({
         model: this.model,
-        max_tokens: request.maxTokens ?? 4096,
+        // `max_tokens` is rejected by current OpenAI models; `max_completion_tokens` is the supported parameter.
+        max_completion_tokens: request.maxTokens ?? 4096,
         messages,
         tools: tools.length > 0 ? tools : undefined,
       });
@@ -78,7 +92,7 @@ export class OpenAILLMProvider implements LLMProvider {
       .map((call) => ({
         toolCallId: call.id,
         toolName: call.function.name,
-        input: JSON.parse(call.function.arguments) as Record<string, unknown>,
+        input: parseToolArguments(call.function.arguments),
       }));
 
     return {
@@ -93,7 +107,7 @@ export class OpenAILLMProvider implements LLMProvider {
     try {
       await this.client.chat.completions.create({
         model: this.model,
-        max_tokens: 1,
+        max_completion_tokens: 16,
         messages: [{ role: 'user', content: 'ping' }],
       });
       return { valid: true };

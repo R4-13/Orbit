@@ -32,6 +32,14 @@ const ACTION_LABELS: Record<string, string> = {
   'task.create': 'Aufgabe anlegen',
   'calendar.read': 'Kalender lesen',
   'email.draft': 'E-Mail-Entwurf erstellen',
+  'email.triage': 'Eingänge semantisch einstufen (KI)',
+  'context.lookup': 'Kontext zum Vorgang lesen',
+  'requirements.resolve': 'Erforderliche Angaben ermitteln',
+  'pricing.resolve': 'Preise aus freigegebener Quelle ermitteln',
+  'quote.create': 'Angebotsentwurf erstellen (intern)',
+  'quote.render': 'Angebotsdokument erzeugen',
+  'email.send.clarification': 'Rückfrage an den Absender senden',
+  'email.send.quote_delivery': 'Angebot an den Kunden senden',
 };
 
 export default function AdminPoliciesPage() {

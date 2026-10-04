@@ -4,6 +4,7 @@ import { AiProvidersModule } from '../ai-providers/ai-providers.module';
 import { AgentDefinitionsModule } from '../agent-definitions/agent-definitions.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { CasesModule } from '../cases/cases.module';
+import { ProcessModule } from '../process/process.module';
 import { StorageModule } from '../storage/storage.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
@@ -15,7 +16,7 @@ import { IntakeService } from './intake.service';
 import { SemanticTriageService } from './semantic-triage.service';
 
 @Module({
-  imports: [AgentModule, AiProvidersModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule],
+  imports: [AgentModule, AiProvidersModule, ProcessModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule],
   controllers: [IntakeController, IntakeDecisionsController],
   providers: [IntakeService, ExecutionEvidenceService, SemanticTriageService, IntakeDecisionsService],
   // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector

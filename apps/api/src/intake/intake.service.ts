@@ -11,6 +11,8 @@ import { AuditService } from '../audit/audit.service';
 import { CasesService } from '../cases/cases.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
+import { CaseFactsService, type FactInput } from '../process/case-facts.service';
+import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
 import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
@@ -35,6 +37,8 @@ interface DomainHandlerResult {
   failureMessage?: string;
   /** An external effect may have happened (Amendment 02 §15.2) — the IntakeEvent needs review, not a retry. */
   outcomeUnknown?: boolean;
+  /** The durable workflow paused for a human approval — the case must say so, not look finished. */
+  waitingForApproval?: boolean;
 }
 
 /** What `persistIntake()` stored — everything a later retry needs, so a pending triage never loses an input. */
@@ -104,6 +108,8 @@ export class IntakeService {
     private readonly prisma: PrismaService,
     private readonly workflowRunner: WorkflowRunnerService,
     private readonly executionEvidence: ExecutionEvidenceService,
+    private readonly facts: CaseFactsService,
+    private readonly lifecycle: CaseLifecycleService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -401,6 +407,28 @@ export class IntakeService {
     }
     await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: businessCase.id, status: 'PROCESSING' } });
 
+    // Universal Case (Amendment 02 §7): goals and intent from the triage, extracted facts as CANDIDATES with their
+    // evidence (never promoted to confirmed here), and an honest process state from the first moment.
+    await this.lifecycle.setGoals(tenantId, businessCase.id, { businessGoals: triage.proposedBusinessGoals, currentIntent: triage.intents[0]?.key });
+    await this.facts.propose(
+      tenantId,
+      businessCase.id,
+      triage.extractedFactCandidates.map(
+        (candidate): FactInput => ({
+          key: candidate.key,
+          value: candidate.value,
+          valueSchemaRef: candidate.valueSchemaRef,
+          unit: candidate.unit,
+          currency: candidate.currency,
+          confidence: candidate.confidence,
+          evidenceRefs: candidate.evidenceRefs,
+          sourceType: 'EMAIL',
+          sourceRef: inboundEmailId,
+        }),
+      ),
+    );
+    await this.lifecycle.transition(tenantId, businessCase.id, { to: 'IN_PROGRESS' }, { type: 'AGENT' });
+
     const handler = this.domainWorkflowHandlers[route];
     let agentRunIds: string[] = [];
     let workflowFailure: string | undefined;
@@ -421,6 +449,12 @@ export class IntakeService {
 
     // The category is routed but the handler had nothing to act on (e.g. an invoice mail without attachment): visible review, not "done".
     if (handled === null) {
+      await this.lifecycle.transition(
+        tenantId,
+        businessCase.id,
+        { to: 'MANUAL_REVIEW', attentionReasons: ['Die Voraussetzungen für den automatischen Ablauf fehlen (z. B. kein Anhang).'] },
+        { type: 'AGENT' },
+      );
       await this.sendToReview(
         tenantId,
         actorUserId,
@@ -430,6 +464,19 @@ export class IntakeService {
         'BUSINESS_ACTIONABLE',
       );
       return { case: businessCase, category: route, agentRunIds, intakeEventId };
+    }
+
+    // The case state follows the real outcome. A legacy domain workflow that succeeded only created records
+    // (e.g. a lead) — that is not a verified completed process (§20.6), so the case stays open.
+    if (workflowFailure) {
+      await this.lifecycle.transition(
+        tenantId,
+        businessCase.id,
+        { to: workflowOutcomeUnknown ? 'MANUAL_REVIEW' : 'FAILED', attentionReasons: [workflowFailure] },
+        { type: 'AGENT' },
+      );
+    } else if (handled?.waitingForApproval) {
+      await this.lifecycle.transition(tenantId, businessCase.id, { to: 'WAITING_FOR_APPROVAL', attentionReasons: ['Eine Freigabe ist offen.'] }, { type: 'AGENT' });
     }
 
     // A failed workflow is not a completed intake — without this the IntakeEvent (and anything
@@ -686,6 +733,7 @@ export class IntakeService {
       agentRunId: result.steps[0]?.agentRunId,
       failureMessage,
       outcomeUnknown: result.steps.some((step) => step.status === 'OUTCOME_UNKNOWN'),
+      waitingForApproval: result.status === 'WAITING_FOR_APPROVAL',
     };
   }
 

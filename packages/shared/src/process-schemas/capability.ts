@@ -1,0 +1,179 @@
+import { z } from 'zod';
+
+/**
+ * Amendment 02 §9 — the business view of what ORBIT can really do. A
+ * capability is a *catalogue entry that names tested implementations*; it
+ * holds no business rules of its own and is not a second tool platform
+ * (§4: "Der neue Capability-Katalog ist eine fachliche Sicht auf die
+ * bestehende Tool Registry und Amendment-01-Capabilities"). Whether it is
+ * executable for a tenant is decided per tenant at runtime (§9.2).
+ */
+export const CapabilityDefinitionSchema = z
+  .object({
+    key: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/),
+    version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    description: z.string().min(1).max(400),
+    inputSchemaRef: z.string().min(1).max(120),
+    outputSchemaRef: z.string().min(1).max(120),
+    preconditionSchemaRef: z.string().max(120).optional(),
+    /** RBAC permissions the executing identity needs (the same strings as PERMISSIONS). */
+    permissionKeys: z.array(z.string().min(1)).max(10),
+    /** Policy action governing the capability; a purpose can refine it (see `policyActionByPurpose`). */
+    policyAction: z.string().min(1),
+    /** e.g. an outbound mail's policy differs for a clarification question and a quote delivery. */
+    policyActionByPurpose: z.record(z.string().max(60), z.string().min(1)).optional(),
+    sideEffect: z.enum(['NONE', 'INTERNAL_WRITE', 'EXTERNAL_WRITE']),
+    riskClass: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+    /** Names in the existing ToolRegistry that implement this capability. */
+    toolBindings: z.array(z.string().min(1)).min(1).max(5),
+    agentBindings: z.array(z.object({ key: z.string().min(1), version: z.string().min(1) }).strict()).max(5).optional(),
+    /** The connection the capability needs: connector type plus the granted capability string (Amendment 01 §9). */
+    connectorRequirements: z.array(z.object({ connectorType: z.string().min(1), capability: z.string().min(1) }).strict()).max(5).optional(),
+    idempotencyStrategy: z.enum(['NONE', 'PAYLOAD_HASH', 'PROVIDER_KEY']),
+    confirmationStrategy: z.enum(['NONE', 'TOOL_RESULT', 'PROVIDER_RECEIPT']),
+    timeoutMs: z.number().int().positive().max(10 * 60_000),
+    retryPolicyRef: z.string().min(1).max(60),
+    compensationCapability: z.string().max(120).optional(),
+  })
+  .strict();
+export type CapabilityDefinition = z.infer<typeof CapabilityDefinitionSchema>;
+
+/**
+ * The capabilities the reference process uses. Tool names refer to tools that
+ * are registered in the ToolRegistry (the registry validates that at startup,
+ * so this list cannot silently drift from reality). Descriptions are business
+ * wording; no prices, customers or addresses live here (§0.2).
+ */
+export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
+  {
+    key: 'context.lookup',
+    version: '1.0.0',
+    description: 'Liest berechtigte, bereits vorhandene Informationen zum Absender oder Vorgang (CRM, frühere Kommunikation) mit Herkunft und Aktualität.',
+    inputSchemaRef: 'schema/context-lookup-input/1',
+    outputSchemaRef: 'schema/context-lookup-result/1',
+    permissionKeys: ['case.read'],
+    policyAction: 'context.lookup',
+    sideEffect: 'NONE',
+    riskClass: 'LOW',
+    toolBindings: ['resolve_context'],
+    idempotencyStrategy: 'NONE',
+    confirmationStrategy: 'NONE',
+    timeoutMs: 15_000,
+    retryPolicyRef: 'read-default',
+  },
+  {
+    key: 'requirements.resolve',
+    version: '1.0.0',
+    description: 'Ermittelt aus freigegebenen Fach- und Katalogregeln, welche Angaben für die konkrete Leistung zusätzlich erforderlich sind.',
+    inputSchemaRef: 'schema/requirements-resolve-input/1',
+    outputSchemaRef: 'schema/requirements-resolve-result/1',
+    permissionKeys: ['case.read'],
+    policyAction: 'requirements.resolve',
+    sideEffect: 'NONE',
+    riskClass: 'LOW',
+    toolBindings: ['resolve_requirements'],
+    idempotencyStrategy: 'NONE',
+    confirmationStrategy: 'NONE',
+    timeoutMs: 15_000,
+    retryPolicyRef: 'read-default',
+  },
+  {
+    key: 'communication.draft',
+    version: '1.0.0',
+    description: 'Bereitet eine Nachricht an einen verifizierten Empfänger als Entwurf vor, ohne sie zuzustellen.',
+    inputSchemaRef: 'schema/communication-draft-input/1',
+    outputSchemaRef: 'schema/communication-draft-result/1',
+    permissionKeys: ['email.send'],
+    policyAction: 'email.draft',
+    sideEffect: 'INTERNAL_WRITE',
+    riskClass: 'LOW',
+    toolBindings: ['draft_communication'],
+    idempotencyStrategy: 'PAYLOAD_HASH',
+    confirmationStrategy: 'TOOL_RESULT',
+    timeoutMs: 60_000,
+    retryPolicyRef: 'write-default',
+  },
+  {
+    key: 'email.send',
+    version: '1.0.0',
+    description: 'Versendet einen freigegebenen Entwurf über das verbundene Postfach und speichert den Versandnachweis.',
+    inputSchemaRef: 'schema/email-send-input/1',
+    outputSchemaRef: 'schema/email-send-result/1',
+    permissionKeys: ['email.send'],
+    policyAction: 'email.send.clarification',
+    // A question to the sender and the delivery of a quote are different risks and are governed separately (§14.2).
+    policyActionByPurpose: { CLARIFICATION: 'email.send.clarification', QUOTE_DELIVERY: 'email.send.quote_delivery' },
+    sideEffect: 'EXTERNAL_WRITE',
+    riskClass: 'HIGH',
+    toolBindings: ['send_communication'],
+    connectorRequirements: [{ connectorType: 'GMAIL', capability: 'email.send' }],
+    idempotencyStrategy: 'PAYLOAD_HASH',
+    confirmationStrategy: 'PROVIDER_RECEIPT',
+    timeoutMs: 60_000,
+    retryPolicyRef: 'external-write',
+  },
+  {
+    key: 'pricing.resolve',
+    version: '1.0.0',
+    description: 'Ermittelt Preise und Bedingungen ausschließlich aus einer freigegebenen Preisquelle; ohne Quelle gibt es keinen Preis.',
+    inputSchemaRef: 'schema/pricing-resolve-input/1',
+    outputSchemaRef: 'schema/pricing-resolve-result/1',
+    permissionKeys: ['case.read'],
+    policyAction: 'pricing.resolve',
+    sideEffect: 'NONE',
+    riskClass: 'MEDIUM',
+    toolBindings: ['resolve_price'],
+    idempotencyStrategy: 'NONE',
+    confirmationStrategy: 'NONE',
+    timeoutMs: 15_000,
+    retryPolicyRef: 'read-default',
+  },
+  {
+    key: 'quote.create',
+    version: '1.0.0',
+    description: 'Erstellt einen internen Angebotsentwurf aus geprüften Fakten und Preisen; die Nummer vergibt ein Nummerndienst, nie die KI.',
+    inputSchemaRef: 'schema/quote-create-input/1',
+    outputSchemaRef: 'schema/quote-create-result/1',
+    permissionKeys: ['case.manage'],
+    policyAction: 'quote.create',
+    sideEffect: 'INTERNAL_WRITE',
+    riskClass: 'MEDIUM',
+    toolBindings: ['create_quote'],
+    idempotencyStrategy: 'PAYLOAD_HASH',
+    confirmationStrategy: 'TOOL_RESULT',
+    timeoutMs: 30_000,
+    retryPolicyRef: 'write-default',
+  },
+  {
+    key: 'quote.render',
+    version: '1.0.0',
+    description: 'Erzeugt aus einem validierten Angebot das versandfertige Dokument.',
+    inputSchemaRef: 'schema/quote-render-input/1',
+    outputSchemaRef: 'schema/quote-render-result/1',
+    permissionKeys: ['case.manage'],
+    policyAction: 'quote.render',
+    sideEffect: 'INTERNAL_WRITE',
+    riskClass: 'LOW',
+    toolBindings: ['render_quote'],
+    idempotencyStrategy: 'PAYLOAD_HASH',
+    confirmationStrategy: 'TOOL_RESULT',
+    timeoutMs: 30_000,
+    retryPolicyRef: 'write-default',
+  },
+  {
+    key: 'task.create',
+    version: '1.0.0',
+    description: 'Legt eine fachliche Aufgabe für eine berechtigte Person an (manuelle Prüfung oder Eingabe).',
+    inputSchemaRef: 'schema/task-create-input/1',
+    outputSchemaRef: 'schema/task-create-result/1',
+    permissionKeys: ['task.manage'],
+    policyAction: 'task.create',
+    sideEffect: 'INTERNAL_WRITE',
+    riskClass: 'LOW',
+    toolBindings: ['create_task'],
+    idempotencyStrategy: 'PAYLOAD_HASH',
+    confirmationStrategy: 'TOOL_RESULT',
+    timeoutMs: 15_000,
+    retryPolicyRef: 'write-default',
+  },
+];

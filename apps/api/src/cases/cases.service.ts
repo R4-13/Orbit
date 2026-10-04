@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotFoundError } from '@orbit/shared';
+import { NotFoundError, ORCHESTRATION_STATUS_FOR_SIMPLE } from '@orbit/shared';
 import type { Case, CaseStatus, CaseType } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -87,9 +87,16 @@ export class CasesService {
   ): Promise<Case> {
     const existing = await this.findOne(tenantId, id);
 
+    // A person sets the simple status: keep the fine-grained state consistent through the one mapping table,
+    // and record that a manual DONE is a human close, not a verified process completion (Amendment 02 §12.1/§20.6).
     const updated = await this.prisma.forTenantId(tenantId).case.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        orchestrationStatus: ORCHESTRATION_STATUS_FOR_SIMPLE[status],
+        revision: { increment: 1 },
+        ...(status === 'DONE' ? { completedAt: new Date(), outcome: { code: 'MANUALLY_CLOSED', evidenceRefs: [] } } : {}),
+      },
     });
 
     await this.audit.record({

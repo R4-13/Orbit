@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
+import type { Case } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,19 +21,19 @@ export class CasesController {
 
   @Post()
   @RequirePermissions(PERMISSIONS.CASE_MANAGE)
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateCaseDto) {
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateCaseDto): Promise<Case> {
     return this.casesService.create(user.tenantId, user.id, dto);
   }
 
   @Get()
   @RequirePermissions(PERMISSIONS.CASE_READ)
-  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryCasesDto) {
+  findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryCasesDto): Promise<Case[]> {
     return this.casesService.findAll(user.tenantId, query);
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.CASE_READ)
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Case> {
     return this.casesService.findOne(user.tenantId, id);
   }
 
@@ -42,7 +43,7 @@ export class CasesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateCaseStatusDto,
-  ) {
+  ): Promise<Case> {
     return this.casesService.updateStatus(user.tenantId, id, user.id, dto.status);
   }
 }

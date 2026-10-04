@@ -69,6 +69,8 @@ enum ActorType {
 enum CaseType {
   FINANCE
   SALES
+  /// Amendment 02 §7.1 — domänen-neutraler Case (z. B. Review-Case für ein unbekanntes Ziel); trägt keine eigene Fachlogik.
+  GENERAL
 }
 
 enum CaseStatus {
@@ -325,6 +327,8 @@ model Tenant {
   @@map("tenants")
   mockCrmRecords MockCrmRecord[]
   intakeDecisions IntakeDecision[]
+  caseFacts       CaseFact[]
+  caseCorrelations CaseCorrelation[]
 }
 
 model User {
@@ -475,6 +479,20 @@ model Case {
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
+  // --- Amendment 02 §7.1 Universal Case (additiv; `status` bleibt die bestehende, einfache UI-Sicht) ---
+  /// Feingranularer Prozesszustand (§12.1). `status` wird daraus über `caseStatusFor()` (@orbit/shared) abgeleitet: eine Mapping-Tabelle, kein zweiter Statusautomat im Frontend.
+  orchestrationStatus CaseOrchestrationStatus @default(RECEIVED) @map("orchestration_status")
+  /// Monoton steigend bei jeder fachlichen Änderung; Commands und Events prüfen dagegen (§12.3, §21.2).
+  revision            Int                     @default(1)
+  businessGoals       String[]                @default([]) @map("business_goals")
+  currentIntent       String?                 @map("current_intent")
+  attentionReasons    String[]                @default([]) @map("attention_reasons")
+  blueprintKey        String?                 @map("blueprint_key")
+  blueprintVersion    String?                 @map("blueprint_version")
+  /// Nur gesetzt, wenn die Abschlusskriterien nachweislich erfüllt sind: `{ code, evidenceRefs }`.
+  outcome             Json?
+  completedAt         DateTime?               @map("completed_at")
+
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignee User?  @relation("CaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
@@ -486,9 +504,12 @@ model Case {
   agentRuns     AgentRun[]
   workflowRuns  WorkflowRun[]
   intakeEvents  IntakeEvent[]
+  facts         CaseFact[]
+  correlations  CaseCorrelation[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
+  @@index([tenantId, orchestrationStatus])
   @@map("cases")
 }
 
@@ -1591,4 +1612,105 @@ model IntakeDecision {
   @@index([tenantId, status])
   @@index([tenantId, appliedRelevance])
   @@map("intake_decisions")
+}
+
+// ============================================================================
+// Business Process Framework: Universal Case, Facts, Correlation (Amendment 02 §7, §12, §13)
+// ============================================================================
+
+/// §12.1 Prozesszustand eines Cases. Mapping auf `CaseStatus` über `caseStatusFor()` (@orbit/shared).
+enum CaseOrchestrationStatus {
+  RECEIVED
+  READY
+  IN_PROGRESS
+  WAITING_FOR_INFORMATION
+  WAITING_FOR_APPROVAL
+  WAITING_FOR_EXTERNAL_SYSTEM
+  PAUSED
+  MANUAL_REVIEW
+  COMPLETED
+  REJECTED
+  CANCELLED
+  FAILED
+}
+
+enum CaseFactStatus {
+  CANDIDATE
+  CONFIRMED
+  CONFLICTED
+  STALE
+  REJECTED
+}
+
+enum CaseFactSourceType {
+  EMAIL
+  ATTACHMENT
+  SYSTEM_OF_RECORD
+  CONFIGURATION
+  HUMAN
+}
+
+/// §7.2 Ein Fakt mit Herkunft. Append-only: eine Änderung legt eine neue Zeile an (`revision` + `supersedesFactId`),
+/// die alte bleibt als Historie erhalten (`isCurrent=false`). Widersprüchliche aktuelle Werte zu einem Schlüssel
+/// stehen gemeinsam auf CONFLICTED, bis ein Mensch auflöst; der letzte Eingang gewinnt nie stillschweigend.
+model CaseFact {
+  id               String             @id @default(uuid())
+  tenantId         String             @map("tenant_id")
+  caseId           String             @map("case_id")
+  key              String
+  value            Json
+  valueSchemaRef   String?            @map("value_schema_ref")
+  unit             String?
+  currency         String?
+  status           CaseFactStatus
+  sourceType       CaseFactSourceType @map("source_type")
+  sourceRef        String?            @map("source_ref")
+  evidenceRefs     String[]           @default([]) @map("evidence_refs")
+  observedAt       DateTime           @default(now()) @map("observed_at")
+  validAsOf        DateTime?          @map("valid_as_of")
+  expiresAt        DateTime?          @map("expires_at")
+  confidence       Float?
+  /// Wer oder was den Fakt bestätigt hat (Benutzer-ID, `schema`, `system-of-record`).
+  verifiedBy       String?            @map("verified_by")
+  revision         Int                @default(1)
+  supersedesFactId String?            @map("supersedes_fact_id")
+  isCurrent        Boolean            @default(true) @map("is_current")
+  sensitivity      String?
+  retentionClass   String?            @map("retention_class")
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, caseId, key, isCurrent])
+  @@index([caseId, isCurrent])
+  @@map("case_facts")
+}
+
+enum CaseCorrelationStatus {
+  MATCHED
+  AMBIGUOUS
+  NONE
+  OVERRIDDEN
+}
+
+/// §13.1 Wie ein Eingang einem Case zugeordnet wurde oder warum nicht: angewandte Regel, Kandidaten, Status.
+/// Betreff oder Absenderadresse allein reichen nie für ein automatisches Zusammenführen.
+model CaseCorrelation {
+  id               String                @id @default(uuid())
+  tenantId         String                @map("tenant_id")
+  emailMessageId   String                @unique @map("email_message_id")
+  caseId           String?               @map("case_id")
+  status           CaseCorrelationStatus
+  /// z. B. IN_REPLY_TO, REFERENCES, PROVIDER_THREAD, SEMANTIC_SUGGESTION, NONE
+  rule             String
+  candidateCaseIds String[]              @default([]) @map("candidate_case_ids")
+  note             String?
+  createdAt        DateTime              @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, caseId])
+  @@map("case_correlations")
 }

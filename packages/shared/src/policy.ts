@@ -53,6 +53,20 @@ export const POLICY_ACTIONS = {
   COPILOT_READ: 'copilot.read',
   /** Channel Event Runtime — die Relevanz-/Triage-Einstufung (BUSINESS_ACTIONABLE/.../UNKNOWN_REQUIRES_REVIEW), die JEDEM eingehenden Intake-Event vorausgeht. Reine Klassifikation ohne Seiteneffekt, daher wie EMAIL_CLASSIFY AUTONOMOUS. */
   EMAIL_TRIAGE: 'email.triage',
+  /** Business Process Framework (Amendment 02 §9): read-only context/requirement/price lookups and internal artifacts. */
+  CONTEXT_LOOKUP: 'context.lookup',
+  REQUIREMENTS_RESOLVE: 'requirements.resolve',
+  PRICING_RESOLVE: 'pricing.resolve',
+  QUOTE_CREATE: 'quote.create',
+  QUOTE_RENDER: 'quote.render',
+  /**
+   * Outbound mail to a customer is split by purpose (§14.2): a question for missing information and the delivery of a
+   * quote are different risks. Both default to REQUIRE_APPROVAL — the safe baseline of §14.2; a tenant explicitly
+   * enables autonomy per purpose (a clarification may be autonomous, a quote delivery stays approval-bound until a
+   * checked tenant policy says otherwise).
+   */
+  EMAIL_SEND_CLARIFICATION: 'email.send.clarification',
+  EMAIL_SEND_QUOTE_DELIVERY: 'email.send.quote_delivery',
 } as const;
 
 export type PolicyActionKey = (typeof POLICY_ACTIONS)[keyof typeof POLICY_ACTIONS];
@@ -88,4 +102,11 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.EMAIL_DRAFT]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.COPILOT_READ]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.EMAIL_TRIAGE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.CONTEXT_LOOKUP]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.REQUIREMENTS_RESOLVE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.PRICING_RESOLVE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.QUOTE_CREATE]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.QUOTE_RENDER]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: { mode: 'REQUIRE_APPROVAL' },
 };
