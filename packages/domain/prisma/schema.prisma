@@ -301,6 +301,8 @@ model Tenant {
   workflowStepDefinitions WorkflowStepDefinition[]
   workflowRuns            WorkflowRun[]
   workflowStepRuns        WorkflowStepRun[]
+  connectorSyncs          ConnectorSync[]
+  intakeEvents            IntakeEvent[]
 
   @@map("tenants")
 }
@@ -463,6 +465,7 @@ model Case {
   leads         Lead[]
   agentRuns     AgentRun[]
   workflowRuns  WorkflowRun[]
+  intakeEvents  IntakeEvent[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -531,8 +534,9 @@ model EmailMessage {
   sentAt            DateTime?      @map("sent_at")
   createdAt         DateTime       @default(now()) @map("created_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case        Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  intakeEvent IntakeEvent?
 
   @@unique([tenantId, providerMessageId])
   @@index([tenantId, direction])
@@ -832,6 +836,8 @@ model Integration {
   updatedAt                     DateTime                 @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connectorSync ConnectorSync?
+  intakeEvents  IntakeEvent[]
 
   @@unique([tenantId, connectorType])
   @@map("integrations")
@@ -857,6 +863,141 @@ model IntegrationCredentialSecret {
 
   @@index([tenantId])
   @@map("integration_credential_secrets")
+}
+
+// ============================================================================
+// Channel Event Runtime (Intake)
+// ============================================================================
+
+/// §10 der Master-Spezifikation listet `ConnectorSync` als eigenes Modell,
+/// getrennt von `Integration` — `Integration` bleibt Authentifizierungs-/
+/// Konfigurationszustand (OAuth-Tokens via `credentialReference`,
+/// nicht-geheime Konfiguration via `config: Json?`), `ConnectorSync` ist
+/// der sich bei jedem Sync-Versuch ändernde Laufzeitzustand (Cursor,
+/// Zeitpunkte, Fehlerzähler). Eine Zeile pro `Integration`
+/// (`@@unique([tenantId, connectionId])`) — ohne Zeile hat diese
+/// Connection noch nie synchronisiert.
+enum ConnectorSyncMode {
+  WEBHOOK
+  POLLING
+  ON_DEMAND
+  BATCH
+}
+
+enum ConnectorSyncStatus {
+  IDLE
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model ConnectorSync {
+  id            String              @id @default(uuid())
+  tenantId      String              @map("tenant_id")
+  connectionId  String              @unique @map("connection_id")
+  connectorType IntegrationConnectorType @map("connector_type")
+  syncMode      ConnectorSyncMode   @map("sync_mode")
+  /// Opaker Fortsetzungspunkt (z. B. die zuletzt gesehene Gmail-Message-ID) — vom jeweiligen Channel-Poll-Adapter interpretiert, nie vom generischen Sync-Runtime selbst geparst.
+  cursor        String?
+  status        ConnectorSyncStatus @default(IDLE)
+  lastAttemptAt DateTime?           @map("last_attempt_at")
+  lastSuccessAt DateTime?           @map("last_success_at")
+  nextRunAt     DateTime?           @map("next_run_at")
+  retryCount    Int                 @default(0) @map("retry_count")
+  lastErrorCode String?             @map("last_error_code")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection Integration @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, nextRunAt])
+  @@map("connector_syncs")
+}
+
+enum IntakeChannel {
+  EMAIL
+  /// Der manuelle "Eingehende E-Mail simulieren"-Pfad auf /inbox — bewusst ein eigener Channel-Wert statt `EMAIL`, damit echte und simulierte Events im Audit/Reporting unterscheidbar bleiben, obwohl beide denselben `IntakeService.handleIntakeEvent()`-Pfad durchlaufen.
+  SIMULATED
+}
+
+/// Channel-unabhängige Relevanz-Einstufung, VOR jeder Domain-Klassifikation
+/// (FINANCE/SALES/OTHER) — entkoppelt "ist das überhaupt geschäftlich
+/// relevant" von "zu welcher Domäne gehört es". Gilt identisch für
+/// künftige Nicht-E-Mail-Kanäle (Telefon, Web, Messenger).
+enum IntakeRelevance {
+  BUSINESS_ACTIONABLE
+  BUSINESS_INFORMATIONAL
+  NON_ACTIONABLE
+  PRIVATE_PERSONAL
+  UNKNOWN_REQUIRES_REVIEW
+}
+
+enum IntakeEventStatus {
+  RECEIVED
+  TRIAGED
+  ROUTED
+  PROCESSING
+  COMPLETED
+  SKIPPED_NON_ACTIONABLE
+  NEEDS_REVIEW
+  FAILED
+}
+
+/// Der normalisierte, channel-unabhängige Orchestrierungs-Datensatz für
+/// jedes eingehende externe Ereignis (§7 des Integration-Framework-
+/// Amendments, §12-17/§29 der Master-Spezifikation). Bewusst **kein**
+/// Duplikat der vollständigen Quelldaten — der E-Mail-Body bleibt
+/// ausschließlich auf `EmailMessage` (via `emailMessageId`-Referenz),
+/// Anhänge bleiben auf `Document` (via `documentIds`-Referenzliste, keine
+/// eigene FK-Beziehung pro Eintrag — dieselbe lose Referenzkonvention wie
+/// `EmailMessage.toAddresses: String[]`). `IntakeEvent` trägt nur, was der
+/// Orchestrierungs-/Triage-/Routing-Entscheidungspfad selbst braucht.
+model IntakeEvent {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  /// `Integration.id` — null beim SIMULATED-Channel (kein echter Connector dahinter).
+  connectionId    String?   @map("connection_id")
+  channel         IntakeChannel
+  /// z. B. "gmail" | "simulated" — freier String statt Enum, damit neue Provider keine Migration brauchen (vgl. `ConnectorMetadata.provider` in packages/integration-core).
+  provider        String
+  /// Die eigene Ereignis-/Nachrichten-ID des Providers (z. B. Gmail-Message-ID) — zusammen mit `tenantId`+`provider` die Idempotenz-Grenze, siehe `@@unique` unten. Bei SIMULATED eine generierte UUID.
+  externalEventId String    @map("external_event_id")
+  occurredAt      DateTime  @map("occurred_at")
+
+  /// `PartyReference`-JSON ({address?, displayName?}) — bewusst JSON statt fester E-Mail-Spalten, damit künftige Kanäle (Telefon: Nummer statt Adresse) keine neue Spalte brauchen.
+  senderRef       Json?     @map("sender_ref")
+  recipientRefs   Json?     @map("recipient_refs")
+  subject         String?
+
+  /// Verweis auf den vollständigen Quelldatensatz — der Body bleibt dort, nicht hier dupliziert.
+  emailMessageId  String?   @unique @map("email_message_id")
+  documentIds     String[]  @map("document_ids")
+
+  relevance       IntakeRelevance?
+  /// Bewusst ein freier String statt eines harten Enums (nur FINANCE/SALES/OTHER heute) — neue Domänen dürfen ohne Schema-Migration hinzukommen.
+  domainCategory  String?   @map("domain_category")
+  caseId          String?   @map("case_id")
+  /// Korrelation zum durablen WorkflowRun, sobald Increment G (Finance/Sales über WorkflowDefinition) steht — bis dahin stets null, da `IntakeService` Finance/Sales noch über den bestehenden `runAgentTurn()`-Pfad ausführt, nicht über den Workflow-Runner.
+  workflowRunId   String?   @map("workflow_run_id")
+
+  status          IntakeEventStatus @default(RECEIVED)
+  errorMessage    String?   @map("error_message")
+
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection   Integration?  @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  emailMessage EmailMessage? @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
+  case         Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  workflowRun  WorkflowRun?  @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, externalEventId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("intake_events")
 }
 
 /// §35-44 des Unified-Evolution-Konzepts ("LLM Provider Strategy") — BYOK-
@@ -1224,6 +1365,7 @@ model WorkflowRun {
   workflowDefinition WorkflowDefinition @relation(fields: [workflowDefinitionId], references: [id], onDelete: Cascade)
   case               Case?              @relation(fields: [caseId], references: [id], onDelete: SetNull)
   stepRuns           WorkflowStepRun[]
+  intakeEvents       IntakeEvent[]
 
   @@index([tenantId, status])
   @@map("workflow_runs")
