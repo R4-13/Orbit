@@ -133,6 +133,10 @@ export class IntakeService {
       subject: input.subject,
       content: input.bodyText,
       attachments: input.attachment ? [input.attachment] : undefined,
+      threadId: input.threadId,
+      rfcMessageId: input.rfcMessageId,
+      inReplyTo: input.inReplyTo,
+      references: input.references,
     };
     return this.handleIntakeEvent(tenantId, actorUserId, event);
   }

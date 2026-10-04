@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsEmail, IsIn, IsNotEmpty, IsOptional, IsString, ValidateNested, MaxLength } from 'class-validator';
 import { SIMULATED_TRIAGE_SCENARIOS, type SimulatedTriageScenario } from '@orbit/shared';
 
 export class EmailAttachmentDto {
@@ -54,4 +54,29 @@ export class IncomingEmailDto {
   @IsOptional()
   @IsIn(SIMULATED_TRIAGE_SCENARIOS)
   simulatedTriageScenario?: SimulatedTriageScenario;
+
+  /**
+   * Threading headers, so a simulated REPLY can be correlated to the case it answers exactly like a real one
+   * (strong reference In-Reply-To / thread — never by subject or sender alone).
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  threadId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  rfcMessageId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  inReplyTo?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(300, { each: true })
+  references?: string[];
 }

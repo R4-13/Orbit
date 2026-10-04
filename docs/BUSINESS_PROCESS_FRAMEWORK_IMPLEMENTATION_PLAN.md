@@ -93,36 +93,42 @@ Knotendetails, Commands, Timeline-Alternative, Inbox-/Dashboard-Link statt „Zu
 Drei Referenzpfade, Antwort-/Resume-Zyklus, Restart-/Concurrency-/Duplikat-/Security-Tests, zweiter Tenant + zweiter Blueprint
 ohne Kernänderung, Ad-hoc → Review.
 
-## 5. Akzeptanzkriterien → Plan (Status wird fortlaufend gepflegt)
+## 5. Akzeptanzkriterien → Stand (implementiert / automatisiert getestet / live nachgewiesen)
 
-| ID | Status vor Start | Zuordnung |
-|---|---|---|
-| BP-01 | PARTIAL → Code/Pfad ✅ (BP-1a): Triage über Provider-Resolver/AgentRuntime, Mock sichtbar getrennt (SIMULATED, Fixtures). **Live BLOCKED_BY_EXTERNAL_CREDENTIALS** (kein LLM-Key); Modellprofile fehlen | BP-1 |
-| BP-02 | PARTIAL → `IntakeDecision`, Thread-/Body-Daten ✅ (BP-1a); generischer Case, Facts, Correlation **offen** (BP-1b) | BP-1 |
-| BP-03 | MISSING | BP-2 |
-| BP-04 | MISSING | BP-2 |
-| BP-05 | MISSING | BP-2 |
-| BP-06 | MISSING | BP-2/3 |
-| BP-07 | MISSING (kein Gmail-Senden) → live BLOCKED (Scope/Einwilligung) | BP-3 |
-| BP-08 | MISSING | BP-3 |
-| BP-09 | MISSING | BP-3 |
-| BP-10 | PARTIAL (Policy/Approval vorhanden, keine Bindung) | BP-2/3 |
-| BP-11 | ✅ implementiert + automatisiert getestet (`triage-resilience`: kein Prozess, keine Aktion bei Ausschluss) | BP-1 |
-| BP-12 | PARTIAL: API `GET /intake-decisions?view=EXCLUDED` ✅ getestet; **UI „Kein Geschäftsprozess ausgelöst" und Produktiv-Standard „ausgeblendet" offen** (BP-3) | BP-1/3 |
-| BP-13 | ✅ implementiert + getestet: unsicher / nicht konfigurierte Kategorie / fehlende Voraussetzung → sichtbare Prüfaufgabe | BP-1 |
-| BP-14 | MISSING („Zugewiesener Agent" auf Dashboard) | BP-3 |
-| BP-15–17 | MISSING | BP-3 |
-| BP-18 | PARTIAL (Sonde nutzt gleiche Policy) | BP-3 |
-| BP-19 | PARTIAL (BullMQ/Postgres vorhanden, keine Wait/Resume-Subscriptions) | BP-2 |
-| BP-20/21 | MISSING (kein Ledger) | BP-2 |
-| BP-22 | MISSING | BP-2 |
-| BP-23 | PARTIAL → **Gate G1/G5** | G |
-| BP-24/25 | MISSING | BP-4 |
-| BP-26 | MISSING | BP-3 |
-| BP-27 | PARTIAL → **G2–G4** | G |
-| BP-28 | ALREADY_COMPLETE (Zahlungen gesperrt, RLS, Policy-Locks) | laufend prüfen |
-| BP-29 | PARTIAL | laufend |
-| BP-30 | PARTIAL | laufend |
+Drei Aussagen, bewusst getrennt: **implementiert** (Code vorhanden), **automatisiert getestet** (Unit/E2E, Modell und Mail als Doubles), **live** (im laufenden Docker-System mit echtem Modell nachgewiesen). Fehlende externe Voraussetzungen stehen als Blocker, nie als „live“.
+
+| ID | Implementiert | Automatisiert getestet | Live nachgewiesen | Offen / Blocker |
+|---|---|---|---|---|
+| BP-01 | ja | ja (Mock-getrennt, Fixtures) | **ja** – Triage mit `gpt-6-luna` (`mode=LIVE`, Newsletter/Anfrage/Injection) am 2026-10-04 | Modellprofile/Evaluationskatalog fehlen |
+| BP-02 | ja | ja (`case-facts-and-correlation`) | ja (Anfrage → Case mit Fakten live) |  |
+| BP-03 | ja (Registry, Lebenszyklus, Hash, Aktivierung) | ja (`process-orchestration`) | siehe Live-Abschnitt |  |
+| BP-04 | ja (Planer/Capability-Bindung) | ja (Validator + E2E zwei Prozesse) | – | KI-Planer live nur durch Stichproben |
+| BP-05 | ja (11 Prüfungen) | ja (47+ Unit, E2E Ad-hoc-Gate) | – |  |
+| BP-06 | ja (Blueprint-`requiredFacts`, Regeln und Preise als Daten) | ja (`reference-process`) | siehe Live-Abschnitt | Preisquelle = Test-SoR |
+| BP-07 | ja (Rückfrage-Entwurf, Freigabe, Gmail-Versand) | ja (mit Mail-Double), Gmail-Versand per Unit | **BLOCKIERT** für echten Versand: braucht Zustimmung „Sendeberechtigung erteilen“ (`gmail.send`); im Testbetrieb **simuliert** | Echter Versand nicht live belegt |
+| BP-08 | ja (Korrelation, WaitSubscription, Fortsetzung) | ja (`reference-process`, Sweep) | simuliert live; echte Antwort-Mail nicht ausgelöst |  |
+| BP-09 | ja (Preis → Angebot → PDF → Freigabe → Versand) | ja | siehe Live-Abschnitt | Versand simuliert |
+| BP-10 | ja (Policy je Zweck, Freigabe an Nutzlast-Hash) | ja | siehe Live-Abschnitt |  |
+| BP-11 | ja | ja (`triage-resilience`) | **ja** (Newsletter: keine Aktion) |  |
+| BP-12 | ja (API + UI-Bereich, Produktivstandard „ausgeblendet“) | API getestet; Sichtbarkeit per Konfig | siehe Live-Abschnitt |  |
+| BP-13 | ja | ja | **ja** (Prompt-Injection → Prüfung) |  |
+| BP-14 | ja (Dashboard/Case) | Typecheck/Lint; Browser siehe Live-Abschnitt | siehe Live-Abschnitt | Posteingangs-Tabelle: Link über Mail-Zeile in Dashboard |
+| BP-15 | ja (Ebenen Gesamt/Tatsächlich/Definition, Kantenstatus) | ja (`case-orchestration-view`) | siehe Live-Abschnitt |  |
+| BP-16 | ja (Details, Vorschau, Evidenz, Receipts) | ja | siehe Live-Abschnitt |  |
+| BP-17 | ja (alle Commands) | ja (Commands, 409, Replay) | siehe Live-Abschnitt |  |
+| BP-18 | ja (Server prüft Berechtigung/Revision) | ja (Berechtigungen, Fremdmandant) | – | Sonde hat keinen Case-Kontext |
+| BP-19 | ja (Sweep, Lease, Events in Postgres) | ja (Restart/Frist/Lease) | – |  |
+| BP-20 | ja (Ledger, Exactly-once-Dispatch) | ja (parallele advance, Replay) | – |  |
+| BP-21 | ja | ja (`OUTCOME_UNKNOWN`, Abgleich) | nicht live erzwingbar |  |
+| BP-22 | ja (Revisionen, Diff, Freigabe-Invalidierung) | ja (Edit → neue Freigabe, Plan-Gate) | – | Replan-Loop-Schleifen nur über Revisionen |
+| BP-23 | ja | ja (Tool → Node → Case → Intake → Graph → Badge) | Teil live (Gate G) |  |
+| BP-24 | ja | ja (zweiter Mandant + zweiter Blueprint, Fixture-Capabilities) | – |  |
+| BP-25 | ja | ja (Ad-hoc-Plan, Bestätigung, Ablehnung) | – |  |
+| BP-26 | ja (Liste als Alternative, ARIA, Responsivität) | Typecheck/Lint; Browser siehe Live-Abschnitt | siehe Live-Abschnitt | Kein automatisierter UI-Test (Playwright) |
+| BP-27 | ja | ja | Teil live (Gate G, KI-Status) |  |
+| BP-28 | ja | bestehende Tests grün | – |  |
+| BP-29 | ja | ja (siehe Abschlussbericht) | – |  |
+| BP-30 | ja | – | – | diese Datei, `IMPLEMENTATION_STATUS.md`, `KNOWN_LIMITATIONS.md` |
 
 ## 6. Migration/Risiko
 

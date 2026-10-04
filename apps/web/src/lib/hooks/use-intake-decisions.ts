@@ -21,7 +21,7 @@ export interface IntakeDecisionItem {
 }
 
 export function useIntakeVisibility() {
-  return useQuery({ queryKey: ['intake-decisions', 'visibility'], queryFn: () => apiFetch<{ showExcludedByDefault: boolean }>('/v1/intake-decisions/visibility'), staleTime: 5 * 60_000 });
+  return useQuery({ queryKey: ['intake-decisions', 'visibility'], queryFn: () => apiFetch<{ showExcludedByDefault: boolean; testOperation: boolean }>('/v1/intake-decisions/visibility'), staleTime: 5 * 60_000 });
 }
 
 export function useExcludedIntake(enabled: boolean) {

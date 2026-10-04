@@ -9,6 +9,7 @@ import { formatDateTime } from '../../lib/format';
 import { useCaseEventStream, useOrchestration, type OrchestrationMode, type StreamStatus } from '../../lib/hooks/use-case-orchestration';
 import { ActionButtons } from './action-controls';
 import { NodeDetailPanel } from './node-detail-panel';
+import { SimulateReply } from './simulate-reply';
 import { OrchestrationTimeline } from './timeline';
 
 // The graph library is only needed on this tab; load it on demand so the rest of the app stays light.
@@ -106,6 +107,7 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
       ) : null}
 
       <ActionButtons caseId={caseId} actions={graph.availableActions} />
+      {graph.overallStatus === 'WAITING_FOR_INFORMATION' ? <SimulateReply caseId={caseId} /> : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <div role="group" aria-label="Ebene" className="inline-flex overflow-hidden rounded-md border border-slate-300">

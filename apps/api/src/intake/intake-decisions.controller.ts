@@ -28,9 +28,11 @@ export class IntakeDecisionsController {
   /** Whether the "Kein Geschäftsprozess ausgelöst" view is shown by default (test operation) or only as an explicit filter (production). */
   @Get('visibility')
   @RequirePermissions(PERMISSIONS.CASE_READ)
-  visibility(): { showExcludedByDefault: boolean } {
+  visibility(): { showExcludedByDefault: boolean; testOperation: boolean } {
     const configured = this.env.UI_SHOW_EXCLUDED_INTAKE;
-    return { showExcludedByDefault: configured ? configured === 'true' : process.env.NODE_ENV !== 'production' };
+    const showExcludedByDefault = configured ? configured === 'true' : process.env.NODE_ENV !== 'production';
+    // Reply simulation (and similar test helpers) are offered only in test operation: simulated mail transport or an explicitly test-visible setup.
+    return { showExcludedByDefault, testOperation: this.env.OUTBOUND_MAIL_MODE === 'simulated' || process.env.NODE_ENV !== 'production' };
   }
 
   @Get()
