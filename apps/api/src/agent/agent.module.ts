@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { AgentRuntime, AnthropicLLMProvider, MockLLMProvider, OpenAILLMProvider, ToolRegistry } from '@orbit/agent-core';
 import type { LLMProvider } from '@orbit/agent-core';
 import { IntegrationUnavailableError } from '@orbit/shared';
@@ -18,6 +18,7 @@ import { TasksModule } from '../tasks/tasks.module';
 import { AgentRunRecorderService } from './agent-run-recorder.service';
 import { AgentRunsController } from './agent-runs.controller';
 import { AGENT_RUNTIME, LLM_PROVIDER, TOOL_REGISTRY } from './agent.tokens';
+import { LoggingLLMProvider } from './logging-llm-provider';
 import { CommunicationAgentTools } from './tools/communication.tools';
 import { FinanceAgentTools } from './tools/finance.tools';
 import { SalesAgentTools } from './tools/sales.tools';
@@ -62,6 +63,10 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
       provide: LLM_PROVIDER,
       inject: [ORBIT_ENV],
       useFactory: (env: OrbitEnv) => {
+        const selected = (provider: LLMProvider): LLMProvider => {
+          new Logger('LLM').log(`llm.provider.selected provider=${provider.providerName} model=${provider.modelName ?? 'n/a'} executionMode=LIVE (platform default)`);
+          return new LoggingLLMProvider(provider);
+        };
         if (env.LLM_PROVIDER === 'mock') {
           return new MockLLMProvider();
         }
@@ -71,7 +76,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
               'LLM_PROVIDER=anthropic requires ANTHROPIC_API_KEY — see docs/AGENT_ARCHITECTURE.md.',
             );
           }
-          return new AnthropicLLMProvider(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL);
+          return selected(new AnthropicLLMProvider(env.ANTHROPIC_API_KEY, env.ANTHROPIC_MODEL));
         }
         if (env.LLM_PROVIDER === 'openai') {
           if (!env.OPENAI_API_KEY) {
@@ -79,7 +84,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
               'LLM_PROVIDER=openai requires OPENAI_API_KEY — see docs/AGENT_ARCHITECTURE.md.',
             );
           }
-          return new OpenAILLMProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL);
+          return selected(new OpenAILLMProvider(env.OPENAI_API_KEY, env.OPENAI_MODEL));
         }
         throw new IntegrationUnavailableError(`LLMProvider "${env.LLM_PROVIDER}" is not implemented yet.`);
       },
