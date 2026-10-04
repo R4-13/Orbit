@@ -155,7 +155,13 @@ export class OrchestratorService {
     try {
       for (let i = 0; i < MAX_ITERATIONS; i += 1) {
         const caseRow = await this.loadCase(tenantId, caseId);
-        if (TERMINAL_CASE_STATUSES.has(caseRow.orchestrationStatus)) return { status: 'TERMINAL', executed };
+        if (TERMINAL_CASE_STATUSES.has(caseRow.orchestrationStatus)) {
+          // A finished case does not wake up: a late event is consumed (so nothing re-triggers it forever) and stays in the log.
+          for (let event = await this.events.nextInbound(tenantId, caseId); event; event = await this.events.nextInbound(tenantId, caseId)) {
+            await this.events.markProcessed(tenantId, event.id);
+          }
+          return { status: 'TERMINAL', executed };
+        }
         if (caseRow.orchestrationStatus === 'PAUSED') return { status: 'PAUSED', executed };
         await this.renewLease(tenantId, caseId);
 
@@ -570,7 +576,17 @@ export class OrchestratorService {
     else if (states.includes('WAITING')) {
       const waitingManual = graph.nodes.some((n) => n.state === 'WAITING' && ['MANUAL_TASK', 'APPROVAL'].includes(n.type));
       target = waitingManual ? { to: 'MANUAL_REVIEW', reason: 'Ein manueller Schritt ist offen.' } : { to: 'WAITING_FOR_INFORMATION', reason: 'Wartet auf eine Antwort.' };
-    } else if (states.includes('BLOCKED') || states.includes('FAILED')) target = { to: 'MANUAL_REVIEW', reason: 'Ein Schritt ist blockiert oder fehlgeschlagen.' };
+    } else if (states.includes('BLOCKED') || states.includes('FAILED')) {
+      // Why a step is blocked decides who can resolve it: a missing capability/connection is an external matter, missing input is information.
+      const blocked = graph.nodes.filter((n) => n.state === 'BLOCKED');
+      const onlyBlocked = blocked.length > 0 && !states.includes('FAILED');
+      target =
+        onlyBlocked && blocked.every((n) => n.errorCode === 'CAPABILITY_NOT_EXECUTABLE')
+          ? { to: 'WAITING_FOR_EXTERNAL_SYSTEM', reason: 'Eine benötigte Fähigkeit oder Verbindung ist nicht verfügbar.' }
+          : onlyBlocked && blocked.every((n) => n.errorCode === 'MISSING_INPUT')
+            ? { to: 'WAITING_FOR_INFORMATION', reason: 'Es fehlen Angaben für den nächsten Schritt.' }
+            : { to: 'MANUAL_REVIEW', reason: 'Ein Schritt ist blockiert oder fehlgeschlagen.' };
+    }
     if (target && caseRow.orchestrationStatus !== target.to) {
       await this.lifecycle.transition(tenantId, caseRow.id, { to: target.to, attentionReasons: caseRow.attentionReasons.length > 0 ? caseRow.attentionReasons : [target.reason] });
     }

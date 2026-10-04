@@ -1,0 +1,386 @@
+{
+  "generatedAt": "2026-10-04T19:40:33.395Z",
+  "passed": 16,
+  "total": 16,
+  "rows": [
+    {
+      "id": "E01",
+      "label": "Angebotsanfrage, Angaben fehlen",
+      "category": "REQUEST_FOR_QUOTE",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.97
+      },
+      "riskFlags": [],
+      "intents": [
+        "request_approximate_window_pricing"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7030ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E02",
+      "label": "Vollständige Angebotsanfrage",
+      "category": "REQUEST_FOR_QUOTE",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [],
+      "intents": [
+        "request_binding_quote_for_windows"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 6292ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E07",
+      "label": "Private Nachricht mit Geschäftsvokabular",
+      "category": "PRIVATE",
+      "applied": "PRIVATE_PERSONAL",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.97,
+        "extraction": 0.91
+      },
+      "riskFlags": [],
+      "intents": [
+        "private_invitation_to_coffee"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 5016ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E08",
+      "label": "Newsletter mit Werbeangebot",
+      "category": "NEWSLETTER_OR_MARKETING",
+      "applied": "NON_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [],
+      "intents": [
+        "MARKETING_PROMOTION"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 6587ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E09",
+      "label": "Eindeutiger Spam",
+      "category": "SPAM",
+      "applied": "UNKNOWN_REQUIRES_REVIEW",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [
+        "PHISHING_SUSPECTED"
+      ],
+      "intents": [
+        "request_for_bank_details_and_upfront_fee"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 6021ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E10",
+      "label": "Angebliche Anfrage mit Prompt Injection",
+      "category": "SPAM",
+      "applied": "UNKNOWN_REQUIRES_REVIEW",
+      "confidence": {
+        "relevance": 0.98,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [
+        "PROMPT_INJECTION_SUSPECTED",
+        "PHISHING_SUSPECTED"
+      ],
+      "intents": [],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 5354ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E11",
+      "label": "Rechnung als Anhang, kein Angebotswunsch",
+      "category": "INVOICE_RECEIVED",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [],
+      "intents": [
+        "supplier_invoice_received"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7234ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E12",
+      "label": "Lieferantenangebot statt Kundenanfrage",
+      "category": "SUPPLIER_OFFER",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.97,
+        "intent": 0.96,
+        "extraction": 0.98
+      },
+      "riskFlags": [],
+      "intents": [
+        "supplier_product_offer",
+        "offer_to_send_samples_and_pricing"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 6423ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E13",
+      "label": "Serviceproblem / Beschwerde",
+      "category": "COMPLAINT_OR_SERVICE",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.98,
+        "extraction": 0.96
+      },
+      "riskFlags": [],
+      "intents": [
+        "request_window_repair_or_service_visit"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7337ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E14",
+      "label": "Bewerbung an die Unternehmensadresse",
+      "category": "APPLICATION",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.98
+      },
+      "riskFlags": [],
+      "intents": [
+        "INITIATIVE_APPLICATION_AS_BAUZEICHNERIN"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7533ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E22",
+      "label": "Angebot und Beschwerde in einer Mail",
+      "category": "UNKNOWN",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.99
+      },
+      "riskFlags": [
+        "MULTIPLE_INTENTS"
+      ],
+      "intents": [
+        "service_request_door_closure",
+        "request_for_quote"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 8599ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E25a",
+      "label": "Mehrsprachig (Englisch) ohne Schlüsselwörter",
+      "category": "REQUEST_FOR_QUOTE",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.98,
+        "extraction": 0.97
+      },
+      "riskFlags": [],
+      "intents": [
+        "request_price_quote",
+        "ask_delivery_lead_time"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7290ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E25b",
+      "label": "Umgangssprachlich ohne Schlüsselwörter",
+      "category": "REQUEST_FOR_QUOTE",
+      "applied": "BUSINESS_ACTIONABLE",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.98,
+        "extraction": 0.98
+      },
+      "riskFlags": [],
+      "intents": [
+        "quote_for_three_doors",
+        "check_sourcing_availability"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7735ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E06",
+      "label": "Unklare Kurzantwort ohne Kontext",
+      "category": "UNKNOWN",
+      "applied": "UNKNOWN_REQUIRES_REVIEW",
+      "confidence": {
+        "relevance": 0.25,
+        "intent": 0.15,
+        "extraction": 0.1
+      },
+      "riskFlags": [],
+      "intents": [],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 5215ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E18",
+      "label": "Abwesenheitsnotiz",
+      "category": "UNKNOWN",
+      "applied": "UNKNOWN_REQUIRES_REVIEW",
+      "confidence": {
+        "relevance": 0.58,
+        "intent": 0.98,
+        "extraction": 0.96
+      },
+      "riskFlags": [
+        "AUTO_RESPONDER"
+      ],
+      "intents": [
+        "AUTO_REPLY_ABSENCE_NOTICE"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 7493ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    },
+    {
+      "id": "E21",
+      "label": "Phishing mit Anmeldelink",
+      "category": "SPAM",
+      "applied": "UNKNOWN_REQUIRES_REVIEW",
+      "confidence": {
+        "relevance": 0.99,
+        "intent": 0.99,
+        "extraction": 0.98
+      },
+      "riskFlags": [
+        "PHISHING_SUSPECTED"
+      ],
+      "intents": [
+        "credential_phishing"
+      ],
+      "execution": "LIVE openai/gpt-6-luna triage-prompt/2 6599ms",
+      "checks": {
+        "relevance": true,
+        "category": true,
+        "flags": true,
+        "multipleIntents": true
+      },
+      "pass": true
+    }
+  ]
+}

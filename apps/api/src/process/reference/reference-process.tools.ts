@@ -356,25 +356,34 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         }
 
         const sentAt = new Date();
-        await scoped.emailMessage.create({
-          data: {
-            tenantId: ctx.tenantId,
-            caseId,
-            direction: 'OUTBOUND',
-            fromAddress: sent.from,
-            toAddresses: [draft.toAddress],
-            subject: draft.subject,
-            bodyText: draft.bodyText.slice(0, 20_000),
-            bodyPreview: draft.bodyText.slice(0, 500),
-            providerMessageId: sent.providerMessageId,
-            threadId: sent.threadId ?? draft.threadId,
-            rfcMessageId: sent.rfcMessageId,
-            inReplyTo: draft.inReplyTo,
-            sentAt,
-          },
-        });
-        await scoped.communicationDraft.update({ where: { id: draft.id }, data: { status: 'SENT' } });
-        if (draft.attachmentDocumentIds.length > 0) await scoped.quote.updateMany({ where: { caseId, documentId: { in: draft.attachmentDocumentIds } }, data: { status: 'SENT' } });
+        // The provider has accepted the message. If recording that locally fails, the effect HAS happened: the step must not
+        // fail as if nothing was sent (a retry would send twice), it ends as an unknown outcome that a person reconciles.
+        try {
+          await scoped.emailMessage.create({
+            data: {
+              tenantId: ctx.tenantId,
+              caseId,
+              direction: 'OUTBOUND',
+              fromAddress: sent.from,
+              toAddresses: [draft.toAddress],
+              subject: draft.subject,
+              bodyText: draft.bodyText.slice(0, 20_000),
+              bodyPreview: draft.bodyText.slice(0, 500),
+              providerMessageId: sent.providerMessageId,
+              threadId: sent.threadId ?? draft.threadId,
+              rfcMessageId: sent.rfcMessageId,
+              inReplyTo: draft.inReplyTo,
+              sentAt,
+            },
+          });
+          await scoped.communicationDraft.update({ where: { id: draft.id }, data: { status: 'SENT' } });
+          if (draft.attachmentDocumentIds.length > 0) await scoped.quote.updateMany({ where: { caseId, documentId: { in: draft.attachmentDocumentIds } }, data: { status: 'SENT' } });
+        } catch {
+          throw new ToolOutcomeUnknownError(
+            `Der Versand wurde vom Anbieter bestätigt (Beleg ${sent.providerMessageId}), die lokale Aufzeichnung ist aber fehlgeschlagen. Bitte abgleichen; die Nachricht wird nicht erneut gesendet.`,
+            'SEND_CONFIRMATION_FAILED',
+          );
+        }
         return { providerRef: sent.providerMessageId, threadId: sent.threadId ?? null, rfcMessageId: sent.rfcMessageId ?? null, sentAt: sentAt.toISOString(), recipient: draft.toAddress, executionMode: sent.executionMode };
       },
     };
