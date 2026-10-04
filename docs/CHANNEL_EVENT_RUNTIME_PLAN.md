@@ -96,8 +96,8 @@ Umsetzungsbeginn — siehe `docs/ASSUMPTIONS.md` für die vollständige Tabelle)
 | A | `IntakeEvent`+`ConnectorSync`-Datenmodell, `NormalizedIntakeEvent`/`PartyReference`/`AttachmentReference`-Typen, RLS, `TENANT_SCOPED_MODELS` | ✅ Abgeschlossen |
 | B | Relevance/Triage-Stufe + Konvergenz von simuliertem/echtem Pfad auf `IntakeService.handleIntakeEvent()`; Domain-Routing als Lookup-Tabelle statt if/else | ✅ Abgeschlossen |
 | C | `ChannelPollAdapter`-Interface + `GmailPollAdapter` (Cursor in `ConnectorSync`) | ✅ Abgeschlossen |
-| D | Generische Sync-Queue/-Processor/-Scheduler + Concurrency-Erweiterung + Idempotenz-Verdrahtung | Offen |
-| E | Human-in-the-Loop-Pfad für `UNKNOWN_REQUIRES_REVIEW` | Offen |
+| D | Generische Sync-Queue/-Processor/-Scheduler + Concurrency-Erweiterung + Idempotenz-Verdrahtung | ✅ Abgeschlossen — live gegen `handwerkernull@gmail.com` verifiziert: echte E-Mail → automatisch Case+Lead+Contact, ohne manuelle Aktion |
+| E | Human-in-the-Loop-Pfad für `UNKNOWN_REQUIRES_REVIEW` | ✅ Bereits durch Increment B erledigt (Review-Task-Erzeugung + E2E-Test) — keine zusätzliche Arbeit nötig |
 | F | Echter Gmail→Intake→bestehender Finance/Sales-Pfad, Live-E2E gegen `handwerkernull@gmail.com`; Domain-Workflow-Status bleibt bewusst `PARTIAL` | Offen |
 | G | **Pflicht-Increment**: Finance/Sales-Ausführung auf `WorkflowDefinition`/`WorkflowRun`/`WorkflowStepRun` migrieren, Restart-/Approval-/Idempotenz-Verhalten testen | Offen |
 | H | Status-Sichtbarkeit (5 Stufen) + Doku + volle End-to-End-Regression | Offen |

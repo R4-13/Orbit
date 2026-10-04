@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@orbit/domain';
+import type { AuditEventType } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -35,12 +36,25 @@ export class WebhookIdempotencyService {
 
   /**
    * Returns `true` the first time this (source, externalEventId) pair is
-   * seen for this tenant — the caller should process the webhook payload.
-   * Returns `false` if it was already recorded — the caller should skip
-   * processing (this delivery is a duplicate) without treating that as an
-   * error.
+   * seen for this tenant — the caller should process the payload. Returns
+   * `false` if it was already recorded — the caller should skip
+   * processing (this delivery/poll result is a duplicate) without
+   * treating that as an error.
+   *
+   * `auditEventType` defaults to `'WEBHOOK_RECEIVED'` (this service's
+   * original, push-webhook-only purpose) but the Channel Event Runtime
+   * (docs/CHANNEL_EVENT_RUNTIME_PLAN.md Increment D) reuses this exact
+   * dedup mechanism for POLLING-sourced events too — passing
+   * `'CHANNEL_EVENT_RECEIVED'` there keeps the audit trail honest about
+   * which delivery mechanism actually occurred, rather than mislabeling
+   * every polled Gmail message as a "webhook".
    */
-  async recordIfNew(tenantId: string, source: string, externalEventId: string): Promise<boolean> {
+  async recordIfNew(
+    tenantId: string,
+    source: string,
+    externalEventId: string,
+    auditEventType: AuditEventType = 'WEBHOOK_RECEIVED',
+  ): Promise<boolean> {
     try {
       await this.prisma.forTenantId(tenantId).webhookEvent.create({
         data: { tenantId, source, externalEventId },
@@ -54,7 +68,7 @@ export class WebhookIdempotencyService {
 
     await this.audit.record({
       tenantId,
-      eventType: 'WEBHOOK_RECEIVED',
+      eventType: auditEventType,
       actorType: 'SYSTEM',
       entityType: 'WebhookEvent',
       payload: { source, externalEventId },

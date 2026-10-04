@@ -158,6 +158,14 @@ export const envSchema = z.object({
   // WorkflowRuns a single tenant may have executing at once in the worker pool, so one tenant
   // can't exhaust all worker capacity for every other tenant.
   TENANT_MAX_CONCURRENT_WORKFLOW_RUNS: z.coerce.number().int().positive().default(5),
+
+  // Channel Event Runtime (docs/CHANNEL_EVENT_RUNTIME_PLAN.md, Increment D) — how often the
+  // scheduler fans out a sync job per connected, polling-capable Integration, and how many
+  // concurrent sync jobs a single tenant may have running at once (deliberately much lower than
+  // TENANT_MAX_CONCURRENT_WORKFLOW_RUNS — polling is lightweight and a tenant only has a handful
+  // of connectors, not dozens of simultaneous workflow runs).
+  CHANNEL_SYNC_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  TENANT_MAX_CONCURRENT_CHANNEL_SYNCS: z.coerce.number().int().positive().default(2),
 });
 
 export type OrbitEnv = z.infer<typeof envSchema>;

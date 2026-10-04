@@ -1,10 +1,14 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job, Queue } from 'bullmq';
+import type { OrbitEnv } from '@orbit/config';
+import { ORBIT_ENV } from '../src/config/env.token';
 import { TenantConcurrencyService } from '../src/queue/tenant-concurrency.service';
 import { WORKFLOW_RUNS_QUEUE } from '../src/queue/queue.tokens';
 import { WorkflowRunnerService } from '../src/workflows/workflow-runner.service';
 import type { WorkflowRunJobData } from '../src/workflows/workflow-run-queue.service';
+
+const CONCURRENCY_CATEGORY = 'workflow-runs';
 
 /** How long a job waits before re-checking a tenant's concurrency slot — short enough that a freed slot is picked up quickly, long enough not to hammer Redis when a tenant is genuinely at its limit. */
 const REQUEUE_DELAY_MS = 2000;
@@ -43,6 +47,7 @@ export class WorkflowRunProcessor extends WorkerHost {
     private readonly runner: WorkflowRunnerService,
     private readonly concurrency: TenantConcurrencyService,
     @InjectQueue(WORKFLOW_RUNS_QUEUE) private readonly queue: Queue<WorkflowRunJobData>,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {
     super();
   }
@@ -50,7 +55,12 @@ export class WorkflowRunProcessor extends WorkerHost {
   async process(job: Job<WorkflowRunJobData>): Promise<void> {
     const { tenantId, actorUserId, workflowRunId } = job.data;
 
-    const acquired = await this.concurrency.acquireWorkflowRunSlot(tenantId, workflowRunId);
+    const acquired = await this.concurrency.acquireSlot(
+      CONCURRENCY_CATEGORY,
+      tenantId,
+      workflowRunId,
+      this.env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS,
+    );
     if (!acquired) {
       this.logger.log(`Tenant ${tenantId} at its concurrency limit — deferring workflow run ${workflowRunId} by ${REQUEUE_DELAY_MS}ms`);
       await this.queue.add('run', job.data, { attempts: 1, delay: REQUEUE_DELAY_MS });
@@ -61,7 +71,7 @@ export class WorkflowRunProcessor extends WorkerHost {
       this.logger.log(`Executing queued workflow run ${workflowRunId} (tenant ${tenantId})`);
       await this.runner.executeQueuedRun(tenantId, actorUserId, workflowRunId);
     } finally {
-      await this.concurrency.releaseWorkflowRunSlot(tenantId, workflowRunId);
+      await this.concurrency.releaseSlot(CONCURRENCY_CATEGORY, tenantId, workflowRunId);
     }
   }
 }

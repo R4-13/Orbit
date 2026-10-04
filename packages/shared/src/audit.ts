@@ -56,6 +56,8 @@ export const AUDIT_EVENT_TYPES = [
   'INTEGRATION_DISCONNECTED',
   'INTEGRATION_TEST_FAILED',
   'WEBHOOK_RECEIVED',
+  /** docs/CHANNEL_EVENT_RUNTIME_PLAN.md — WebhookIdempotencyService.recordIfNew() used for a polling-sourced (not push/webhook-delivered) event; keeps the audit trail honest about which delivery mechanism actually occurred. */
+  'CHANNEL_EVENT_RECEIVED',
   'TENANT_DATA_EXPORTED',
   'TENANT_DELETE_REQUESTED',
   'TENANT_DELETE_COMPLETED',

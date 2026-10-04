@@ -41,6 +41,24 @@ describe('parseGmailMessageHeaders', () => {
     const result = parseGmailMessageHeaders({ id: 'msg_1', payload: {} });
     expect(result.receivedAt.getTime()).toBeGreaterThanOrEqual(before);
   });
+
+  it('extracts the bare address from "Display Name" <addr@example.com>-style From/To headers (found live against a real Gmail account, docs/ASSUMPTIONS.md Channel Event Runtime Increment D)', () => {
+    const message: GmailMessage = {
+      id: 'msg_1',
+      payload: {
+        headers: [
+          { name: 'From', value: 'Reiner Pistorius <reinerpistorius@googlemail.com>' },
+          { name: 'To', value: '"Musterwerk GmbH" <vertrieb@musterwerk.example>, plain@musterwerk.example' },
+          { name: 'Subject', value: 'Angebot Badrenovierung' },
+        ],
+      },
+    };
+
+    const result = parseGmailMessageHeaders(message);
+
+    expect(result.from).toBe('reinerpistorius@googlemail.com');
+    expect(result.to).toEqual(['vertrieb@musterwerk.example', 'plain@musterwerk.example']);
+  });
 });
 
 describe('extractPlainTextBody', () => {

@@ -53,6 +53,22 @@ function getHeader(headers: GmailHeader[] | undefined, name: string): string {
   return headers?.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? '';
 }
 
+/**
+ * RFC 5322 `From`/`To` header values are commonly `"Display Name" <addr@example.com>`,
+ * not a bare address — Gmail returns the header exactly as received, unparsed.
+ * Every consumer downstream (`IntakeService.runSalesAgent()`'s `fromAddress.split('@')`
+ * domain/local-part derivation, the `create_contact`/`find_contact` tools' `z.string().email()`
+ * validation, `IncomingEmailDto`'s own `@IsEmail()` convention for the simulated path) already
+ * assumes a bare address — found live against a real connected Gmail account
+ * (docs/ASSUMPTIONS.md Channel Event Runtime Increment D): a real message with a display-name
+ * `From` header made the Sales agent's `create_contact` tool call fail Zod validation silently
+ * (empty `AgentRun.errorMessage` — the underlying cause, not this function, but what exposed it).
+ */
+function extractEmailAddress(rawHeaderValue: string): string {
+  const angleMatch = rawHeaderValue.match(/<([^<>]+)>\s*$/);
+  return (angleMatch?.[1] ?? rawHeaderValue).trim();
+}
+
 function findPlainTextPart(part: GmailMessagePart | undefined): GmailMessagePart | undefined {
   if (!part) return undefined;
   if (part.mimeType === 'text/plain' && part.body?.data) return part;
@@ -76,11 +92,11 @@ export function parseGmailMessageHeaders(message: GmailMessage): ParsedGmailHead
   const headers = message.payload?.headers;
   const toRaw = getHeader(headers, 'To');
   return {
-    from: getHeader(headers, 'From'),
+    from: extractEmailAddress(getHeader(headers, 'From')),
     to: toRaw
       ? toRaw
           .split(',')
-          .map((s) => s.trim())
+          .map((s) => extractEmailAddress(s.trim()))
           .filter(Boolean)
       : [],
     subject: getHeader(headers, 'Subject'),

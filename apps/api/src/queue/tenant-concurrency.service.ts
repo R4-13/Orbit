@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
 
-const WORKFLOW_RUNS_ZSET_PREFIX = 'tenant-concurrency:workflow-runs:';
+const ZSET_PREFIX = 'tenant-concurrency:';
 
 /**
  * Considers a member "stale" (and eligible for automatic cleanup on the
@@ -21,20 +21,29 @@ const STALE_AFTER_MS = 15 * 60 * 1000;
 /**
  * docs/ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md Phase 2 ("Tenant Concurrency
  * Fairness", docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §62) — caps how many
- * WorkflowRuns a single tenant may have executing concurrently in the
- * shared worker pool, so one tenant with many simultaneous runs can't
- * starve every other tenant's throughput. `docs/SCALABILITY_CONCEPT.md`
- * already documented that BullMQ's job-group feature (the natural fit
- * for this) is a paid BullMQ Pro feature — this is the "self-built Redis
- * counter" alternative that document named but never implemented.
+ * jobs of a given *category* (WorkflowRuns, and since
+ * docs/CHANNEL_EVENT_RUNTIME_PLAN.md Increment D also channel sync jobs) a
+ * single tenant may have executing concurrently in the shared worker pool,
+ * so one tenant with many simultaneous jobs can't starve every other
+ * tenant's throughput. `docs/SCALABILITY_CONCEPT.md` already documented
+ * that BullMQ's job-group feature (the natural fit for this) is a paid
+ * BullMQ Pro feature — this is the "self-built Redis counter" alternative
+ * that document named but never implemented.
  *
- * A Redis-backed distributed semaphore using a per-tenant sorted set
- * (score = acquisition timestamp, member = workflowRunId — already
- * globally unique, no extra ID needed). Not a plain INCR/DECR counter:
- * that would leak permanently if a worker process crashes between
+ * Generalized (originally WorkflowRuns-only — see docs/ASSUMPTIONS.md
+ * Channel Event Runtime Increment D) to take an explicit `category` +
+ * `limit` per call, since different job kinds reasonably need different
+ * ceilings (`TENANT_MAX_CONCURRENT_WORKFLOW_RUNS` vs.
+ * `TENANT_MAX_CONCURRENT_CHANNEL_SYNCS`) — the service itself stays
+ * category-agnostic, each caller owns its own limit.
+ *
+ * A Redis-backed distributed semaphore using a per-tenant-per-category
+ * sorted set (score = acquisition timestamp, member = the job's own id —
+ * already globally unique, no extra id needed). Not a plain INCR/DECR
+ * counter: that would leak permanently if a worker process crashes between
  * `acquire()` and `release()`. A sorted set lets `acquire()` purge stale
- * (`STALE_AFTER_MS`-old) entries for that tenant on every attempt,
- * self-healing without a separate sweep process.
+ * (`STALE_AFTER_MS`-old) entries for that tenant+category on every
+ * attempt, self-healing without a separate sweep process.
  *
  * A dedicated `ioredis` connection, not BullMQ's own — same reasoning as
  * `ThrottlerRedisStorageService` (Phase 23): BullMQ's `IRedisClient`
@@ -44,32 +53,30 @@ const STALE_AFTER_MS = 15 * 60 * 1000;
 @Injectable()
 export class TenantConcurrencyService implements OnApplicationShutdown {
   private readonly redis: Redis;
-  private readonly limit: number;
 
   constructor(@Inject(ORBIT_ENV) env: OrbitEnv) {
     this.redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
-    this.limit = env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS;
   }
 
-  /** Returns `true` if a slot was acquired (caller must `release()` when done), `false` if the tenant is already at its limit. */
-  async acquireWorkflowRunSlot(tenantId: string, workflowRunId: string): Promise<boolean> {
-    const key = WORKFLOW_RUNS_ZSET_PREFIX + tenantId;
+  /** Returns `true` if a slot was acquired (caller must `release()` when done), `false` if the tenant is already at its `limit` for this `category`. */
+  async acquireSlot(category: string, tenantId: string, memberId: string, limit: number): Promise<boolean> {
+    const key = `${ZSET_PREFIX}${category}:${tenantId}`;
     const now = Date.now();
     const result = (await this.redis.eval(
       ACQUIRE_SCRIPT,
       1,
       key,
-      workflowRunId,
+      memberId,
       now,
       now - STALE_AFTER_MS,
-      this.limit,
+      limit,
       STALE_AFTER_MS,
     )) as number;
     return result === 1;
   }
 
-  async releaseWorkflowRunSlot(tenantId: string, workflowRunId: string): Promise<void> {
-    await this.redis.zrem(WORKFLOW_RUNS_ZSET_PREFIX + tenantId, workflowRunId);
+  async releaseSlot(category: string, tenantId: string, memberId: string): Promise<void> {
+    await this.redis.zrem(`${ZSET_PREFIX}${category}:${tenantId}`, memberId);
   }
 
   onApplicationShutdown(): void {

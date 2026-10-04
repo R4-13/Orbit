@@ -12,6 +12,8 @@ import { TenantConcurrencyService } from '../src/queue/tenant-concurrency.servic
  * the Lua script's sorted-set logic is actually correct under real
  * concurrent access.
  */
+const CATEGORY = 'workflow-runs';
+
 describe('TenantConcurrencyService (real Redis)', () => {
   let service: TenantConcurrencyService;
   let redis: Redis;
@@ -39,41 +41,44 @@ describe('TenantConcurrencyService (real Redis)', () => {
   it('acquires up to TENANT_MAX_CONCURRENT_WORKFLOW_RUNS slots, then refuses the next one', async () => {
     const tenantId = uniqueTenant();
     const env = loadEnv();
+    const limit = env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS;
 
-    for (let i = 0; i < env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS; i += 1) {
-      const acquired = await service.acquireWorkflowRunSlot(tenantId, `run_${i}`);
+    for (let i = 0; i < limit; i += 1) {
+      const acquired = await service.acquireSlot(CATEGORY, tenantId, `run_${i}`, limit);
       expect(acquired).toBe(true);
     }
 
-    const overLimit = await service.acquireWorkflowRunSlot(tenantId, 'run_over_limit');
+    const overLimit = await service.acquireSlot(CATEGORY, tenantId, 'run_over_limit', limit);
     expect(overLimit).toBe(false);
   });
 
   it('releasing a slot makes room for exactly one more acquire', async () => {
     const tenantId = uniqueTenant();
     const env = loadEnv();
-    for (let i = 0; i < env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS; i += 1) {
-      await service.acquireWorkflowRunSlot(tenantId, `run_${i}`);
+    const limit = env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS;
+    for (let i = 0; i < limit; i += 1) {
+      await service.acquireSlot(CATEGORY, tenantId, `run_${i}`, limit);
     }
-    expect(await service.acquireWorkflowRunSlot(tenantId, 'still_blocked')).toBe(false);
+    expect(await service.acquireSlot(CATEGORY, tenantId, 'still_blocked', limit)).toBe(false);
 
-    await service.releaseWorkflowRunSlot(tenantId, 'run_0');
+    await service.releaseSlot(CATEGORY, tenantId, 'run_0');
 
-    expect(await service.acquireWorkflowRunSlot(tenantId, 'now_fits')).toBe(true);
-    expect(await service.acquireWorkflowRunSlot(tenantId, 'still_over')).toBe(false);
+    expect(await service.acquireSlot(CATEGORY, tenantId, 'now_fits', limit)).toBe(true);
+    expect(await service.acquireSlot(CATEGORY, tenantId, 'still_over', limit)).toBe(false);
   });
 
   it('tracks each tenant independently — one tenant at its limit does not block another', async () => {
     const tenantA = uniqueTenant();
     const tenantB = uniqueTenant();
     const env = loadEnv();
+    const limit = env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS;
 
-    for (let i = 0; i < env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS; i += 1) {
-      await service.acquireWorkflowRunSlot(tenantA, `run_${i}`);
+    for (let i = 0; i < limit; i += 1) {
+      await service.acquireSlot(CATEGORY, tenantA, `run_${i}`, limit);
     }
-    expect(await service.acquireWorkflowRunSlot(tenantA, 'blocked')).toBe(false);
+    expect(await service.acquireSlot(CATEGORY, tenantA, 'blocked', limit)).toBe(false);
 
-    expect(await service.acquireWorkflowRunSlot(tenantB, 'run_0')).toBe(true);
+    expect(await service.acquireSlot(CATEGORY, tenantB, 'run_0', limit)).toBe(true);
   });
 
   it('handles N concurrent acquire attempts atomically: exactly the limit succeed, no more and no fewer', async () => {
@@ -83,7 +88,7 @@ describe('TenantConcurrencyService (real Redis)', () => {
     const attempts = limit * 2;
 
     const results = await Promise.all(
-      Array.from({ length: attempts }, (_, i) => service.acquireWorkflowRunSlot(tenantId, `run_${i}`)),
+      Array.from({ length: attempts }, (_, i) => service.acquireSlot(CATEGORY, tenantId, `run_${i}`, limit)),
     );
 
     expect(results.filter(Boolean)).toHaveLength(limit);
@@ -92,15 +97,15 @@ describe('TenantConcurrencyService (real Redis)', () => {
 
   it('a stale (crashed-worker-leaked) slot does not count toward the limit, and is purged as a side effect of the next acquire attempt', async () => {
     const tenantId = uniqueTenant();
-    const key = `tenant-concurrency:workflow-runs:${tenantId}`;
+    const key = `tenant-concurrency:${CATEGORY}:${tenantId}`;
     const env = loadEnv();
     const limit = env.TENANT_MAX_CONCURRENT_WORKFLOW_RUNS;
 
     // Set up the pre-state directly via Redis (not via the service —
-    // acquireWorkflowRunSlot() always cleans stale entries as part of
-    // its own script, so building this state through the service itself
-    // would clean the stale entry away before the scenario is even set
-    // up). One entry from long before STALE_AFTER_MS (15 min) — as if a
+    // acquireSlot() always cleans stale entries as part of its own
+    // script, so building this state through the service itself would
+    // clean the stale entry away before the scenario is even set up).
+    // One entry from long before STALE_AFTER_MS (15 min) — as if a
     // worker crashed after acquire() but before release() — plus
     // exactly `limit` genuinely fresh entries.
     await redis.zadd(key, Date.now() - 20 * 60 * 1000, 'leaked_run');
@@ -111,12 +116,12 @@ describe('TenantConcurrencyService (real Redis)', () => {
 
     // Blocked by the `limit` genuinely fresh entries alone — the stale
     // one must not have contributed to this being over capacity.
-    expect(await service.acquireWorkflowRunSlot(tenantId, 'blocked_by_fresh_entries')).toBe(false);
+    expect(await service.acquireSlot(CATEGORY, tenantId, 'blocked_by_fresh_entries', limit)).toBe(false);
     // ...yet the stale entry was purged as a side effect of that same call.
     expect(await redis.zrange(key, 0, -1)).not.toContain('leaked_run');
     expect(await redis.zcard(key)).toBe(limit);
 
-    await service.releaseWorkflowRunSlot(tenantId, 'fresh_0');
-    expect(await service.acquireWorkflowRunSlot(tenantId, 'fits_now')).toBe(true);
+    await service.releaseSlot(CATEGORY, tenantId, 'fresh_0');
+    expect(await service.acquireSlot(CATEGORY, tenantId, 'fits_now', limit)).toBe(true);
   });
 });

@@ -12,5 +12,8 @@ import { IntakeService } from './intake.service';
   imports: [AgentModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule],
   controllers: [IntakeController],
   providers: [IntakeService],
+  // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector
+  // sync event is fed into, same entry point `handleIncomingEmail()` already uses.
+  exports: [IntakeService],
 })
 export class IntakeModule {}

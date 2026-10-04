@@ -2,13 +2,17 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { findRepoRootEnvFile } from '@orbit/config';
 import { AuditModule } from '../src/audit/audit.module';
+import { ChannelSyncModule } from '../src/channel-sync/channel-sync.module';
 import { EnvModule } from '../src/config/env.module';
+import { IntakeModule } from '../src/intake/intake.module';
 import { MetricsModule } from '../src/metrics/metrics.module';
 import { PolicyModule } from '../src/policy/policy.module';
 import { PrismaModule } from '../src/prisma/prisma.module';
 import { QueueModule } from '../src/queue/queue.module';
 import { SecurityModule } from '../src/security/security.module';
+import { WebhooksModule } from '../src/webhooks/webhooks.module';
 import { WorkflowsModule } from '../src/workflows/workflows.module';
+import { ChannelSyncProcessor } from './channel-sync.processor';
 import { WorkflowRunProcessor } from './workflow-run.processor';
 
 const rootEnvFile = findRepoRootEnvFile(__dirname);
@@ -44,7 +48,10 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     QueueModule,
     SecurityModule,
     WorkflowsModule,
+    IntakeModule,
+    ChannelSyncModule,
+    WebhooksModule,
   ],
-  providers: [WorkflowRunProcessor],
+  providers: [WorkflowRunProcessor, ChannelSyncProcessor],
 })
 export class WorkerModule {}

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
-import { WORKFLOW_RUNS_QUEUE } from './queue.tokens';
+import { CHANNEL_SYNC_QUEUE, WORKFLOW_RUNS_QUEUE } from './queue.tokens';
 import { TenantConcurrencyService } from './tenant-concurrency.service';
 
 /**
@@ -23,6 +23,7 @@ import { TenantConcurrencyService } from './tenant-concurrency.service';
       useFactory: (env: OrbitEnv) => ({ connection: { url: env.REDIS_URL } }),
     }),
     BullModule.registerQueue({ name: WORKFLOW_RUNS_QUEUE }),
+    BullModule.registerQueue({ name: CHANNEL_SYNC_QUEUE }),
   ],
   providers: [TenantConcurrencyService],
   exports: [BullModule, TenantConcurrencyService],
