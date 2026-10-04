@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Integration, IntegrationConnectorType } from '@orbit/domain';
 import type { ConnectorMetadata } from '@orbit/integration-core';
+import type { ConnectorOperationalStatusResult } from '@orbit/shared';
 import { apiFetch } from '../api-client';
 
 export type IntegrationSummary = Omit<Integration, 'credentialReference'> & { hasCredentials: boolean };
@@ -34,7 +35,10 @@ export function useTestConnection() {
   return useMutation({
     mutationFn: (connectorType: IntegrationConnectorType) =>
       apiFetch<{ ok: boolean }>(`/v1/integrations/${connectorType}/test`, { method: 'POST' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['integration-operational-status'] });
+    },
   });
 }
 
@@ -54,7 +58,19 @@ export function useUpsertIntegrationCredentials() {
         method: 'PUT',
         body: JSON.stringify({ credentials, config }),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['integration-operational-status'] });
+    },
+  });
+}
+
+/** docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 (Increment H) — die 5 Betriebsstatus-Stufen pro Connector, berechnet aus echten Nachweisen statt aus dem reinen Verbindungsstatus. Nur für Connectoren mit `liveConnectSupported` sinnvoll (die übrigen bleiben strukturell bei `AUTHENTICATION_CONNECTED` oder `null`, siehe Backend-Kommentar). */
+export function useConnectorOperationalStatus(connectorType: IntegrationConnectorType, enabled: boolean) {
+  return useQuery({
+    queryKey: ['integration-operational-status', connectorType],
+    queryFn: () => apiFetch<ConnectorOperationalStatusResult>(`/v1/integrations/${connectorType}/operational-status`),
+    enabled,
   });
 }
 
@@ -63,6 +79,9 @@ export function useDisconnectIntegration() {
   return useMutation({
     mutationFn: (connectorType: IntegrationConnectorType) =>
       apiFetch<IntegrationSummary>(`/v1/integrations/${connectorType}`, { method: 'DELETE' }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['integration-operational-status'] });
+    },
   });
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
+import { ConnectorStatusService } from './connector-status.service';
 import { GmailConnectorService } from './gmail-connector.service';
 import { IntegrationsCallbackController } from './integrations-callback.controller';
 import { IntegrationsController } from './integrations.controller';
@@ -20,7 +21,7 @@ import { OAuth2Service } from './oauth2.service';
     }),
   ],
   controllers: [IntegrationsController, IntegrationsCallbackController],
-  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService],
+  providers: [IntegrationsService, OAuth2Service, OAuthStateService, GmailConnectorService, ConnectorStatusService],
   // GmailConnectorService exported for GmailPollAdapter (ChannelSyncModule, Increment C) — the
   // only other consumer of this service besides IntegrationsController/-CallbackController.
   exports: [IntegrationsService, GmailConnectorService],

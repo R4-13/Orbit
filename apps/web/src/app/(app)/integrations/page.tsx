@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ConnectorMetadata } from '@orbit/integration-core';
+import type { ConnectorOperationalStatus } from '@orbit/shared';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
 import { Calendar, Mail, Phone, Plug, Receipt, Users } from 'lucide-react';
 import { ApiError, errorMessage } from '../../../lib/api-client';
 import { formatDateTime } from '../../../lib/format';
 import {
+  useConnectorOperationalStatus,
   useConnectors,
   useDisconnectIntegration,
   useIntegrations,
@@ -97,6 +99,38 @@ function ConnectedDetails({ integration }: { integration: IntegrationSummary }) 
   );
 }
 
+/** docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 (Increment H): "Ein erfolgreicher OAuth-Connect allein ist niemals gleichbedeutend mit einem funktionierenden automatischen Intake-Kanal." — daher eine eigene, aus echten Nachweisen berechnete Betriebsstatus-Zeile statt nur dem "Verbunden"-Badge oben. */
+const OPERATIONAL_STATUS_LABELS: Record<ConnectorOperationalStatus, string> = {
+  AUTHENTICATION_CONNECTED: 'Authentifiziert — Kanal noch nicht aktiv',
+  INPUT_TRIGGER_ACTIVE: 'Eingang wird abgerufen',
+  INTAKE_PIPELINE_ACTIVE: 'Intake-Pipeline aktiv',
+  DOMAIN_WORKFLOW_ACTIVE: 'Fachlicher Workflow aktiv',
+  LIVE_END_TO_END_TESTED: 'Live Ende-zu-Ende getestet',
+};
+
+const OPERATIONAL_STATUS_TONES: Record<ConnectorOperationalStatus, BadgeTone> = {
+  AUTHENTICATION_CONNECTED: 'warning',
+  INPUT_TRIGGER_ACTIVE: 'warning',
+  INTAKE_PIPELINE_ACTIVE: 'info',
+  DOMAIN_WORKFLOW_ACTIVE: 'info',
+  LIVE_END_TO_END_TESTED: 'success',
+};
+
+function OperationalStatusRow({ connectorId, enabled }: { connectorId: ConnectorMetadata['id']; enabled: boolean }) {
+  const { data } = useConnectorOperationalStatus(connectorId, enabled);
+  if (!enabled) return null;
+  return (
+    <p className="mt-1.5 flex items-center gap-1.5 text-xs">
+      <span className="text-slate-500">Betriebsstatus:</span>
+      {data?.highestLevelReached ? (
+        <Badge tone={OPERATIONAL_STATUS_TONES[data.highestLevelReached]}>{OPERATIONAL_STATUS_LABELS[data.highestLevelReached]}</Badge>
+      ) : (
+        <Badge tone="neutral">{data ? 'Noch keine Aktivität' : 'Wird geladen …'}</Badge>
+      )}
+    </p>
+  );
+}
+
 function OAuthConnectorRow({ connector, integration }: { connector: ConnectorMetadata; integration?: IntegrationSummary }) {
   const startConnect = useStartConnect();
   const testConnection = useTestConnection();
@@ -147,6 +181,7 @@ function OAuthConnectorRow({ connector, integration }: { connector: ConnectorMet
             <p className="font-medium text-slate-900">{connector.name}</p>
             <p className="text-xs text-slate-500">{connector.description}</p>
             {isConnected ? <ConnectedDetails integration={integration!} /> : null}
+            <OperationalStatusRow connectorId={connector.id} enabled={isConnected && connector.liveConnectSupported} />
           </div>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -221,6 +256,7 @@ function ApiKeyConnectorRow({ connector, integration }: { connector: ConnectorMe
             <p className="font-medium text-slate-900">{connector.name}</p>
             <p className="text-xs text-slate-500">{connector.description}</p>
             {isConnected ? <ConnectedDetails integration={integration!} /> : null}
+            <OperationalStatusRow connectorId={connector.id} enabled={isConnected} />
           </div>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">

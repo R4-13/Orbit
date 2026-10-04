@@ -6,3 +6,4 @@ export * from './result';
 export * from './duration';
 export * from './agent-definitions';
 export * from './workflow-definitions';
+export * from './connector-operational-status';

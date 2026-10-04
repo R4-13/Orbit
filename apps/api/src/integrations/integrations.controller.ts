@@ -8,6 +8,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { ConnectorStatusService } from './connector-status.service';
 import { UpsertIntegrationCredentialsDto } from './dto/upsert-integration-credentials.dto';
 import { GmailConnectorService } from './gmail-connector.service';
 import { IntegrationsService } from './integrations.service';
@@ -21,6 +22,7 @@ export class IntegrationsController {
   constructor(
     private readonly integrationsService: IntegrationsService,
     private readonly gmailConnector: GmailConnectorService,
+    private readonly connectorStatus: ConnectorStatusService,
   ) {}
 
   @Get()
@@ -83,6 +85,15 @@ export class IntegrationsController {
       await this.gmailConnector.revokeAtProvider(user.tenantId).catch(() => undefined);
     }
     return this.integrationsService.disconnect(user.tenantId, user.id, connectorType);
+  }
+
+  /** docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8 (Increment H) — the 5-level operational status, computed from real evidence, not from `Integration.status` alone. */
+  @Get(':connectorType/operational-status')
+  getOperationalStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
+  ) {
+    return this.connectorStatus.getStatus(user.tenantId, connectorType);
   }
 
   /** Single source of truth for "is this connector really callable today" is the registry's `liveConnectSupported` flag (currently only GMAIL) — not a second, separately-maintained list here. */

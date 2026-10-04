@@ -978,7 +978,7 @@ model IntakeEvent {
   /// Bewusst ein freier String statt eines harten Enums (nur FINANCE/SALES/OTHER heute) — neue Domänen dürfen ohne Schema-Migration hinzukommen.
   domainCategory  String?   @map("domain_category")
   caseId          String?   @map("case_id")
-  /// Korrelation zum durablen WorkflowRun, sobald Increment G (Finance/Sales über WorkflowDefinition) steht — bis dahin stets null, da `IntakeService` Finance/Sales noch über den bestehenden `runAgentTurn()`-Pfad ausführt, nicht über den Workflow-Runner.
+  /// Korrelation zum durablen WorkflowRun — seit Increment G von `IntakeService.triggerWorkflow()` für jedes FINANCE/SALES-Intake-Event gesetzt (vorher stets null, da Finance/Sales über den inzwischen entfernten `runAgentTurn()`-Pfad liefen).
   workflowRunId   String?   @map("workflow_run_id")
 
   status          IntakeEventStatus @default(RECEIVED)

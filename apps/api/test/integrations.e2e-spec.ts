@@ -81,6 +81,32 @@ describe('Integrations / credential storage (e2e)', () => {
     expect(JSON.stringify(list.body)).not.toContain('e2e-super-secret');
   });
 
+  it('operational-status reflects real evidence, never just the OAuth/credentials status (docs/CHANNEL_EVENT_RUNTIME_PLAN.md §8)', async () => {
+    const unconfigured = await request(app.getHttpServer())
+      .get('/api/v1/integrations/DATEV/operational-status')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(unconfigured.body.highestLevelReached).toBeNull();
+    expect(unconfigured.body.currentlyConnected).toBe(false);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/integrations/DATEV/credentials')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ credentials: { clientId: 'e2e-status-client' } })
+      .expect(200);
+
+    const connected = await request(app.getHttpServer())
+      .get('/api/v1/integrations/DATEV/operational-status')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    // Credentials stored successfully -> AUTHENTICATION_CONNECTED, but never
+    // further — no ConnectorSync/IntakeEvent exists for this connection, so
+    // claiming INPUT_TRIGGER_ACTIVE or beyond would misrepresent reality.
+    expect(connected.body.highestLevelReached).toBe('AUTHENTICATION_CONNECTED');
+    expect(connected.body.currentlyConnected).toBe(true);
+    expect(connected.body.levels.INPUT_TRIGGER_ACTIVE.reached).toBe(false);
+  });
+
   it('overwrites previously stored credentials on a second PUT (upsert)', async () => {
     await request(app.getHttpServer())
       .put('/api/v1/integrations/HUBSPOT/credentials')
