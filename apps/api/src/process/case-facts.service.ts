@@ -110,6 +110,21 @@ export class CaseFactsService {
     return updated;
   }
 
+  /**
+   * A value read from a system of record or from tenant configuration is trusted by origin, not by confidence. Emails,
+   * attachments and model output never qualify — those stay candidates until schema validation or a person confirms them.
+   */
+  async confirmFromTrustedSource(tenantId: string, factId: string): Promise<CaseFact> {
+    const fact = await this.requireFact(tenantId, factId);
+    if (fact.sourceType !== "SYSTEM_OF_RECORD" && fact.sourceType !== "CONFIGURATION") {
+      throw new ValidationFailedError("Only facts from a system of record or tenant configuration can be confirmed by origin.", { factId, sourceType: fact.sourceType });
+    }
+    if (fact.status !== "CANDIDATE") return fact;
+    const updated = await this.prisma.forTenantId(tenantId).caseFact.update({ where: { id: factId }, data: { status: "CONFIRMED", verifiedBy: "system-of-record" } });
+    await this.bumpRevision(tenantId, fact.caseId);
+    return updated;
+  }
+
   /** A person states or corrects a value. Supersedes every current row for the key, which also resolves any conflict. */
   async setByHuman(tenantId: string, caseId: string, userId: string, input: Omit<FactInput, 'sourceType'>): Promise<CaseFact> {
     const validation = validateFactValue(input.valueType, input.value);

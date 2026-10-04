@@ -40,6 +40,7 @@ const ACTION_LABELS: Record<string, string> = {
   'quote.render': 'Angebotsdokument erzeugen',
   'email.send.clarification': 'Rückfrage an den Absender senden',
   'email.send.quote_delivery': 'Angebot an den Kunden senden',
+  'process.plan': 'Prozessplan durch die KI vorschlagen',
 };
 
 export default function AdminPoliciesPage() {

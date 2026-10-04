@@ -67,6 +67,8 @@ export const POLICY_ACTIONS = {
    */
   EMAIL_SEND_CLARIFICATION: 'email.send.clarification',
   EMAIL_SEND_QUOTE_DELIVERY: 'email.send.quote_delivery',
+  /** Amendment 02 §11: der KI-Prozessplaner schlägt einen Plan vor (reine Planung ohne Wirkung; jede Aktion im Plan bleibt einzeln policy-pflichtig). */
+  PROCESS_PLAN: 'process.plan',
 } as const;
 
 export type PolicyActionKey = (typeof POLICY_ACTIONS)[keyof typeof POLICY_ACTIONS];
@@ -109,4 +111,5 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.QUOTE_RENDER]: { mode: 'AUTONOMOUS' },
   [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.PROCESS_PLAN]: { mode: 'AUTONOMOUS' },
 };

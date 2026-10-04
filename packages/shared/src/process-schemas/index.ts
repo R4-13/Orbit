@@ -9,3 +9,5 @@ export * from './capability';
 export * from './commands';
 export * from './graph';
 export * from './plan-validator';
+export * from './blueprint-validator';
+export * from './plan-runtime';

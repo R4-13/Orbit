@@ -23,6 +23,7 @@ import { CommunicationAgentTools } from './tools/communication.tools';
 import { FinanceAgentTools } from './tools/finance.tools';
 import { SalesAgentTools } from './tools/sales.tools';
 import { TriageAgentTools } from './tools/triage.tools';
+import { ProcessAgentTools } from './tools/process.tools';
 import { SondeTools } from '../copilot/tools/sonde.tools';
 
 /**
@@ -57,6 +58,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
     SalesAgentTools,
     CommunicationAgentTools,
     TriageAgentTools,
+    ProcessAgentTools,
     SondeTools,
     AgentRunRecorderService,
     {
@@ -91,13 +93,14 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
     },
     {
       provide: TOOL_REGISTRY,
-      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools, TriageAgentTools, SondeTools],
+      inject: [FinanceAgentTools, SalesAgentTools, CommunicationAgentTools, TriageAgentTools, SondeTools, ProcessAgentTools],
       useFactory: (
         finance: FinanceAgentTools,
         sales: SalesAgentTools,
         communication: CommunicationAgentTools,
         triage: TriageAgentTools,
         sonde: SondeTools,
+        processTools: ProcessAgentTools,
       ) => {
         const registry = new ToolRegistry();
         communication.register(registry);
@@ -105,6 +108,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
         finance.register(registry);
         sales.register(registry);
         sonde.register(registry);
+        processTools.register(registry);
         return registry;
       },
     },

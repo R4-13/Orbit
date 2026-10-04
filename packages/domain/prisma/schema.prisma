@@ -137,6 +137,8 @@ enum ApprovalEntityType {
   BOOKING_PROPOSAL
   SUPPLIER
   FOLLOW_UP
+  /// Amendment 02: eine Freigabe für eine vorbereitete externe Wirkung (`ActionIntent`), gebunden an Nutzlast-Hash und Planrevision.
+  PROCESS_ACTION
   MEETING
 }
 

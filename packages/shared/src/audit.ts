@@ -76,6 +76,19 @@ export const AUDIT_EVENT_TYPES = [
   'TENANT_BRANDING_RESET',
   'COPILOT_CONVERSATION_STARTED',
   'COPILOT_CONVERSATION_DELETED',
+  /** Amendment 02 §8.2 — Blueprint-Lebenszyklus (Import, Statuswechsel, Mandantenaktivierung); Payload: Schlüssel, Version, Hash, alter/neuer Status. */
+  'PROCESS_BLUEPRINT_IMPORTED',
+  'PROCESS_BLUEPRINT_TRANSITIONED',
+  'PROCESS_BLUEPRINT_ACTIVATED',
+  'PROCESS_BLUEPRINT_DEACTIVATED',
+  /** Amendment 02 §11/§15 — Planrevision angelegt/aktiviert/ersetzt; externe Wirkung vorbereitet/bestätigt/ungewiss. */
+  'PROCESS_PLAN_CREATED',
+  'PROCESS_PLAN_ACTIVATED',
+  'PROCESS_ACTION_PREPARED',
+  'PROCESS_ACTION_CONFIRMED',
+  'PROCESS_ACTION_OUTCOME_UNKNOWN',
+  /** Amendment 02 §14.5 — ein Command wurde ausgeführt, abgewiesen oder als Konflikt erkannt. */
+  'CASE_COMMAND_EXECUTED',
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

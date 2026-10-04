@@ -38,6 +38,20 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
   }
 
   /**
+   * Runs several operations atomically for ONE tenant: the transaction carries `app.tenant_id`, so Postgres
+   * Row-Level Security (role orbit_app) confines every statement to that tenant. Used where state and an event must be
+   * persisted together (Amendment 02 §12.3). The `tx` client is deliberately not wrapped by the application-layer
+   * scope — callers must still put `tenantId` into their `where`/`data`; RLS is the hard guarantee.
+   */
+  async inTenantTransaction<T>(tenantId: string, fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    if (!tenantId) throw new Error('inTenantTransaction() requires a non-empty tenantId.');
+    return this.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+      return fn(tx);
+    });
+  }
+
+  /**
    * Runs `fn` inside a transaction with the Postgres RLS bypass GUC
    * (`app.bypass_rls`) enabled for that transaction only — for the small,
    * explicit set of genuinely cross-tenant operations that must run before
