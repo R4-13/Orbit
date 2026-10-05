@@ -133,6 +133,8 @@ gemocktem HTTP-Client (kein echter API-Call).
 
 ## Roadmap (übernimmt §74, mit Klassifikation je Phase)
 
+> **Stand 2026-10-05:** Phase 5–9 sind umgesetzt; die frühere Markierung „MISSING“ war überholt. Die aktuelle Gesamtübersicht über alle Spezifikationen steht in [`SPEC_STATUS_OVERVIEW.md`](SPEC_STATUS_OVERVIEW.md).
+
 | Phase | Inhalt | Klassifikation | In dieser Session umsetzbar? |
 |---|---|---|---|
 | 0 | Gap-Analyse (dieses Dokument) | — | ✅ erledigt |
@@ -140,13 +142,13 @@ gemocktem HTTP-Client (kein echter API-Call).
 | 2 | Operational Hardening (Logging, Metrics, Failed-Jobs-UI, Tenant-Concurrency, Retention-Grundlage) | ✅ erledigt (Metrics + Logging + Tenant-Concurrency + Failed-Work-Retry + Retention-Grundlage) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 3 | Agent Governance (Lifecycle, Prompt-Layering, Evaluationsframework) | Prompt-Layering ✅ + Injection-Boundary ✅ + Evaluationsframework ✅ erledigt; Lifecycle bewusst nicht auf das volle 8-Zustands-Modell erweitert (siehe `docs/ASSUMPTIONS.md` #244-253) | ✅ Ja — siehe `docs/IMPLEMENTATION_STATUS.md` |
 | 4 | LLM Provider Platform (OpenAI-Adapter, Provider-Registry, BYOK-Modell, Admin-UI) | ✅ erledigt (strukturell — Provider-Adapter/BYOK-Routing/Admin-UI live gegen echte Postgres bewiesen, Live-Aufruf eines echten Anthropic/OpenAI-Keys mangels Credentials nicht möglich; Model-Profile/Lifecycle-Registry/Usage-Metering bewusst nicht Teil dieser Stufe, siehe `docs/ASSUMPTIONS.md` #254-262) | ✅ Ja (strukturell, ohne Live-Test) |
-| 5 | Sonde Conversation Foundation | MISSING | ✅ Ja |
-| 6 | Sonde Read Mode | MISSING | ✅ Ja |
-| 7 | Sonde Streaming UX | MISSING | ✅ Ja (SSE-Infrastruktur ja; echtes Streaming von `AnthropicLLMProvider`/`OpenAILLMProvider` nur strukturell, da kein Live-Provider) |
-| 8 | Sonde Prepare Mode | MISSING | ✅ Ja |
-| 9 | Sonde Safe Actions | MISSING | ✅ Ja |
-| 10 | Sonde Workflow Delegation | MISSING | ✅ Ja (abhängig von Phase 1) |
-| 11 | Real Provider and Connector Validation | BLOCKED_BY_EXTERNAL_CREDENTIALS | ❌ Nein — braucht echte Zugangsdaten |
+| 5 | Sonde Conversation Foundation | ✅ erledigt (`Conversation`/`ConversationMessage`, `/copilot/*`, SondePanel-Frontend; ASSUMPTIONS #276-286) | ✅ erledigt |
+| 6 | Sonde Read Mode | ✅ erledigt (ASK-Modus, lesende Tools über die geteilte ToolRegistry; seit Amendment 02 zusätzlich serverseitig gebauter, nur lesender Vorgangskontext) | ✅ erledigt |
+| 7 | Sonde Streaming UX | ✅ erledigt (SSE `tool.started`/`tool.completed`/`message.completed`/`error`; kein `message.delta`-Token-Streaming, ASSUMPTIONS #287-293) | ✅ Ja (SSE-Infrastruktur ja; echtes Streaming von `AnthropicLLMProvider`/`OpenAILLMProvider` nur strukturell, da kein Live-Provider) |
+| 8 | Sonde Prepare Mode | ✅ erledigt (`draft_email`/`create_meeting`/`create_booking_proposal`; ASSUMPTIONS #294-298) | ✅ erledigt |
+| 9 | Sonde Safe Actions | ✅ erledigt (ACT-Modus: `create_task`/`create_contact`/`create_lead`/`send_email` mit Freigabe; ASSUMPTIONS #299-301) | ✅ erledigt |
+| 10 | Sonde Workflow Delegation | OFFEN (DELEGATE-Modus bewusst noch nicht umgesetzt; Sonde führt auch im Vorgang keine Commands aus) | ✅ Ja (Phase 1 und Amendment 02 sind die Grundlage) |
+| 11 | Real Provider and Connector Validation | TEILWEISE: Anthropic-Verbindungstest und OpenAI `gpt-6-luna` (Triage, Sonde) live, Gmail-Lesen live; Gmail-Versand, DATEV/Lexware/HubSpot/Microsoft/Twilio BLOCKED_BY_EXTERNAL_CREDENTIALS | ❌ Nein — braucht echte Zugangsdaten |
 | 12 | Hardening and Pilot Readiness (Security-/Load-Tests) | PARTIAL | ⚠️ Teilweise — Security-/Regressionstests ja, echte Lasttests gegen produktionsnahe Infrastruktur nicht sinnvoll in dieser Umgebung |
 
 **Abweichung von §74 bewusst vorgenommen**: Phase 4 (Provider Platform)

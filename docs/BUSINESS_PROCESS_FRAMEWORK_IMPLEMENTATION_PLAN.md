@@ -112,11 +112,11 @@ Drei Aussagen, bewusst getrennt: **implementiert** (Code vorhanden), **automatis
 | BP-11 | ja | ja (`triage-resilience`) | **ja** (Newsletter: keine Aktion) |  |
 | BP-12 | ja (API + UI-Bereich, Produktivstandard „ausgeblendet“) | API getestet; Sichtbarkeit per Konfig | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-13 | ja | ja | **ja** (Prompt-Injection → Prüfung) |  |
-| BP-14 | ja (Dashboard/Case) | Typecheck/Lint; Browser **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Posteingangs-Tabelle: Link über Mail-Zeile in Dashboard |
+| BP-14 | ja (Dashboard/Case) | Typecheck/Lint; Playwright (Spalte „Orchestrierung“, Bereich „Kein Geschäftsprozess ausgelöst“) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Posteingangs-Tabelle: Link über Mail-Zeile in Dashboard |
 | BP-15 | ja (Ebenen Gesamt/Tatsächlich/Definition, Kantenstatus) | ja (`case-orchestration-view`) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-16 | ja (Details, Vorschau, Evidenz, Receipts) | ja | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
 | BP-17 | ja (alle Commands) | ja (Commands, 409, Replay) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ |  |
-| BP-18 | ja (Server prüft Berechtigung/Revision) | ja (Berechtigungen, Fremdmandant) | – | Sonde hat keinen Case-Kontext |
+| BP-18 | ja (Server prüft Berechtigung/Revision) | ja (Berechtigungen, Fremdmandant; `case-context.service.spec`) | **ja** – Sonde beantwortet Fragen im Vorgang aus dem serverseitigen Kontext (nur lesend, führt keine Commands aus) | Sonde-Command-Ausführung bewusst nicht umgesetzt |
 | BP-19 | ja (Sweep, Lease, Events in Postgres) | ja (Restart/Frist/Lease) | – |  |
 | BP-20 | ja (Ledger, Exactly-once-Dispatch) | ja (parallele advance, Replay) | – |  |
 | BP-21 | ja | ja (`OUTCOME_UNKNOWN`, Abgleich) | nicht live erzwingbar |  |
@@ -124,7 +124,7 @@ Drei Aussagen, bewusst getrennt: **implementiert** (Code vorhanden), **automatis
 | BP-23 | ja | ja (Tool → Node → Case → Intake → Graph → Badge) | Teil live (Gate G) |  |
 | BP-24 | ja | ja (zweiter Mandant + zweiter Blueprint, Fixture-Capabilities) | – |  |
 | BP-25 | ja | ja (Ad-hoc-Plan, Bestätigung, Ablehnung) | – |  |
-| BP-26 | ja (Liste als Alternative, ARIA, Responsivität) | Typecheck/Lint; Browser **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | Kein automatisierter UI-Test (Playwright) |
+| BP-26 | ja (Liste als Alternative, ARIA, Responsivität) | Typecheck/Lint; Playwright (390 px ohne horizontales Scrollen, schreibgeschützter Nutzer ohne Aktionen) | **ja, mit simuliertem Versand** – Abschnitt „Live-Nachweis“ | – |
 | BP-27 | ja | ja | Teil live (Gate G, KI-Status) |  |
 | BP-28 | ja | bestehende Tests grün | – |  |
 | BP-29 | ja | ja (siehe Abschlussbericht) | – |  |
