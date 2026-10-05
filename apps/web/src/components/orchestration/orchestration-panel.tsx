@@ -71,10 +71,11 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
   const { data: graph, isLoading, isError, error, refetch } = useOrchestration(caseId, { mode, planRevision });
   // Sonde sees what the user sees: the case, the selected step and the revision (the server re-validates this hint).
   const { setContext } = useSondeCaseContext();
+  const selectedTitle = selected ? graph?.nodes.find((node) => node.id === selected)?.title : undefined;
   useEffect(() => {
-    setContext({ caseId, nodeId: selected ?? undefined, planRevision });
+    setContext({ caseId, nodeId: selected ?? undefined, planRevision, label: selectedTitle ? `Dieser Vorgang · Schritt „${selectedTitle}“` : 'Dieser Vorgang' });
     return () => setContext(null);
-  }, [caseId, selected, planRevision, setContext]);
+  }, [caseId, selected, selectedTitle, planRevision, setContext]);
   const stream = useCaseEventStream(caseId, mode !== 'DEFINITION');
 
   if (isLoading) return <p className="text-sm text-slate-500">Orchestrierung wird geladen …</p>;

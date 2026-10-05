@@ -34,3 +34,18 @@ export async function loginViaApi(email: string, password = DEMO_PASSWORD): Prom
   const body = (await response.json()) as { accessToken: string };
   return body.accessToken;
 }
+
+/**
+ * Meldet über die echte API an und legt die Sitzung vor dem ersten Seitenaufruf in den localStorage – spart den UI-Login in
+ * Tests, die viele Viewports durchlaufen (der Login selbst ist in auth.spec.ts abgedeckt).
+ */
+export async function loginViaStorage(page: Page, email: string, password = DEMO_PASSWORD): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error(`loginViaStorage(${email}) failed: ${response.status}`);
+  const session = (await response.json()) as { accessToken: string; refreshToken: string; user: unknown };
+  await page.addInitScript((value) => window.localStorage.setItem('orbit.auth', value), JSON.stringify({ accessToken: session.accessToken, refreshToken: session.refreshToken, user: session.user }));
+}

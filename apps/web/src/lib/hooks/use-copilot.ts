@@ -2,9 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Conversation, ConversationMessage } from '@orbit/domain';
 import { ApiError, apiFetch, apiFetchStream } from '../api-client';
 
+export type SondeMode = 'ASK' | 'PREPARE' | 'ACT';
+
+export interface SondeReadiness {
+  /** Konfigurationsart (ORBIT Managed / eigener Anbieter) – kein Health-Nachweis. */
+  configuration: 'ORBIT_MANAGED' | 'TENANT_MANAGED';
+  executionMode: 'LIVE' | 'SIMULATED';
+  health: 'VERIFIED' | 'NOT_VERIFIED' | 'ERROR' | 'SIMULATED';
+  detail: string | null;
+  checkedAt: string | null;
+}
+
 export interface CopilotCapabilities {
-  modes: Array<'ASK' | 'PREPARE' | 'ACT'>;
+  modes: SondeMode[];
   tools: string[];
+  readiness?: SondeReadiness;
 }
 
 export function useCopilotCapabilities() {
@@ -112,13 +124,14 @@ export async function streamCopilotMessage(
   conversationId: string,
   content: string,
   handlers: CopilotStreamHandlers,
-  context?: { caseId: string; nodeId?: string; planRevision?: number } | null,
+  options: { context?: { caseId: string; nodeId?: string; planRevision?: number } | null; mode?: SondeMode } = {},
 ): Promise<void> {
+  const { context, mode } = options;
   let response: Response;
   try {
     response = await apiFetchStream(`/v1/copilot/conversations/${conversationId}/messages/stream`, {
       method: 'POST',
-      body: JSON.stringify({ content, ...(context ? { context } : {}) }),
+      body: JSON.stringify({ content, ...(mode ? { mode } : {}), ...(context ? { context } : {}) }),
     });
   } catch (err) {
     handlers.onError?.(err instanceof ApiError ? err.message : 'Die Verbindung zu Sonde ist fehlgeschlagen.');

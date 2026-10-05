@@ -20,7 +20,7 @@
      what made the Finance/Sales sidebar submenu text invisible (same
      color as the sidebar background) before this was fixed. See
      docs/ASSUMPTIONS.md. */
-  --brand-primary: 29 78 216;
+  --brand-primary: 22 102 216;
   --brand-primary-foreground: #ffffff;
 
   --brand-secondary: #0f172a;
@@ -29,20 +29,20 @@
   --brand-accent: 8 145 178;
   --brand-accent-foreground: #ecfeff;
 
-  --nav-background: #0f172a;
+  --nav-background: #0b2340;
   --nav-foreground: 148 163 184;
   --nav-active-background: rgba(255, 255, 255, 0.08);
   --nav-active-foreground: #ffffff;
 
-  --surface-page: #f8fafc;
+  --surface-page: #f5f7fb;
   --surface-card: #ffffff;
   --surface-muted: #f1f5f9;
 
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-primary: #14243b;
+  --text-secondary: #52647b;
   --text-muted: #94a3b8;
 
-  --border-default: #e2e8f0;
+  --border-default: #dce4ef;
 
   --status-success: #16a34a;
   --status-success-bg: #f0fdf4;
@@ -53,5 +53,5 @@
   --status-info: #2563eb;
   --status-info-bg: #eff6ff;
 
-  --radius-card: 16px;
+  --radius-card: 12px;
 }

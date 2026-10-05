@@ -1,0 +1,222 @@
+[
+  {
+    "route": "dashboard",
+    "size": "1920x1080",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 1296,
+    "mainVScroll": 1475,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "inbox",
+    "size": "1920x1080",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 1296,
+    "mainVScroll": 6912,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "finance/invoices",
+    "size": "1920x1080",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 1296,
+    "mainVScroll": 2209,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "approvals",
+    "size": "1920x1080",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 1296,
+    "mainVScroll": 4639,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "cases",
+    "size": "1920x1080",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 1296,
+    "mainVScroll": 1124,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "dashboard",
+    "size": "1440x900",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 816,
+    "mainVScroll": 1703,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "inbox",
+    "size": "1440x900",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 816,
+    "mainVScroll": 7312,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "finance/invoices",
+    "size": "1440x900",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 816,
+    "mainVScroll": 2389,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "approvals",
+    "size": "1440x900",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 816,
+    "mainVScroll": 4819,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "cases",
+    "size": "1440x900",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 816,
+    "mainVScroll": 2164,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "dashboard",
+    "size": "1280x720",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 656,
+    "mainVScroll": 1947,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "inbox",
+    "size": "1280x720",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 656,
+    "mainVScroll": 7708,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "finance/invoices",
+    "size": "1280x720",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 656,
+    "mainVScroll": 3785,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "approvals",
+    "size": "1280x720",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 656,
+    "mainVScroll": 6583,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "cases",
+    "size": "1280x720",
+    "docScroll": 64,
+    "bodyScroll": 64,
+    "pageHScroll": 0,
+    "mainWidth": 656,
+    "mainVScroll": 2584,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "dashboard",
+    "size": "390x844",
+    "docScroll": 0,
+    "bodyScroll": 0,
+    "pageHScroll": 0,
+    "mainWidth": 390,
+    "mainVScroll": 3453,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "inbox",
+    "size": "390x844",
+    "docScroll": 0,
+    "bodyScroll": 0,
+    "pageHScroll": 0,
+    "mainWidth": 390,
+    "mainVScroll": 8106,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "finance/invoices",
+    "size": "390x844",
+    "docScroll": 0,
+    "bodyScroll": 0,
+    "pageHScroll": 0,
+    "mainWidth": 390,
+    "mainVScroll": 5865,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "approvals",
+    "size": "390x844",
+    "docScroll": 0,
+    "bodyScroll": 0,
+    "pageHScroll": 0,
+    "mainWidth": 390,
+    "mainVScroll": 6471,
+    "homeVScroll": null,
+    "homeHScroll": null
+  },
+  {
+    "route": "cases",
+    "size": "390x844",
+    "docScroll": 0,
+    "bodyScroll": 0,
+    "pageHScroll": 0,
+    "mainWidth": 390,
+    "mainVScroll": 2952,
+    "homeVScroll": null,
+    "homeHScroll": null
+  }
+]

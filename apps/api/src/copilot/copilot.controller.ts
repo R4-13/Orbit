@@ -10,6 +10,7 @@ import type { CopilotStreamEvent } from './copilot-stream-event';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SONDE_ACT_TOOL_NAMES, SONDE_ASK_TOOL_NAMES, SONDE_PREPARE_TOOL_NAMES } from './tools/sonde.tools';
+import { AiProvidersService } from '../ai-providers/ai-providers.service';
 
 /**
  * §33 des Master-Dokuments ("Sonde action cards, streaming and API") —
@@ -39,14 +40,24 @@ export class CopilotController {
   constructor(
     private readonly conversations: CopilotConversationService,
     private readonly runtime: CopilotRuntimeService,
+    private readonly aiProviders: AiProvidersService,
   ) {}
 
   @Get('capabilities')
-  getCapabilities() {
+  async getCapabilities(@CurrentUser() user: AuthenticatedUser) {
     // §32: READ (ASK) + PREPARE + ACT in dieser Phase — DELEGATE/NAVIGATE folgen mit späteren Phasen.
+    // UI v2 §8.6: „Bereit“ braucht eine tatsächliche Bereitschaft – die Konfigurationsart (ORBIT Managed) ist kein Health-Nachweis.
+    const status = await this.aiProviders.getStatus(user.tenantId);
     return {
       modes: ['ASK', 'PREPARE', 'ACT'],
       tools: [...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES, ...SONDE_ACT_TOOL_NAMES],
+      readiness: {
+        configuration: status.mode,
+        executionMode: status.runtime.executionMode,
+        health: status.runtime.health.state,
+        detail: status.runtime.health.detail,
+        checkedAt: status.runtime.health.checkedAt,
+      },
     };
   }
 

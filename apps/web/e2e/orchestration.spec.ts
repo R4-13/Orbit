@@ -80,7 +80,9 @@ test.describe('Case orchestration', () => {
   test('the inbox links to the orchestration instead of an assigned agent, and offers the excluded-intake view', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await page.goto('/dashboard');
-    await expect(page.getByRole('columnheader', { name: 'Orchestrierung' })).toBeVisible();
+    // Home zeigt eine Vorschau (keine breite Tabelle): jede Zeile führt in die Orchestrierung bzw. die Entscheidung (UI v2 §6.6).
+    await expect(page.getByRole('heading', { name: 'Neu im Posteingang' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Orchestrierung anzeigen|Entscheidung ansehen|Vorgang ansehen/ }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Zugewiesener Agent' })).toHaveCount(0);
 
     await page.goto('/inbox');

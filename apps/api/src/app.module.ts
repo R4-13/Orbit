@@ -33,6 +33,7 @@ import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RetentionModule } from './retention/retention.module';
+import { SearchModule } from './search/search.module';
 import { SecurityModule } from './security/security.module';
 import { StorageModule } from './storage/storage.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -110,6 +111,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     AgentDefinitionsModule,
     CopilotModule,
     DashboardModule,
+    SearchModule,
     WorkflowsModule,
     RetentionModule,
     FollowUpsModule,

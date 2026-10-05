@@ -45,7 +45,7 @@ export class DashboardController {
         view: view as DashboardView,
         period: period as DashboardPeriod,
         timezone,
-        limits: { attention: clamp(attention, 1, 10), inbox: clamp(inbox, 1, 10), tasks: clamp(tasks, 1, 10), completed: clamp(completed, 1, 10) },
+        limits: { attention: clamp(attention, 1, 50), inbox: clamp(inbox, 1, 10), tasks: clamp(tasks, 1, 10), completed: clamp(completed, 1, 10) },
       },
     );
   }

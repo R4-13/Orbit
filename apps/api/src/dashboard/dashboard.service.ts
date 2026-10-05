@@ -6,6 +6,7 @@ import {
   COMPLETED_ACTION_LABELS,
   DASHBOARD_METRIC_KEYS,
   PERMISSIONS,
+  UNMAPPED_LABEL,
   approvalEntityLabel,
   compareAttention,
   connectorLabel,
@@ -168,12 +169,13 @@ export class DashboardService {
     for (const approval of pendingApprovals) {
       const intent = approval.entityType === 'PROCESS_ACTION' ? intentById.get(approval.entityId) : undefined;
       const linkedCase = intent ? caseById.get(intent.caseId) : undefined;
-      const what = intent ? policyActionLabel(intent.capabilityKey) : policyActionLabel(approval.policyAction);
+      const mapped = policyActionLabel(intent ? intent.capabilityKey : approval.policyAction);
+      const what = mapped === UNMAPPED_LABEL ? 'Freigabe erforderlich' : mapped;
       const entity = approvalEntityLabel(approval.entityType);
       push({
         id: `approval:${approval.id}`,
         deduplicationKey: linkedCase ? `case:${linkedCase.id}` : `approval:${approval.id}`,
-        title: linkedCase ? `${what}: ${linkedCase.title}` : `${what} (${entity})`,
+        title: linkedCase ? `${what}: ${linkedCase.title}` : mapped === UNMAPPED_LABEL ? `Freigabe: ${entity}` : `${what} (${entity})`,
         reason: approval.reason ?? 'Ihre Freigabe ist erforderlich, bevor ORBIT fortfährt.',
         priority: 'NORMAL',
         rank: 3,

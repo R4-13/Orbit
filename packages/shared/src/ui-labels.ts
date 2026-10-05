@@ -73,6 +73,14 @@ export const POLICY_ACTION_LABELS: Readonly<Record<string, string>> = {
   'email.send.clarification': 'Rückfrage an den Kunden senden',
   'email.send.quote_delivery': 'Angebot an den Kunden senden',
   'process.plan': 'Ablauf planen',
+  // Werkzeuge der Agenten und von Sonde, die als Freigabe (FOLLOW_UP) auftauchen können.
+  create_booking_proposal: 'Buchungsvorschlag erstellen',
+  send_email: 'Nachricht versenden',
+  draft_email: 'Antwort vorbereiten',
+  create_meeting: 'Termin vorschlagen',
+  create_task: 'Aufgabe anlegen',
+  create_contact: 'Kontakt anlegen',
+  create_lead: 'Interessenten anlegen',
 };
 
 /** Freigabe-Entitätstypen → Objektbezeichnung. */

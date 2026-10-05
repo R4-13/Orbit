@@ -4,7 +4,10 @@ import { DEMO_USERS, loginViaUi } from './utils/login';
 test.describe('Auth', () => {
   test('logs in with valid seeded credentials and reaches the dashboard', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.finance);
-    await expect(page.getByRole('heading', { name: 'Willkommen zurück, finance@musterwerk.example' })).toBeVisible();
+    // UI v2 GAP-08: eine freundliche Begrüßung, nie die technische E-Mail-Adresse als Überschrift.
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toHaveText(/^Guten (Morgen|Tag|Abend)/);
+    await expect(heading).not.toContainText('@');
   });
 
   test('shows a German error message for a wrong password and stays on /login', async ({ page }) => {
@@ -27,7 +30,8 @@ test.describe('Auth', () => {
 
   test('logs out, clears the session and redirects to /login', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
-    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: 'Profilmenü' }).click();
+    await page.getByRole('menuitem', { name: 'Abmelden' }).click();
     await page.waitForURL('**/login');
 
     const authStorage = await page.evaluate(() => window.localStorage.getItem('orbit.auth'));
@@ -40,8 +44,10 @@ test.describe('Auth', () => {
 
   test('does not expose the Lieferanten nav item to a user without SUPPLIER_MANAGE', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.finance);
-    const nav = page.getByRole('navigation');
-    await expect(nav.getByRole('link', { name: 'Lieferanten' })).not.toBeVisible();
+    // Untergruppen sind beim Einstieg geschlossen; die aktive Route öffnet ihre Gruppe (UI v2 NAV-03).
+    await page.goto('/finance/invoices');
+    const nav = page.getByRole('navigation', { name: 'Hauptnavigation' });
     await expect(nav.getByRole('link', { name: 'Rechnungen', exact: true })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Lieferanten' })).not.toBeVisible();
   });
 });

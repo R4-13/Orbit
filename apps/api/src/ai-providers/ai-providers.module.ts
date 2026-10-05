@@ -9,6 +9,6 @@ import { AiProvidersService } from './ai-providers.service';
   imports: [AgentModule],
   controllers: [AiProvidersController],
   providers: [AiProvidersService, AiProviderResolverService],
-  exports: [AiProviderResolverService],
+  exports: [AiProviderResolverService, AiProvidersService],
 })
 export class AiProvidersModule {}
