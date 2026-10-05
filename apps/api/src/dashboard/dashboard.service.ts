@@ -399,7 +399,8 @@ export class DashboardService {
     const since = new Date(now.getTime() - INBOX_WINDOW_DAYS * 24 * 3600 * 1000);
     const where = {
       occurredAt: { gte: since },
-      ...(showExcluded ? {} : { NOT: { OR: [{ relevance: { in: [...EXCLUDED] } }, { status: 'SKIPPED_NON_ACTIONABLE' as const }] } }),
+      // NULL-sicher (siehe InboxService): noch nicht eingestufte Eingänge (relevance = NULL) bleiben sichtbar.
+      ...(showExcluded ? {} : { AND: [{ OR: [{ relevance: null }, { relevance: { notIn: [...EXCLUDED] } }] }, { status: { not: 'SKIPPED_NON_ACTIONABLE' as const } }] }),
     };
     const [events, total] = await Promise.all([
       db.intakeEvent.findMany({ where, orderBy: { occurredAt: 'desc' }, take: limit, include: { case: true } }),

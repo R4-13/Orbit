@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, DefaultValuePipe, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS } from '@orbit/shared';
+import { PERMISSIONS, type TaskListResponse } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -8,6 +8,8 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTasksDto } from './dto/query-tasks.dto';
+import { isValidTimezone } from '../dashboard/dashboard-time';
+import { TasksOverviewService } from './tasks-overview.service';
 import { TasksService } from './tasks.service';
 
 @ApiTags('tasks')
@@ -15,7 +17,24 @@ import { TasksService } from './tasks.service';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'tasks' })
 export class TasksController {
-  constructor(private readonly tasksService: TasksService) {}
+  constructor(
+    private readonly tasksService: TasksService,
+    private readonly overview: TasksOverviewService,
+  ) {}
+
+  /** UI v2 §15: „Meine Aufgaben“ (Standard) nach überfällig/heute/später; die Teamansicht braucht kein eigenes Recht über `task.read` hinaus (alle Aufgaben des Mandanten sind ohnehin lesbar). */
+  @Get('overview')
+  @RequirePermissions(PERMISSIONS.TASK_READ)
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('scope', new DefaultValuePipe('MINE')) scope: string,
+    @Query('done') done: string | undefined,
+    @Query('timezone', new DefaultValuePipe('Europe/Berlin')) timezone: string,
+  ): Promise<TaskListResponse> {
+    if (scope !== 'MINE' && scope !== 'TEAM') throw new BadRequestException('scope muss MINE oder TEAM sein.');
+    if (!isValidTimezone(timezone)) throw new BadRequestException('timezone ist keine gültige IANA-Zeitzone.');
+    return this.overview.list(user.tenantId, user.id, { scope, includeDone: done === 'true', timezone });
+  }
 
   @Post()
   @RequirePermissions(PERMISSIONS.TASK_MANAGE)

@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS } from '@orbit/shared';
+import { PERMISSIONS, type CaseListFilter, type CaseListResponse } from '@orbit/shared';
 import type { Case } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { CasesOverviewService } from './cases-overview.service';
 import { CasesService } from './cases.service';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { QueryCasesDto } from './dto/query-cases.dto';
@@ -17,7 +18,25 @@ import { UpdateCaseStatusDto } from './dto/update-case-status.dto';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'cases' })
 export class CasesController {
-  constructor(private readonly casesService: CasesService) {}
+  constructor(
+    private readonly casesService: CasesService,
+    private readonly overview: CasesOverviewService,
+  ) {}
+
+  /** UI v2 §16.1: die Vorgangsübersicht (Standard „Offene Vorgänge“) – vor `:id`, damit der Pfad nicht als ID gelesen wird. */
+  @Get('overview')
+  @RequirePermissions(PERMISSIONS.CASE_READ)
+  list(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('filter', new DefaultValuePipe('OPEN')) filter: string,
+    @Query('type') type: string | undefined,
+    @Query('q', new DefaultValuePipe('')) q: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+  ): Promise<CaseListResponse> {
+    if (!['OPEN', 'ATTENTION', 'DONE', 'ALL'].includes(filter)) throw new BadRequestException('Unbekannter Filter.');
+    if (type !== undefined && type !== 'FINANCE' && type !== 'SALES') throw new BadRequestException('type muss FINANCE oder SALES sein.');
+    return this.overview.list(user.tenantId, { filter: filter as CaseListFilter, type: type as 'FINANCE' | 'SALES' | undefined, page, search: q });
+  }
 
   @Post()
   @RequirePermissions(PERMISSIONS.CASE_MANAGE)

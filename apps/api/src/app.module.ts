@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { findRepoRootEnvFile, type OrbitEnv } from '@orbit/config';
+import { ActivityModule } from './activity/activity.module';
 import { AgentModule } from './agent/agent.module';
 import { AgentDefinitionsModule } from './agent-definitions/agent-definitions.module';
 import { AiProvidersModule } from './ai-providers/ai-providers.module';
@@ -23,6 +24,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { EmailMessagesModule } from './email-messages/email-messages.module';
 import { FollowUpsModule } from './follow-ups/follow-ups.module';
 import { HealthModule } from './health/health.module';
+import { InboxModule } from './inbox/inbox.module';
 import { IntakeModule } from './intake/intake.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { InvoicesModule } from './invoices/invoices.module';
@@ -112,6 +114,8 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     CopilotModule,
     DashboardModule,
     SearchModule,
+    InboxModule,
+    ActivityModule,
     WorkflowsModule,
     RetentionModule,
     FollowUpsModule,

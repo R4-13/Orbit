@@ -217,3 +217,212 @@ export function internalHref(type: EntityType, id: string): string | undefined {
       return undefined;
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Posteingang (UI v2 §11)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const INBOX_STAGES = ['ATTENTION', 'NEW', 'IN_PROGRESS', 'DONE'] as const;
+export type InboxStage = (typeof INBOX_STAGES)[number];
+
+export type InboxFilter = 'ALL' | InboxStage | 'FINANCE' | 'SALES';
+
+export interface InboxListItem {
+  id: string;
+  emailMessageId?: string;
+  source: 'EMAIL';
+  senderLabel: string;
+  senderAddress?: string;
+  subject: string;
+  occurredAt: string;
+  /** Fachlicher Typ, z. B. „Angebotsanfrage“ (aus der Label-Registry), nie ein Enum-Schlüssel. */
+  typeLabel: string;
+  categoryKey?: string;
+  domain: 'FINANCE' | 'SALES' | null;
+  stage: InboxStage;
+  statusLabel: string;
+  nextActionLabel: string;
+  needsAttention: boolean;
+  /** Sicher ausgefiltert (Kein Geschäftsprozess ausgelöst): erscheint nur, wenn die Sicht es erlaubt. */
+  excluded: boolean;
+  caseRef?: EntityRef;
+  hasProcess: boolean;
+  /** Erweiterte Felder (Spaltenwahl/Detail), nicht Teil der Standardliste. */
+  details: { agentLabel?: string; relevanceLabel?: string; confidence?: number; executionMode?: 'LIVE' | 'SIMULATED' };
+}
+
+export interface InboxListResponse {
+  items: InboxListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** Zähler je Filter, damit die Filterleiste ohne weitere Anfrage ehrlich beschriftet werden kann. */
+  counts: Record<InboxFilter, number>;
+  generatedAt: string;
+  /** Wird die Standardansicht ohne ausgefilterte Eingänge geliefert? */
+  excludedHidden: boolean;
+}
+
+export interface InboxFactView {
+  key: string;
+  label: string;
+  valueText: string;
+  confirmed: boolean;
+  sourceLabel: string;
+  evidence?: string;
+}
+
+export interface InboxDetail extends InboxListItem {
+  bodyPreview?: string;
+  recipients: string[];
+  attachments: Array<{ id: string; name: string; mimeType: string; sizeBytes: number }>;
+  /** Kurze fachliche Einordnung mit Begründung der Entscheidung. */
+  reason?: string;
+  facts: InboxFactView[];
+  /** „Aktion: Keine“ bei nicht geschäftsrelevanten Eingängen (§11.2). */
+  actionStatement?: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Freigaben (UI v2 §14)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type ApprovalDecisionMode = 'ENTITY' | 'FOLLOW_UP' | 'PROCESS_ACTION' | 'NONE';
+
+export interface ApprovalQueueItem {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  /** Was soll geschehen? „Bankverbindung eines Lieferanten ändern“, nie ein Policy-Schlüssel. */
+  actionLabel: string;
+  /** Betroffene Person/Firma bzw. das Geschäftsobjekt. */
+  object?: EntityRef;
+  subtitle?: string;
+  amountText?: string;
+  /** Grund/Risiko in einem Satz. */
+  reason: string;
+  risk: 'CRITICAL' | 'NORMAL';
+  requestedAt: string;
+  decidedAt?: string;
+  href: string;
+  canDecide: boolean;
+}
+
+export interface ApprovalFieldView {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+}
+
+export interface ApprovalDetail extends ApprovalQueueItem {
+  /** Die Fragen des Entscheidungsdetails (§14.2): was, für wen, mit welchen Daten, in welches System, warum, danach. */
+  forWhom?: EntityRef;
+  fields: ApprovalFieldView[];
+  targetSystem: string;
+  whyRequired: string;
+  afterwards: string;
+  related: EntityRef[];
+  decision: { mode: ApprovalDecisionMode; approveLabel: string; rejectLabel: string; rejectNeedsReason: boolean };
+  /** Nur bei vorbereiteten externen Wirkungen: die Entscheidung läuft über die Orchestrierung des Vorgangs mit gebundener Nutzlast. */
+  processAction?: { caseId: string; nodeId: string };
+  /** „Diese Freigabe wurde durch eine Änderung ersetzt.“ */
+  stale: boolean;
+  /** Grund, warum (noch) nicht entschieden werden kann, in Klartext. */
+  cannotDecideReason?: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Aktivitäten (UI v2 §17)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface ActivityEvidence {
+  label: string;
+  executionMode: 'LIVE' | 'SIMULATED';
+  providerRef?: string;
+  /** Nur ein bestätigtes Receipt belegt eine externe Wirkung. */
+  confirmed: boolean;
+}
+
+export interface ActivityEntry {
+  id: string;
+  at: string;
+  /** „Antwort versandt“, „Freigabe erteilt“ – verständlich, ohne Ereignisschlüssel. */
+  title: string;
+  actorLabel: string;
+  actorType: 'USER' | 'AGENT' | 'SYSTEM';
+  /** RESULT = bestätigtes Ergebnis/Entscheidung, EVENT = Zwischenschritt. */
+  kind: 'RESULT' | 'EVENT';
+  entity?: EntityRef;
+  evidence?: ActivityEvidence;
+}
+
+export interface ActivityFeed {
+  entries: ActivityEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+  generatedAt: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Vorgänge (UI v2 §16.1)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type CaseListFilter = 'OPEN' | 'ATTENTION' | 'DONE' | 'ALL';
+
+export interface CaseListItem {
+  id: string;
+  title: string;
+  typeLabel: string;
+  /** Firma oder Person, um die es geht (aus Interessent bzw. Lieferant), falls bekannt. */
+  counterparty?: EntityRef;
+  statusLabel: string;
+  statusTone: 'neutral' | 'info' | 'warning' | 'success' | 'danger';
+  /** Nächster Schritt bzw. Wartegrund in Klartext. */
+  nextStep: string;
+  ownerLabel?: string;
+  updatedAt: string;
+  needsAttention: boolean;
+  hasProcess: boolean;
+  href: string;
+}
+
+export interface CaseListResponse {
+  items: CaseListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<CaseListFilter, number>;
+  generatedAt: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Aufgaben (UI v2 §15)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type TaskSection = 'OVERDUE' | 'TODAY' | 'LATER' | 'NO_DUE_DATE' | 'DONE';
+
+export interface TaskListItem {
+  id: string;
+  title: string;
+  /** Welches konkrete Ergebnis wird benötigt? */
+  expectedResult?: string;
+  status: 'OPEN' | 'DONE' | 'CANCELLED';
+  section: TaskSection;
+  dueAt?: string;
+  assigneeLabel?: string;
+  assignedToMe: boolean;
+  fromAssistant: boolean;
+  relatedCase?: EntityRef;
+  /** Läuft der zugehörige Vorgang über einen Prozess? Dann wird er dort bearbeitet – kein loses „Erledigt“ (§15). */
+  caseHasProcess: boolean;
+  /** Fachlicher Bereich des Vorgangs (Finanzen/Vertrieb), falls zugeordnet. */
+  areaLabel?: string;
+  href: string;
+}
+
+export interface TaskListResponse {
+  items: TaskListItem[];
+  total: number;
+  counts: { OVERDUE: number; TODAY: number; LATER: number; NO_DUE_DATE: number; DONE: number };
+  generatedAt: string;
+}

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError } from '@orbit/shared';
-import { Prisma, type BookingProposal, type Invoice, type Supplier } from '@orbit/domain';
+import { Prisma, type BookingProposal, type FinanceTransfer, type Invoice, type Supplier } from '@orbit/domain';
 import type { FinanceConnector, OcrProvider } from '@orbit/integration-core';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
@@ -22,6 +22,14 @@ export interface AddBookingProposalInput {
 }
 
 /** IBAN comparison ignores spaces/case — "DE12 3456" and "de123456" are the same account. */
+export type InvoiceDetailRecord = Invoice & {
+  supplier: Supplier | null;
+  document: { id: string; fileName: string; mimeType: string; sizeBytes: number } | null;
+  case: { id: string; title: string } | null;
+  bookingProposals: BookingProposal[];
+  financeTransfers: FinanceTransfer[];
+};
+
 function normalizeIban(iban: string): string {
   return iban.replace(/\s+/g, '').toUpperCase();
 }
@@ -175,10 +183,12 @@ export class InvoicesService {
     return invoice;
   }
 
-  findAll(tenantId: string, status?: Invoice['status']): Promise<Invoice[]> {
+  /** UI v2 §12.1: die Liste zeigt Lieferant (Name) und Fälligkeit – der Lieferant kommt als schmale Auswahl mit, nicht als ganzer Stammsatz. */
+  findAll(tenantId: string, status?: Invoice['status']): Promise<Array<Invoice & { supplier: { id: string; name: string } | null }>> {
     return this.prisma.forTenantId(tenantId).invoice.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },
+      include: { supplier: { select: { id: true, name: true } } },
     });
   }
 
@@ -189,10 +199,17 @@ export class InvoicesService {
    * SUPPLIER_MANAGE just to see the one field that matters for that
    * comparison. See docs/ASSUMPTIONS.md Phase 19e.
    */
-  async findOne(tenantId: string, id: string): Promise<Invoice & { supplier: Supplier | null }> {
+  async findOne(tenantId: string, id: string): Promise<InvoiceDetailRecord> {
     const found = await this.prisma.forTenantId(tenantId).invoice.findUnique({
       where: { id },
-      include: { supplier: true },
+      // UI v2 §12.2: Beleg (Dokument), Buchungsvorschlag, Übertragung und der zugehörige Vorgang für die „Verknüpft“-Sektion.
+      include: {
+        supplier: true,
+        document: { select: { id: true, fileName: true, mimeType: true, sizeBytes: true } },
+        case: { select: { id: true, title: true } },
+        bookingProposals: { orderBy: { createdAt: 'desc' } },
+        financeTransfers: { orderBy: { startedAt: 'desc' } },
+      },
     });
     if (!found) {
       throw new NotFoundError('Invoice not found.', { id });
