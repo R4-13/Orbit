@@ -132,7 +132,7 @@ function ByokForm({ onSaved }: { onSaved: () => void }) {
       <Button onClick={handleSave} disabled={upsert.isPending || !apiKey}>
         Speichern &amp; prüfen
       </Button>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         Der Schlüssel wird sofort gegen den echten Provider geprüft und danach AES-256-verschlüsselt gespeichert —
         der Klartext wird nie zurückgegeben.
       </p>
@@ -171,8 +171,8 @@ export default function AdminAiProvidersPage() {
   const statusInfo = connection ? (STATUS_LABELS[connection.status] ?? STATUS_LABELS.NOT_CONFIGURED) : null;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-xl font-semibold text-slate-900">KI-Provider</h1>
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-semibold text-slate-900">KI &amp; Modelle</h1>
       <p className="mt-1 text-sm text-slate-500">
         Standardmäßig verwenden alle Agenten die von ORBIT betriebene KI-Konfiguration — kein eigener API-Key nötig.
         Fortgeschrittene Kunden können stattdessen einen eigenen Provider-Zugang hinterlegen (Bring Your Own Key).
@@ -186,7 +186,7 @@ export default function AdminAiProvidersPage() {
           {isError ? (
             <ErrorState message={errorMessage(loadError, 'Der KI-Provider-Status konnte nicht geladen werden.')} onRetry={() => void refetch()} />
           ) : isLoading ? (
-            <p className="text-sm text-slate-400">Wird geladen …</p>
+            <p className="text-sm text-slate-500">Wird geladen …</p>
           ) : (
             <>
               <div className="flex items-center justify-between rounded-md border border-slate-200 px-4 py-3">

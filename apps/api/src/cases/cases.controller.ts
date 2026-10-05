@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS, type CaseListFilter, type CaseListResponse } from '@orbit/shared';
+import { PERMISSIONS, type CaseListFilter, type CaseListItem, type CaseListResponse } from '@orbit/shared';
 import type { Case } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -48,6 +48,13 @@ export class CasesController {
   @RequirePermissions(PERMISSIONS.CASE_READ)
   findAll(@CurrentUser() user: AuthenticatedUser, @Query() query: QueryCasesDto): Promise<Case[]> {
     return this.casesService.findAll(user.tenantId, query);
+  }
+
+  /** Kurzfassung für die Vorschau (UI v2 §9.3): Status, nächster Schritt, Gegenüber, Verantwortlicher. */
+  @Get(':id/summary')
+  @RequirePermissions(PERMISSIONS.CASE_READ)
+  summary(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<CaseListItem> {
+    return this.overview.summary(user.tenantId, id);
   }
 
   @Get(':id')

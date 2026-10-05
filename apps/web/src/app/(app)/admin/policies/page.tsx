@@ -49,8 +49,8 @@ export default function AdminPoliciesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="text-xl font-semibold text-slate-900">Agent-Autonomie</h1>
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-semibold text-slate-900">Regeln &amp; Freigaben</h1>
       <p className="mt-1 text-sm text-slate-500">
         Legt fest, wie selbstständig Agenten pro Aktion handeln dürfen — von &bdquo;nur vorschlagen&ldquo; bis
         &bdquo;autonom ausführen&ldquo;. Gesperrte Aktionen können nur eingeschränkt, nie gelockert werden.
@@ -81,7 +81,7 @@ export default function AdminPoliciesPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={3}>
+                <td className="px-4 py-6 text-slate-500" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
@@ -96,7 +96,7 @@ export default function AdminPoliciesPage() {
                         {ACTION_LABELS[policy.action] ?? policy.action}
                       </span>
                       {policy.locked ? (
-                        <span className="ml-2 text-xs text-slate-400">(gesperrt)</span>
+                        <span className="ml-2 text-xs text-slate-500">(gesperrt)</span>
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
@@ -135,7 +135,7 @@ export default function AdminPoliciesPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={3}>
+                <td className="px-4 py-6 text-slate-500" colSpan={3}>
                   Keine Policy-Konfiguration gefunden.
                 </td>
               </tr>

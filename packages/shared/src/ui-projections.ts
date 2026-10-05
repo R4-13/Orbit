@@ -191,6 +191,13 @@ export function isInternalHref(href: string): boolean {
   return /^\/(?!\/)[A-Za-z0-9_\-./?=&%#]*$/.test(href);
 }
 
+export type CaseTab = 'overview' | 'orchestration' | 'communication' | 'documents' | 'history';
+
+/** Direkter Einstieg in einen Tab des Vorgangs, z. B. „Orchestrierung anzeigen“ (UI v2 §16.2). */
+export function caseTabHref(caseId: string, tab: CaseTab): string {
+  return `/cases/${encodeURIComponent(caseId)}${tab === 'overview' ? '' : `?tab=${tab}`}`;
+}
+
 /** Interne Zielrouten je Objekttyp – eine zentrale Stelle statt verteilter String-Konkatenation. */
 export function internalHref(type: EntityType, id: string): string | undefined {
   const encoded = encodeURIComponent(id);
@@ -210,7 +217,7 @@ export function internalHref(type: EntityType, id: string): string | undefined {
     case 'SUPPLIER':
       return `/finance/suppliers?focus=${encoded}`;
     case 'EMAIL':
-      return `/inbox?focus=${encoded}`;
+      return `/inbox/${encoded}`;
     case 'INTEGRATION':
       return `/integrations`;
     default:
@@ -321,7 +328,14 @@ export interface ApprovalDetail extends ApprovalQueueItem {
   whyRequired: string;
   afterwards: string;
   related: EntityRef[];
-  decision: { mode: ApprovalDecisionMode; approveLabel: string; rejectLabel: string; rejectNeedsReason: boolean };
+  decision: {
+    mode: ApprovalDecisionMode;
+    approveLabel: string;
+    rejectLabel: string;
+    rejectNeedsReason: boolean;
+    /** Die Endpunkte (PATCH) des Besitzers der Entscheidung – der Server legt fest, wo entschieden wird; die Oberfläche spiegelt diese Logik nicht. */
+    endpoints?: { approve: string; reject: string };
+  };
   /** Nur bei vorbereiteten externen Wirkungen: die Entscheidung läuft über die Orchestrierung des Vorgangs mit gebundener Nutzlast. */
   processAction?: { caseId: string; nodeId: string };
   /** „Diese Freigabe wurde durch eine Änderung ersetzt.“ */
@@ -424,5 +438,37 @@ export interface TaskListResponse {
   items: TaskListItem[];
   total: number;
   counts: { OVERDUE: number; TODAY: number; LATER: number; NO_DUE_DATE: number; DONE: number };
+  generatedAt: string;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Vertrieb (UI v2 §13)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type LeadFilter = 'OPEN' | 'NEW' | 'REPLY_MISSING' | 'DUE_TODAY' | 'DONE' | 'ALL';
+
+export interface LeadListItem {
+  id: string;
+  contactLabel: string;
+  companyLabel?: string;
+  sourceLabel: string;
+  statusLabel: string;
+  statusTone: 'neutral' | 'info' | 'warning' | 'success' | 'danger';
+  /** Verständlicher nächster Schritt: offene Aufgabe, Wartegrund des Vorgangs oder Vorschlag aus dem Status. */
+  nextStep: string;
+  dueAt?: string;
+  replyMissing: boolean;
+  dueToday: boolean;
+  /** „bestätigt“ nur bei erfolgter CRM-Zuordnung – sonst bleibt der Konflikt sichtbar (§13.2). */
+  crmLabel: string;
+  createdAt: string;
+  caseRef?: EntityRef;
+  href: string;
+}
+
+export interface LeadListResponse {
+  items: LeadListItem[];
+  total: number;
+  counts: Record<LeadFilter, number>;
   generatedAt: string;
 }

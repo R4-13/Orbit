@@ -51,9 +51,9 @@ export function CaseHistory({ caseId }: { caseId: string }) {
     <ol className="space-y-1.5" aria-label="Ereignisse des Vorgangs">
       {[...data].reverse().map((event) => (
         <li key={event.sequence} className="flex gap-3 rounded border border-slate-100 px-3 py-2 text-sm">
-          <span className="w-8 shrink-0 text-right text-xs text-slate-400">#{event.sequence}</span>
+          <span className="w-8 shrink-0 text-right text-xs text-slate-500">#{event.sequence}</span>
           <span className="flex-1 text-slate-800">{describe(event)}</span>
-          <time className="shrink-0 text-xs text-slate-400" dateTime={event.at}>
+          <time className="shrink-0 text-xs text-slate-500" dateTime={event.at}>
             {formatDateTime(event.at)}
           </time>
         </li>

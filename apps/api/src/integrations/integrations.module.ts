@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
+import { TasksModule } from '../tasks/tasks.module';
 import { ConnectorStatusService } from './connector-status.service';
 import { GmailConnectorService } from './gmail-connector.service';
 import { IntegrationsCallbackController } from './integrations-callback.controller';
@@ -13,6 +14,7 @@ import { GmailOutboundMail, OUTBOUND_MAIL, SimulatedOutboundMail } from './outbo
 
 @Module({
   imports: [
+    TasksModule,
     // Own registration (not importing AuthModule) to keep this module self-contained — reuses the
     // same JWT_SECRET (already a trusted platform signing secret), see OAuthStateService's header
     // comment for why that's safe despite the distinct purpose.

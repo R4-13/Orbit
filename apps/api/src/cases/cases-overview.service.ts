@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@orbit/domain';
 import {
   CASE_ORCHESTRATION_LABELS,
+  NotFoundError,
   caseTypeDisplay,
   internalHref,
   type CaseListFilter,
@@ -85,6 +86,20 @@ export class CasesOverviewService {
       ...filters.map((filter) => db.case.count({ where: whereFor(filter, input.type, input.search) })),
     ]);
 
+    const items = await this.present(tenantId, rows);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize: CASE_PAGE_SIZE,
+      counts: Object.fromEntries(filters.map((filter, index) => [filter, counts[index] ?? 0])) as CaseListResponse['counts'],
+      generatedAt: now.toISOString(),
+    };
+  }
+
+  private async present(tenantId: string, rows: Array<Prisma.CaseGetPayload<{ include: { assignee: { select: { firstName: true; lastName: true } } } }>>): Promise<CaseListItem[]> {
+    const db = this.prisma.forTenantId(tenantId);
     const ids = rows.map((row) => row.id);
     const [leads, invoices] = await Promise.all([
       ids.length > 0 ? db.lead.findMany({ where: { caseId: { in: ids } }, include: { contact: { select: { firstName: true, lastName: true } }, company: { select: { name: true } } } }) : [],
@@ -102,7 +117,7 @@ export class CasesOverviewService {
       counterparty.set(invoice.caseId, { type: 'SUPPLIER', id: invoice.supplier.id, label: invoice.supplier.name, href: internalHref('SUPPLIER', invoice.supplier.id) });
     }
 
-    const items = rows.map((row): CaseListItem => {
+    return rows.map((row): CaseListItem => {
       const status = row.orchestrationStatus as CaseOrchestrationStatusValue;
       const owner = row.assignee ? `${row.assignee.firstName} ${row.assignee.lastName}`.trim() : undefined;
       return {
@@ -120,14 +135,11 @@ export class CasesOverviewService {
         href: internalHref('CASE', row.id) as string,
       };
     });
+  }
 
-    return {
-      items,
-      total,
-      page,
-      pageSize: CASE_PAGE_SIZE,
-      counts: Object.fromEntries(filters.map((filter, index) => [filter, counts[index] ?? 0])) as CaseListResponse['counts'],
-      generatedAt: now.toISOString(),
-    };
+  async summary(tenantId: string, id: string): Promise<CaseListItem> {
+    const row = await this.prisma.forTenantId(tenantId).case.findUnique({ where: { id }, include: { assignee: { select: { firstName: true, lastName: true } } } });
+    if (!row) throw new NotFoundError('Case not found.', { id });
+    return (await this.present(tenantId, [row]))[0] as CaseListItem;
   }
 }

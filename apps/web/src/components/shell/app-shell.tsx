@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { PERMISSIONS } from '@orbit/shared';
 import { useAuth } from '../../lib/auth-context';
 import { useViewportWidth } from '../../lib/hooks/use-element-size';
@@ -12,6 +13,7 @@ import { HEADER_HEIGHT, NAV_DRAWER_BREAKPOINT, clampSondeWidth, defaultSondeOpen
 import { useSondeCaseContext } from '../../lib/sonde-context';
 import { useSondeWorkspace } from '../../lib/sonde-workspace';
 import { useUiPreferences } from '../../lib/ui-preferences';
+import { EntityPreviewDrawer } from '../common/entity-preview-drawer';
 import { AppHeader } from './app-header';
 import { GlobalSearch } from './global-search';
 import { NavigationTree, pageLabelFor } from './navigation';
@@ -27,6 +29,7 @@ const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT';
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading, hasPermission, logout } = useAuth();
   const { data: brandingResponse } = useTenantBranding();
@@ -60,6 +63,46 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => setDrawerOpen(false), [pathname]);
+
+  // Rücksprung erhält die Scrollposition (UI v2 §9.4, AC-12): je Route merken, nur bei Browser-Zurück/-Vor wiederherstellen.
+  const search = useSearchParams()?.toString() ?? '';
+  const scrollPositions = useRef(new Map<string, number>());
+  const lastKey = useRef<string>('');
+  const poppedRef = useRef(false);
+  useEffect(() => {
+    const onPop = () => {
+      poppedRef.current = true;
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>('[data-shell-main]');
+    if (!main) return;
+    const key = `${pathname}?${search}`;
+    if (lastKey.current && lastKey.current !== key) {
+      // Beim Verlassen wurde die Position bereits fortlaufend gespeichert (onScroll unten).
+    }
+    lastKey.current = key;
+    const target = poppedRef.current ? (scrollPositions.current.get(key) ?? 0) : 0;
+    poppedRef.current = false;
+    main.scrollTop = 0;
+    if (target > 0) {
+      // Inhalte laden asynchron: bis zu ~1,5 s warten, bis die Seite hoch genug ist.
+      let attempts = 0;
+      const tryRestore = () => {
+        if (main.scrollHeight - main.clientHeight >= target || attempts > 30) main.scrollTop = target;
+        else {
+          attempts += 1;
+          window.setTimeout(tryRestore, 50);
+        }
+      };
+      tryRestore();
+    }
+    const onScroll = () => scrollPositions.current.set(key, main.scrollTop);
+    main.addEventListener('scroll', onScroll, { passive: true });
+    return () => main.removeEventListener('scroll', onScroll);
+  }, [pathname, search]);
   useEffect(() => setPageLabel(pageLabelFor(pathname)), [pathname, setPageLabel]);
 
   // Layout wechselt (z. B. Fenster verkleinert): ein offenes Overlay verschwindet nicht, wenn Dock wieder möglich ist – der Zustand folgt der Präferenz.
@@ -170,7 +213,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           onToggleDrawer={() => setDrawerOpen((open) => !open)}
           onToggleSonde={() => (sondeOpen ? closeSonde() : openSonde())}
           onLogout={() => {
-            void logout().then(() => router.replace('/login'));
+            // Der Cache gehört zur Sitzung: nach der Abmeldung bleiben weder Listen noch Erscheinungsbild des Mandanten im Speicher.
+            void logout().then(() => {
+              queryClient.clear();
+              router.replace('/login');
+            });
           }}
           search={<GlobalSearch />}
         />
@@ -197,6 +244,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </div>
       </div>
+
+      <EntityPreviewDrawer />
 
       {!docked && overlayOpen ? (
         <>

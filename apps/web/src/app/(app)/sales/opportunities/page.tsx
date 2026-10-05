@@ -45,9 +45,9 @@ export default function OpportunitiesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Opportunities</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Verkaufschancen</h1>
         <p className="mt-1 text-sm text-slate-500">Verkaufschancen von der Qualifizierung bis zum Abschluss.</p>
       </div>
 
@@ -129,7 +129,7 @@ export default function OpportunitiesPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={3}>
+                <td className="px-4 py-6 text-slate-500" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
@@ -157,7 +157,7 @@ export default function OpportunitiesPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={3}>
+                <td className="px-4 py-6 text-slate-500" colSpan={3}>
                   Keine Opportunities gefunden.
                 </td>
               </tr>

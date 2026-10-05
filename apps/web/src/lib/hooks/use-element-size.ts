@@ -47,3 +47,24 @@ export function useViewportWidth(): number {
   }, []);
   return width;
 }
+
+/**
+ * Tatsächlich verfügbare Breite der Arbeitsfläche (nach Navigation und angedockter Sonde). Tabellen entscheiden damit, welche
+ * Spalten sie zeigen – ein Viewport-Breakpoint allein wüsste nichts von Sonde und Navigation (UI v2 SHELL-04).
+ */
+export function useMainWidth(): number {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const main = document.querySelector<HTMLElement>('[data-shell-main]');
+    if (!main) return;
+    const measure = () => {
+      const style = window.getComputedStyle(main);
+      setWidth(Math.round(main.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(main);
+    return () => observer.disconnect();
+  }, []);
+  return width;
+}

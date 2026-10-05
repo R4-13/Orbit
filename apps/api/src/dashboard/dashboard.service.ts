@@ -421,7 +421,7 @@ export class DashboardService {
         nextActionLabel: nextActionFor(caseStatus, Boolean(linkedCase)),
         caseRef: linkedCase ? ref('CASE', linkedCase.id, linkedCase.title) : undefined,
         hasProcess: onProcess,
-        href: internalHref('EMAIL', event.emailMessageId ?? event.id) ?? '/inbox',
+        href: internalHref('EMAIL', event.id) ?? '/inbox',
       };
     });
     return { items, total };

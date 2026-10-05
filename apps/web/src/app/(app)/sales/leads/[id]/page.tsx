@@ -1,113 +1,150 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
 import type { LeadStatus } from '@orbit/domain';
-import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { PERMISSIONS, internalHref } from '@orbit/shared';
+import { ErrorState } from '@orbit/ui';
+import { LastUpdated, Notice, PageHeader, RelatedObjects, StatusBadge } from '../../../../../components/common/primitives';
 import { apiFetch, errorMessage } from '../../../../../lib/api-client';
+import { useAuth } from '../../../../../lib/auth-context';
 import { formatAmount, formatDateTime } from '../../../../../lib/format';
 import { useLead } from '../../../../../lib/hooks/use-leads';
 import { statusLabel } from '../../../../../lib/status-labels';
 
 const STATUS_OPTIONS: LeadStatus[] = ['NEW', 'QUALIFIED', 'DISQUALIFIED', 'CONVERTED'];
+const SOURCE_LABELS: Record<string, string> = { EMAIL: 'E-Mail', PHONE: 'Telefon', WEB: 'Web', MANUAL: 'Manuell' };
 
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-[15px] font-semibold text-slate-900">{title}</h2>
+      <div className="mt-2 text-sm text-slate-800">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Detail eines Interessenten (UI v2 §13.2): Kontakt/Unternehmen, Anliegen, Quelle, nächste Handlung, Status und CRM-Stand.
+ * Kommunikation und Vorgang sind direkt verlinkt. Der CRM-Stand ist nur „bestätigt“, wenn der Kontakt tatsächlich im CRM geführt wird.
+ */
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: lead, isLoading, isError, error, refetch } = useLead(id);
+  const router = useRouter();
+  const { hasPermission } = useAuth();
+  const { data: lead, isLoading, isError, error, refetch, dataUpdatedAt } = useLead(id);
   const queryClient = useQueryClient();
   const updateStatus = useMutation({
-    mutationFn: (status: LeadStatus) =>
-      apiFetch(`/v1/leads/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    mutationFn: (status: LeadStatus) => apiFetch(`/v1/leads/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads', id] });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
-  if (isLoading) {
-    return <p className="text-sm text-slate-500">Wird geladen …</p>;
-  }
-  if (isError) {
-    return <ErrorState message={errorMessage(error, 'Der Lead konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
-  }
-  if (!lead) {
-    return <p className="text-sm text-slate-500">Lead nicht gefunden.</p>;
+  const back = (
+    <button type="button" onClick={() => router.back()} className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline">
+      <ArrowLeft size={14} aria-hidden="true" /> Zurück zu den Interessenten
+    </button>
+  );
+
+  if (isLoading) return <p className="text-sm text-slate-600">Wird geladen …</p>;
+  if (isError || !lead) {
+    return (
+      <div className="space-y-3">
+        {back}
+        <ErrorState message={errorMessage(error, 'Der Interessent konnte nicht geladen werden – er existiert nicht mehr oder Sie haben keinen Zugriff.')} onRetry={() => void refetch()} />
+        <Link href="/sales/leads" className="text-sm font-medium text-brand hover:underline">
+          Zur Liste
+        </Link>
+      </div>
+    );
   }
 
   const status = statusLabel(lead.status);
+  const name = `${lead.contact.firstName} ${lead.contact.lastName}`.trim();
+  const crmConfirmed = Boolean(lead.contact.crmExternalId);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">
-            {lead.contact.firstName} {lead.contact.lastName}
-          </h1>
-          {lead.company ? <p className="mt-1 text-sm text-slate-500">{lead.company.name}</p> : null}
-          <p className="mt-1 text-xs text-slate-400">Erstellt {formatDateTime(lead.createdAt)}</p>
+    <div className="space-y-4">
+      {back}
+      <PageHeader title={name} description={`${lead.company?.name ?? 'Kein Unternehmen'} · Anfrage über ${SOURCE_LABELS[lead.source] ?? lead.source} vom ${formatDateTime(lead.createdAt)}`}>
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+          <LastUpdated at={new Date(dataUpdatedAt).toISOString()} />
+          {hasPermission(PERMISSIONS.CRM_LEAD_CREATE) ? (
+            <label className="flex items-center gap-2 text-sm text-slate-800">
+              Status ändern
+              <select
+                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                value={lead.status}
+                disabled={updateStatus.isPending}
+                onChange={(event) => updateStatus.mutate(event.target.value as LeadStatus)}
+              >
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {statusLabel(option).label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2">
-          <Badge tone={status.tone}>{status.label}</Badge>
-          <select
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
-            value={lead.status}
-            disabled={updateStatus.isPending}
-            onChange={(event) => updateStatus.mutate(event.target.value as LeadStatus)}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {statusLabel(option).label}
-              </option>
-            ))}
-          </select>
+      </PageHeader>
+
+      {updateStatus.isError ? <Notice tone="danger">{errorMessage(updateStatus.error, 'Der Status konnte nicht geändert werden.')}</Notice> : null}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div className="min-w-0 space-y-4">
+          <Card title="Anliegen und Kontakt">
+            <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1.5">
+              <dt className="text-slate-600">Anliegen</dt>
+              <dd className="whitespace-pre-wrap break-words">{lead.notes ?? 'Kein Text hinterlegt.'}</dd>
+              <dt className="text-slate-600">E-Mail</dt>
+              <dd className="break-all">{lead.contact.email ?? '–'}</dd>
+              <dt className="text-slate-600">Telefon</dt>
+              <dd>{lead.contact.phone ?? '–'}</dd>
+              <dt className="text-slate-600">CRM-Stand</dt>
+              <dd>
+                <StatusBadge tone={crmConfirmed ? 'success' : 'warning'}>{crmConfirmed ? 'Im CRM bestätigt' : 'Noch nicht abgeglichen'}</StatusBadge>
+                {!crmConfirmed ? <span className="ml-2 text-xs text-slate-600">ORBIT legt keinen neuen Kunden ungeprüft an und ersetzt keinen vorhandenen.</span> : null}
+              </dd>
+            </dl>
+          </Card>
+
+          {lead.opportunities.length > 0 ? (
+            <Card title="Verkaufschancen">
+              <ul className="divide-y divide-slate-100">
+                {lead.opportunities.map((opportunity) => {
+                  const stage = statusLabel(opportunity.stage);
+                  return (
+                    <li key={opportunity.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                      <Link href={`/sales/opportunities/${opportunity.id}`} className="min-w-0 truncate font-medium text-brand hover:underline">
+                        {opportunity.name}
+                      </Link>
+                      <span className="text-slate-700">{opportunity.value !== null ? formatAmount(opportunity.value, opportunity.currency) : '–'}</span>
+                      <StatusBadge tone={stage.tone}>{stage.label}</StatusBadge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 space-y-4">
+          <RelatedObjects
+            items={[
+              { label: 'Vorgang', entity: lead.caseId ? { type: 'CASE', id: lead.caseId, label: 'Zugehöriger Vorgang', href: internalHref('CASE', lead.caseId) } : undefined },
+              { label: 'Kontakt', text: name },
+              { label: 'Unternehmen', text: lead.company?.name },
+              { label: 'Verkaufschancen', text: lead.opportunities.length > 0 ? `${lead.opportunities.length}` : undefined },
+            ]}
+          />
         </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Kontaktdaten</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-slate-500">E-Mail</dt>
-            <dd>{lead.contact.email ?? '–'}</dd>
-            <dt className="text-slate-500">Telefon</dt>
-            <dd>{lead.contact.phone ?? '–'}</dd>
-            <dt className="text-slate-500">Quelle</dt>
-            <dd>{lead.source}</dd>
-            <dt className="text-slate-500">Notizen</dt>
-            <dd>{lead.notes ?? '–'}</dd>
-          </dl>
-        </CardContent>
-      </Card>
-
-      {lead.opportunities.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Opportunities</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {lead.opportunities.map((opportunity) => {
-              const stage = statusLabel(opportunity.stage);
-              return (
-                <div key={opportunity.id} className="flex items-center justify-between text-sm">
-                  <Link
-                    href={`/sales/opportunities/${opportunity.id}`}
-                    className="font-medium text-brand hover:underline"
-                  >
-                    {opportunity.name}
-                  </Link>
-                  <span className="text-slate-600">
-                    {opportunity.value !== null ? formatAmount(opportunity.value, opportunity.currency) : '–'}
-                  </span>
-                  <Badge tone={stage.tone}>{stage.label}</Badge>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }

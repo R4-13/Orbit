@@ -28,8 +28,8 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="text-xl font-semibold text-slate-900">Nutzerverwaltung</h1>
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-semibold text-slate-900">Benutzer &amp; Rollen</h1>
       <p className="mt-1 text-sm text-slate-500">
         Deaktivierte Nutzer verlieren sofort den Zugriff — auch bereits laufende Sitzungen werden beendet, nicht
         nur künftige Anmeldungen gesperrt.
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={5}>
+                <td className="px-4 py-6 text-slate-500" colSpan={5}>
                   Wird geladen …
                 </td>
               </tr>
@@ -83,9 +83,9 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(user.lastLoginAt)}</td>
                     <td className="px-4 py-3">
                       {user.status === 'DEACTIVATED' ? (
-                        <span className="text-xs text-slate-400">—</span>
+                        <span className="text-xs text-slate-500">—</span>
                       ) : isSelf ? (
-                        <span className="text-xs text-slate-400">Eigenes Konto</span>
+                        <span className="text-xs text-slate-500">Eigenes Konto</span>
                       ) : (
                         <Button
                           variant="ghost"
@@ -110,7 +110,7 @@ export default function AdminUsersPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={5}>
+                <td className="px-4 py-6 text-slate-500" colSpan={5}>
                   Keine Nutzer gefunden.
                 </td>
               </tr>

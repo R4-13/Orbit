@@ -19,12 +19,16 @@ test.describe('Case orchestration', () => {
     test.skip(!processCase, 'Kein Vorgang auf einem Prozess vorhanden – bitte zuerst eine Angebotsanfrage im Posteingang einspielen.');
 
     await loginViaUi(page, DEMO_USERS.admin);
+    // UI v2 §16.2: der Einstieg „Orchestrierung anzeigen“ öffnet direkt den Orchestrierungs-Tab; der normale Vorgangslink den Überblick.
     await page.goto(`/cases/${processCase!.id}`);
-
+    for (const tab of ['Überblick', 'Orchestrierung', 'Kommunikation', 'Dokumente', 'Historie']) {
+      await expect(page.getByRole('tab', { name: tab })).toBeVisible();
+    }
+    await expect(page.getByRole('tab', { name: 'Überblick' })).toHaveAttribute('aria-selected', 'true');
+    await page.goto(`/cases/${processCase!.id}?tab=orchestration`);
     await expect(page.getByRole('tab', { name: 'Orchestrierung' })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tab', { name: 'Historie' })).toBeVisible();
     // No manual status switch on a case that a process steers.
-    await expect(page.locator('select')).toHaveCount(0);
+    await expect(page.getByRole('main').locator('select')).toHaveCount(0);
 
     // The linear alternative is always available and complete: every step has a business label for its state.
     await page.getByRole('button', { name: 'Liste' }).click();
@@ -56,7 +60,7 @@ test.describe('Case orchestration', () => {
     test.skip(!processCase, 'Kein Vorgang auf einem Prozess vorhanden.');
 
     await loginViaUi(page, DEMO_USERS.viewer);
-    await page.goto(`/cases/${processCase!.id}`);
+    await page.goto(`/cases/${processCase!.id}?tab=orchestration`);
     await expect(page.getByRole('tab', { name: 'Orchestrierung' })).toBeVisible();
     await page.getByRole('button', { name: 'Liste' }).click();
     await expect(page.getByRole('list', { name: 'Schritte des Vorgangs in Reihenfolge' })).toBeVisible();
@@ -70,7 +74,7 @@ test.describe('Case orchestration', () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, DEMO_USERS.admin);
-    await page.goto(`/cases/${processCase!.id}`);
+    await page.goto(`/cases/${processCase!.id}?tab=orchestration`);
     await expect(page.getByRole('list', { name: 'Schritte des Vorgangs in Reihenfolge' })).toBeVisible();
     // No horizontal page scroll on mobile.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -92,7 +96,7 @@ test.describe('Case orchestration', () => {
   test('process definitions: the admin sees blueprints and which capabilities can really run', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await page.goto('/admin/processes');
-    await expect(page.getByRole('heading', { name: 'Prozessdefinitionen' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Prozesse', exact: true })).toBeVisible();
     await expect(page.getByText('Fähigkeiten dieses Mandanten')).toBeVisible();
     await expect(page.getByText(/Ausführbar|Nicht ausführbar/).first()).toBeVisible();
   });

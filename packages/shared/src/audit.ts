@@ -89,6 +89,8 @@ export const AUDIT_EVENT_TYPES = [
   'PROCESS_ACTION_OUTCOME_UNKNOWN',
   /** Amendment 02 §14.5 — ein Command wurde ausgeführt, abgewiesen oder als Konflikt erkannt. */
   'CASE_COMMAND_EXECUTED',
+  /** UI v2 §18.2 — ein Nutzer hat ein nicht unterstütztes System als Anfrage erfasst (kein erfundener Connector). */
+  'CONNECTOR_REQUESTED',
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

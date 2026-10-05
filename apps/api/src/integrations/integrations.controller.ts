@@ -8,6 +8,9 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { AuditService } from '../audit/audit.service';
+import { TasksService } from '../tasks/tasks.service';
+import { ConnectorRequestDto } from './dto/connector-request.dto';
 import { ConnectorStatusService } from './connector-status.service';
 import { UpsertIntegrationCredentialsDto } from './dto/upsert-integration-credentials.dto';
 import { GmailConnectorService } from './gmail-connector.service';
@@ -23,7 +26,20 @@ export class IntegrationsController {
     private readonly integrationsService: IntegrationsService,
     private readonly gmailConnector: GmailConnectorService,
     private readonly connectorStatus: ConnectorStatusService,
+    private readonly audit: AuditService,
+    private readonly tasks: TasksService,
   ) {}
+
+  /**
+   * UI v2 §18.2: ein System, das ORBIT nicht unterstützt, wird als Anfrage erfasst – nicht als erfundener Connector angeboten.
+   * Die Anfrage wird auditiert und als Aufgabe für die Administration sichtbar.
+   */
+  @Post('requests')
+  async requestSystem(@CurrentUser() user: AuthenticatedUser, @Body() dto: ConnectorRequestDto): Promise<{ recorded: true }> {
+    await this.audit.record({ tenantId: user.tenantId, eventType: 'CONNECTOR_REQUESTED', actorType: 'USER', actorUserId: user.id, payload: { systemName: dto.systemName, note: dto.note ?? null } });
+    await this.tasks.create(user.tenantId, user.id, { title: `Systemanbindung prüfen: ${dto.systemName}`, description: dto.note ?? 'Ein Nutzer wünscht die Anbindung dieses Systems.' });
+    return { recorded: true };
+  }
 
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {

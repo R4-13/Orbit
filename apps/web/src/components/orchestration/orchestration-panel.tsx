@@ -7,6 +7,7 @@ import { Badge, ErrorState, type BadgeTone } from '@orbit/ui';
 import { errorMessage } from '../../lib/api-client';
 import { formatDateTime } from '../../lib/format';
 import { useCaseEventStream, useOrchestration, type OrchestrationMode, type StreamStatus } from '../../lib/hooks/use-case-orchestration';
+import { useMainWidth } from '../../lib/hooks/use-element-size';
 import { useSondeCaseContext } from '../../lib/sonde-context';
 import { ActionButtons } from './action-controls';
 import { NodeDetailPanel } from './node-detail-panel';
@@ -47,16 +48,10 @@ const MODES: Array<{ id: OrchestrationMode; label: string; hint: string }> = [
   { id: 'DEFINITION', label: 'Prozessdefinition', hint: 'Der Standardablauf' },
 ];
 
+/** Der Graph braucht Platz: maßgeblich ist die tatsächlich verfügbare Breite der Arbeitsfläche, nicht der Viewport (UI v2 SHELL-04). */
 function useIsWide(): boolean {
-  const [wide, setWide] = useState(true);
-  useEffect(() => {
-    const query = window.matchMedia('(min-width: 768px)');
-    const update = (): void => setWide(query.matches);
-    update();
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-  return wide;
+  const width = useMainWidth();
+  return width === 0 ? true : width >= 900;
 }
 
 /** The interactive orchestration of one case (Amendment 02 §16–§17): graph or list, node details, server-provided actions. */

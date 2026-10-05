@@ -72,9 +72,9 @@ export default function ProcessesPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Prozessdefinitionen</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Prozesse</h1>
         <p className="mt-1 text-sm text-slate-500">
           Ein Prozess ist ein versioniertes, geprüftes Datenpaket – kein Programmcode. Veröffentlichte Versionen sind unveränderlich; für Änderungen entsteht eine neue Version. Erst aktivierte Versionen starten neue Vorgänge.
         </p>
@@ -107,7 +107,7 @@ export default function ProcessesPage() {
                     {b.active ? <Badge tone="success">Aktiv für diesen Mandanten</Badge> : null}
                   </div>
                   {b.definition.description ? <p className="text-sm text-slate-600">{b.definition.description}</p> : null}
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Prüfsumme {b.definitionHash.slice(0, 12)} · angelegt {formatDateTime(b.createdAt)}
                     {b.publishedAt ? ` · veröffentlicht ${formatDateTime(b.publishedAt)}` : ''} · Planungsmodus {b.definition.planMode ?? '–'}
                   </p>

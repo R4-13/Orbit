@@ -87,7 +87,7 @@ function LogoField({
           onChange={(event) => void handleFileSelected(event)}
         />
       </div>
-      <p className="mt-1 text-xs text-slate-400">PNG, JPEG oder WebP, maximal 2 MB. Alternativ eine bestehende URL eintragen.</p>
+      <p className="mt-1 text-xs text-slate-500">PNG, JPEG oder WebP, maximal 2 MB. Alternativ eine bestehende URL eintragen.</p>
       {uploadError ? <p className="mt-1 text-xs text-red-600">{uploadError}</p> : null}
     </div>
   );
@@ -178,8 +178,8 @@ export default function AdminBrandingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="text-xl font-semibold text-slate-900">Branding &amp; Erscheinungsbild</h1>
+    <div className="max-w-4xl">
+      <h1 className="text-2xl font-semibold text-slate-900">Erscheinungsbild</h1>
       <p className="mt-1 text-sm text-slate-500">
         Logo und Farben Ihres Tenants — wirkt sofort auf die gesamte Anwendung, ohne Code-Änderung. Ohne eigene
         Konfiguration gilt das Standard-ORION-Theme.
@@ -198,7 +198,7 @@ export default function AdminBrandingPage() {
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
-        <p className="mt-6 text-sm text-slate-400">Wird geladen …</p>
+        <p className="mt-6 text-sm text-slate-500">Wird geladen …</p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>

@@ -13,6 +13,7 @@ import type {
   SalesOverview,
   TaskPreviewItem,
 } from '@orbit/shared';
+import { caseTabHref } from '@orbit/shared';
 import { describeKpi, formatDue, formatListTime, formatMetricValue } from '../../lib/home-format';
 
 /** Kartenrahmen der Home-Seite: 12 px Radius, 12–16 px Innenabstand, `min-h-0`, damit lange Daten das Grid nie aufziehen (SHELL-02). */
@@ -131,7 +132,7 @@ export function AttentionRow({ item, now }: { item: AttentionItem; now: Date }) 
 
 export function InboxRow({ item, now }: { item: InboxPreviewItem; now: Date }) {
   const actionLabel = item.hasProcess ? 'Orchestrierung anzeigen' : item.caseRef ? 'Vorgang ansehen' : 'Entscheidung ansehen';
-  const actionHref = item.caseRef?.href ?? item.href;
+  const actionHref = item.caseRef ? (item.hasProcess ? caseTabHref(item.caseRef.id, 'orchestration') : (item.caseRef.href ?? item.href)) : item.href;
   return (
     <li className="flex h-[var(--home-row,44px)] items-center gap-2.5 px-3">
       <Mail size={16} className="shrink-0 text-slate-500" aria-label="E-Mail" role="img" />

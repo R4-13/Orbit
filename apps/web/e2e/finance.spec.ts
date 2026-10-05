@@ -32,6 +32,8 @@ test.describe('Finance', () => {
   }) => {
     await loginViaUi(page, DEMO_USERS.finance);
     await page.goto('/finance/invoices');
+    // UI v2 §12.1: Standard ist „Zu bearbeiten“; abgeschlossene Rechnungen stehen unter „Alle Rechnungen“.
+    await page.getByRole('button', { name: /^Alle Rechnungen/ }).click();
 
     // Not an exact row count: other e2e/manual test runs against this same
     // dev DB create their own additional invoices (by design, so they never
@@ -106,8 +108,8 @@ test.describe('Finance', () => {
 
     await loginViaUi(page, DEMO_USERS.approver);
     await page.goto(`/finance/invoices/${invoice.id}`);
-    await page.getByRole('button', { name: 'An Finanzbuchhaltung übertragen' }).click();
+    await page.getByRole('button', { name: 'Zur Buchhaltung übertragen' }).click();
 
-    await expect(page.locator('p[role="alert"]')).toHaveText('Invoice has no matched supplier to transfer to.');
+    await expect(page.getByText('Invoice has no matched supplier to transfer to.')).toBeVisible();
   });
 });

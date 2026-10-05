@@ -120,7 +120,7 @@ function StepEditor({
       {drafts.map((draft, index) => (
         <div key={index} className="rounded-md border border-slate-200 p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Schritt {index + 1}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Schritt {index + 1}</p>
             <Button variant="ghost" className="text-xs" onClick={() => removeStep(index)}>
               Entfernen
             </Button>
@@ -339,7 +339,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
 
         {showTrigger ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Ausführen — löst einen echten Workflow-Lauf aus</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Ausführen — löst einen echten Workflow-Lauf aus</p>
             <Label htmlFor={`wf-${definition.key}-trigger-input`}>Eingabe (JSON, unter $.trigger.input verfügbar)</Label>
             <textarea
               id={`wf-${definition.key}-trigger-input`}
@@ -402,7 +402,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
 
         {showRuns ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Bisherige Läufe</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Bisherige Läufe</p>
             {retryError ? <p className="mb-2 text-xs text-red-600">{retryError}</p> : null}
             {runs && runs.length > 0 ? (
               <ul className="space-y-1.5">
@@ -427,7 +427,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
                 })}
               </ul>
             ) : (
-              <p className="text-xs text-slate-400">Noch keine Läufe.</p>
+              <p className="text-xs text-slate-500">Noch keine Läufe.</p>
             )}
           </div>
         ) : null}
@@ -526,9 +526,9 @@ export default function AdminWorkflowsPage() {
   const agentOptions = (agentDefinitions ?? []).filter((a) => a.status === 'ACTIVE');
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Orchestrierung</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Abläufe</h1>
         <p className="mt-1 text-sm text-slate-500">
           Mehrere Agenten zu einem Prozess verketten. Ein Schritt kann vom Output eines vorherigen Schritts abhängig gemacht werden
           (Bedingung) und dessen Werte als Eingabe übernehmen (Input-Mapping). Nur Agenten mit Status &bdquo;Aktiv&ldquo; (siehe{' '}
@@ -547,7 +547,7 @@ export default function AdminWorkflowsPage() {
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
-        <p className="text-sm text-slate-400">Wird geladen …</p>
+        <p className="text-sm text-slate-500">Wird geladen …</p>
       ) : definitions && definitions.length > 0 ? (
         <div className="space-y-4">
           {definitions.map((definition) => (
@@ -555,7 +555,7 @@ export default function AdminWorkflowsPage() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-400">Noch keine Workflows konfiguriert.</p>
+        <p className="text-sm text-slate-500">Noch keine Workflows konfiguriert.</p>
       )}
     </div>
   );

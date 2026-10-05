@@ -270,7 +270,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
         <div ref={scrollRef} onScroll={handleScroll} role="log" aria-live="polite" aria-label="Unterhaltung mit Sonde" className="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4">
           {!workspace.activeConversationId ? (
             <div className="my-auto flex flex-col items-center gap-2 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-400" aria-hidden="true">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-500" aria-hidden="true">
                 <Sparkles size={22} />
               </span>
               <p className="text-sm font-medium text-slate-700">Stellen Sie Sonde eine Frage</p>
@@ -279,7 +279,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
               </p>
             </div>
           ) : messagesLoading ? (
-            <div className="my-auto flex items-center justify-center text-slate-400">
+            <div className="my-auto flex items-center justify-center text-slate-500">
               <Loader2 size={20} className="animate-spin" aria-label="Wird geladen" />
             </div>
           ) : messages && messages.length > 0 ? (

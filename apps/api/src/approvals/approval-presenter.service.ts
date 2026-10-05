@@ -31,7 +31,7 @@ interface Presented {
   targetSystem: string;
   afterwards: string;
   related: EntityRef[];
-  decision: { mode: ApprovalDecisionMode; approveLabel: string; rejectLabel: string; rejectNeedsReason: boolean };
+  decision: { mode: ApprovalDecisionMode; approveLabel: string; rejectLabel: string; rejectNeedsReason: boolean; endpoints?: { approve: string; reject: string } };
   processAction?: { caseId: string; nodeId: string };
   stale: boolean;
   requiredPermission?: Permission;
@@ -185,7 +185,13 @@ export class ApprovalPresenterService {
               ? 'Die neue Bankverbindung wird beim Lieferanten hinterlegt und die Rechnung geht in die normale Freigabe. Es wird nichts bezahlt.'
               : 'Die Rechnung gilt als freigegeben und kann zur Buchhaltung übertragen werden. Eine Zahlung löst ORBIT nicht aus.',
             related: [ref('INVOICE', invoice.id, label), ...(invoice.caseId ? [ref('CASE', invoice.caseId, 'Zugehöriger Vorgang')] : [])],
-            decision: { mode: 'ENTITY', approveLabel: bank ? 'Neue Bankverbindung bestätigen' : 'Genehmigen', rejectLabel: 'Ablehnen', rejectNeedsReason: true },
+            decision: {
+              mode: 'ENTITY',
+              approveLabel: bank ? 'Neue Bankverbindung bestätigen' : 'Genehmigen',
+              rejectLabel: 'Ablehnen',
+              rejectNeedsReason: true,
+              endpoints: { approve: `/v1/invoices/${invoice.id}/${bank ? 'confirm-bank-change' : 'approve'}`, reject: `/v1/invoices/${invoice.id}/reject` },
+            },
             requiredPermission: PERMISSIONS.INVOICE_APPROVE,
             cannotDecideReason: undefined,
           });
@@ -211,7 +217,13 @@ export class ApprovalPresenterService {
             targetSystem: 'Lieferantenstamm in ORBIT',
             afterwards: 'Der Lieferant wird aktiv und kann Rechnungen zugeordnet bekommen.',
             related: [ref('SUPPLIER', supplier.id, supplier.name)],
-            decision: { mode: 'ENTITY', approveLabel: 'Genehmigen', rejectLabel: 'Ablehnen', rejectNeedsReason: true },
+            decision: {
+              mode: 'ENTITY',
+              approveLabel: 'Genehmigen',
+              rejectLabel: 'Ablehnen',
+              rejectNeedsReason: true,
+              endpoints: { approve: `/v1/suppliers/${supplier.id}/approve`, reject: `/v1/suppliers/${supplier.id}/reject` },
+            },
             requiredPermission: PERMISSIONS.SUPPLIER_MANAGE,
             cannotDecideReason: undefined,
           });
@@ -240,7 +252,13 @@ export class ApprovalPresenterService {
           fields: fields.length > 0 ? fields : fallback.fields,
           targetSystem: isMail ? 'E-Mail (Postfach der Firma)' : 'ORBIT',
           afterwards: isMail ? 'Die Nachricht wird genau so versendet, wie sie hier steht.' : 'Die vorgeschlagene Aktion wird genau mit diesen Angaben ausgeführt.',
-          decision: { mode: 'FOLLOW_UP', approveLabel: 'Genehmigen & ausführen', rejectLabel: 'Ablehnen', rejectNeedsReason: false },
+          decision: {
+            mode: 'FOLLOW_UP',
+            approveLabel: 'Genehmigen & ausführen',
+            rejectLabel: 'Ablehnen',
+            rejectNeedsReason: false,
+            endpoints: { approve: `/v1/follow-ups/${approval.id}/approve`, reject: `/v1/follow-ups/${approval.id}/reject` },
+          },
           requiredPermission: PERMISSIONS.APPROVAL_DECIDE,
           cannotDecideReason: invocation ? undefined : 'Die ursprüngliche Anfrage ist nicht mehr vorhanden und kann nicht ausgeführt werden.',
           stale: !invocation && approval.status === 'PENDING',

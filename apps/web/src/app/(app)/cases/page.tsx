@@ -1,109 +1,148 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import type { Case, CaseType } from '@orbit/domain';
-import { Badge, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { caseTabHref, type CaseListFilter } from '@orbit/shared';
+import { ErrorState } from '@orbit/ui';
+import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, Pagination, SearchField, StatusBadge } from '../../../components/common/primitives';
 import { errorMessage } from '../../../lib/api-client';
-import { formatDateTime } from '../../../lib/format';
-import { useCases } from '../../../lib/hooks/use-cases';
-import { caseTypeLabel, statusLabel } from '../../../lib/status-labels';
+import { useMainWidth } from '../../../lib/hooks/use-element-size';
+import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
+import { useCaseList } from '../../../lib/hooks/use-ui-projections';
+import { formatListTime } from '../../../lib/home-format';
 
-const TYPE_TABS: { value: CaseType | null; label: string }[] = [
-  { value: null, label: 'Alle' },
-  { value: 'FINANCE', label: 'Finance' },
-  { value: 'SALES', label: 'Sales' },
-];
+interface CaseViewState {
+  filter: CaseListFilter;
+  type: 'ALL' | 'FINANCE' | 'SALES';
+  q: string;
+  page: number;
+}
 
-const SORT_ACCESSORS = {
-  title: (c: Case) => c.title,
-  type: (c: Case) => c.type,
-  status: (c: Case) => c.status,
-  createdAt: (c: Case) => new Date(c.createdAt).getTime(),
-};
-
+/**
+ * UI/UX v2 §16.1: Vorgänge verbinden die Arbeit – fachlicher Titel, Gegenüber, Status, nächster Schritt, Verantwortlicher und
+ * Aktualität. Standard ist „Offene Vorgänge“; keine Liste technischer Agentlauf-IDs.
+ */
 export default function CasesPage() {
-  const typeFilter = useSearchParams().get('type') as CaseType | null;
-  const { data: cases, isLoading, isError, error, refetch } = useCases({ type: typeFilter ?? undefined });
-  const { sorted, sort, requestSort } = useSortableList(cases, SORT_ACCESSORS);
+  const [view, setView, resetView] = usePersistentState<CaseViewState>('cases', { filter: 'OPEN', type: 'ALL', q: '', page: 1 });
+  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useCaseList({ filter: view.filter, type: view.type === 'ALL' ? undefined : view.type, page: view.page, q: view.q });
+  const width = useMainWidth();
+  const compact = width > 0 && width < 900;
+  const counts = data?.counts;
+  const filtered = view.filter !== 'OPEN' || view.type !== 'ALL' || view.q.trim() !== '';
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="text-xl font-semibold text-slate-900">Vorgänge</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Jeder eingehende Finance- oder Sales-Vorgang, von Anfang bis Ende nachvollziehbar.
-      </p>
-
-      <div className="mt-4 flex gap-2">
-        {TYPE_TABS.map((tab) => {
-          const href = tab.value ? `/cases?type=${tab.value}` : '/cases';
-          const active = (typeFilter ?? null) === tab.value;
-          return (
-            <Link
-              key={tab.label}
-              href={href}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                active ? 'bg-brand/10 text-brand' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
+    <div className="space-y-4">
+      <PageHeader
+        title="Vorgänge"
+        description="Wie die Arbeit zusammenhängt und wo sie steht – von der Anfrage bis zum Ergebnis."
+        stats={counts ? [{ label: 'Offen', value: counts.OPEN }, { label: 'Benötigt Aufmerksamkeit', value: counts.ATTENTION }, { label: 'Abgeschlossen', value: counts.DONE }] : undefined}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FilterTabs
+          label="Vorgänge filtern"
+          value={view.filter}
+          onChange={(filter) => setView({ ...view, filter, page: 1 })}
+          items={[
+            { value: 'OPEN', label: 'Offene Vorgänge', count: counts?.OPEN },
+            { value: 'ATTENTION', label: 'Benötigt Aufmerksamkeit', count: counts?.ATTENTION },
+            { value: 'DONE', label: 'Abgeschlossen', count: counts?.DONE },
+            { value: 'ALL', label: 'Alle', count: counts?.ALL },
+          ]}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="sr-only" htmlFor="case-area">
+            Bereich
+          </label>
+          <select id="case-area" value={view.type} onChange={(event) => setView({ ...view, type: event.target.value as CaseViewState['type'], page: 1 })} className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900">
+            <option value="ALL">Alle Bereiche</option>
+            <option value="FINANCE">Finanzen</option>
+            <option value="SALES">Vertrieb</option>
+          </select>
+          <SearchField label="Vorgänge" value={view.q} onChange={(q) => setView({ ...view, q, page: 1 })} placeholder="Vorgang suchen …" />
+          {filtered ? (
+            <button type="button" onClick={resetView} className="text-sm font-medium text-brand hover:underline">
+              Filter zurücksetzen
+            </button>
+          ) : null}
+          <LastUpdated at={data ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
+        </div>
       </div>
 
       {isError ? (
-        <ErrorState
-          className="mt-4"
-          message={errorMessage(error, 'Die Vorgänge konnten nicht geladen werden.')}
-          onRetry={() => void refetch()}
-        />
+        <ErrorState message={errorMessage(error, 'Die Vorgänge konnten nicht geladen werden.')} onRetry={() => void refetch()} />
       ) : (
-      <Card className="mt-4 overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <SortableTh label="Titel" sortKey="title" sort={sort} onSort={requestSort} />
-              <SortableTh label="Typ" sortKey="type" sort={sort} onSort={requestSort} />
-              <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
-              <SortableTh label="Erstellt" sortKey="createdAt" sort={sort} onSort={requestSort} />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full table-fixed text-left text-sm">
+            <caption className="sr-only">Vorgänge mit Gegenüber, Status, nächstem Schritt und Aktualität</caption>
+            <thead className="bg-slate-50 text-xs font-medium text-slate-700">
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={4}>
-                  Wird geladen …
-                </td>
+                <th scope="col" className="px-3 py-2.5">
+                  Vorgang
+                </th>
+                {compact ? null : (
+                  <th scope="col" className="w-56 px-3 py-2.5">
+                    Gegenüber
+                  </th>
+                )}
+                <th scope="col" className="w-64 px-3 py-2.5">
+                  Status und nächster Schritt
+                </th>
+                {compact ? null : (
+                  <th scope="col" className="w-36 px-3 py-2.5">
+                    Verantwortlich
+                  </th>
+                )}
+                {compact ? null : (
+                  <th scope="col" className="w-24 px-3 py-2.5">
+                    Aktualisiert
+                  </th>
+                )}
               </tr>
-            ) : sorted && sorted.length > 0 ? (
-              sorted.map((c) => {
-                const status = statusLabel(c.status);
-                return (
-                  <tr key={c.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <Link href={`/cases/${c.id}`} className="font-medium text-brand hover:underline">
-                        {c.title}
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={compact ? 2 : 5} className="px-4 py-8 text-slate-600">
+                    Wird geladen …
+                  </td>
+                </tr>
+              ) : data && data.items.length > 0 ? (
+                data.items.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-3 py-3 align-top">
+                      <Link href={item.href} className="block truncate font-medium text-slate-900 hover:underline" title={item.title}>
+                        {item.title}
                       </Link>
+                      <p className="truncate text-xs text-slate-600">
+                        {item.typeLabel}
+                        {compact && item.counterparty ? ` · ${item.counterparty.label}` : ''}
+                        {compact ? ` · ${formatListTime(item.updatedAt)}` : ''}
+                      </p>
+                      {item.hasProcess ? (
+                        <Link href={caseTabHref(item.id, 'orchestration')} className="text-xs font-medium text-brand hover:underline" aria-label={`Orchestrierung anzeigen: ${item.title}`}>
+                          Orchestrierung anzeigen
+                        </Link>
+                      ) : null}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{caseTypeLabel(c.type)}</td>
-                    <td className="px-4 py-3">
-                      <Badge tone={status.tone}>{status.label}</Badge>
+                    {compact ? null : <td className="px-3 py-3 align-top">{item.counterparty ? <EntityLink entity={item.counterparty} withPreview={false} /> : <span className="text-slate-500">–</span>}</td>}
+                    <td className="px-3 py-3 align-top">
+                      <StatusBadge tone={item.statusTone}>{item.statusLabel}</StatusBadge>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-700">{item.nextStep}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{formatDateTime(c.createdAt)}</td>
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{item.ownerLabel ?? <span className="text-slate-500">Nicht zugewiesen</span>}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListTime(item.updatedAt)}</td>}
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={4}>
-                  Keine Vorgänge gefunden.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={compact ? 2 : 5}>
+                    <EmptyState title={filtered ? 'Keine Vorgänge für diese Auswahl' : 'Keine offenen Vorgänge'}>{filtered ? 'Passen Sie den Filter an oder setzen Sie ihn zurück.' : 'Sobald eine Anfrage zu einem Vorgang wird, erscheint sie hier.'}</EmptyState>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          {data ? <Pagination page={data.page} pageSize={data.pageSize} total={data.total} onChange={(page) => setView({ ...view, page })} /> : null}
+        </div>
       )}
     </div>
   );

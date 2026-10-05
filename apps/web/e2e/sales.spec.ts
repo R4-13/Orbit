@@ -19,19 +19,15 @@ test.describe('Sales', () => {
     await loginViaUi(page, DEMO_USERS.sales);
     await page.goto('/sales/leads');
 
-    // Scoped per-row: repeated e2e/manual runs against this same dev DB
-    // accumulate their own additional NEW/QUALIFIED leads over time (by
-    // design — see the "creates a lead..." test below), so asserting a
-    // status label is visible anywhere on the page would be ambiguous.
-    const convertedRow = page.locator('tbody tr', {
-      hasText: 'Anfrage über Kontaktformular, bereits als Kunde gewonnen.',
-    });
-    await expect(convertedRow.getByText('Konvertiert')).toBeVisible();
-
-    const qualifiedRow = page.locator('tbody tr', {
-      hasText: 'Interesse an Büroausstattung für neuen Standort.',
-    });
+    // UI v2 §13.1: Standard ist „Offene Anfragen“ – die qualifizierte Anfrage ist dort sichtbar, die bereits gewonnene erst unter
+    // „Abgeschlossen“. Zeilen werden per Kontaktname gefunden (die Notizen stehen nicht mehr in der Liste).
+    const qualifiedRow = page.locator('tbody tr', { hasText: 'Julia' }).first();
     await expect(qualifiedRow.getByText('Qualifiziert')).toBeVisible();
+    await expect(page.locator('tbody tr', { hasText: 'Petra Klein' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: /^Abgeschlossen/ }).click();
+    const convertedRow = page.locator('tbody tr', { hasText: 'Petra Klein' }).first();
+    await expect(convertedRow.getByText('Konvertiert')).toBeVisible();
   });
 
   test('creates a lead for a fresh contact, which auto-creates a follow-up task', async ({ page }) => {
@@ -53,20 +49,24 @@ test.describe('Sales', () => {
     await loginViaUi(page, DEMO_USERS.sales);
     await page.goto('/sales/leads');
 
+    await page.getByRole('button', { name: 'Interessent anlegen' }).click();
     await page.getByLabel('Kontakt').selectOption({ label: `${firstName} ${lastName}` });
     await page.getByLabel('Quelle').selectOption({ label: 'Telefon' });
-    await page.getByRole('button', { name: 'Lead anlegen' }).click();
+    await page.getByRole('button', { name: 'Interessent speichern' }).click();
 
-    const newLeadRow = page.locator('tbody tr', { hasText: 'Telefon' }).first();
+    const newLeadRow = page.locator('tbody tr', { hasText: `${firstName} ${lastName}` }).first();
     await expect(newLeadRow.getByText('Neu')).toBeVisible();
 
     await page.goto('/tasks');
     const expectedTaskTitle = `Neuen Lead kontaktieren: ${firstName} ${lastName}`;
-    const taskRow = page.locator('tr', { hasText: expectedTaskTitle });
+    const taskRow = page.locator('li', { hasText: expectedTaskTitle });
     await expect(taskRow).toBeVisible();
-    await expect(taskRow.getByText('Offen')).toBeVisible();
 
-    await taskRow.getByRole('button', { name: 'Erledigt' }).click();
-    await expect(taskRow.getByText('Erledigt')).toBeVisible();
+    // UI v2 §15: Abschluss ist eine bewusste Aktion („Als erledigt markieren“), die Aufgabe verlässt die Liste der offenen Arbeit …
+    await taskRow.getByRole('button', { name: 'Als erledigt markieren' }).click();
+    await expect(taskRow).toHaveCount(0);
+    // … und bleibt unter „Erledigte anzeigen“ nachvollziehbar.
+    await page.getByLabel('Erledigte anzeigen').check();
+    await expect(page.locator('li', { hasText: expectedTaskTitle }).getByText('Erledigt')).toBeVisible();
   });
 });

@@ -45,7 +45,7 @@ export function ExcludedIntakeSection() {
             {isError ? (
               <ErrorState className="m-4" message={errorMessage(error, 'Die Liste konnte nicht geladen werden.')} onRetry={() => void refetch()} />
             ) : isLoading ? (
-              <p className="px-5 py-4 text-sm text-slate-400">Wird geladen …</p>
+              <p className="px-5 py-4 text-sm text-slate-500">Wird geladen …</p>
             ) : data && data.length > 0 ? (
               <ul className="divide-y divide-slate-100">
                 {data.map((item) => (

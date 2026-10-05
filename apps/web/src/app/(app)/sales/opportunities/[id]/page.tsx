@@ -30,14 +30,14 @@ export default function OpportunityDetailPage() {
   const stage = statusLabel(opportunity.stage);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">{opportunity.name}</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">{opportunity.name}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {opportunity.value !== null ? formatAmount(opportunity.value, opportunity.currency) : 'Kein Wert hinterlegt'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">Erstellt {formatDateTime(opportunity.createdAt)}</p>
+          <p className="mt-1 text-xs text-slate-500">Erstellt {formatDateTime(opportunity.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={stage.tone}>{stage.label}</Badge>

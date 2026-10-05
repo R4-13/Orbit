@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BookingProposal, Invoice, InvoiceStatus, Supplier } from '@orbit/domain';
+import type { BookingProposal, FinanceTransfer, Invoice, InvoiceStatus, Supplier } from '@orbit/domain';
 import { apiFetch } from '../api-client';
 
-export type InvoiceDetail = Invoice & { supplier: Supplier | null };
+export type InvoiceDetail = Invoice & {
+  supplier: Supplier | null;
+  document: { id: string; fileName: string; mimeType: string; sizeBytes: number } | null;
+  case: { id: string; title: string } | null;
+  bookingProposals: BookingProposal[];
+  financeTransfers: FinanceTransfer[];
+};
 
 export function useInvoices(status?: InvoiceStatus) {
   return useQuery({
@@ -48,6 +54,8 @@ export function useApproveInvoice(invoiceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -59,6 +67,8 @@ export function useTransferInvoice(invoiceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -70,6 +80,8 @@ export function useRejectInvoice(invoiceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }
@@ -82,6 +94,8 @@ export function useConfirmBankChange(invoiceId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', invoiceId] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
   });

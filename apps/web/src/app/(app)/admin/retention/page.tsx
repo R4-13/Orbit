@@ -140,8 +140,8 @@ export default function AdminRetentionPage() {
   const policyByCategory = new Map((policies ?? []).map((p) => [p.category, p.retentionDays]));
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="text-xl font-semibold text-slate-900">Datenaufbewahrung</h1>
+    <div className="max-w-5xl">
+      <h1 className="text-2xl font-semibold text-slate-900">Datenaufbewahrung</h1>
       <p className="mt-1 text-sm text-slate-500">
         Legt fest, wie lange Agent-Lauf- und Tool-Aufruf-Historie aufbewahrt wird. Ohne konfigurierte Regel
         wird nichts gelöscht. Eine Vorschau zeigt vor dem Löschen, wie viele Datensätze betroffen wären — das
@@ -168,7 +168,7 @@ export default function AdminRetentionPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-400" colSpan={4}>
+                <td className="px-4 py-6 text-slate-500" colSpan={4}>
                   Wird geladen …
                 </td>
               </tr>

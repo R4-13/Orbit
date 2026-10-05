@@ -26,16 +26,18 @@ function renderValue(value: unknown): string {
 }
 
 /** Node details (§16.6): business wording first — what it is, why it is in this state, what it used, what it produced. */
-export function NodeDetailPanel({ caseId, nodeId, planRevision, onClose }: { caseId: string; nodeId: string; planRevision?: number; onClose: () => void }) {
+export function NodeDetailPanel({ caseId, nodeId, planRevision, onClose }: { caseId: string; nodeId: string; planRevision?: number; onClose?: () => void }) {
   const { data, isLoading, isError, error, refetch } = useNodeDetail(caseId, nodeId, planRevision);
 
   return (
     <aside className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" aria-label="Details zum ausgewählten Schritt">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-base font-semibold text-slate-900">{data?.title ?? 'Schritt'}</h2>
-        <button type="button" onClick={onClose} className="rounded px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Details schließen">
-          ✕
-        </button>
+        {onClose ? (
+          <button type="button" onClick={onClose} className="rounded px-2 py-1 text-sm text-slate-500 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Details schließen">
+            ✕
+          </button>
+        ) : null}
       </div>
       {isLoading ? <p className="mt-3 text-sm text-slate-500">Wird geladen …</p> : null}
       {isError ? <ErrorState className="mt-3" message={errorMessage(error, 'Die Details konnten nicht geladen werden.')} onRetry={() => void refetch()} /> : null}
@@ -144,7 +146,7 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
         </Section>
       ) : null}
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         {detail.startedAt ? `Gestartet ${formatDateTime(detail.startedAt)}` : ''}
         {detail.completedAt ? ` · Beendet ${formatDateTime(detail.completedAt)}` : ''}
       </p>

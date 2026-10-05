@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import type { ActivityFeed, ApprovalDetail, ApprovalQueueItem, CaseListResponse, InboxDetail, InboxListResponse, TaskListResponse } from '@orbit/shared';
+import type { ActivityFeed, ApprovalDetail, ApprovalQueueItem, CaseListResponse, InboxDetail, InboxListResponse, LeadListResponse, TaskListResponse } from '@orbit/shared';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TenantsService } from '../src/tenants/tenants.service';
@@ -76,6 +76,12 @@ describe('UI projections (e2e)', () => {
     await db.task.create({ data: { tenantId, title: 'Später prüfen', dueDate: new Date(Date.now() + 5 * day) } });
     await db.task.create({ data: { tenantId, title: 'Schon erledigt', status: 'DONE' } });
 
+    // Vertrieb: Interessent im Vorgang, der auf die Antwort des Kunden wartet; zweiter, bereits gewonnener.
+    const waitingReply = await db.case.create({ data: { tenantId, type: 'SALES', title: 'Rückfrage Gartentor', orchestrationStatus: 'WAITING_FOR_INFORMATION', blueprintKey: 'rfq' } });
+    const contactA = await db.contact.create({ data: { tenantId, firstName: 'Petra', lastName: 'Weber', email: 'petra@weber.example' } });
+    const contactB = await db.contact.create({ data: { tenantId, firstName: 'Max', lastName: 'Gewonnen', crmExternalId: 'crm-1' } });
+    await db.lead.create({ data: { tenantId, contactId: contactA.id, caseId: waitingReply.id, source: 'EMAIL', status: 'NEW' } });
+    await db.lead.create({ data: { tenantId, contactId: contactB.id, source: 'WEB', status: 'CONVERTED' } });
     await db.auditLog.create({ data: { tenantId, eventType: 'APPROVAL_GRANTED', actorType: 'USER', entityType: 'Case', entityId: waiting.id } });
     await db.auditLog.create({ data: { tenantId, eventType: 'TOOL_INVOKED', actorType: 'AGENT' } });
   });
@@ -175,9 +181,9 @@ describe('UI projections (e2e)', () => {
   describe('Vorgänge', () => {
     it('lists open cases by default with status, next step and counts; the finished one only under "Abgeschlossen"', async () => {
       const open = (await get('/cases/overview').expect(200)).body as CaseListResponse;
-      expect(open.items.map((i) => i.title)).toEqual(['Anfrage Fenster Müller']);
-      expect(open.items[0]).toMatchObject({ statusLabel: 'Freigabe erforderlich', needsAttention: true, nextStep: 'Ihre Freigabe ist erforderlich', typeLabel: 'Vertrieb' });
-      expect(open.counts).toMatchObject({ OPEN: 1, ATTENTION: 1, DONE: 1, ALL: 2 });
+      expect(open.items.map((i) => i.title).sort()).toEqual(['Anfrage Fenster Müller', 'Rückfrage Gartentor']);
+      expect(open.items.find((i) => i.title === 'Anfrage Fenster Müller')).toMatchObject({ statusLabel: 'Freigabe erforderlich', needsAttention: true, nextStep: 'Ihre Freigabe ist erforderlich', typeLabel: 'Vertrieb' });
+      expect(open.counts).toMatchObject({ OPEN: 2, ATTENTION: 1, DONE: 1, ALL: 3 });
       const done = (await get('/cases/overview?filter=DONE').expect(200)).body as CaseListResponse;
       expect(done.items.map((i) => i.title)).toEqual(['Angebot Haustür']);
       await get('/cases/overview?filter=BOGUS').expect(400);
@@ -211,6 +217,28 @@ describe('UI projections (e2e)', () => {
       const forCase = (await get(`/activity/feed?caseId=${ids.doneCase}`).expect(200)).body as ActivityFeed;
       expect(forCase.entries.every((e) => e.entity?.id === ids.doneCase)).toBe(true);
       await get('/activity/feed?area=BOGUS').expect(400);
+    });
+  });
+  describe('Vertrieb und Verbindungen', () => {
+    it('lists open inquiries with the next step; "Antwort fehlt" and "Abgeschlossen" are separate filters; CRM state is only confirmed when it is', async () => {
+      const open = (await get('/leads/overview').expect(200)).body as LeadListResponse;
+      expect(open.items.map((i) => i.contactLabel)).toEqual(['Petra Weber']);
+      expect(open.items[0]).toMatchObject({ statusLabel: 'Neu', replyMissing: true, nextStep: 'Wartet auf die Antwort des Kunden', crmLabel: 'Noch nicht mit dem CRM abgeglichen' });
+      expect(open.counts).toMatchObject({ OPEN: 1, REPLY_MISSING: 1, DONE: 1, ALL: 2 });
+      const done = (await get('/leads/overview?filter=DONE').expect(200)).body as LeadListResponse;
+      expect(done.items[0]).toMatchObject({ contactLabel: 'Max Gewonnen', statusLabel: 'Konvertiert', crmLabel: 'Im CRM bestätigt' });
+      const searched = (await get('/leads/overview?filter=ALL&q=weber').expect(200)).body as LeadListResponse;
+      expect(searched.items).toHaveLength(1);
+      await get('/leads/overview?filter=BOGUS').expect(400);
+    });
+
+    it('records a request for an unsupported system as audit event and admin task – never as an invented connector', async () => {
+      await request(app.getHttpServer()).post('/api/v1/integrations/requests').set('Authorization', `Bearer ${token}`).send({ systemName: 'Lexoffice', note: 'Rechnungen' }).expect(201);
+      const events = await prisma.forTenantId(tenantId).auditLog.findMany({ where: { eventType: 'CONNECTOR_REQUESTED' } });
+      expect(events).toHaveLength(1);
+      const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { title: 'Systemanbindung prüfen: Lexoffice' } });
+      expect(tasks).toHaveLength(1);
+      await request(app.getHttpServer()).post('/api/v1/integrations/requests').set('Authorization', `Bearer ${token}`).send({ systemName: 'x' }).expect(400);
     });
   });
 });

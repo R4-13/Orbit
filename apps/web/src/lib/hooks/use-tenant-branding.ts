@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TenantBranding } from '@orbit/domain';
 import { apiFetch } from '../api-client';
+import { useAuth } from '../auth-context';
+import { normalizeTheme } from '../theme-contrast';
 
 export interface UpdateTenantBrandingInput {
   companyDisplayName?: string;
@@ -48,42 +50,90 @@ function hexToRgbChannels(hex: string): string | null {
 }
 
 export function useTenantBranding() {
+  // Der Cache-Schlüssel enthält den Mandanten: nach einem Mandantenwechsel im selben Browser wird nie das Erscheinungsbild des
+  // vorigen Mandanten wiederverwendet (UI v2 §21.3, AC-18).
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['tenant-branding'],
+    queryKey: ['tenant-branding', user?.tenantId],
     queryFn: () => apiFetch<{ branding: TenantBranding | null }>('/v1/tenant/branding'),
     staleTime: 5 * 60 * 1000,
+    enabled: Boolean(user),
   });
+}
+
+const THEME_CACHE_PREFIX = 'orbit.theme.';
+
+/** Das zuletzt angewendete Erscheinungsbild je Mandant, damit der erste Render nicht erst mit der Standardfarbe aufblitzt. */
+function readThemeCache(tenantId: string): Record<string, string> | null {
+  try {
+    const raw = window.localStorage.getItem(`${THEME_CACHE_PREFIX}${tenantId}`);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeThemeCache(tenantId: string, variables: Record<string, string>): void {
+  try {
+    window.localStorage.setItem(`${THEME_CACHE_PREFIX}${tenantId}`, JSON.stringify(variables));
+  } catch {
+    /* ohne Speicher gibt es nur keinen Sofort-Effekt */
+  }
+}
+
+function toCssVariables(branding: TenantBranding): Record<string, string> {
+  // Unlesbare Kombinationen werden korrigiert, statt Schrift oder Statuswerte zu verstecken (siehe lib/theme-contrast).
+  const { values } = normalizeTheme({
+    primaryColor: branding.primaryColor,
+    primaryForeground: branding.primaryForeground,
+    accentColor: branding.accentColor,
+    accentForeground: branding.accentForeground,
+    navigationBackground: branding.navigationBackground,
+    navigationForeground: branding.navigationForeground,
+  });
+  const resolved: Partial<Record<string, unknown>> = { ...branding, ...values };
+  const variables: Record<string, string> = {};
+  for (const [field, cssVar] of Object.entries(CSS_VARIABLE_BY_FIELD) as [keyof TenantBranding, string][]) {
+    const value = resolved[field];
+    if (typeof value === 'string' && value.length > 0) {
+      variables[cssVar] = CHANNEL_CSS_VARIABLES.has(cssVar) ? (hexToRgbChannels(value) ?? value) : value;
+    }
+  }
+  return variables;
 }
 
 /**
  * Applies a tenant's branding as CSS custom-property overrides on
- * `:root` (docs/ORION_UI_UX_DEVELOPMENT_SPECIFICATION_v1.md §24.2/§24.3).
- * Called once from the authenticated app shell. Reverts every overridden
+ * `:root`. Called once from the authenticated app shell. Reverts every overridden
  * property on unmount/tenant-change so a stale override can never survive
- * into a different tenant's session (§24.4).
+ * into a different tenant's session. Beim ersten Render wird – falls vorhanden – das zuletzt für DIESEN Mandanten angewendete Theme
+ * sofort gesetzt, danach gilt die geladene (und kontrastgeprüfte) Konfiguration.
  */
 export function useApplyTenantTheme(branding: TenantBranding | null | undefined) {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
+
   useEffect(() => {
+    if (!tenantId || branding !== undefined) return;
+    const cached = readThemeCache(tenantId);
+    if (!cached) return;
     const root = document.documentElement;
-    const applied: string[] = [];
-
-    if (branding) {
-      for (const [field, cssVar] of Object.entries(CSS_VARIABLE_BY_FIELD) as [keyof TenantBranding, string][]) {
-        const value = branding[field];
-        if (typeof value === 'string' && value.length > 0) {
-          const cssValue = CHANNEL_CSS_VARIABLES.has(cssVar) ? (hexToRgbChannels(value) ?? value) : value;
-          root.style.setProperty(cssVar, cssValue);
-          applied.push(cssVar);
-        }
-      }
-    }
-
+    for (const [cssVar, value] of Object.entries(cached)) root.style.setProperty(cssVar, value);
     return () => {
-      for (const cssVar of applied) {
-        root.style.removeProperty(cssVar);
-      }
+      for (const cssVar of Object.keys(cached)) root.style.removeProperty(cssVar);
     };
-  }, [branding]);
+  }, [tenantId, branding]);
+
+  useEffect(() => {
+    if (branding === undefined) return;
+    const root = document.documentElement;
+    const variables = branding ? toCssVariables(branding) : {};
+    for (const [cssVar, value] of Object.entries(variables)) root.style.setProperty(cssVar, value);
+    if (tenantId) writeThemeCache(tenantId, variables);
+    return () => {
+      for (const cssVar of Object.keys(variables)) root.style.removeProperty(cssVar);
+    };
+  }, [branding, tenantId]);
 }
 
 export function useUpdateTenantBranding() {

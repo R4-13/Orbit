@@ -88,7 +88,7 @@ export default function AdminSettingsPage() {
 
   if (deletionResult) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div className="max-w-2xl">
         <Card className="border-red-200">
           <CardContent className="text-sm text-red-800">{deletionResult}</CardContent>
         </Card>
@@ -100,9 +100,9 @@ export default function AdminSettingsPage() {
   const canConfirmDeletion = confirmText.trim() === tenant.name;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Mandanteneinstellungen</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Unternehmen &amp; Einstellungen</h1>
         <p className="mt-1 text-sm text-slate-500">Stammdaten sowie DSGVO-Funktionen für Ihren Mandanten.</p>
       </div>
 
