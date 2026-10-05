@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { DEMO_USERS, loginViaStorage } from './utils/login';
+import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaStorage } from './utils/login';
 
 /**
  * Abnahme UI/UX v2 (docs/ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md): Shell, Home, Navigation, Sonde. Die Prüfungen messen die
@@ -394,5 +394,107 @@ test.describe('Tastatur und Zugänglichkeit (AC-19)', () => {
     await search.fill('IT-Service');
     await page.getByRole('option').filter({ has: page.getByText('Rechnung', { exact: true }) }).first().click();
     await page.waitForURL('**/finance/invoices/**');
+  });
+});
+
+test.describe('Größenänderung der Sonde, Kontextbindung und Verknüpfungen (AC-08, AC-09, AC-11, AC-20)', () => {
+  test('manuelles Ziehen der Sonde-Breite überschreitet nie die Grenze von 800 px Hauptinhalt', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await openHome(page);
+    const handle = page.getByRole('separator', { name: 'Breite von Sonde ändern' });
+    const box = (await handle.boundingBox())!;
+    const startX = box.x + box.width / 2;
+    const y = box.y + 200;
+    // nach links ziehen = breiter: bleibt bei 480 px (Maximum) und lässt dem Hauptinhalt mindestens 800 px netto
+    await page.mouse.move(startX, y);
+    await page.mouse.down();
+    await page.mouse.move(startX - 400, y, { steps: 8 });
+    await page.mouse.up();
+    const wide = (await page.locator('[data-sonde="docked"]').boundingBox())!.width;
+    expect(Math.round(wide)).toBe(480);
+    const main = (await page.locator('[data-shell-main]').boundingBox())!.width;
+    expect(main - 2 * 16).toBeGreaterThanOrEqual(800);
+    // nach rechts ziehen = schmaler: nie unter 360 px
+    const box2 = (await handle.boundingBox())!;
+    await page.mouse.move(box2.x + box2.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(box2.x + 600, y, { steps: 8 });
+    await page.mouse.up();
+    expect(Math.round((await page.locator('[data-sonde="docked"]').boundingBox())!.width)).toBe(360);
+    // Tastatur: Pfeil nach links vergrößert um 16 px
+    await handle.focus();
+    await page.keyboard.press('ArrowLeft');
+    expect(Math.round((await page.locator('[data-sonde="docked"]').boundingBox())!.width)).toBe(376);
+  });
+
+  test('der Kontext einer Nachricht wird beim Absenden gebunden – ein Seitenwechsel schiebt der laufenden Anfrage nichts unter (AC-09)', async ({ page }) => {
+    const token = await loginViaApi(DEMO_USERS.admin);
+    const cases = (await (await fetch(`${API_BASE_URL}/api/v1/cases`, { headers: { Authorization: `Bearer ${token}` } })).json()) as Array<{ id: string; blueprintKey: string | null }>;
+    const processCase = cases.find((c) => c.blueprintKey);
+    test.skip(!processCase, 'Kein Vorgang auf einem Prozess vorhanden.');
+
+    const now = new Date().toISOString();
+    await page.route('**/api/v1/copilot/conversations', (route) =>
+      route.request().method() === 'GET' ? route.fulfill({ json: [{ id: 'c-ctx', tenantId: 't', userId: 'u', title: 'Kontext', createdAt: now, updatedAt: now }] }) : route.continue(),
+    );
+    await page.route('**/api/v1/copilot/conversations/c-ctx/messages', (route) => (route.request().method() === 'GET' ? route.fulfill({ json: [] }) : route.continue()));
+    let captured: { content: string; mode?: string; context?: { caseId: string } } | null = null;
+    await page.route('**/api/v1/copilot/conversations/c-ctx/messages/stream', async (route) => {
+      captured = route.request().postDataJSON();
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream' }, body: `event: message.completed\ndata: ${JSON.stringify({ id: 'a1', role: 'ASSISTANT', content: 'ok' })}\n\n` });
+    });
+
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await page.goto(`/cases/${processCase!.id}?tab=orchestration`);
+    await expect(page.getByText(/Kontext:/)).toBeVisible();
+    await expect(page.locator('[data-sonde="docked"]')).toContainText('Dieser Vorgang');
+    await page.getByLabel('Nachricht an Sonde').fill('Wie steht es um diesen Vorgang?');
+    await page.getByRole('button', { name: 'Nachricht senden' }).click();
+    // sofort auf eine andere Seite wechseln, während die Anfrage noch läuft
+    await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Home', exact: true }).click();
+    await page.waitForURL('**/dashboard');
+    await expect.poll(() => captured).not.toBeNull();
+    expect(captured!.context?.caseId).toBe(processCase!.id);
+    expect(captured!.mode).toBe('ASK');
+    // Die nächste Nachricht auf Home trägt dagegen keinen Vorgangskontext mehr.
+    await expect(page.getByLabel('Nachricht an Sonde')).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test('jeder interne Link auf Home führt auf eine existierende, erlaubte Seite (AC-11)', async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await openHome(page);
+    const hrefs = await page.locator('[data-shell-main] a[href^="/"]').evaluateAll((links) => [...new Set(links.map((a) => a.getAttribute('href') as string))]);
+    expect(hrefs.length).toBeGreaterThan(8);
+    for (const href of hrefs.slice(0, 18)) {
+      const response = await page.goto(href);
+      expect(response?.status(), href).toBeLessThan(400);
+      await expect(page.getByRole('heading', { level: 1 }), href).toBeVisible();
+      expect(new URL(page.url()).pathname, href).not.toBe('/login');
+      await expect(page.getByText('This page could not be found')).toHaveCount(0);
+    }
+  });
+
+  test('bei einem Ladefehler bleibt Home geometrisch stabil und nennt den Wiederholungsweg (AC-20)', async ({ page }) => {
+    await page.route('**/api/v1/dashboard/snapshot**', (route) => route.abort('failed'));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: 'Benötigt Ihre Aufmerksamkeit' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /erneut|Erneut|Wiederholen/ }).first()).toBeVisible();
+    await expect(page.getByText(/Stand unbekannt/)).toBeVisible();
+    const m = await page.evaluate(() => {
+      const home = document.querySelector('[data-home-layout]') as HTMLElement;
+      return { layout: home.dataset.homeLayout, v: home.scrollHeight - home.clientHeight, h: home.scrollWidth - home.clientWidth };
+    });
+    expect(m.layout).toBe('one-screen');
+    expect(m.v).toBeLessThanOrEqual(1);
+    expect(m.h).toBeLessThanOrEqual(1);
+    // Es werden keine erfundenen Nullwerte gezeigt.
+    await expect(page.getByRole('link', { name: /^Freigaben offen: 0/ })).toHaveCount(0);
   });
 });

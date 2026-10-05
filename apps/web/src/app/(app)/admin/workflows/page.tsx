@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AgentDefinition } from '@orbit/domain';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, type BadgeTone } from '@orbit/ui';
@@ -120,7 +121,7 @@ function StepEditor({
       {drafts.map((draft, index) => (
         <div key={index} className="rounded-md border border-slate-200 p-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Schritt {index + 1}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Schritt {index + 1}</p>
             <Button variant="ghost" className="text-xs" onClick={() => removeStep(index)}>
               Entfernen
             </Button>
@@ -274,7 +275,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>{definition.name}</CardTitle>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-600">
             <span className="font-mono">{definition.key}</span> · {TRIGGER_TYPE_LABELS[definition.triggerType] ?? definition.triggerType} ·{' '}
             {definition.steps.length} Schritt{definition.steps.length === 1 ? '' : 'e'}
           </p>
@@ -304,7 +305,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
                 <li key={step.id} className="rounded-md bg-slate-50 px-3 py-2">
                   <span className="font-medium">Schritt {step.order}:</span> <span className="font-mono">{step.agentDefinitionKey}</span>
                   {step.condition ? (
-                    <span className="ml-2 text-xs text-slate-500">
+                    <span className="ml-2 text-xs text-slate-600">
                       (nur wenn {(step.condition as { field: string }).field} = &bdquo;{(step.condition as { equals: string }).equals}&ldquo;)
                     </span>
                   ) : null}
@@ -339,7 +340,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
 
         {showTrigger ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Ausführen — löst einen echten Workflow-Lauf aus</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">Ausführen — löst einen echten Workflow-Lauf aus</p>
             <Label htmlFor={`wf-${definition.key}-trigger-input`}>Eingabe (JSON, unter $.trigger.input verfügbar)</Label>
             <textarea
               id={`wf-${definition.key}-trigger-input`}
@@ -368,11 +369,11 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
                   {(RUN_STATUS_LABELS[trigger.data.status] ?? { label: trigger.data.status }).label}
                 </Badge>
                 {trigger.data.status === 'WAITING_FOR_APPROVAL' ? (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-600">
                     Ein Tool-Aufruf wartet auf Freigabe — siehe{' '}
-                    <a className="underline" href="/approvals">
+                    <Link className="underline" href="/approvals">
                       Freigaben
-                    </a>
+                    </Link>
                     . Der Lauf wird nach der Entscheidung automatisch fortgesetzt.
                   </p>
                 ) : null}
@@ -391,7 +392,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
             {pendingAsyncRunId ? (
               <div className="mt-3 flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-xs">
                 <Badge tone="info">Läuft …</Badge>
-                <span className="text-slate-500">
+                <span className="text-slate-600">
                   Lauf <span className="font-mono">{pendingAsyncRunId}</span> wird alle {ASYNC_RUN_POLL_INTERVAL_MS / 1000}s per Polling
                   (<span className="font-mono">GET .../runs</span>) abgefragt.
                 </span>
@@ -402,7 +403,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
 
         {showRuns ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Bisherige Läufe</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">Bisherige Läufe</p>
             {retryError ? <p className="mb-2 text-xs text-red-600">{retryError}</p> : null}
             {runs && runs.length > 0 ? (
               <ul className="space-y-1.5">
@@ -427,7 +428,7 @@ function WorkflowDefinitionCard({ definition, agentOptions }: { definition: Work
                 })}
               </ul>
             ) : (
-              <p className="text-xs text-slate-500">Noch keine Läufe.</p>
+              <p className="text-xs text-slate-600">Noch keine Läufe.</p>
             )}
           </div>
         ) : null}
@@ -476,7 +477,7 @@ function CreateWorkflowForm({ agentOptions }: { agentOptions: AgentDefinition[] 
       </CardHeader>
       {expanded ? (
         <CardContent className="space-y-3">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             Wird als Entwurf angelegt. Schritte laufen in der angegebenen Reihenfolge; eine Bedingung (ab Schritt 2) prüft den Output eines
             vorherigen Schritts, z. B. <code>$.steps[1].output.classify_message.category</code>.
           </p>
@@ -529,7 +530,7 @@ export default function AdminWorkflowsPage() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Abläufe</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Mehrere Agenten zu einem Prozess verketten. Ein Schritt kann vom Output eines vorherigen Schritts abhängig gemacht werden
           (Bedingung) und dessen Werte als Eingabe übernehmen (Input-Mapping). Nur Agenten mit Status &bdquo;Aktiv&ldquo; (siehe{' '}
           <a className="underline" href="/admin/agents">
@@ -547,7 +548,7 @@ export default function AdminWorkflowsPage() {
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
-        <p className="text-sm text-slate-500">Wird geladen …</p>
+        <p className="text-sm text-slate-600">Wird geladen …</p>
       ) : definitions && definitions.length > 0 ? (
         <div className="space-y-4">
           {definitions.map((definition) => (
@@ -555,7 +556,7 @@ export default function AdminWorkflowsPage() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">Noch keine Workflows konfiguriert.</p>
+        <p className="text-sm text-slate-600">Noch keine Workflows konfiguriert.</p>
       )}
     </div>
   );

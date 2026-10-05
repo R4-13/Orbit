@@ -50,6 +50,8 @@ for (const size of SIZES) {
         pageHScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         mainWidth: main ? Math.round(main.getBoundingClientRect().width) : null,
         mainVScroll: main ? main.scrollHeight - main.clientHeight : null,
+        // overflow-x ist am Hauptbereich verborgen: ein Überlauf wäre sonst unsichtbar abgeschnitten – hier wird er trotzdem gemessen.
+        mainHScroll: main ? main.scrollWidth - main.clientWidth : null,
         homeVScroll: home ? home.scrollHeight - home.clientHeight : null,
         homeHScroll: home ? home.scrollWidth - home.clientWidth : null,
       };

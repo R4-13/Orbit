@@ -64,28 +64,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => setDrawerOpen(false), [pathname]);
 
-  // Rücksprung erhält die Scrollposition (UI v2 §9.4, AC-12): je Route merken, nur bei Browser-Zurück/-Vor wiederherstellen.
+  // Rücksprung erhält die Scrollposition (UI v2 §9.4, AC-12): je Route merken. Ein Klick auf einen Link ist eine neue Navigation (oben
+  // beginnen); jeder andere Routenwechsel – Browser-Zurück/-Vor – stellt die gemerkte Position wieder her. Auf popstate kann man sich dafür
+  // nicht verlassen: im Produktionsbuild ist der Routenwechsel samt Effekten schon durch, bevor das Ereignis eintrifft.
   const search = useSearchParams()?.toString() ?? '';
   const scrollPositions = useRef(new Map<string, number>());
-  const lastKey = useRef<string>('');
-  const poppedRef = useRef(false);
+  const linkNavigationRef = useRef(false);
+  // Der Hauptbereich existiert erst, nachdem die Anmeldung geprüft wurde – daher als State-Referenz, damit der Effekt dann (erneut) läuft.
+  const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const onPop = () => {
-      poppedRef.current = true;
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-  useEffect(() => {
-    const main = document.querySelector<HTMLElement>('[data-shell-main]');
+    const main = mainEl;
     if (!main) return;
     const key = `${pathname}?${search}`;
-    if (lastKey.current && lastKey.current !== key) {
-      // Beim Verlassen wurde die Position bereits fortlaufend gespeichert (onScroll unten).
-    }
-    lastKey.current = key;
-    const target = poppedRef.current ? (scrollPositions.current.get(key) ?? 0) : 0;
-    poppedRef.current = false;
+    const target = linkNavigationRef.current ? 0 : (scrollPositions.current.get(key) ?? 0);
+    linkNavigationRef.current = false;
     main.scrollTop = 0;
     if (target > 0) {
       // Inhalte laden asynchron: bis zu ~1,5 s warten, bis die Seite hoch genug ist.
@@ -99,10 +91,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       };
       tryRestore();
     }
-    const onScroll = () => scrollPositions.current.set(key, main.scrollTop);
-    main.addEventListener('scroll', onScroll, { passive: true });
-    return () => main.removeEventListener('scroll', onScroll);
-  }, [pathname, search]);
+    // Die Position wird beim Verlassen festgehalten (Klick auf einen Link), nicht fortlaufend: sobald die neue Seite eingeblendet ist,
+    // setzt der Browser den Scrollwert wegen der kürzeren Inhalte selbst auf 0 und würde die Merkung sonst überschreiben.
+    let resetTimer: number | undefined;
+    const onClickCapture = (event: MouseEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('a[href]')) return;
+      scrollPositions.current.set(key, main.scrollTop);
+      linkNavigationRef.current = true;
+      // Führt der Klick nicht zu einem Routenwechsel (z. B. Anker), darf die Markierung ein späteres Zurück nicht verfälschen.
+      window.clearTimeout(resetTimer);
+      resetTimer = window.setTimeout(() => {
+        linkNavigationRef.current = false;
+      }, 3000);
+    };
+    document.addEventListener('click', onClickCapture, true);
+    return () => {
+      document.removeEventListener('click', onClickCapture, true);
+      window.clearTimeout(resetTimer);
+    };
+  }, [pathname, search, mainEl]);
   useEffect(() => setPageLabel(pageLabelFor(pathname)), [pathname, setPageLabel]);
 
   // Layout wechselt (z. B. Fenster verkleinert): ein offenes Overlay verschwindet nicht, wenn Dock wieder möglich ist – der Zustand folgt der Präferenz.
@@ -222,7 +229,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           search={<GlobalSearch />}
         />
         <div className="flex min-h-0 flex-1">
-          <main id="main" tabIndex={-1} aria-label="Arbeitsbereich" data-shell-main style={{ padding: geometry.mainPadding }} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-page outline-none">
+          <main ref={setMainEl} id="main" tabIndex={-1} aria-label="Arbeitsbereich" data-shell-main style={{ padding: geometry.mainPadding }} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-page outline-none">
             {children}
           </main>
           {docked && sondeOpen ? (

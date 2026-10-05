@@ -6,11 +6,10 @@ import {
   COMPLETED_ACTION_LABELS,
   DASHBOARD_METRIC_KEYS,
   PERMISSIONS,
-  UNMAPPED_LABEL,
-  approvalEntityLabel,
   compareAttention,
   connectorLabel,
   deduplicateAttention,
+  humanizeKnownKeys,
   intakeStatusLabel,
   internalHref,
   policyActionLabel,
@@ -29,6 +28,7 @@ import {
   type SalesOverview,
   type TaskPreviewItem,
 } from '@orbit/shared';
+import { ApprovalPresenterService } from '../approvals/approval-presenter.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { showExcludedIntakeByDefault } from '../intake/intake-visibility';
 import { PrismaService } from '../prisma/prisma.service';
@@ -87,6 +87,7 @@ function nextActionFor(status: CaseOrchestrationStatusValue | undefined, hasCase
 export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly approvalPresenter: ApprovalPresenterService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
 
@@ -127,7 +128,8 @@ export class DashboardService {
     };
 
     const [pendingApprovals, attentionCases, unknownIntents, openTasks, riskInvoices, brokenIntegrations] = await Promise.all([
-      canApprovals ? db.approval.findMany({ where: { status: 'PENDING' }, orderBy: { requestedAt: 'desc' }, take: MAX_ATTENTION_CANDIDATES }) : [],
+      // DATA-01: dieselbe Quelle wie die Freigabe-Queue „Meine offenen Freigaben“ – Zähler und Einträge stimmen überein.
+      canApprovals ? this.approvalPresenter.queue(tenantId, viewer.permissions, 'MINE', MAX_ATTENTION_CANDIDATES) : [],
       canCases
         ? db.case.findMany({
             where: { orchestrationStatus: { in: ['MANUAL_REVIEW', 'FAILED'] } },
@@ -148,14 +150,10 @@ export class DashboardService {
       canIntegrations ? db.integration.findMany({ where: { status: { in: ['AUTH_REQUIRED', 'ERROR'] } } }) : [],
     ]);
 
-    // Cases, die für Anzeigenamen gebraucht werden (Freigaben über ActionIntent, Aufgaben, Fehler, ungewisse Wirkungen).
-    const processApprovalIds = pendingApprovals.filter((a) => a.entityType === 'PROCESS_ACTION').map((a) => a.entityId);
-    const approvalIntents = processApprovalIds.length > 0 ? await db.actionIntent.findMany({ where: { id: { in: processApprovalIds } } }) : [];
-    const intentById = new Map(approvalIntents.map((intent) => [intent.id, intent]));
+    // Cases, die für Anzeigenamen gebraucht werden (Aufgaben, Fehler, ungewisse Wirkungen).
     const caseIds = new Set<string>([
       ...attentionCases.map((c) => c.id),
       ...unknownIntents.map((i) => i.caseId),
-      ...approvalIntents.map((i) => i.caseId),
       ...openTasks.map((t) => t.caseId).filter((id): id is string => Boolean(id)),
     ]);
     const caseRows = caseIds.size > 0 ? await db.case.findMany({ where: { id: { in: [...caseIds] } } }) : [];
@@ -167,23 +165,21 @@ export class DashboardService {
     };
 
     for (const approval of pendingApprovals) {
-      const intent = approval.entityType === 'PROCESS_ACTION' ? intentById.get(approval.entityId) : undefined;
-      const linkedCase = intent ? caseById.get(intent.caseId) : undefined;
-      const mapped = policyActionLabel(intent ? intent.capabilityKey : approval.policyAction);
-      const what = mapped === UNMAPPED_LABEL ? 'Freigabe erforderlich' : mapped;
-      const entity = approvalEntityLabel(approval.entityType);
+      // Derselbe Vorgang bzw. dieselbe Rechnung bündelt Freigabe, Aufgabe und Risikohinweis zu EINER menschlichen Handlung.
+      const objectKey = approval.object ? (approval.object.type === 'CASE' ? `case:${approval.object.id}` : approval.object.type === 'INVOICE' ? `invoice:${approval.object.id}` : `approval:${approval.id}`) : `approval:${approval.id}`;
+      const critical = approval.risk === 'CRITICAL';
       push({
         id: `approval:${approval.id}`,
-        deduplicationKey: linkedCase ? `case:${linkedCase.id}` : `approval:${approval.id}`,
-        title: linkedCase ? `${what}: ${linkedCase.title}` : mapped === UNMAPPED_LABEL ? `Freigabe: ${entity}` : `${what} (${entity})`,
-        reason: approval.reason ?? 'Ihre Freigabe ist erforderlich, bevor ORBIT fortfährt.',
-        priority: 'NORMAL',
-        rank: 3,
-        statusLabel: 'Freigabe erforderlich',
-        primaryEntity: ref('APPROVAL', approval.id, what),
-        relatedEntities: linkedCase ? [ref('CASE', linkedCase.id, linkedCase.title)] : [],
-        availableActions: [{ key: 'review-approval', label: 'Prüfen', href: internalHref('APPROVAL', approval.id) }],
-        createdAt: approval.requestedAt.toISOString(),
+        deduplicationKey: objectKey,
+        title: approval.object && approval.object.type === 'CASE' ? `${approval.actionLabel}: ${approval.object.label}` : approval.subtitle ? `${approval.actionLabel}: ${approval.object?.label ?? approval.subtitle}` : approval.object ? `${approval.actionLabel}: ${approval.object.label}` : approval.actionLabel,
+        reason: approval.reason,
+        priority: critical ? 'CRITICAL' : 'NORMAL',
+        rank: critical ? 0 : 3,
+        statusLabel: critical ? 'Kritisch prüfen' : 'Freigabe erforderlich',
+        primaryEntity: ref('APPROVAL', approval.id, approval.actionLabel),
+        relatedEntities: approval.object ? [approval.object] : [],
+        availableActions: [{ key: 'review-approval', label: 'Prüfen', href: approval.href }],
+        createdAt: approval.requestedAt,
       });
     }
 
@@ -192,8 +188,8 @@ export class DashboardService {
       push({
         id: `case:${found.id}`,
         deduplicationKey: `case:${found.id}`,
-        title: found.title,
-        reason: found.attentionReasons[0] ?? (failed ? 'Die Bearbeitung ist fehlgeschlagen und braucht eine Entscheidung.' : 'Der Vorgang braucht Ihre Prüfung.'),
+        title: humanizeKnownKeys(found.title),
+        reason: humanizeKnownKeys(found.attentionReasons[0] ?? (failed ? 'Die Bearbeitung ist fehlgeschlagen und braucht eine Entscheidung.' : 'Der Vorgang braucht Ihre Prüfung.')),
         priority: failed ? 'HIGH' : 'NORMAL',
         rank: failed ? 1 : 3,
         statusLabel: CASE_ORCHESTRATION_LABELS[found.orchestrationStatus as CaseOrchestrationStatusValue] ?? 'Prüfung erforderlich',
@@ -228,7 +224,7 @@ export class DashboardService {
       push({
         id: `task:${task.id}`,
         deduplicationKey: linkedCase ? `case:${linkedCase.id}` : `task:${task.id}`,
-        title: task.title,
+        title: humanizeKnownKeys(task.title),
         reason: overdue ? 'Die Frist ist überschritten.' : 'Heute fällig.',
         priority: overdue ? 'HIGH' : 'NORMAL',
         rank: overdue ? 1 : 2,
@@ -292,7 +288,7 @@ export class DashboardService {
       const linkedCase = task.caseId ? caseById.get(task.caseId) : undefined;
       return {
         id: task.id,
-        title: task.title,
+        title: humanizeKnownKeys(task.title),
         dueAt: task.dueDate?.toISOString(),
         overdue: Boolean(task.dueDate && task.dueDate < range.startOfToday),
         relatedCase: linkedCase ? ref('CASE', linkedCase.id, linkedCase.title) : undefined,

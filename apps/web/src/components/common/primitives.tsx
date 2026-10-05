@@ -106,7 +106,7 @@ export function EntityLink({ entity, className = '', withPreview = true }: { ent
           onClick={() => openPreview(entity)}
           aria-label={`Vorschau: ${entity.label}`}
           title="Vorschau"
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-800"
         >
           <Eye size={15} aria-hidden="true" />
         </button>
@@ -132,7 +132,7 @@ export function LastUpdated({ at, fetching = false }: { at?: string | Date | nul
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500" aria-hidden="true">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-600" aria-hidden="true">
         <SearchX size={20} />
       </span>
       <p className="text-sm font-medium text-slate-900">{title}</p>
@@ -146,7 +146,7 @@ export function EmptyState({ title, children, action }: { title: string; childre
 export function PermissionState({ children }: { children?: ReactNode }) {
   return (
     <div role="alert" className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-      <Lock size={18} className="mt-0.5 shrink-0 text-slate-500" aria-hidden="true" />
+      <Lock size={18} className="mt-0.5 shrink-0 text-slate-600" aria-hidden="true" />
       <p>{children ?? 'Für diese Ansicht fehlt Ihnen die Berechtigung. Wenden Sie sich bei Bedarf an Ihre Administration.'}</p>
     </div>
   );
@@ -179,11 +179,11 @@ export function FilterTabs<T extends string>({ items, value, onChange, label }: 
             aria-pressed={active}
             onClick={() => onChange(item.value)}
             className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand ${
-              active ? 'border-brand bg-brand/10 text-brand' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+              active ? 'border-brand bg-brand/10 text-slate-900 ring-1 ring-brand' : 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
             }`}
           >
             {item.label}
-            {item.count !== undefined ? <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-brand/15' : 'bg-slate-100 text-slate-700'}`}>{item.count}</span> : null}
+            {item.count !== undefined ? <span className={`rounded-full px-1.5 text-xs ${active ? 'bg-white/70 text-slate-900' : 'bg-slate-100 text-slate-700'}`}>{item.count}</span> : null}
           </button>
         );
       })}
@@ -203,7 +203,7 @@ export function SearchField({ value, onChange, placeholder, label }: { value: st
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+        className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
       />
     </div>
   );

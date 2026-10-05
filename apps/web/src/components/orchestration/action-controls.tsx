@@ -35,7 +35,7 @@ export function PreviewBlock({ preview }: { preview: ActionPreview }) {
           </p>
           <table className="mt-1 w-full text-xs">
             <thead>
-              <tr className="text-left text-slate-500">
+              <tr className="text-left text-slate-600">
                 <th className="py-1 pr-2 font-medium">Position</th>
                 <th className="py-1 pr-2 font-medium">Menge</th>
                 <th className="py-1 pr-2 text-right font-medium">Einzelpreis</th>
@@ -99,7 +99,7 @@ function ActionDialog({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4" role="presentation" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div role="dialog" aria-modal="true" aria-label={action.title} className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-t-xl bg-white p-5 shadow-xl sm:rounded-xl">
         <h2 className="text-base font-semibold text-slate-900">{action.title}</h2>
-        {action.requiresPreview ? <p className="mt-1 text-xs text-slate-500">Bitte prüfen Sie Empfänger, Text, Anhang und Beträge, bevor Sie bestätigen.</p> : null}
+        {action.requiresPreview ? <p className="mt-1 text-xs text-slate-600">Bitte prüfen Sie Empfänger, Text, Anhang und Beträge, bevor Sie bestätigen.</p> : null}
         {preview && action.requiresPreview ? (
           <div className="mt-3">
             <PreviewBlock preview={preview} />

@@ -252,18 +252,24 @@ export class SalesAgentTools {
       description: 'Entwirft eine Follow-up-E-Mail (wird als Entwurf gespeichert, noch nicht versendet).',
       inputSchema,
       policyAction: POLICY_ACTIONS.EMAIL_DRAFT,
-      execute: async (input, context: ToolExecutionContext) =>
-        this.prisma.forTenantId(context.tenantId).emailMessage.create({
+      execute: async (input, context: ToolExecutionContext) => {
+        // Der Absender ist das verbundene Postfach des Mandanten (dynamisch ermittelt), nie eine im Code festgelegte Adresse (UI v2 AC-17).
+        const mailbox = await this.prisma.forTenantId(context.tenantId).integration.findFirst({
+          where: { connectorType: { in: ['GMAIL', 'MICROSOFT'] }, status: 'CONNECTED' },
+          select: { externalAccountDisplayName: true },
+        });
+        return this.prisma.forTenantId(context.tenantId).emailMessage.create({
           data: {
             tenantId: context.tenantId,
             caseId: input.caseId,
             direction: 'OUTBOUND',
-            fromAddress: 'noreply@musterwerk.example',
+            fromAddress: mailbox?.externalAccountDisplayName ?? 'Kein Postfach verbunden',
             toAddresses: [input.toAddress],
             subject: input.subject,
             bodyPreview: input.bodyText.slice(0, 500),
           },
-        }),
+        });
+      },
     };
   }
 

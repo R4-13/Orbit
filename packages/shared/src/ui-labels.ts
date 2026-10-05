@@ -173,3 +173,25 @@ export function greeting(hour: number, firstName?: string | null): string {
   const name = firstName?.trim();
   return name ? `${base}, ${name}` : base;
 }
+
+/** Risikohinweise der Triage (Amendment 02 §5) in Alltagssprache. */
+export const RISK_FLAG_LABELS: Readonly<Record<string, string>> = {
+  PROMPT_INJECTION_SUSPECTED: 'Verdacht auf einen Manipulationsversuch',
+  PHISHING_SUSPECTED: 'Phishing-Verdacht',
+  IDENTITY_MISMATCH: 'Absender passt nicht zur angegebenen Identität',
+  AUTO_RESPONDER: 'Automatische Antwort',
+  MULTIPLE_INTENTS: 'Mehrere Anliegen in einer Nachricht',
+  UNSUPPORTED_LANGUAGE: 'Nicht unterstützte Sprache',
+};
+
+export const riskFlagLabel = (key: string | null | undefined): string => (key && RISK_FLAG_LABELS[key]) || UNMAPPED_LABEL;
+
+const KNOWN_KEY_PATTERN = new RegExp(String.raw`\b(${Object.keys(RISK_FLAG_LABELS).join('|')})\b`, 'g');
+
+/**
+ * Sicherheitsnetz für Freitext aus dem Bestand (Aufgabentitel, Begründungen): bekannte technische Risikoschlüssel werden durch ihre
+ * verständliche Bezeichnung ersetzt (UI v2 §3.2: keine sichtbaren Enum-Schlüssel). Unbekannte Wörter bleiben unverändert.
+ */
+export function humanizeKnownKeys(text: string): string {
+  return text.replace(KNOWN_KEY_PATTERN, (key) => RISK_FLAG_LABELS[key] ?? key);
+}

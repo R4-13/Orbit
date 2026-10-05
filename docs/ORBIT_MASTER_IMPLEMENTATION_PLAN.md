@@ -303,3 +303,7 @@ Unterstützung (Sanitization-Pipeline — Raster-Upload ist erledigt, siehe Punk
 automatische Kontrast-Validierung, visuelle Regressionstests, DELEGATE-Modus,
 Action-Card-UI mit Bestätigen-Button, `prepare_follow_up`, `message.delta`-Token-
 Streaming, Model-Profile-Registry, Usage-Metering, separate Plattform-Admin-Ansicht.
+
+UI/UX v2 (Stand 2026-10-05): ✅ **ORBIT UI/UX Specification v2** (ersetzt ORION v1) ist umgesetzt und abgenommen — 20 von 22 Abnahmekriterien
+vollständig, 2 teilweise. Plan: `docs/ORBIT_UI_UX_V2_IMPLEMENTATION_PLAN.md`, Architektur: `docs/UI_ARCHITECTURE.md`, Theming:
+`docs/THEMING_AND_BRANDING.md`, Ergebnis: `docs/ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`.

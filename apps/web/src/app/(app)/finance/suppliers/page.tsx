@@ -40,7 +40,7 @@ export default function SuppliersPage() {
   return (
     <div className="">
       <h1 className="text-2xl font-semibold text-slate-900">Lieferanten</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Neue Lieferanten benötigen vor der ersten Zahlung eine Freigabe.
       </p>
 
@@ -59,7 +59,7 @@ export default function SuppliersPage() {
       ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
               <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} />
@@ -69,7 +69,7 @@ export default function SuppliersPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
@@ -103,7 +103,7 @@ export default function SuppliersPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Keine Lieferanten gefunden.
                 </td>
               </tr>

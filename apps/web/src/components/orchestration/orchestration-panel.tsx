@@ -17,7 +17,7 @@ import { OrchestrationTimeline } from './timeline';
 // The graph library is only needed on this tab; load it on demand so the rest of the app stays light.
 const OrchestrationGraph = dynamic(() => import('./orchestration-graph').then((m) => m.OrchestrationGraph), {
   ssr: false,
-  loading: () => <p className="p-6 text-sm text-slate-500">Graph wird geladen …</p>,
+  loading: () => <p className="p-6 text-sm text-slate-600">Graph wird geladen …</p>,
 });
 
 const STATUS_TONES: Record<string, BadgeTone> = {
@@ -73,7 +73,7 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
   }, [caseId, selected, selectedTitle, planRevision, setContext]);
   const stream = useCaseEventStream(caseId, mode !== 'DEFINITION');
 
-  if (isLoading) return <p className="text-sm text-slate-500">Orchestrierung wird geladen …</p>;
+  if (isLoading) return <p className="text-sm text-slate-600">Orchestrierung wird geladen …</p>;
   if (isError) return <ErrorState message={errorMessage(error, 'Die Orchestrierung konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
   if (!graph) return null;
 
@@ -88,11 +88,11 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={STATUS_TONES[graph.overallStatus] ?? 'neutral'}>{statusLabel}</Badge>
           {graph.blueprint ? (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-600">
               {graph.blueprint.title} · {graph.blueprint.key} {graph.blueprint.version}
             </span>
           ) : (
-            <span className="text-xs text-slate-500">Ad-hoc-Plan</span>
+            <span className="text-xs text-slate-600">Ad-hoc-Plan</span>
           )}
         </div>
         <span className="flex items-center gap-1.5 text-xs text-slate-600" role="status" aria-live="polite">
@@ -167,7 +167,7 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
           Änderung gegenüber der Vorrevision: {revision.diff.added.length} neu, {revision.diff.changed.length} geändert, {revision.diff.removed.length} entfallen, {revision.diff.kept.length} unverändert.
         </p>
       ) : null}
-      {revision ? <p className="text-xs text-slate-500">{revision.explanation} · erstellt {formatDateTime(revision.createdAt)}</p> : null}
+      {revision ? <p className="text-xs text-slate-600">{revision.explanation} · erstellt {formatDateTime(revision.createdAt)}</p> : null}
 
       {graph.nodes.length === 0 ? (
         <p className="rounded-md border border-dashed border-slate-300 p-6 text-sm text-slate-600">Für diesen Vorgang gibt es noch keinen Plan. Sobald einer erstellt wurde, erscheint er hier.</p>
@@ -179,7 +179,7 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
           {selected && mode !== 'DEFINITION' ? (
             <NodeDetailPanel caseId={caseId} nodeId={selected} planRevision={graph.planRevision} onClose={() => setSelected(null)} />
           ) : (
-            <p className="rounded-md border border-dashed border-slate-300 p-4 text-sm text-slate-500">
+            <p className="rounded-md border border-dashed border-slate-300 p-4 text-sm text-slate-600">
               {mode === 'DEFINITION' ? 'Die Prozessdefinition zeigt den Standardablauf. Wählen Sie „Gesamt“ für den tatsächlichen Verlauf dieses Vorgangs.' : 'Wählen Sie einen Schritt, um Details, Nachweise und mögliche Aktionen zu sehen.'}
             </p>
           )}

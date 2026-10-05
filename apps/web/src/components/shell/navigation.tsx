@@ -177,7 +177,7 @@ export function NavigationTree({
     setOverride({ path: pathname, open: openGroup === key ? null : key });
   }
 
-  const rowBase = 'flex h-10 items-center gap-2.5 rounded-md text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white';
+  const rowBase = 'flex min-h-10 items-center gap-2.5 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white';
   const tone = (active: boolean) => (active ? 'bg-nav-active text-nav-active-foreground' : 'text-nav-foreground hover:bg-white/10 hover:text-nav-active-foreground');
 
   return (
@@ -214,7 +214,7 @@ export function NavigationTree({
                     className={`${rowBase} min-w-0 flex-1 ${rail ? 'justify-center px-0' : 'px-3'} ${tone(active)}`}
                   >
                     <Icon size={18} className="shrink-0" aria-hidden="true" />
-                    {rail ? <span className="sr-only">{label}</span> : <span className="truncate">{label}</span>}
+                    {rail ? <span className="sr-only">{label}</span> : <span className="min-w-0 leading-tight">{label}</span>}
                     {badge ? (
                       <span className={`${rail ? 'absolute right-1 top-0.5' : 'ml-auto'} rounded-full bg-amber-400 px-1.5 text-[11px] font-semibold leading-5 text-slate-900`} aria-label={`${badge} offen`}>
                         {badge}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compareAttention, deduplicateAttention, internalHref, isInternalHref, type AttentionItem } from './ui-projections';
-import { categoryLabel, greeting, policyActionLabel, UNMAPPED_LABEL } from './ui-labels';
+import { categoryLabel, greeting, humanizeKnownKeys, policyActionLabel, riskFlagLabel, UNMAPPED_LABEL } from './ui-labels';
 
 function item(overrides: Partial<AttentionItem>): AttentionItem {
   return {
@@ -88,5 +88,15 @@ describe('label registry', () => {
     expect(greeting(8, '  ')).toBe('Guten Morgen');
     expect(greeting(14, 'Anna')).toBe('Guten Tag, Anna');
     expect(greeting(20, null)).toBe('Guten Abend');
+  });
+});
+
+describe('humanizeKnownKeys', () => {
+  it('replaces technical risk keys inside free text and leaves everything else untouched', () => {
+    expect(humanizeKnownKeys('Prüfung erforderlich: PROMPT_INJECTION_SUSPECTED erzwingt Prüfung')).toBe('Prüfung erforderlich: Verdacht auf einen Manipulationsversuch erzwingt Prüfung');
+    expect(humanizeKnownKeys('PHISHING_SUSPECTED und IDENTITY_MISMATCH')).toBe('Phishing-Verdacht und Absender passt nicht zur angegebenen Identität');
+    expect(humanizeKnownKeys('Kein Schlüssel hier, auch nicht SOME_OTHER_KEY.')).toBe('Kein Schlüssel hier, auch nicht SOME_OTHER_KEY.');
+    expect(riskFlagLabel('AUTO_RESPONDER')).toBe('Automatische Antwort');
+    expect(riskFlagLabel('NOPE')).toBe(UNMAPPED_LABEL);
   });
 });

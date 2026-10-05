@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { caseTypeDisplay, internalHref, type TaskListItem, type TaskListResponse, type TaskSection } from '@orbit/shared';
+import { caseTypeDisplay, humanizeKnownKeys, internalHref, type TaskListItem, type TaskListResponse, type TaskSection } from '@orbit/shared';
 import { periodRange } from '../dashboard/dashboard-time';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -32,8 +32,8 @@ export class TasksOverviewService {
 
     const items = rows.map((row): TaskListItem => ({
       id: row.id,
-      title: row.title,
-      expectedResult: row.description ?? undefined,
+      title: humanizeKnownKeys(row.title),
+      expectedResult: row.description ? humanizeKnownKeys(row.description) : undefined,
       status: row.status,
       section: sectionOf(row),
       dueAt: row.dueDate?.toISOString(),

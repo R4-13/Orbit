@@ -135,7 +135,7 @@ export function InboxRow({ item, now }: { item: InboxPreviewItem; now: Date }) {
   const actionHref = item.caseRef ? (item.hasProcess ? caseTabHref(item.caseRef.id, 'orchestration') : (item.caseRef.href ?? item.href)) : item.href;
   return (
     <li className="flex h-[var(--home-row,44px)] items-center gap-2.5 px-3">
-      <Mail size={16} className="shrink-0 text-slate-500" aria-label="E-Mail" role="img" />
+      <Mail size={16} className="shrink-0 text-slate-600" aria-label="E-Mail" role="img" />
       <Link href={item.href} className="min-w-0 flex-1" title={`${item.senderLabel} – ${item.subject}`}>
         <span className="block truncate text-[13px] leading-5 text-slate-700">
           <span className="font-medium text-slate-900">{item.senderLabel}</span> · {formatListTime(item.occurredAt, now)}

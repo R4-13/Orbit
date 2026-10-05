@@ -95,7 +95,7 @@ export default function ApprovalsPage() {
                       <p className="line-clamp-2 text-[13px] text-slate-700">{item.reason}</p>
                       {compact && item.object ? <p className="mt-0.5 truncate text-xs text-slate-600">{item.object.label}{item.amountText ? ` · ${item.amountText}` : ''}</p> : null}
                     </td>
-                    {compact ? null : <td className="px-3 py-3 align-top">{item.object ? <EntityLink entity={item.object} /> : <span className="text-slate-500">–</span>}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top">{item.object ? <EntityLink entity={item.object} /> : <span className="text-slate-600">–</span>}</td>}
                     {compact ? null : <td className="px-3 py-3 text-right align-top tabular-nums text-slate-900">{item.amountText ?? '–'}</td>}
                     <td className="px-3 py-3 align-top">
                       <div className="flex flex-col items-start gap-1">

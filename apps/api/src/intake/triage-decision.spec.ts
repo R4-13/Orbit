@@ -1,5 +1,6 @@
 import { buildTriageFixture } from '@orbit/shared';
 import { CATEGORY_DOMAIN_ROUTES, deriveAppliedRelevance, routeForCategory } from './triage-decision';
+import { riskFlagLabel } from '@orbit/shared';
 
 const THRESHOLDS = { minConfidence: 0.6, exclusionMinConfidence: 0.85 };
 
@@ -47,7 +48,9 @@ describe('deriveAppliedRelevance (Amendment 02 §3.1/§14.3 — deterministic th
       const result = buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'REQUEST_FOR_QUOTE', confidence: { relevance: 0.99, intent: 0.99 }, riskFlags: [flag] });
       const applied = deriveAppliedRelevance(result, THRESHOLDS);
       expect(applied.relevance).toBe('UNKNOWN_REQUIRES_REVIEW');
-      expect(applied.basis).toContain(flag);
+      // Die Begründung nennt den Risikohinweis in Alltagssprache, nie den technischen Schlüssel (UI v2 §3.2).
+      expect(applied.basis).toContain(riskFlagLabel(flag));
+      expect(applied.basis).not.toContain(flag);
     },
   );
 

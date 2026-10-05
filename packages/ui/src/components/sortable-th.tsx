@@ -34,13 +34,14 @@ function SortIcon({ direction }: { direction: SortDirection | null }) {
 export function SortableTh<K extends string>({ label, sortKey, sort, onSort, className, ...props }: SortableThProps<K>) {
   const direction = sort?.key === sortKey ? sort.direction : null;
   return (
-    <th className={cn('px-4 py-3 font-medium', className)} {...props}>
-      <button
-        type="button"
-        onClick={() => onSort(sortKey)}
-        className="inline-flex items-center gap-1 hover:text-slate-700"
-        aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
-      >
+    // `aria-sort` gehört an die Spaltenüberschrift (`<th scope="col">`), nicht an den Knopf darin – dort ist es kein erlaubtes ARIA-Attribut.
+    <th
+      scope="col"
+      className={cn('px-4 py-3 font-medium', className)}
+      aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
+      {...props}
+    >
+      <button type="button" onClick={() => onSort(sortKey)} className="inline-flex items-center gap-1 hover:text-slate-700">
         {label}
         <SortIcon direction={direction} />
       </button>

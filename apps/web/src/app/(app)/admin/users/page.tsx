@@ -30,7 +30,7 @@ export default function AdminUsersPage() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-semibold text-slate-900">Benutzer &amp; Rollen</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Deaktivierte Nutzer verlieren sofort den Zugriff — auch bereits laufende Sitzungen werden beendet, nicht
         nur künftige Anmeldungen gesperrt.
       </p>
@@ -50,7 +50,7 @@ export default function AdminUsersPage() {
       ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
               <SortableTh label="E-Mail" sortKey="email" sort={sort} onSort={requestSort} />
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={5}>
+                <td className="px-4 py-6 text-slate-600" colSpan={5}>
                   Wird geladen …
                 </td>
               </tr>
@@ -80,12 +80,12 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <Badge tone={status.tone}>{status.label}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{formatDateTime(user.lastLoginAt)}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatDateTime(user.lastLoginAt)}</td>
                     <td className="px-4 py-3">
                       {user.status === 'DEACTIVATED' ? (
-                        <span className="text-xs text-slate-500">—</span>
+                        <span className="text-xs text-slate-600">—</span>
                       ) : isSelf ? (
-                        <span className="text-xs text-slate-500">Eigenes Konto</span>
+                        <span className="text-xs text-slate-600">Eigenes Konto</span>
                       ) : (
                         <Button
                           variant="ghost"
@@ -110,7 +110,7 @@ export default function AdminUsersPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={5}>
+                <td className="px-4 py-6 text-slate-600" colSpan={5}>
                   Keine Nutzer gefunden.
                 </td>
               </tr>

@@ -155,7 +155,8 @@ export class SondeTools {
           openCasesCount: cases.length,
           openTasksCount: openTasks.length,
           overdueTasksCount,
-          pendingApprovalsCount: approvals.length,
+          // Mit Snapshot gilt dieselbe Definition wie auf Home und in der Freigabe-Liste („Meine offenen Freigaben“), sonst alle offenen.
+          pendingApprovalsCount: snapshot?.metrics.find((metric) => metric.key === 'approvalsOpen')?.value ?? approvals.length,
           failedRunsCount,
           ...(snapshot
             ? {

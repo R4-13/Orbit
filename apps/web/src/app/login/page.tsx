@@ -45,7 +45,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardContent className="pt-6">
           <h1 className="mb-1 text-lg font-semibold text-slate-900">{BRAND_NAME}</h1>
-          <p className="mb-6 text-sm text-slate-500">Bitte melden Sie sich an.</p>
+          <p className="mb-6 text-sm text-slate-600">Bitte melden Sie sich an.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { TaskListItem, TaskSection } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
+import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, Notice, PageHeader, StatusBadge } from '../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../lib/api-client';
 import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
@@ -42,7 +43,7 @@ function TaskRow({ task, onComplete, busy }: { task: TaskListItem; onComplete: (
           {task.assigneeLabel ? <span>Zuständig: {task.assigneeLabel}</span> : <span>Nicht zugewiesen</span>}
         </p>
       </div>
-      <div className="min-w-0 max-w-[16rem] basis-48">{task.relatedCase ? <EntityLink entity={task.relatedCase} /> : <span className="text-sm text-slate-500">Kein Vorgang</span>}</div>
+      <div className="min-w-0 max-w-[16rem] basis-48">{task.relatedCase ? <EntityLink entity={task.relatedCase} /> : <span className="text-sm text-slate-600">Kein Vorgang</span>}</div>
       <div className="flex shrink-0 items-center gap-2">
         {task.status === 'DONE' ? <StatusBadge tone="success">Erledigt</StatusBadge> : null}
         {task.status === 'OPEN' && task.caseHasProcess && task.relatedCase?.href ? (
@@ -65,7 +66,7 @@ function TaskRow({ task, onComplete, busy }: { task: TaskListItem; onComplete: (
  * ein Prozess-Vorgang wird im Vorgang bearbeitet, nicht durch ein loses „Erledigt“.
  */
 export default function TasksPage() {
-  const [view, setView] = usePersistentState<TaskViewState>('tasks', { scope: 'MINE', done: false });
+  const [view, setView, resetView] = usePersistentState<TaskViewState>('tasks', { scope: 'MINE', done: false });
   const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useTaskList(view);
   const completeTask = useCompleteTask();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -105,7 +106,10 @@ export default function TasksPage() {
             Erledigte anzeigen
           </label>
         </div>
-        <LastUpdated at={data ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
+        <div className="flex items-center gap-3">
+          <SavedViewsMenu listKey="tasks" current={view} onApply={setView} onReset={resetView} />
+          <LastUpdated at={data ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
+        </div>
       </div>
 
       {actionError ? <Notice tone="danger">{actionError}</Notice> : null}

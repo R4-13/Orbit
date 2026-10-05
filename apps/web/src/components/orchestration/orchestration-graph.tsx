@@ -41,7 +41,7 @@ function ProcessNode({ data }: NodeProps<Node<ProcessNodeData>>) {
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-slate-400" />
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{TYPE_LABELS[data.type] ?? data.type}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">{TYPE_LABELS[data.type] ?? data.type}</span>
         <ExecutionModeTag mode={data.executionMode} />
       </div>
       <p className="mt-0.5 line-clamp-2 text-sm font-medium text-slate-900">{data.title}</p>
@@ -150,7 +150,7 @@ function Canvas({ graph, selectedId, onSelect }: { graph: CaseGraphView; selecte
         <Background gap={20} />
         <Controls showInteractive={false} />
       </ReactFlow>
-      <p className="pointer-events-none absolute bottom-2 left-3 hidden text-[11px] text-slate-500 sm:block">
+      <p className="pointer-events-none absolute bottom-2 left-3 hidden text-[11px] text-slate-600 sm:block">
         Durchgezogen = genommen · gestrichelt = möglich · gepunktet = nicht genommen
       </p>
     </div>

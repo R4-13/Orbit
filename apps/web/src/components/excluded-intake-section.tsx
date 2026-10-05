@@ -39,24 +39,24 @@ export function ExcludedIntakeSection() {
         <Card className="mt-3 overflow-hidden">
           <CardHeader>
             <CardTitle>Eingänge ohne Geschäftsprozess</CardTitle>
-            <p className="mt-1 text-xs text-slate-500">Bei diesen Eingängen wurde bewusst nichts ausgelöst: keine Aufgabe, kein Vorgang, keine Antwort. Falls die Einstufung falsch ist, können Sie sie zur Prüfung vormerken.</p>
+            <p className="mt-1 text-xs text-slate-600">Bei diesen Eingängen wurde bewusst nichts ausgelöst: keine Aufgabe, kein Vorgang, keine Antwort. Falls die Einstufung falsch ist, können Sie sie zur Prüfung vormerken.</p>
           </CardHeader>
           <CardContent className="p-0">
             {isError ? (
               <ErrorState className="m-4" message={errorMessage(error, 'Die Liste konnte nicht geladen werden.')} onRetry={() => void refetch()} />
             ) : isLoading ? (
-              <p className="px-5 py-4 text-sm text-slate-500">Wird geladen …</p>
+              <p className="px-5 py-4 text-sm text-slate-600">Wird geladen …</p>
             ) : data && data.length > 0 ? (
               <ul className="divide-y divide-slate-100">
                 {data.map((item) => (
                   <li key={item.id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 text-sm">
                       <p className="truncate font-medium text-slate-900">{item.subject ?? '(ohne Betreff)'}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-600">
                         {item.sender?.address ?? 'unbekannt'} · {formatDateTime(item.occurredAt)}
                       </p>
                       <p className="mt-1 text-slate-700">{item.conciseReason ?? item.basis ?? 'Als nicht geschäftsrelevant eingestuft.'}</p>
-                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                         {item.category ? <Badge tone="neutral">{CATEGORY_LABELS[item.category] ?? item.category}</Badge> : null}
                         {item.confidence ? <span>Sicherheit {Math.round(item.confidence.relevance * 100)} %</span> : null}
                         {item.execution ? <Badge tone={item.execution.mode === 'LIVE' ? 'info' : 'warning'}>{item.execution.mode === 'LIVE' ? `KI: ${item.execution.model ?? item.execution.provider}` : 'Simuliert'}</Badge> : <span>Regelbasiert</span>}
@@ -76,7 +76,7 @@ export function ExcludedIntakeSection() {
                 ))}
               </ul>
             ) : (
-              <p className="px-5 py-4 text-sm text-slate-500">Keine ausgeschlossenen Eingänge.</p>
+              <p className="px-5 py-4 text-sm text-slate-600">Keine ausgeschlossenen Eingänge.</p>
             )}
             {review.isError ? (
               <p role="alert" className="m-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">

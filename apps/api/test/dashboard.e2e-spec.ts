@@ -39,7 +39,8 @@ describe('Dashboard snapshot (e2e)', () => {
     const yesterday = new Date(Date.now() - 36 * 3600 * 1000);
     await db.task.create({ data: { tenantId, title: 'Rückruf Kunde Meier', dueDate: yesterday } });
     await db.task.create({ data: { tenantId, title: 'Später erledigen', dueDate: new Date(Date.now() + 5 * 24 * 3600 * 1000) } });
-    await db.approval.create({ data: { tenantId, entityType: 'FOLLOW_UP', entityId: randomUUID(), policyAction: 'followup.send', reason: 'Nachricht an Kunde' } });
+    const newSupplier = await db.supplier.create({ data: { tenantId, name: 'Neue Nachricht GmbH' } });
+    await db.approval.create({ data: { tenantId, entityType: 'SUPPLIER', entityId: newSupplier.id, policyAction: 'supplier.create', reason: 'Neuer Lieferant wartet auf Freigabe' } });
   });
 
   afterAll(async () => {
@@ -62,7 +63,7 @@ describe('Dashboard snapshot (e2e)', () => {
     expect(titles[0]).toMatch(/Bankverbindung geändert: Stahl AG · R-77/);
     expect(snapshot.attentionPreview[0]!.priority).toBe('CRITICAL');
     expect(titles.slice(1, 3).sort()).toEqual(['Anfrage Fenster Müller', 'Rückruf Kunde Meier'].sort());
-    expect(titles[3]).toMatch(/Nachricht/);
+    expect(titles[3]).toMatch(/Lieferanten anlegen/);
     for (const item of snapshot.attentionPreview) {
       expect(item.primaryEntity.href).toMatch(/^\//);
       expect(item.availableActions.length).toBeGreaterThan(0);

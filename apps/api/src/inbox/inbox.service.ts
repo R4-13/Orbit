@@ -5,6 +5,7 @@ import {
   CASE_ORCHESTRATION_LABELS,
   NotFoundError,
   categoryLabel,
+  humanizeKnownKeys,
   intakeStatusLabel,
   internalHref,
   relevanceLabel,
@@ -160,7 +161,7 @@ export class InboxService {
       bodyPreview: email?.bodyText?.slice(0, 2000) ?? email?.bodyPreview ?? undefined,
       recipients: email?.toAddresses ?? [],
       attachments: documents.map((doc) => ({ id: doc.id, name: doc.fileName, mimeType: doc.mimeType, sizeBytes: doc.sizeBytes })),
-      reason: result?.conciseReason ?? row.decision?.failureReason ?? undefined,
+      reason: humanizeKnownKeys(result?.conciseReason ?? row.decision?.failureReason ?? '') || undefined,
       facts,
       actionStatement: item.excluded || !row.case ? 'Aktion: Keine – es wurde kein Geschäftsprozess ausgelöst.' : undefined,
     };

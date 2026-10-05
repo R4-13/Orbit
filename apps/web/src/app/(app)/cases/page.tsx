@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { caseTabHref, type CaseListFilter } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
+import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, Pagination, SearchField, StatusBadge } from '../../../components/common/primitives';
 import { errorMessage } from '../../../lib/api-client';
 import { useMainWidth } from '../../../lib/hooks/use-element-size';
@@ -63,6 +64,7 @@ export default function CasesPage() {
               Filter zurücksetzen
             </button>
           ) : null}
+          <SavedViewsMenu listKey="cases" current={view} onApply={setView} onReset={resetView} />
           <LastUpdated at={data ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
         </div>
       </div>
@@ -123,12 +125,12 @@ export default function CasesPage() {
                         </Link>
                       ) : null}
                     </td>
-                    {compact ? null : <td className="px-3 py-3 align-top">{item.counterparty ? <EntityLink entity={item.counterparty} withPreview={false} /> : <span className="text-slate-500">–</span>}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top">{item.counterparty ? <EntityLink entity={item.counterparty} withPreview={false} /> : <span className="text-slate-600">–</span>}</td>}
                     <td className="px-3 py-3 align-top">
                       <StatusBadge tone={item.statusTone}>{item.statusLabel}</StatusBadge>
                       <p className="mt-1 line-clamp-2 text-xs text-slate-700">{item.nextStep}</p>
                     </td>
-                    {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{item.ownerLabel ?? <span className="text-slate-500">Nicht zugewiesen</span>}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{item.ownerLabel ?? <span className="text-slate-600">Nicht zugewiesen</span>}</td>}
                     {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListTime(item.updatedAt)}</td>}
                   </tr>
                 ))

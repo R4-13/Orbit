@@ -16,9 +16,14 @@ test.describe('Branding — logo upload', () => {
 
     const logoInput = page.locator('#branding-logo');
     const fileInput = logoInput.locator('xpath=../input[@type="file"]');
+    // Ein früherer Lauf kann bereits ein Logo gespeichert haben – gewartet wird auf den NEUEN Wert, nicht auf irgendeinen passenden.
+    await expect(logoInput).toBeVisible();
+    await page.waitForTimeout(500);
+    const previousUrl = await logoInput.inputValue();
     await fileInput.setInputFiles({ name: 'playwright-logo.png', mimeType: 'image/png', buffer: ONE_PIXEL_PNG });
 
     // The upload is async (request-upload-url -> PUT to object storage); wait for the field to actually change.
+    await expect(logoInput).not.toHaveValue(previousUrl, { timeout: 10_000 });
     await expect(logoInput).toHaveValue(/\/public\/tenants\/.+playwright-logo\.png$/, { timeout: 10_000 });
     const uploadedUrl = await logoInput.inputValue();
 
@@ -28,6 +33,8 @@ test.describe('Branding — logo upload', () => {
     expect(await response.body()).toEqual(ONE_PIXEL_PNG);
 
     await page.getByRole('button', { name: 'Speichern' }).click();
+    // Erst neu laden, wenn der Server das Speichern bestätigt hat (die Seite zeigt dann „Gespeichert“).
+    await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.locator('#branding-logo')).toHaveValue(uploadedUrl);
   });

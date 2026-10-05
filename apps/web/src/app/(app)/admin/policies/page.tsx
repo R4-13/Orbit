@@ -51,7 +51,7 @@ export default function AdminPoliciesPage() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-semibold text-slate-900">Regeln &amp; Freigaben</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Legt fest, wie selbstständig Agenten pro Aktion handeln dürfen — von &bdquo;nur vorschlagen&ldquo; bis
         &bdquo;autonom ausführen&ldquo;. Gesperrte Aktionen können nur eingeschränkt, nie gelockert werden.
       </p>
@@ -71,7 +71,7 @@ export default function AdminPoliciesPage() {
       ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <th className="px-4 py-3 font-medium">Aktion</th>
               <th className="px-4 py-3 font-medium">Modus</th>
@@ -81,7 +81,7 @@ export default function AdminPoliciesPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
@@ -96,7 +96,7 @@ export default function AdminPoliciesPage() {
                         {ACTION_LABELS[policy.action] ?? policy.action}
                       </span>
                       {policy.locked ? (
-                        <span className="ml-2 text-xs text-slate-500">(gesperrt)</span>
+                        <span className="ml-2 text-xs text-slate-600">(gesperrt)</span>
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
@@ -104,6 +104,7 @@ export default function AdminPoliciesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <select
+                        aria-label={`Regel für „${ACTION_LABELS[policy.action] ?? policy.action}“`}
                         className="rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                         value={policy.mode}
                         disabled={isPendingThis}
@@ -135,7 +136,7 @@ export default function AdminPoliciesPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Keine Policy-Konfiguration gefunden.
                 </td>
               </tr>

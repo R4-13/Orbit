@@ -120,3 +120,7 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 * **Zweite Wartephase:** der Referenz-Blueprint stellt eine automatische Rückfrage (`maxAutoQuestions: 1`); bleiben Angaben nach der Antwort offen, entsteht eine manuelle Prüfaufgabe statt einer zweiten Rückfrage.
 * **Graph:** automatisches Schichtlayout ohne Kantenkreuzungs-Optimierung; sehr große Pläne (> 60 Knoten) sind per Validator ausgeschlossen. Kein Drag-and-drop-Editor für Pläne (Aktionen laufen nur über Commands).
 * **Aufbewahrung** von `bodyText`/Fakten ist noch nicht an die Retention-Konfiguration gekoppelt.
+* **UI v2 – Freigaben:** es gibt keinen Endpunkt für einen Ablehnungsgrund; „Ablehnen“ verlangt eine zweite Bestätigung, speichert aber keinen Freitext.
+* **UI v2 – Sonde:** keine Funktion „Antwort stoppen“ (kein Abbruch einer laufenden Modellantwort im Backend); die Modi DELEGATE/NAVIGATE sind nicht verfügbar.
+* **UI v2 – Konnektoren:** pro Anbieter ist nur ein Konto wählbar.
+* **UI v2 – Prüfungen:** keine manuelle Screenreader- und Mobile-Tastaturprüfung (nur axe-core automatisiert); kein automatisierter Mandantenwechsel A/B im Browser.

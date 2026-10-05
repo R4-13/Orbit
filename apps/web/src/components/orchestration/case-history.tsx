@@ -44,16 +44,16 @@ function describe(event: CaseEventRow): string {
 /** The full, ordered history of a case — the audit-friendly counterpart of the live graph. */
 export function CaseHistory({ caseId }: { caseId: string }) {
   const { data, isLoading, isError, error, refetch } = useCaseEventHistory(caseId);
-  if (isLoading) return <p className="text-sm text-slate-500">Historie wird geladen …</p>;
+  if (isLoading) return <p className="text-sm text-slate-600">Historie wird geladen …</p>;
   if (isError) return <ErrorState message={errorMessage(error, 'Die Historie konnte nicht geladen werden.')} onRetry={() => void refetch()} />;
-  if (!data || data.length === 0) return <p className="text-sm text-slate-500">Noch keine Ereignisse.</p>;
+  if (!data || data.length === 0) return <p className="text-sm text-slate-600">Noch keine Ereignisse.</p>;
   return (
     <ol className="space-y-1.5" aria-label="Ereignisse des Vorgangs">
       {[...data].reverse().map((event) => (
         <li key={event.sequence} className="flex gap-3 rounded border border-slate-100 px-3 py-2 text-sm">
-          <span className="w-8 shrink-0 text-right text-xs text-slate-500">#{event.sequence}</span>
+          <span className="w-8 shrink-0 text-right text-xs text-slate-600">#{event.sequence}</span>
           <span className="flex-1 text-slate-800">{describe(event)}</span>
-          <time className="shrink-0 text-xs text-slate-500" dateTime={event.at}>
+          <time className="shrink-0 text-xs text-slate-600" dateTime={event.at}>
             {formatDateTime(event.at)}
           </time>
         </li>

@@ -17,7 +17,7 @@ export function OrchestrationTimeline({ graph, selectedId, onSelect }: { graph: 
       .filter((n): n is NonNullable<typeof n> => Boolean(n));
   }, [graph.nodes, graph.edges]);
 
-  if (ordered.length === 0) return <p className="text-sm text-slate-500">Noch kein Plan vorhanden.</p>;
+  if (ordered.length === 0) return <p className="text-sm text-slate-600">Noch kein Plan vorhanden.</p>;
   return (
     <ol className="space-y-2" aria-label="Schritte des Vorgangs in Reihenfolge">
       {ordered.map((node, index) => {
@@ -41,7 +41,7 @@ export function OrchestrationTimeline({ graph, selectedId, onSelect }: { graph: 
                   <ExecutionModeTag mode={node.executionMode} />
                   {node.availableActions.length > 0 ? <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-brand-foreground">Aktion möglich</span> : null}
                 </span>
-                {node.conciseReason ? <span className="mt-1 block text-xs text-slate-500">{node.conciseReason}</span> : null}
+                {node.conciseReason ? <span className="mt-1 block text-xs text-slate-600">{node.conciseReason}</span> : null}
               </span>
             </button>
           </li>

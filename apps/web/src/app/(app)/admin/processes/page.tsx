@@ -75,7 +75,7 @@ export default function ProcessesPage() {
     <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Prozesse</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Ein Prozess ist ein versioniertes, geprüftes Datenpaket – kein Programmcode. Veröffentlichte Versionen sind unveränderlich; für Änderungen entsteht eine neue Version. Erst aktivierte Versionen starten neue Vorgänge.
         </p>
       </div>
@@ -93,21 +93,21 @@ export default function ProcessesPage() {
           {blueprints.isError ? (
             <ErrorState message={errorMessage(blueprints.error, 'Die Prozesse konnten nicht geladen werden.')} onRetry={() => void blueprints.refetch()} />
           ) : blueprints.isLoading ? (
-            <p className="text-sm text-slate-500">Wird geladen …</p>
+            <p className="text-sm text-slate-600">Wird geladen …</p>
           ) : blueprints.data && blueprints.data.length > 0 ? (
             <ul className="divide-y divide-slate-100">
               {blueprints.data.map((b) => (
                 <li key={b.id} className="space-y-2 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-slate-900">{b.definition.title ?? b.key}</span>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-slate-600">
                       {b.key} · Version {b.version}
                     </span>
                     <Badge tone={STATUS_LABELS[b.status].tone}>{STATUS_LABELS[b.status].label}</Badge>
                     {b.active ? <Badge tone="success">Aktiv für diesen Mandanten</Badge> : null}
                   </div>
                   {b.definition.description ? <p className="text-sm text-slate-600">{b.definition.description}</p> : null}
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-600">
                     Prüfsumme {b.definitionHash.slice(0, 12)} · angelegt {formatDateTime(b.createdAt)}
                     {b.publishedAt ? ` · veröffentlicht ${formatDateTime(b.publishedAt)}` : ''} · Planungsmodus {b.definition.planMode ?? '–'}
                   </p>
@@ -133,7 +133,7 @@ export default function ProcessesPage() {
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">Noch keine Prozessdefinition importiert.</p>
+            <p className="text-sm text-slate-600">Noch keine Prozessdefinition importiert.</p>
           )}
         </CardContent>
       </Card>
@@ -153,7 +153,7 @@ export default function ProcessesPage() {
               aria-describedby="blueprint-help"
             />
           </label>
-          <p id="blueprint-help" className="text-xs text-slate-500">
+          <p id="blueprint-help" className="text-xs text-slate-600">
             Unbekannte Schlüssel, nicht vorhandene Fähigkeiten, erfundene Empfänger oder Preise und unerreichbare Schritte werden abgelehnt. Der Import legt immer einen Entwurf an.
           </p>
           {parseError ? <p role="alert" className="text-sm text-red-700">{parseError}</p> : null}
@@ -191,7 +191,7 @@ export default function ProcessesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Fähigkeiten dieses Mandanten</CardTitle>
-          <p className="mt-1 text-xs text-slate-500">Was ORBIT hier tatsächlich ausführen kann – mit Gründen, falls etwas nicht verfügbar ist.</p>
+          <p className="mt-1 text-xs text-slate-600">Was ORBIT hier tatsächlich ausführen kann – mit Gründen, falls etwas nicht verfügbar ist.</p>
         </CardHeader>
         <CardContent>
           {capabilities.isError ? (
@@ -203,7 +203,7 @@ export default function ProcessesPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-slate-900">{c.key}</span>
                     <Badge tone={c.executability?.executable ? 'success' : 'warning'}>{c.executability?.executable ? 'Ausführbar' : 'Nicht ausführbar'}</Badge>
-                    <span className="text-xs text-slate-500">{c.sideEffect === 'EXTERNAL_WRITE' ? 'wirkt nach außen' : c.sideEffect === 'INTERNAL_WRITE' ? 'schreibt intern' : 'nur lesend'} · Risiko {c.riskClass}</span>
+                    <span className="text-xs text-slate-600">{c.sideEffect === 'EXTERNAL_WRITE' ? 'wirkt nach außen' : c.sideEffect === 'INTERNAL_WRITE' ? 'schreibt intern' : 'nur lesend'} · Risiko {c.riskClass}</span>
                   </div>
                   <p className="text-slate-600">{c.description}</p>
                   {c.executability && !c.executability.executable ? <p className="text-xs text-amber-800">{c.executability.reasons.join(' ')}</p> : null}

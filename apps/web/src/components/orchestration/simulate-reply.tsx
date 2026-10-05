@@ -41,7 +41,7 @@ export function SimulateReply({ caseId }: { caseId: string }) {
       </button>
       {open ? (
         <div className="mt-3 space-y-2">
-          <p className="text-xs text-slate-500">Die Antwort geht als echte Folge-E-Mail mit Thread- und In-Reply-To-Kennung durch die normale Zuordnung; der Vorgang setzt danach selbstständig fort.</p>
+          <p className="text-xs text-slate-600">Die Antwort geht als echte Folge-E-Mail mit Thread- und In-Reply-To-Kennung durch die normale Zuordnung; der Vorgang setzt danach selbstständig fort.</p>
           <label className="block">
             <span className="font-medium text-slate-700">Text der Antwort</span>
             <textarea className="mt-1 h-28 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand" value={text} onChange={(e) => setText(e.target.value)} />

@@ -8,7 +8,7 @@ import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CopilotConversationService } from './copilot-conversation.service';
 import { SondeCaseContextService } from './case-context.service';
-import { CopilotRuntimeService } from './copilot-runtime.service';
+import { CopilotRuntimeService, toolNamesForMode } from './copilot-runtime.service';
 
 describe('CopilotRuntimeService', () => {
   let service: CopilotRuntimeService;
@@ -84,19 +84,13 @@ describe('CopilotRuntimeService', () => {
 
     const result = await service.sendMessage('tenant_1', 'user_1', 'conv_1', 'Wie viele Freigaben stehen aus?');
 
+    // Ohne gewählten Modus gilt der sicherste: „Fragen“ – nur Lese-Werkzeuge (UI v2 §8.3).
     expect(toolRegistry.subset).toHaveBeenCalledWith([
       'get_dashboard_summary',
       'list_open_approvals',
       'get_case',
       'list_overdue_tasks',
       'list_failed_agent_runs',
-      'draft_email',
-      'create_meeting',
-      'create_booking_proposal',
-      'create_task',
-      'create_contact',
-      'create_lead',
-      'send_email',
     ]);
     expect(scoped.conversationMessage.create).toHaveBeenNthCalledWith(1, {
       data: { tenantId: 'tenant_1', conversationId: 'conv_1', userId: 'user_1', role: 'USER', content: 'Wie viele Freigaben stehen aus?' },
@@ -194,5 +188,19 @@ describe('CopilotRuntimeService', () => {
       },
     });
     expect(result.content).toContain('nicht verfügbar');
+  });
+});
+
+describe('toolNamesForMode (UI v2 §8.3: der Modus begrenzt die Werkzeuge wirklich)', () => {
+  it('ASK is the default and only reads; PREPARE adds drafts and proposals; ACT adds the actions – each mode contains the previous one', () => {
+    const ask = toolNamesForMode(undefined);
+    expect(toolNamesForMode('ASK')).toEqual(ask);
+    expect(ask).not.toContain('create_task');
+    expect(ask).not.toContain('draft_email');
+    const prepare = toolNamesForMode('PREPARE');
+    expect(prepare).toEqual(expect.arrayContaining([...ask, 'draft_email', 'create_meeting', 'create_booking_proposal']));
+    expect(prepare).not.toContain('send_email');
+    const act = toolNamesForMode('ACT');
+    expect(act).toEqual(expect.arrayContaining([...prepare, 'create_task', 'create_contact', 'create_lead', 'send_email']));
   });
 });

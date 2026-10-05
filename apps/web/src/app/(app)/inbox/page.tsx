@@ -7,6 +7,7 @@ import type { IntakeEventStatus } from '@orbit/domain';
 import { SIMULATED_TRIAGE_SCENARIOS, SIMULATED_TRIAGE_SCENARIO_LABELS, caseTabHref, categoryLabel, type InboxFilter, type SimulatedTriageScenario } from '@orbit/shared';
 import { Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
 import { EmptyState, FilterTabs, LastUpdated, PageHeader, Pagination, SearchField, StatusBadge } from '../../../components/common/primitives';
+import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
 import { ExcludedIntakeSection } from '../../../components/excluded-intake-section';
 import { ApiError, errorMessage } from '../../../lib/api-client';
 import { useMainWidth } from '../../../lib/hooks/use-element-size';
@@ -57,7 +58,7 @@ export default function InboxPage() {
   const [simulating, setSimulating] = useState(false);
 
   const [fromAddress, setFromAddress] = useState('');
-  const [toAddress, setToAddress] = useState('rechnungen@musterwerk.example');
+  const [toAddress, setToAddress] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
   const [scenario, setScenario] = useState<SimulatedTriageScenario | ''>('');
@@ -120,7 +121,7 @@ export default function InboxPage() {
                 </div>
                 <div>
                   <Label htmlFor="toAddress">An</Label>
-                  <Input id="toAddress" type="email" required value={toAddress} onChange={(event) => setToAddress(event.target.value)} />
+                  <Input id="toAddress" type="email" required value={toAddress} onChange={(event) => setToAddress(event.target.value)} placeholder="info@ihre-firma.example" />
                 </div>
               </div>
               <div>
@@ -179,6 +180,7 @@ export default function InboxPage() {
               Filter zurücksetzen
             </button>
           ) : null}
+          <SavedViewsMenu listKey="inbox" current={state} onApply={setState} onReset={resetState} />
           <LastUpdated at={data?.generatedAt} fetching={isFetching} />
         </div>
       </div>
@@ -226,7 +228,7 @@ export default function InboxPage() {
               ) : data && data.items.length > 0 ? (
                 data.items.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-3 align-top text-slate-500">
+                    <td className="px-3 py-3 align-top text-slate-600">
                       <Mail size={16} aria-label="E-Mail" role="img" />
                     </td>
                     <td className="px-3 py-3 align-top">

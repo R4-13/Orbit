@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { PermissionState } from '../../../../components/common/primitives';
 import { ApiError } from '../../../../lib/api-client';
 import { formatDateTime } from '../../../../lib/format';
 import {
@@ -76,14 +77,43 @@ export default function AdminSettingsPage() {
     }
   }
 
+  // Auch Lade-, Fehler- und Berechtigungszustände tragen die Seitenüberschrift: Orientierung und Seitentitel bleiben stabil.
+  const title = <h1 className="mb-4 text-2xl font-semibold text-slate-900">Unternehmen &amp; Einstellungen</h1>;
   if (isLoading) {
-    return <p className="text-sm text-slate-500">Wird geladen …</p>;
+    return (
+      <div className="max-w-2xl">
+        {title}
+        <p className="text-sm text-slate-600">Wird geladen …</p>
+      </div>
+    );
   }
   if (isError) {
-    return <ErrorState message={describeError(tenantError)} onRetry={() => void refetch()} />;
+    // Export und Löschung des Mandanten sind bewusst der Systemadministration vorbehalten (Recht „tenant.manage“, siehe Tenants-API).
+    if (tenantError instanceof ApiError && tenantError.status === 403) {
+      return (
+        <div className="max-w-2xl">
+          {title}
+          <PermissionState>
+            Datenexport und die Löschung des Unternehmens sind der Systemadministration vorbehalten. Mit Ihrer Rolle können Sie diese Seite nicht nutzen –
+            wenden Sie sich bei Bedarf an die Systemadministration Ihres Unternehmens.
+          </PermissionState>
+        </div>
+      );
+    }
+    return (
+      <div className="max-w-2xl">
+        {title}
+        <ErrorState message={describeError(tenantError)} onRetry={() => void refetch()} />
+      </div>
+    );
   }
   if (!tenant) {
-    return <p className="text-sm text-slate-500">Mandant nicht gefunden.</p>;
+    return (
+      <div className="max-w-2xl">
+        {title}
+        <p className="text-sm text-slate-600">Mandant nicht gefunden.</p>
+      </div>
+    );
   }
 
   if (deletionResult) {
@@ -103,7 +133,7 @@ export default function AdminSettingsPage() {
     <div className="max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Unternehmen &amp; Einstellungen</h1>
-        <p className="mt-1 text-sm text-slate-500">Stammdaten sowie DSGVO-Funktionen für Ihren Mandanten.</p>
+        <p className="mt-1 text-sm text-slate-600">Stammdaten sowie DSGVO-Funktionen für Ihren Mandanten.</p>
       </div>
 
       {error ? (
@@ -118,19 +148,19 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-slate-500">Name</dt>
+            <dt className="text-slate-600">Name</dt>
             <dd>{tenant.name}</dd>
-            <dt className="text-slate-500">Slug</dt>
+            <dt className="text-slate-600">Slug</dt>
             <dd>{tenant.slug}</dd>
-            <dt className="text-slate-500">Status</dt>
+            <dt className="text-slate-600">Status</dt>
             <dd>
               <Badge tone={tenant.status === 'ACTIVE' ? 'success' : 'warning'}>{tenant.status}</Badge>
             </dd>
-            <dt className="text-slate-500">Sprache</dt>
+            <dt className="text-slate-600">Sprache</dt>
             <dd>{tenant.locale}</dd>
-            <dt className="text-slate-500">Zeitzone</dt>
+            <dt className="text-slate-600">Zeitzone</dt>
             <dd>{tenant.timezone}</dd>
-            <dt className="text-slate-500">Angelegt am</dt>
+            <dt className="text-slate-600">Angelegt am</dt>
             <dd>{formatDateTime(tenant.createdAt)}</dd>
           </dl>
         </CardContent>

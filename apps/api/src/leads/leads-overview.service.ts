@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@orbit/domain';
-import { internalHref, type LeadFilter, type LeadListItem, type LeadListResponse } from '@orbit/shared';
+import { humanizeKnownKeys, internalHref, type LeadFilter, type LeadListItem, type LeadListResponse } from '@orbit/shared';
 import { periodRange } from '../dashboard/dashboard-time';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -44,7 +43,7 @@ export class LeadsOverviewService {
       const contactLabel = `${lead.contact.firstName} ${lead.contact.lastName}`.trim();
       const nextStep = replyMissing
         ? 'Wartet auf die Antwort des Kunden'
-        : (task?.title ?? lead.case?.attentionReasons[0] ?? (lead.status === 'NEW' ? 'Kontakt aufnehmen und einordnen' : lead.status === 'QUALIFIED' ? 'Angebot oder Termin vorbereiten' : 'Keine – abgeschlossen'));
+        : humanizeKnownKeys(task?.title ?? lead.case?.attentionReasons[0] ?? (lead.status === 'NEW' ? 'Kontakt aufnehmen und einordnen' : lead.status === 'QUALIFIED' ? 'Angebot oder Termin vorbereiten' : 'Keine – abgeschlossen'));
       return {
         id: lead.id,
         contactLabel,

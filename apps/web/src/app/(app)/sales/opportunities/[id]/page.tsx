@@ -16,7 +16,7 @@ export default function OpportunityDetailPage() {
   const updateStage = useUpdateOpportunityStage(id);
 
   if (isLoading) {
-    return <p className="text-sm text-slate-500">Wird geladen …</p>;
+    return <p className="text-sm text-slate-600">Wird geladen …</p>;
   }
   if (isError) {
     return (
@@ -24,7 +24,7 @@ export default function OpportunityDetailPage() {
     );
   }
   if (!opportunity) {
-    return <p className="text-sm text-slate-500">Opportunity nicht gefunden.</p>;
+    return <p className="text-sm text-slate-600">Opportunity nicht gefunden.</p>;
   }
 
   const stage = statusLabel(opportunity.stage);
@@ -34,10 +34,10 @@ export default function OpportunityDetailPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">{opportunity.name}</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-600">
             {opportunity.value !== null ? formatAmount(opportunity.value, opportunity.currency) : 'Kein Wert hinterlegt'}
           </p>
-          <p className="mt-1 text-xs text-slate-500">Erstellt {formatDateTime(opportunity.createdAt)}</p>
+          <p className="mt-1 text-xs text-slate-600">Erstellt {formatDateTime(opportunity.createdAt)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={stage.tone}>{stage.label}</Badge>
@@ -62,9 +62,9 @@ export default function OpportunityDetailPage() {
         </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-slate-500">Währung</dt>
+            <dt className="text-slate-600">Währung</dt>
             <dd>{opportunity.currency}</dd>
-            <dt className="text-slate-500">CRM-Referenz</dt>
+            <dt className="text-slate-600">CRM-Referenz</dt>
             <dd>{opportunity.crmExternalId ?? '–'}</dd>
           </dl>
         </CardContent>

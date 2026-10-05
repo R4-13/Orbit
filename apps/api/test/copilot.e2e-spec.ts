@@ -108,7 +108,7 @@ describe('Copilot / Sonde (e2e)', () => {
       .get('/api/v1/copilot/capabilities')
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       modes: ['ASK', 'PREPARE', 'ACT'],
       tools: [
         'get_dashboard_summary',
@@ -125,6 +125,8 @@ describe('Copilot / Sonde (e2e)', () => {
         'send_email',
       ],
     });
+    // UI v2 §8.6: „Bereit“ kommt aus der Laufzeit, nicht aus der Konfigurationsart.
+    expect(response.body.readiness).toMatchObject({ configuration: 'ORBIT_MANAGED', executionMode: expect.stringMatching(/LIVE|SIMULATED/), health: expect.any(String) });
   });
 
   it('rejects every /copilot route without a valid token', async () => {

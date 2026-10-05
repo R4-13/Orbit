@@ -1,5 +1,5 @@
 import type { IntakeRelevance } from '@orbit/domain';
-import type { TriageResult } from '@orbit/shared';
+import { riskFlagLabel, type TriageResult } from '@orbit/shared';
 
 /**
  * Deterministic application logic that turns the model's *proposal* into a
@@ -31,7 +31,7 @@ export interface AppliedRelevance {
 export function deriveAppliedRelevance(result: TriageResult, thresholds: TriageThresholds): AppliedRelevance {
   const forcing = result.riskFlags.find((flag) => REVIEW_FORCING_RISK_FLAGS.has(flag));
   if (forcing) {
-    return { relevance: 'UNKNOWN_REQUIRES_REVIEW', basis: `Risikohinweis ${forcing} erzwingt eine menschliche Prüfung.` };
+    return { relevance: 'UNKNOWN_REQUIRES_REVIEW', basis: `Risikohinweis „${riskFlagLabel(forcing)}“ erzwingt eine menschliche Prüfung.` };
   }
 
   switch (result.businessRelevance) {

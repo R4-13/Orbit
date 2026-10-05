@@ -71,7 +71,7 @@ function OperationalChecks({ connectorId, enabled }: { connectorId: ConnectorMet
           const reached = data.levels[level].reached;
           return (
             <li key={level} className="flex items-center gap-1.5" data-level={level} data-reached={reached}>
-              <span aria-hidden="true" className={reached ? 'text-emerald-700' : 'text-slate-500'}>
+              <span aria-hidden="true" className={reached ? 'text-emerald-700' : 'text-slate-600'}>
                 {reached ? '✓' : '○'}
               </span>
               <span className={reached ? 'text-slate-800' : 'text-slate-600'}>

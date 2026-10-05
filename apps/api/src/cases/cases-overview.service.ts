@@ -4,6 +4,7 @@ import {
   CASE_ORCHESTRATION_LABELS,
   NotFoundError,
   caseTypeDisplay,
+  humanizeKnownKeys,
   internalHref,
   type CaseListFilter,
   type CaseListItem,
@@ -122,12 +123,12 @@ export class CasesOverviewService {
       const owner = row.assignee ? `${row.assignee.firstName} ${row.assignee.lastName}`.trim() : undefined;
       return {
         id: row.id,
-        title: row.title,
+        title: humanizeKnownKeys(row.title),
         typeLabel: caseTypeDisplay(row.type),
         counterparty: counterparty.get(row.id),
         statusLabel: CASE_ORCHESTRATION_LABELS[status] ?? 'In Bearbeitung',
         statusTone: TONES[status] ?? 'neutral',
-        nextStep: row.attentionReasons[0] ?? NEXT_STEPS[status] ?? 'Fortschritt ansehen',
+        nextStep: humanizeKnownKeys(row.attentionReasons[0] ?? NEXT_STEPS[status] ?? 'Fortschritt ansehen'),
         ownerLabel: owner,
         updatedAt: row.updatedAt.toISOString(),
         needsAttention: (ATTENTION_STATES as readonly string[]).includes(status),

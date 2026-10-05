@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import type { Invoice } from '@orbit/domain';
 import { ErrorState } from '@orbit/ui';
+import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { errorMessage } from '../../../../lib/api-client';
 import { formatAmount } from '../../../../lib/format';
@@ -65,6 +66,7 @@ export default function InvoicesPage() {
               Filter zurücksetzen
             </button>
           ) : null}
+          <SavedViewsMenu listKey="invoices" current={view} onApply={setView} onReset={resetView} />
           <LastUpdated at={invoices ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
         </div>
       </div>
@@ -110,7 +112,7 @@ export default function InvoicesPage() {
                           {invoice.invoiceNumber ?? '(ohne Nummer)'}
                         </Link>
                         <div className="truncate text-[13px] text-slate-700">
-                          {invoice.supplier ? <EntityLink entity={{ type: 'SUPPLIER', id: invoice.supplier.id, label: invoice.supplier.name, href: '/finance/suppliers' }} withPreview={false} /> : <span className="text-slate-500">Lieferant noch nicht zugeordnet</span>}
+                          {invoice.supplier ? <EntityLink entity={{ type: 'SUPPLIER', id: invoice.supplier.id, label: invoice.supplier.name, href: '/finance/suppliers' }} withPreview={false} /> : <span className="text-slate-600">Lieferant noch nicht zugeordnet</span>}
                           {compact ? ` · fällig ${dueText(invoice.dueDate)}` : ''}
                         </div>
                       </td>

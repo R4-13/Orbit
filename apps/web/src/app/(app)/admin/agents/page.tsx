@@ -63,8 +63,8 @@ function ToolCheckboxList({
           />
           <span>
             <span className="font-mono text-xs font-medium text-slate-900">{tool.name}</span>
-            <span className="block text-xs text-slate-500">{tool.description}</span>
-            <span className="block text-xs text-slate-500">Policy-Action: {tool.policyAction}</span>
+            <span className="block text-xs text-slate-600">{tool.description}</span>
+            <span className="block text-xs text-slate-600">Policy-Action: {tool.policyAction}</span>
           </span>
         </label>
       ))}
@@ -137,7 +137,7 @@ function EvaluationPanel({ agentKey }: { agentKey: string }) {
   return (
     <div className="border-t border-slate-100 pt-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
           Evaluationsfälle — kritische Fälle blockieren die Aktivierung, solange sie fehlschlagen
         </p>
         <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ function EvaluationPanel({ agentKey }: { agentKey: string }) {
       {isError ? (
         <p className="text-xs text-red-600">{errorMessage(loadError, 'Die Evaluationsfälle konnten nicht geladen werden.')}</p>
       ) : isLoading ? (
-        <p className="text-xs text-slate-500">Wird geladen …</p>
+        <p className="text-xs text-slate-600">Wird geladen …</p>
       ) : cases && cases.length > 0 ? (
         <ul className="space-y-1.5">
           {cases.map((evaluationCase) => {
@@ -192,7 +192,7 @@ function EvaluationPanel({ agentKey }: { agentKey: string }) {
           })}
         </ul>
       ) : (
-        <p className="text-xs text-slate-500">Noch keine Evaluationsfälle für diesen Agenten.</p>
+        <p className="text-xs text-slate-600">Noch keine Evaluationsfälle für diesen Agenten.</p>
       )}
 
       {expanded ? (
@@ -319,7 +319,7 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>{definition.name}</CardTitle>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-600">
             <span className="font-mono">{definition.key}</span> · {BASE_TYPE_LABELS[definition.baseType] ?? definition.baseType} ·
             Version {definition.version}
           </p>
@@ -350,13 +350,13 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
         {!editing ? (
           <>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">System-Prompt</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-600">System-Prompt</p>
               <p className="mt-1 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                 {definition.systemPrompt}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Erlaubte Tools</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-600">Erlaubte Tools</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {definition.allowedTools.map((toolName) => (
                   <Badge key={toolName} tone="info">
@@ -379,7 +379,7 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
               />
             </div>
             <div>
-              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Erlaubte Tools</p>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-600">Erlaubte Tools</p>
               <ToolCheckboxList tools={tools} selected={allowedTools} onToggle={toggleTool} />
             </div>
             <div className="flex items-end gap-3">
@@ -418,14 +418,14 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
 
         {showVersions ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Versionshistorie</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">Versionshistorie</p>
             {versions && versions.length > 0 ? (
               <ul className="space-y-2">
                 {versions.map((v) => (
                   <li key={v.id} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs">
                     <span>
                       <span className="font-medium">Version {v.version}</span> — {formatDateTime(v.createdAt)}
-                      {v.changeNote ? <span className="text-slate-500"> · {v.changeNote}</span> : null}
+                      {v.changeNote ? <span className="text-slate-600"> · {v.changeNote}</span> : null}
                     </span>
                     {v.version !== definition.version ? (
                       <Button
@@ -437,20 +437,20 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
                         Wiederherstellen
                       </Button>
                     ) : (
-                      <span className="text-slate-500">Aktuell</span>
+                      <span className="text-slate-600">Aktuell</span>
                     )}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-slate-500">Wird geladen …</p>
+              <p className="text-xs text-slate-600">Wird geladen …</p>
             )}
           </div>
         ) : null}
 
         {showTestRun ? (
           <div className="border-t border-slate-100 pt-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-600">
               Testlauf — führt den Agenten echt aus (inkl. Policy-Engine-Prüfung), erzeugt einen normalen Agent-Lauf
             </p>
             <div className="space-y-2">
@@ -468,14 +468,14 @@ function AgentDefinitionCard({ definition, tools }: { definition: AgentDefinitio
             {testError ? <p className="mt-2 text-sm text-red-600">{testError}</p> : null}
             {testResult ? (
               <div className="mt-3 space-y-1.5">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-600">
                   Agent-Lauf <span className="font-mono">{testResult.agentRunId}</span> —{' '}
                   <a className="underline" href={`/activity`}>
                     in Activity ansehen
                   </a>
                 </p>
                 {testResult.toolCallOutcomes.length === 0 ? (
-                  <p className="text-xs text-slate-500">Keine Tool-Aufrufe.</p>
+                  <p className="text-xs text-slate-600">Keine Tool-Aufrufe.</p>
                 ) : (
                   <ul className="space-y-1">
                     {testResult.toolCallOutcomes.map((outcome) => {
@@ -551,7 +551,7 @@ function CreateAgentForm({ tools }: { tools: ToolCatalogEntry[] }) {
       </CardHeader>
       {expanded ? (
         <CardContent className="space-y-3">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             Wird als Entwurf (Status &bdquo;Entwurf&ldquo;) angelegt — erst nach Aktivierung von einem echten Workflow nutzbar.
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -595,7 +595,7 @@ function CreateAgentForm({ tools }: { tools: ToolCatalogEntry[] }) {
             />
           </div>
           <div>
-            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Erlaubte Tools</p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-600">Erlaubte Tools</p>
             <ToolCheckboxList tools={tools} selected={allowedTools} onToggle={toggleTool} />
           </div>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -619,7 +619,7 @@ export default function AdminAgentsPage() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Agenten</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-600">
           Prompt und Tool-Zugriff der Agenten anpassen sowie neue Agenten anlegen. Jede Änderung erzeugt eine neue,
           wiederherstellbare Version. Die Policy-Engine (<a className="underline" href="/admin/policies">Agent-Autonomie</a>)
           entscheidet unabhängig davon weiterhin, ob ein erlaubtes Tool auch tatsächlich autonom ausgeführt werden
@@ -635,7 +635,7 @@ export default function AdminAgentsPage() {
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
-        <p className="text-sm text-slate-500">Wird geladen …</p>
+        <p className="text-sm text-slate-600">Wird geladen …</p>
       ) : definitions && definitions.length > 0 ? (
         <div className="space-y-4">
           {definitions.map((definition) => (
@@ -643,7 +643,7 @@ export default function AdminAgentsPage() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">Noch keine Agenten konfiguriert.</p>
+        <p className="text-sm text-slate-600">Noch keine Agenten konfiguriert.</p>
       )}
     </div>
   );

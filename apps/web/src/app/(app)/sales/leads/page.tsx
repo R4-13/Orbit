@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import type { LeadSource } from '@orbit/domain';
 import type { LeadFilter } from '@orbit/shared';
 import { Button, ErrorState } from '@orbit/ui';
+import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, Notice, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useMainWidth } from '../../../../lib/hooks/use-element-size';
@@ -136,6 +137,7 @@ export default function LeadsPage() {
               Filter zurücksetzen
             </button>
           ) : null}
+          <SavedViewsMenu listKey="leads" current={view} onApply={setView} onReset={resetView} />
           <LastUpdated at={data?.generatedAt} fetching={isFetching} />
         </div>
       </div>
@@ -192,7 +194,7 @@ export default function LeadsPage() {
                     </td>
                     {compact ? null : (
                       <td className="px-3 py-3 align-top">
-                        {lead.caseRef ? <EntityLink entity={lead.caseRef} /> : <span className="text-slate-500">Kein Vorgang</span>}
+                        {lead.caseRef ? <EntityLink entity={lead.caseRef} /> : <span className="text-slate-600">Kein Vorgang</span>}
                         <p className="mt-0.5 truncate text-xs text-slate-600">{lead.crmLabel}</p>
                       </td>
                     )}

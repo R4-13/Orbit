@@ -6,6 +6,7 @@ import {
   PERMISSIONS,
   UNMAPPED_LABEL,
   approvalEntityLabel,
+  humanizeKnownKeys,
   internalHref,
   policyActionLabel,
   type ApprovalDecisionMode,
@@ -144,7 +145,7 @@ export class ApprovalPresenterService {
       const baseLabel = mapped === UNMAPPED_LABEL ? 'Freigabe erforderlich' : mapped;
       const fallback: Presented = {
         actionLabel: baseLabel,
-        reason: approval.reason ?? 'Ihre Freigabe ist erforderlich.',
+        reason: humanizeKnownKeys(approval.reason ?? 'Ihre Freigabe ist erforderlich.'),
         risk: 'NORMAL',
         fields: [{ label: 'Objekt', value: approvalEntityLabel(approval.entityType) }],
         targetSystem: 'ORBIT',

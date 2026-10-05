@@ -18,7 +18,7 @@ export default function HomePage() {
   }, [isLoading, isAuthenticated, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+    <main className="flex min-h-screen items-center justify-center text-sm text-slate-600">
       Wird geladen …
     </main>
   );

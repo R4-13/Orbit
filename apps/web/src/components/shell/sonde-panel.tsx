@@ -148,7 +148,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
                     </button>
                   ))
                 ) : (
-                  <p className="px-3 py-2 text-sm text-slate-500">Noch keine Unterhaltungen.</p>
+                  <p className="px-3 py-2 text-sm text-slate-600">Noch keine Unterhaltungen.</p>
                 )}
                 {workspace.activeConversationId ? (
                   <button
@@ -186,9 +186,9 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
       <div className="relative flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-600">
         {sentContext ? <Link2 size={14} className="shrink-0" aria-hidden="true" /> : <Link2Off size={14} className="shrink-0" aria-hidden="true" />}
         <span className="min-w-0 flex-1 truncate">
-          <span className="text-slate-500">Kontext: </span>
+          <span className="text-slate-600">Kontext: </span>
           <span className="font-medium text-slate-800">{contextLabel}</span>
-          {contextStore.pinned ? <span className="ml-1 text-slate-500">(fixiert)</span> : null}
+          {contextStore.pinned ? <span className="ml-1 text-slate-600">(fixiert)</span> : null}
         </span>
         <button
           type="button"
@@ -262,30 +262,30 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
             })}
           </select>
         </label>
-        <p className="mt-1 text-xs text-slate-500">{SONDE_MODE_LABELS[workspace.mode].hint}</p>
+        <p className="mt-1 text-xs text-slate-600">{SONDE_MODE_LABELS[workspace.mode].hint}</p>
       </div>
 
       {/* 4 · Nachrichten (die einzige scrollende Fläche) */}
       <div className="relative min-h-0">
-        <div ref={scrollRef} onScroll={handleScroll} role="log" aria-live="polite" aria-label="Unterhaltung mit Sonde" className="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4">
+        <div ref={scrollRef} onScroll={handleScroll} role="log" tabIndex={0} aria-live="polite" aria-label="Unterhaltung mit Sonde" className="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4">
           {!workspace.activeConversationId ? (
             <div className="my-auto flex flex-col items-center gap-2 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-500" aria-hidden="true">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-50 text-slate-600" aria-hidden="true">
                 <Sparkles size={22} />
               </span>
               <p className="text-sm font-medium text-slate-700">Stellen Sie Sonde eine Frage</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-600">
                 Sonde erklärt offene Vorgänge und Freigaben. Im Modus „Vorbereiten“ erstellt sie Entwürfe, im Modus „Ausführen“ legt sie Aufgaben oder Kontakte an – ein Versand wartet immer auf Ihre Freigabe.
               </p>
             </div>
           ) : messagesLoading ? (
-            <div className="my-auto flex items-center justify-center text-slate-500">
+            <div className="my-auto flex items-center justify-center text-slate-600">
               <Loader2 size={20} className="animate-spin" aria-label="Wird geladen" />
             </div>
           ) : messages && messages.length > 0 ? (
             messages.map((message) => (
               <div key={message.id} className={`flex max-w-[88%] flex-col gap-0.5 ${message.role === 'USER' ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
-                <span className="text-[11px] font-medium text-slate-500">{message.role === 'USER' ? 'Sie' : 'Sonde'}</span>
+                <span className="text-[11px] font-medium text-slate-600">{message.role === 'USER' ? 'Sie' : 'Sonde'}</span>
                 <div
                   className={`whitespace-pre-wrap break-words rounded-lg px-3 py-2 text-sm leading-relaxed ${
                     message.role === 'USER' ? 'bg-brand text-brand-foreground' : 'bg-slate-100 text-slate-900'
@@ -296,7 +296,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
               </div>
             ))
           ) : (
-            <p className="my-auto text-center text-sm text-slate-500">Noch keine Nachrichten in dieser Unterhaltung.</p>
+            <p className="my-auto text-center text-sm text-slate-600">Noch keine Nachrichten in dieser Unterhaltung.</p>
           )}
 
           {busy ? (
@@ -363,7 +363,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
               }
             }}
             placeholder="Fragen Sie Sonde etwas …"
-            className="min-h-[40px] w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="min-h-[40px] w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-600 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
           <button
             type="button"
@@ -375,7 +375,7 @@ export function SondePanel({ onClose, autoFocus = false }: { onClose: () => void
             <Send size={16} />
           </button>
         </div>
-        <p className="mt-1.5 text-[11px] text-slate-500">Eingabetaste sendet, Umschalt + Eingabe fügt eine Zeile ein.</p>
+        <p className="mt-1.5 text-[11px] text-slate-600">Eingabetaste sendet, Umschalt + Eingabe fügt eine Zeile ein.</p>
       </div>
     </div>
   );

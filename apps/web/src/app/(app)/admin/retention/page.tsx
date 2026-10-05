@@ -49,6 +49,7 @@ function CategoryRow({ category, currentDays }: { category: RetentionCategory; c
         <div className="flex items-center gap-2">
           <Input
             type="number"
+            aria-label={`Aufbewahrung in Tagen: ${CATEGORY_LABELS[category]}`}
             min={MIN_RETENTION_DAYS}
             className="w-24"
             value={draftDays}
@@ -89,7 +90,7 @@ function CategoryRow({ category, currentDays }: { category: RetentionCategory; c
               {preview.error instanceof ApiError ? preview.error.message : 'Vorschau fehlgeschlagen.'}
             </p>
           ) : preview.data ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-600">
               {preview.data.matchingCount === 0
                 ? 'Keine Datensätze zur Löschung fällig.'
                 : `${preview.data.matchingCount} Datensätze fällig (${formatDate(preview.data.oldestMatchingAt)} – ${formatDate(preview.data.newestMatchingAt)}).`}
@@ -142,7 +143,7 @@ export default function AdminRetentionPage() {
   return (
     <div className="max-w-5xl">
       <h1 className="text-2xl font-semibold text-slate-900">Datenaufbewahrung</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Legt fest, wie lange Agent-Lauf- und Tool-Aufruf-Historie aufbewahrt wird. Ohne konfigurierte Regel
         wird nichts gelöscht. Eine Vorschau zeigt vor dem Löschen, wie viele Datensätze betroffen wären — das
         Löschen selbst muss danach explizit bestätigt werden und läuft nie automatisch.
@@ -157,7 +158,7 @@ export default function AdminRetentionPage() {
       ) : (
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <th className="px-4 py-3 font-medium">Kategorie</th>
               <th className="px-4 py-3 font-medium">Aktuelle Regel</th>
@@ -168,7 +169,7 @@ export default function AdminRetentionPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={4}>
+                <td className="px-4 py-6 text-slate-600" colSpan={4}>
                   Wird geladen …
                 </td>
               </tr>

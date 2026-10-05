@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import type { ActivityFeed, ApprovalDetail, ApprovalQueueItem, CaseListResponse, InboxDetail, InboxListResponse, LeadListResponse, TaskListResponse } from '@orbit/shared';
+import type { ActivityFeed, DashboardSnapshot, ApprovalDetail, ApprovalQueueItem, CaseListResponse, InboxDetail, InboxListResponse, LeadListResponse, TaskListResponse } from '@orbit/shared';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TenantsService } from '../src/tenants/tenants.service';
@@ -239,6 +239,18 @@ describe('UI projections (e2e)', () => {
       const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { title: 'Systemanbindung prüfen: Lexoffice' } });
       expect(tasks).toHaveLength(1);
       await request(app.getHttpServer()).post('/api/v1/integrations/requests').set('Authorization', `Bearer ${token}`).send({ systemName: 'x' }).expect(400);
+    });
+  });
+  describe('Eine Zahl für Home, Liste und Sonde (AC-10, DATA-01)', () => {
+    it('„Freigaben offen“ auf Home ist genau die Länge von „Meine offenen Freigaben“ – die ersetzte Freigabe zählt in keiner der beiden', async () => {
+      const snapshot = (await get('/dashboard/snapshot?attention=50').expect(200)).body as DashboardSnapshot;
+      const queue = (await get('/approvals/queue').expect(200)).body as ApprovalQueueItem[];
+      const open = snapshot.metrics.find((metric) => metric.key === 'approvalsOpen')!;
+      expect(open).toMatchObject({ basis: 'CURRENT', value: queue.length });
+      // Die Aufmerksamkeit führt dieselben Freigaben (Rechnung und Vorgang bündeln mit ihrem Risikohinweis bzw. ihrer Aufgabe).
+      const approvalsInAttention = snapshot.attentionPreview.filter((item) => item.primaryEntity.type === 'APPROVAL' || item.relatedEntities.some((e) => e.type === 'APPROVAL'));
+      expect(approvalsInAttention.length).toBeGreaterThan(0);
+      expect(snapshot.generatedAt).toBeTruthy();
     });
   });
 });

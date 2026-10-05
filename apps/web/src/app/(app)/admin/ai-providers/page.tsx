@@ -62,8 +62,8 @@ function RuntimeBox({ runtime }: { runtime: NonNullable<ReturnType<typeof useAiP
               ? 'Simuliert: Es wird derzeit kein echtes KI-Modell aufgerufen. Einstufungen und Antworten stammen nicht von einer echten KI.'
               : `Live: ${runtime.provider}${runtime.model ? ` · ${runtime.model}` : ''}`}
           </p>
-          {runtime.health.checkedAt ? <p className="text-xs text-slate-500">Zuletzt geprüft: {formatDateTime(runtime.health.checkedAt)}</p> : null}
-          {runtime.health.detail && runtime.health.state !== 'SIMULATED' ? <p className="text-xs text-slate-500">{runtime.health.detail}</p> : null}
+          {runtime.health.checkedAt ? <p className="text-xs text-slate-600">Zuletzt geprüft: {formatDateTime(runtime.health.checkedAt)}</p> : null}
+          {runtime.health.detail && runtime.health.state !== 'SIMULATED' ? <p className="text-xs text-slate-600">{runtime.health.detail}</p> : null}
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <Badge tone={health.tone}>{health.label}</Badge>
@@ -132,7 +132,7 @@ function ByokForm({ onSaved }: { onSaved: () => void }) {
       <Button onClick={handleSave} disabled={upsert.isPending || !apiKey}>
         Speichern &amp; prüfen
       </Button>
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-600">
         Der Schlüssel wird sofort gegen den echten Provider geprüft und danach AES-256-verschlüsselt gespeichert —
         der Klartext wird nie zurückgegeben.
       </p>
@@ -173,7 +173,7 @@ export default function AdminAiProvidersPage() {
   return (
     <div className="max-w-3xl">
       <h1 className="text-2xl font-semibold text-slate-900">KI &amp; Modelle</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Standardmäßig verwenden alle Agenten die von ORBIT betriebene KI-Konfiguration — kein eigener API-Key nötig.
         Fortgeschrittene Kunden können stattdessen einen eigenen Provider-Zugang hinterlegen (Bring Your Own Key).
       </p>
@@ -186,13 +186,13 @@ export default function AdminAiProvidersPage() {
           {isError ? (
             <ErrorState message={errorMessage(loadError, 'Der KI-Provider-Status konnte nicht geladen werden.')} onRetry={() => void refetch()} />
           ) : isLoading ? (
-            <p className="text-sm text-slate-500">Wird geladen …</p>
+            <p className="text-sm text-slate-600">Wird geladen …</p>
           ) : (
             <>
               <div className="flex items-center justify-between rounded-md border border-slate-200 px-4 py-3">
                 <div>
                   <p className="font-medium text-slate-900">ORBIT-Managed AI</p>
-                  <p className="text-xs text-slate-500">Kein eigener API-Key erforderlich — von ORBIT betrieben und geprüft.</p>
+                  <p className="text-xs text-slate-600">Kein eigener API-Key erforderlich — von ORBIT betrieben und geprüft.</p>
                 </div>
                 <Badge tone={!isTenantManaged ? 'info' : 'neutral'}>{!isTenantManaged ? 'Konfiguration aktiv' : 'Inaktiv'}</Badge>
               </div>
@@ -204,13 +204,13 @@ export default function AdminAiProvidersPage() {
                   <div>
                     <p className="font-medium text-slate-900">Customer-Managed AI (BYOK)</p>
                     {connection ? (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-600">
                         {PROVIDER_LABELS[connection.providerKey]}
                         {connection.model ? ` · ${connection.model}` : ''}
                         {connection.lastTestedAt ? ` · zuletzt geprüft: ${formatDateTime(connection.lastTestedAt)}` : ''}
                       </p>
                     ) : (
-                      <p className="text-xs text-slate-500">Noch nicht konfiguriert.</p>
+                      <p className="text-xs text-slate-600">Noch nicht konfiguriert.</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

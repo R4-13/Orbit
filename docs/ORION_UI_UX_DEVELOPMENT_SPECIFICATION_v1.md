@@ -1,3 +1,7 @@
+> **HISTORISCH – ersetzt durch [`ORBIT_UI_UX_DEVELOPMENT_SPECIFICATION_v2.md`](ORBIT_UI_UX_DEVELOPMENT_SPECIFICATION_v2.md) (05.10.2026).**
+> Diese Fassung gilt nicht mehr als UI/UX-Implementierungsdefinition. Aktive Verweise zeigen auf v2; der Umsetzungsstand steht in
+> [`ORBIT_UI_UX_V2_IMPLEMENTATION_PLAN.md`](ORBIT_UI_UX_V2_IMPLEMENTATION_PLAN.md).
+
 # ORION UI/UX DEVELOPMENT SPECIFICATION
 ## High-Fidelity Application Shell, Dashboard, Theming and Sonde Copilot Specification for Claude Code
 

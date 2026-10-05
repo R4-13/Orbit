@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { Notice, StatusBadge } from '../../../../components/common/primitives';
+import { normalizeTheme } from '../../../../lib/theme-contrast';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
 import {
   ALLOWED_LOGO_CONTENT_TYPES,
@@ -15,13 +17,13 @@ import {
 
 /** Spiegelt die Standard-ORION-Palette aus apps/web/src/app/globals.css — Ausgangswerte für die Farbwähler, solange kein Tenant-Override existiert. */
 const DEFAULTS = {
-  primaryColor: '#1d4ed8',
+  primaryColor: '#1666d8',
   primaryForeground: '#ffffff',
-  secondaryColor: '#0f172a',
+  secondaryColor: '#14243b',
   secondaryForeground: '#ffffff',
   accentColor: '#0891b2',
   accentForeground: '#ecfeff',
-  navigationBackground: '#0f172a',
+  navigationBackground: '#0b2340',
   navigationForeground: '#94a3b8',
 };
 
@@ -87,17 +89,19 @@ function LogoField({
           onChange={(event) => void handleFileSelected(event)}
         />
       </div>
-      <p className="mt-1 text-xs text-slate-500">PNG, JPEG oder WebP, maximal 2 MB. Alternativ eine bestehende URL eintragen.</p>
+      <p className="mt-1 text-xs text-slate-600">PNG, JPEG oder WebP, maximal 2 MB. Alternativ eine bestehende URL eintragen.</p>
       {uploadError ? <p className="mt-1 text-xs text-red-600">{uploadError}</p> : null}
     </div>
   );
 }
 
 function ColorField({
+  group,
   label,
   value,
   onChange,
 }: {
+  group: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -108,11 +112,12 @@ function ColorField({
       <div className="flex items-center gap-2">
         <input
           type="color"
+          aria-label={`${group}, ${label}: Farbwähler`}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className="h-9 w-9 shrink-0 cursor-pointer rounded-md border border-slate-300"
         />
-        <Input value={value} onChange={(event) => onChange(event.target.value)} className="font-mono text-xs" />
+        <Input aria-label={`${group}, ${label}: Hex-Wert`} value={value} onChange={(event) => onChange(event.target.value)} className="font-mono text-xs" />
       </div>
     </div>
   );
@@ -124,6 +129,7 @@ export default function AdminBrandingPage() {
   const reset = useResetTenantBranding();
   const [form, setForm] = useState<FormState>({ companyDisplayName: '', logoUrl: '', logoMarkUrl: '', ...DEFAULTS });
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const branding = brandingResponse?.branding;
@@ -143,8 +149,42 @@ export default function AdminBrandingPage() {
   }, [brandingResponse]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setSaved(false);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  // Ungespeichert-Hinweis (UI v2 §19): Änderungen gegenüber dem gespeicherten Stand.
+  const savedBranding = brandingResponse?.branding;
+  const baseline: FormState = {
+    companyDisplayName: savedBranding?.companyDisplayName ?? '',
+    logoUrl: savedBranding?.logoUrl ?? '',
+    logoMarkUrl: savedBranding?.logoMarkUrl ?? '',
+    primaryColor: savedBranding?.primaryColor ?? DEFAULTS.primaryColor,
+    primaryForeground: savedBranding?.primaryForeground ?? DEFAULTS.primaryForeground,
+    secondaryColor: savedBranding?.secondaryColor ?? DEFAULTS.secondaryColor,
+    secondaryForeground: savedBranding?.secondaryForeground ?? DEFAULTS.secondaryForeground,
+    accentColor: savedBranding?.accentColor ?? DEFAULTS.accentColor,
+    accentForeground: savedBranding?.accentForeground ?? DEFAULTS.accentForeground,
+    navigationBackground: savedBranding?.navigationBackground ?? DEFAULTS.navigationBackground,
+    navigationForeground: savedBranding?.navigationForeground ?? DEFAULTS.navigationForeground,
+  };
+  const dirty = (Object.keys(baseline) as Array<keyof FormState>).some((key) => baseline[key] !== form[key]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  // Genau so wird das Erscheinungsbild angezeigt: unlesbare Kombinationen werden korrigiert (nicht verborgen) und hier erklärt.
+  const theme = normalizeTheme({
+    primaryColor: form.primaryColor,
+    primaryForeground: form.primaryForeground,
+    accentColor: form.accentColor,
+    accentForeground: form.accentForeground,
+    navigationBackground: form.navigationBackground,
+    navigationForeground: form.navigationForeground,
+  });
 
   async function handleSave() {
     setError(null);
@@ -163,6 +203,7 @@ export default function AdminBrandingPage() {
     };
     try {
       await update.mutateAsync(input);
+      setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das Branding konnte nicht gespeichert werden.');
     }
@@ -172,6 +213,7 @@ export default function AdminBrandingPage() {
     setError(null);
     try {
       await reset.mutateAsync();
+      setSaved(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Das Zurücksetzen ist fehlgeschlagen.');
     }
@@ -180,7 +222,7 @@ export default function AdminBrandingPage() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-semibold text-slate-900">Erscheinungsbild</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         Logo und Farben Ihres Tenants — wirkt sofort auf die gesamte Anwendung, ohne Code-Änderung. Ohne eigene
         Konfiguration gilt das Standard-ORION-Theme.
       </p>
@@ -198,7 +240,7 @@ export default function AdminBrandingPage() {
           onRetry={() => void refetch()}
         />
       ) : isLoading ? (
-        <p className="mt-6 text-sm text-slate-500">Wird geladen …</p>
+        <p className="mt-6 text-sm text-slate-600">Wird geladen …</p>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
@@ -236,37 +278,53 @@ export default function AdminBrandingPage() {
             <CardHeader>
               <CardTitle>Vorschau</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-hidden rounded-md border border-slate-200">
+            <CardContent className="space-y-3">
+              <div className="overflow-hidden rounded-md border border-slate-200" aria-label="Vorschau des Erscheinungsbilds">
                 <div className="flex items-center gap-2 px-3 py-2.5" style={{ backgroundColor: form.navigationBackground }}>
                   {form.logoMarkUrl || form.logoUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- tenant-supplied, arbitrary external/object-storage URL; next/image's fixed remote-pattern allowlist doesn't fit a per-tenant, user-editable source.
                     <img src={form.logoMarkUrl || form.logoUrl} alt="" className="h-5 w-5 rounded object-contain" />
                   ) : null}
-                  <span className="text-xs font-semibold" style={{ color: form.navigationForeground }}>
+                  <span className="text-xs font-semibold" style={{ color: theme.values.navigationForeground ?? form.navigationForeground }}>
                     {form.companyDisplayName || 'Project ORBIT'}
+                  </span>
+                  <span className="ml-auto text-xs" style={{ color: theme.values.navigationForeground ?? form.navigationForeground }}>
+                    Navigation
                   </span>
                 </div>
                 <div className="space-y-2 p-3">
-                  <button
-                    type="button"
-                    className="rounded-md px-3 py-1.5 text-xs font-medium"
-                    style={{ backgroundColor: form.primaryColor, color: form.primaryForeground }}
-                  >
-                    Primärer Button
-                  </button>
-                  <button
-                    type="button"
-                    className="ml-2 rounded-md px-3 py-1.5 text-xs font-medium"
-                    style={{ backgroundColor: form.accentColor, color: form.accentForeground }}
-                  >
-                    Sonde-Akzent
-                  </button>
-                  <div>
-                    <Badge tone="success">Automatisiert</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" className="rounded-md px-3 py-1.5 text-xs font-medium" style={{ backgroundColor: theme.values.primaryColor ?? form.primaryColor, color: theme.values.primaryForeground ?? form.primaryForeground }}>
+                      Primäre Aktion
+                    </button>
+                    <button type="button" className="rounded-md px-3 py-1.5 text-xs font-medium" style={{ backgroundColor: form.accentColor, color: theme.values.accentForeground ?? form.accentForeground }}>
+                      Sonde
+                    </button>
+                    <span className="rounded-md px-3 py-1.5 text-xs font-medium outline outline-2 outline-offset-2" style={{ outlineColor: theme.values.primaryColor ?? form.primaryColor }}>
+                      Fokus
+                    </span>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge tone="success">Erledigt</StatusBadge>
+                    <StatusBadge tone="warning">Freigabe erforderlich</StatusBadge>
+                    <StatusBadge tone="danger">Fehlgeschlagen</StatusBadge>
+                  </div>
+                  <div className="rounded-md border border-slate-200 p-2 text-xs text-slate-800">Karte mit Beispieltext in der Standard-Schriftfarbe.</div>
+                  <p className="text-xs text-slate-600">Statusfarben (Erfolg, Warnung, Fehler) gehören ORBIT und werden nie durch Ihre Farben ersetzt – Status steht immer mit Symbol und Text.</p>
                 </div>
               </div>
+              {theme.corrections.length > 0 ? (
+                <Notice tone="warning">
+                  <p className="font-medium">ORBIT korrigiert, damit alles lesbar bleibt:</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                    {theme.corrections.map((correction) => (
+                      <li key={correction.field}>{correction.reason}</li>
+                    ))}
+                  </ul>
+                </Notice>
+              ) : (
+                <p className="text-xs text-slate-600">Alle Kontraste erreichen mindestens 4,5 : 1.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -275,8 +333,8 @@ export default function AdminBrandingPage() {
               <CardTitle>Primärfarbe</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ColorField label="Hintergrund" value={form.primaryColor} onChange={(v) => set('primaryColor', v)} />
-              <ColorField label="Vordergrund (Text/Icons)" value={form.primaryForeground} onChange={(v) => set('primaryForeground', v)} />
+              <ColorField group="Primärfarbe" label="Hintergrund" value={form.primaryColor} onChange={(v) => set('primaryColor', v)} />
+              <ColorField group="Primärfarbe" label="Vordergrund (Text/Icons)" value={form.primaryForeground} onChange={(v) => set('primaryForeground', v)} />
             </CardContent>
           </Card>
 
@@ -285,8 +343,8 @@ export default function AdminBrandingPage() {
               <CardTitle>Akzentfarbe (Sonde)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ColorField label="Hintergrund" value={form.accentColor} onChange={(v) => set('accentColor', v)} />
-              <ColorField label="Vordergrund" value={form.accentForeground} onChange={(v) => set('accentForeground', v)} />
+              <ColorField group="Akzentfarbe" label="Hintergrund" value={form.accentColor} onChange={(v) => set('accentColor', v)} />
+              <ColorField group="Akzentfarbe" label="Vordergrund" value={form.accentForeground} onChange={(v) => set('accentForeground', v)} />
             </CardContent>
           </Card>
 
@@ -295,8 +353,8 @@ export default function AdminBrandingPage() {
               <CardTitle>Sekundärfarbe</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ColorField label="Hintergrund" value={form.secondaryColor} onChange={(v) => set('secondaryColor', v)} />
-              <ColorField label="Vordergrund" value={form.secondaryForeground} onChange={(v) => set('secondaryForeground', v)} />
+              <ColorField group="Sekundärfarbe" label="Hintergrund" value={form.secondaryColor} onChange={(v) => set('secondaryColor', v)} />
+              <ColorField group="Sekundärfarbe" label="Vordergrund" value={form.secondaryForeground} onChange={(v) => set('secondaryForeground', v)} />
             </CardContent>
           </Card>
 
@@ -305,17 +363,26 @@ export default function AdminBrandingPage() {
               <CardTitle>Navigation (Sidebar)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <ColorField label="Hintergrund" value={form.navigationBackground} onChange={(v) => set('navigationBackground', v)} />
-              <ColorField label="Vordergrund" value={form.navigationForeground} onChange={(v) => set('navigationForeground', v)} />
+              <ColorField group="Navigation" label="Hintergrund" value={form.navigationBackground} onChange={(v) => set('navigationBackground', v)} />
+              <ColorField group="Navigation" label="Vordergrund" value={form.navigationForeground} onChange={(v) => set('navigationForeground', v)} />
             </CardContent>
           </Card>
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-3">
-        <Button onClick={handleSave} disabled={update.isPending}>
-          Speichern
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button onClick={handleSave} disabled={update.isPending || !dirty}>
+          {update.isPending ? 'Wird gespeichert …' : 'Speichern'}
         </Button>
+        {dirty ? (
+          <span className="text-sm font-medium text-amber-800" role="status">
+            Ungespeicherte Änderungen
+          </span>
+        ) : saved ? (
+          <span className="text-sm font-medium text-emerald-800" role="status">
+            Gespeichert
+          </span>
+        ) : null}
         <Button variant="ghost" onClick={handleReset} disabled={reset.isPending}>
           Auf Standard zurücksetzen
         </Button>

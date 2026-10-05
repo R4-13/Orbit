@@ -48,7 +48,7 @@ export default function OpportunitiesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Verkaufschancen</h1>
-        <p className="mt-1 text-sm text-slate-500">Verkaufschancen von der Qualifizierung bis zum Abschluss.</p>
+        <p className="mt-1 text-sm text-slate-600">Verkaufschancen von der Qualifizierung bis zum Abschluss.</p>
       </div>
 
       <Card className="p-5">
@@ -119,7 +119,7 @@ export default function OpportunitiesPage() {
       ) : (
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <SortableTh label="Bezeichnung" sortKey="name" sort={sort} onSort={requestSort} />
               <SortableTh label="Wert" sortKey="value" sort={sort} onSort={requestSort} />
@@ -129,7 +129,7 @@ export default function OpportunitiesPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
@@ -157,7 +157,7 @@ export default function OpportunitiesPage() {
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Keine Opportunities gefunden.
                 </td>
               </tr>
