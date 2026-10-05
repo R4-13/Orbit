@@ -1,7 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { AuthService, type AuthTokens } from './auth.service';
+import { AuthService, type AuthTokens, type UserProfile } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import type { AuthenticatedUser } from './types';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
@@ -46,6 +49,13 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokens> {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  /** Anzeigename des angemeldeten Nutzers (Begrüßung, Profil) – bewusst getrennt vom Token, das keine Namen trägt. */
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthenticatedUser): Promise<UserProfile> {
+    return this.authService.profile(user.tenantId, user.id);
   }
 
   @Post('logout')

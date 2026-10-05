@@ -8,3 +8,5 @@ export * from './agent-definitions';
 export * from './workflow-definitions';
 export * from './connector-operational-status';
 export * from './process-schemas';
+export * from './ui-projections';
+export * from './ui-labels';

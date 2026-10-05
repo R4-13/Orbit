@@ -16,6 +16,13 @@ const USER_WITH_ROLES_INCLUDE = {
 
 type UserWithRoles = Prisma.UserGetPayload<{ include: typeof USER_WITH_ROLES_INCLUDE }>;
 
+/** Anzeigedaten des angemeldeten Nutzers (UI v2 §3.2: Profilname statt E-Mail-Adresse). */
+export interface UserProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -77,6 +84,15 @@ export class AuthService {
     }
 
     return this.issueTokens(this.toAuthenticatedUser(user));
+  }
+
+  async profile(tenantId: string, userId: string): Promise<UserProfile> {
+    const found = await this.prisma.forTenantId(tenantId).user.findUnique({
+      where: { id: userId },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (!found) throw new UnauthorizedException('Unknown user.');
+    return found;
   }
 
   async logout(rawRefreshToken: string): Promise<void> {

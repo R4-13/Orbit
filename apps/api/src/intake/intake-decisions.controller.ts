@@ -10,6 +10,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { ReviewIntakeDecisionDto } from './dto/review-intake-decision.dto';
 import { IntakeDecisionsService } from './intake-decisions.service';
+import { showExcludedIntakeByDefault } from './intake-visibility';
 
 const ViewEnum = { EXCLUDED: 'EXCLUDED', REVIEW: 'REVIEW', PENDING: 'PENDING', ALL: 'ALL' } as const;
 type View = (typeof ViewEnum)[keyof typeof ViewEnum];
@@ -29,8 +30,7 @@ export class IntakeDecisionsController {
   @Get('visibility')
   @RequirePermissions(PERMISSIONS.CASE_READ)
   visibility(): { showExcludedByDefault: boolean; testOperation: boolean } {
-    const configured = this.env.UI_SHOW_EXCLUDED_INTAKE;
-    const showExcludedByDefault = configured ? configured === 'true' : process.env.NODE_ENV !== 'production';
+    const showExcludedByDefault = showExcludedIntakeByDefault(this.env);
     // Reply simulation (and similar test helpers) are offered only in test operation: simulated mail transport or an explicitly test-visible setup.
     return { showExcludedByDefault, testOperation: this.env.OUTBOUND_MAIL_MODE === 'simulated' || process.env.NODE_ENV !== 'production' };
   }
