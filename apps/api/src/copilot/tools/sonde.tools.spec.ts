@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { ToolRegistry } from '@orbit/agent-core';
 import { ApprovalsService } from '../../approvals/approvals.service';
 import { CasesService } from '../../cases/cases.service';
+import { DashboardService } from '../../dashboard/dashboard.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from '../../tasks/tasks.service';
 import { SondeTools } from './sonde.tools';
@@ -34,6 +35,7 @@ describe('SondeTools', () => {
         { provide: TasksService, useValue: tasks },
         { provide: ApprovalsService, useValue: approvals },
         { provide: PrismaService, useValue: prisma },
+        { provide: DashboardService, useValue: { viewerFor: jest.fn().mockResolvedValue(undefined), snapshot: jest.fn() } },
       ],
     }).compile();
 

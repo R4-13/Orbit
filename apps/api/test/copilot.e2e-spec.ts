@@ -277,7 +277,7 @@ describe('Copilot / Sonde (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post(`/api/v1/copilot/conversations/${prepareConversationId}/messages`)
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ content: 'Schreib eine Antwort an kunde@example.com.' })
+        .send({ content: 'Schreib eine Antwort an kunde@example.com.', mode: 'PREPARE' })
         .expect(201);
       expect(response.body.content).toBe('Ich habe einen Antwortentwurf gespeichert.');
 
@@ -308,7 +308,7 @@ describe('Copilot / Sonde (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post(`/api/v1/copilot/conversations/${prepareConversationId}/messages`)
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ content: `Erstelle einen Buchungsvorschlag für Rechnung ${invoice.id}.` })
+        .send({ content: `Erstelle einen Buchungsvorschlag für Rechnung ${invoice.id}.`, mode: 'PREPARE' })
         .expect(201);
       expect(response.body.content).toBe('Ich habe einen Buchungsvorschlag erstellt.');
 
@@ -355,7 +355,7 @@ describe('Copilot / Sonde (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post(`/api/v1/copilot/conversations/${actConversationId}/messages`)
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ content: 'Leg eine Aufgabe an: Rückruf Müller GmbH, Angebot nachfassen.' })
+        .send({ content: 'Leg eine Aufgabe an: Rückruf Müller GmbH, Angebot nachfassen.', mode: 'ACT' })
         .expect(201);
       expect(response.body.content).toBe('Ich habe die Aufgabe angelegt.');
 
@@ -385,7 +385,7 @@ describe('Copilot / Sonde (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post(`/api/v1/copilot/conversations/${actConversationId}/messages`)
         .set('Authorization', `Bearer ${tokenA}`)
-        .send({ content: 'Versende den Entwurf jetzt.' })
+        .send({ content: 'Versende den Entwurf jetzt.', mode: 'ACT' })
         .expect(201);
       expect(response.body.content).toBe('Der Versand wartet jetzt auf Ihre Freigabe.');
 
@@ -397,6 +397,30 @@ describe('Copilot / Sonde (e2e)', () => {
         .approval.findMany({ where: { policyAction: 'send_email', entityType: 'FOLLOW_UP' } });
       expect(approvals).toHaveLength(1);
       expect(approvals[0]).toMatchObject({ status: 'PENDING' });
+    });
+  });
+  /** UI v2 §8.3: der gewählte Modus begrenzt die Werkzeuge der Nachricht wirklich – er ist kein dekoratives Etikett. */
+  describe('mode scoping', () => {
+    it('without a mode (default "Fragen") a model-requested write tool is not executed', async () => {
+      const conversation = await request(app.getHttpServer()).post('/api/v1/copilot/conversations').set('Authorization', `Bearer ${tokenA}`).send({ title: 'Modus' }).expect(201);
+      llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName: 'create_task', input: { title: 'Darf nicht entstehen im Fragen-Modus' } }], stopReason: 'tool_use' });
+      llm.seedResponse({ toolCalls: [], stopReason: 'end_turn', text: 'Das geht nur im Modus Ausführen.' });
+      await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${conversation.body.id}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Leg eine Aufgabe an.' })
+        .expect(201);
+      const created = await prisma.forTenantId(tenantAId).task.findMany({ where: { title: 'Darf nicht entstehen im Fragen-Modus' } });
+      expect(created).toHaveLength(0);
+    });
+
+    it('rejects an unknown mode', async () => {
+      const conversation = await request(app.getHttpServer()).post('/api/v1/copilot/conversations').set('Authorization', `Bearer ${tokenA}`).send({ title: 'Modus 2' }).expect(201);
+      await request(app.getHttpServer())
+        .post(`/api/v1/copilot/conversations/${conversation.body.id}/messages`)
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ content: 'Hallo', mode: 'ROOT' })
+        .expect(400);
     });
   });
 });

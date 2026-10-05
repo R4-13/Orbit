@@ -4,6 +4,7 @@ import { POLICY_ACTIONS } from '@orbit/shared';
 import type { ToolDefinition, ToolExecutionContext, ToolRegistry } from '@orbit/agent-core';
 import { ApprovalsService } from '../../approvals/approvals.service';
 import { CasesService } from '../../cases/cases.service';
+import { DashboardService } from '../../dashboard/dashboard.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from '../../tasks/tasks.service';
 
@@ -119,6 +120,7 @@ export class SondeTools {
     private readonly tasks: TasksService,
     private readonly approvals: ApprovalsService,
     private readonly prisma: PrismaService,
+    private readonly dashboard: DashboardService,
   ) {}
 
   register(registry: ToolRegistry): void {
@@ -133,7 +135,7 @@ export class SondeTools {
     return {
       name: 'get_dashboard_summary',
       description:
-        'Liefert eine kompakte Übersicht des aktuellen Stands: Anzahl offener Vorgänge, offener Aufgaben, überfälliger Aufgaben, ausstehender Freigaben und fehlgeschlagener Agent-Läufe.',
+        'Liefert eine kompakte Übersicht des aktuellen Stands: Anzahl offener Vorgänge, offener Aufgaben, überfälliger Aufgaben, ausstehender Freigaben und fehlgeschlagener Agent-Läufe – sowie, wenn verfügbar, dieselben Kennzahlen und die Aufmerksamkeitsliste wie die Home-Seite mit Stand und Geltungsbereich. Nenne bei Zahlen den Stand.',
       inputSchema: z.object({}),
       policyAction: POLICY_ACTIONS.COPILOT_READ,
       execute: async (_input, context: ToolExecutionContext) => {
@@ -145,12 +147,25 @@ export class SondeTools {
         ]);
         const now = Date.now();
         const overdueTasksCount = openTasks.filter((t) => t.dueDate && new Date(t.dueDate).getTime() < now).length;
+        // UI v2 DATA-01/DATA-02: dieselbe autorisierte Projektion wie Home – mit Stand und Geltungsbereich, damit Sonde und
+        // Oberfläche dieselben Zahlen nennen (oder die Abweichung erklären).
+        const viewer = context.actorUserId ? await this.dashboard.viewerFor(context.tenantId, context.actorUserId) : undefined;
+        const snapshot = viewer ? await this.dashboard.snapshot(viewer, { view: 'MINE', period: 'TODAY', timezone: 'Europe/Berlin' }) : undefined;
         return {
           openCasesCount: cases.length,
           openTasksCount: openTasks.length,
           overdueTasksCount,
           pendingApprovalsCount: approvals.length,
           failedRunsCount,
+          ...(snapshot
+            ? {
+                stand: snapshot.generatedAt,
+                geltungsbereich: `Ansicht ${snapshot.scope.view === 'MINE' ? 'Meine' : 'Team'}, Zeitraum ${snapshot.scope.period === 'TODAY' ? 'heute' : snapshot.scope.period}, Zeitzone ${snapshot.scope.timezone}`,
+                kennzahlen: snapshot.metrics.map((metric) => ({ schluessel: metric.key, wert: metric.value, bezug: metric.basis === 'CURRENT' ? 'aktuell' : 'Zeitraum' })),
+                aufmerksamkeitGesamt: snapshot.attentionTotal,
+                aufmerksamkeit: snapshot.attentionPreview.map((item) => ({ titel: item.title, grund: item.reason, status: item.statusLabel, frist: item.dueAt })),
+              }
+            : {}),
         };
       },
     };

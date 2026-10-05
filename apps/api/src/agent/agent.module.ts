@@ -8,6 +8,7 @@ import { CasesModule } from '../cases/cases.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { ConnectorsModule } from '../connectors/connectors.module';
 import { ContactsModule } from '../contacts/contacts.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 import { ORBIT_ENV } from '../config/env.token';
 import { InvoicesModule } from '../invoices/invoices.module';
 import { LeadsModule } from '../leads/leads.module';
@@ -51,6 +52,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
     MeetingsModule,
     CasesModule,
     ApprovalsModule,
+    DashboardModule,
   ],
   controllers: [AgentRunsController],
   providers: [

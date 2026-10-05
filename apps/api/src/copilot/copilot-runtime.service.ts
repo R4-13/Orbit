@@ -11,6 +11,7 @@ import type { Permission } from '@orbit/shared';
 import { SondeCaseContextService, type SondeCaseContext } from './case-context.service';
 import { CopilotConversationService } from './copilot-conversation.service';
 import type { CopilotStreamEvent } from './copilot-stream-event';
+import type { SondeRequestMode } from './dto/send-message.dto';
 import { SONDE_ACT_TOOL_NAMES, SONDE_ASK_TOOL_NAMES, SONDE_PREPARE_TOOL_NAMES } from './tools/sonde.tools';
 
 /** §31 des Master-Dokuments ("Sonde memory") — "recent messages... Do not send unlimited history." Ein fester, dokumentierter Wert statt einer echten Zusammenfassungs-Kompression (siehe docs/ASSUMPTIONS.md, ConversationSummary bewusst nicht Teil dieser Phase). */
@@ -20,6 +21,20 @@ const MAX_HISTORY_MESSAGES = 10;
 export interface SondeViewer {
   permissions: readonly Permission[];
   context?: SondeCaseContext;
+  /** Gewählter Modus dieser Nachricht (UI v2 §8.3). Fehlt er, gilt der sicherste: nur Lese-Werkzeuge. */
+  mode?: SondeRequestMode;
+}
+
+/** Werkzeuge je Modus: jeder Modus enthält die Fähigkeiten der vorherigen – und ersetzt nie Policy oder Freigabe. */
+export function toolNamesForMode(mode: SondeRequestMode | undefined): readonly string[] {
+  switch (mode) {
+    case 'ACT':
+      return [...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES, ...SONDE_ACT_TOOL_NAMES];
+    case 'PREPARE':
+      return [...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES];
+    default:
+      return [...SONDE_ASK_TOOL_NAMES];
+  }
 }
 
 /** §51 des Master-Dokuments ("Provider Failure Behaviour") — wörtlich vorgeschriebener Text, kein eigener Wortlaut. */
@@ -120,11 +135,13 @@ export class CopilotRuntimeService {
     });
 
     const llm = await this.aiProviders.resolveForTenant(tenantId);
-    const scopedTools = this.toolRegistry.subset([...SONDE_ASK_TOOL_NAMES, ...SONDE_PREPARE_TOOL_NAMES, ...SONDE_ACT_TOOL_NAMES]);
+    const mode: SondeRequestMode = viewer?.mode ?? 'ASK';
+    const scopedTools = this.toolRegistry.subset([...toolNamesForMode(mode)]);
     const runtime = new AgentRuntime(llm, scopedTools, (action, ctx) => this.policy.resolveMode(ctx.tenantId, action));
     // Case context (Amendment 02 §17.4): built on the server for this user, read-only; absent when the user may not read the case.
     const contextBlock = viewer?.context ? await this.caseContext.build(tenantId, viewer.permissions, viewer.context) : null;
-    const systemPrompt = buildLayeredSystemPrompt(contextBlock ? `${SONDE_SYSTEM_PROMPT}\n\n${contextBlock}` : SONDE_SYSTEM_PROMPT);
+    const modeBlock = `Aktueller Modus dieser Nachricht: ${mode}. Nur die Werkzeuge dieses Modus stehen zur Verfügung. Wünscht der Nutzer etwas, das mehr verlangt (Entwürfe oder Aktionen), erkläre kurz, dass er dafür oben im Sonde-Panel den Modus „Vorbereiten“ bzw. „Ausführen“ wählen muss – tue nie so, als hättest du es ohne passendes Werkzeug getan.`;
+    const systemPrompt = buildLayeredSystemPrompt([SONDE_SYSTEM_PROMPT, modeBlock, contextBlock].filter(Boolean).join('\n\n'));
 
     const agentRun = await this.runs.start({
       tenantId,

@@ -89,6 +89,17 @@ export class DashboardService {
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
 
+  /** Für Aufrufer ohne Request-Kontext (Sonde-Tools): Rechte des Nutzers aus seinen Rollen laden – nie aus Modell-Eingaben. */
+  async viewerFor(tenantId: string, userId: string): Promise<DashboardViewer | undefined> {
+    const user = await this.prisma.forTenantId(tenantId).user.findUnique({
+      where: { id: userId },
+      include: { roles: { include: { role: { include: { permissions: true } } } } },
+    });
+    if (!user || user.status === 'DEACTIVATED') return undefined;
+    const permissions = [...new Set(user.roles.flatMap((userRole) => userRole.role.permissions.map((rp) => rp.permission)))] as Permission[];
+    return { tenantId, userId, permissions };
+  }
+
   async snapshot(viewer: DashboardViewer, options: DashboardOptions, now: Date = new Date()): Promise<DashboardSnapshot> {
     const { tenantId } = viewer;
     const db = this.prisma.forTenantId(tenantId);
