@@ -154,3 +154,31 @@ Durchgeführt im laufenden System über die Oberfläche bzw. die HTTP-API des De
 - Neue Runtime per Tenant-/Blueprint-Feature-Flag; bestehende `finance-invoice-intake`/`sales-lead-intake`-Workflows laufen unverändert weiter.
 - Risiko Gmail-Send: Scope-Erweiterung erzwingt Re-Consent → `AUTH_REQUIRED`-Pfad (Amendment 01 §10) wird genutzt, nichts wird stillschweigend verbunden.
 - Risiko Umfang: jedes Increment einzeln lint-/typecheck-/testverifiziert und committet; Statusbericht trennt implementiert / automatisiert getestet / live.
+
+---
+
+## Revision 1.2 — Gap-Matrix (Phase ADO-0, Stand 06.10.2026)
+
+Grundlage: `ORBIT_MASTER_SPECIFICATION_v3_AMENDMENT_02_BUSINESS_PROCESS_ORCHESTRATION_FRAMEWORK_v1.2.md` (Kapitel 28–39, BP-31…BP-45, AD-01…AD-18).
+Befund aus dem Code (Orchestrator, Planner, Fakten-, Korrelations-, Ledger-Dienste, `packages/shared/src/process-schemas`):
+
+| Req | Anforderung | Ist-Stand (Evidenz) | Status | Maßnahme |
+|---|---|---|---|---|
+| BP-31 | persistierter Observe→…→Reassess-Zyklus | `OrchestratorService.advance()` ist restartfähig (Leases, `CaseEvent`, `WaitSubscription`); nach Wartebedingung/Aktion wird neu bewertet, Replan nur ohne Fortsetzungskante (`consumeInbound`) und per Befehl/Trigger | PARTIAL | Reassess-Schritt nach jeder Aktion/jedem Ereignis (Fakten/Requirements neu auswerten) ergänzen |
+| BP-32 | fehlende Fakten: erst Resolution Ladder | Tools `resolve_context`/`resolve_requirements` ermitteln Fakten aus Mail/CRM; `MISSING_INPUT` blockiert den Knoten → `WAITING_FOR_INFORMATION`; **keine** protokollierte Strategieauswahl (R0…R6), kein `ContextResolutionAttempt` | PARTIAL | `ContextResolutionAttempt` als `CaseEvent`-Typ (keine neue Tabelle), Strategiereihenfolge im Orchestrator |
+| BP-33 | autonome externe Sachrückfrage | Capability `email.send.clarification` mit eigener Policy-Action; Standard der Referenzpolicy zu prüfen | PARTIAL | Policy-Default/Constraint-Prüfung, Test AD-03 |
+| BP-34 | Antwort setzt denselben Case automatisch fort | `receiveInbound` + `CaseCorrelation` + `consumeInbound`; Korrelation nicht allein per Absender | PARTIAL → zu belegen | End-to-End-Test AD-04/05/06 |
+| BP-35 | `HumanInteractionRequest` nur mit Grund, konkret | `Approval`/`Task`/Kommandos (`APPROVE_ACTION`, `COMPLETE_MANUAL_TASK`, …) mit Beschreibung der Wirkung; kein einheitliches DTO mit `reasonCode`/`allowedResponses` | PARTIAL | DTO-Projektion über bestehende Objekte, keine neue Tabelle (Governance 5.1) |
+| BP-36 | Policy-Modi einzige Autorität | `PolicyMode` = `DISABLED/SUGGEST_ONLY/REQUIRE_APPROVAL/AUTONOMOUS`, serverseitig im Tool Gateway/Orchestrator | COMPLETE (zu belegen durch AD-08/09) | Tests |
+| BP-37 | Planner kann Policy nicht setzen/lockern | Plan-Validator + Policy-Auswertung zur Laufzeit je Knoten | PARTIAL → zu belegen | AD-08/AD-09 |
+| BP-38 | Replanning begrenzt, versioniert, historienerhaltend, idempotent | `replan()` mit `maxReplans`, Plan-Revisionen, `SUPERSEDED`-Knoten, `ActionLedger` mit Idempotenz | COMPLETE → zu belegen | AD-10/11 |
+| BP-39 | zentrale Limits (Aktionen, Cases, Cost, Fehler-in-Folge …) | `LimitsSchema` je Blueprint (`maxPlannerCalls`, `maxReplans`, `maxSteps`, `maxAutoQuestions`, `maxReminders`, `maxRuntimeHours`), Defaults im Code (`DEFAULT_LIMITS`, `DEFAULT_MAX_REPLANS`) | PARTIAL | Defaults in Plattform-/Tenant-Konfiguration verlagern, fehlende Limits ergänzen (`maxActionsPerCase`, `maxConsecutiveCapabilityFailures`, Kosten) |
+| BP-40 | Completion pro Goal, deterministisch, mit Evidence | `completionCriteria` (Ausdruck) je **Blueprint/Case**, Evaluierung im Orchestrator; Goals sind nur Strings (`goals: string[]`) ohne Zustand | PARTIAL | `CompletionEvaluation` je Case (mit Kriterien/Evidenz als Event), Goal-Status als Projektion |
+| BP-41 | `OUTCOME_UNKNOWN` kollabiert nie zu `COMPLETED` | Knoten-/Intent-Zustand `OUTCOME_UNKNOWN` → Case `MANUAL_REVIEW`; keine Wiederholung ohne Abgleich | COMPLETE → zu belegen | Regressionstest |
+| BP-42 | Business- und Diagnostic-Projektion getrennt/autorisiert | ein Node-Detail für `case.read`: enthält interne Fehlercodes, gekürzten Roh-Output, Payload-Hash, Provider-Referenzen, Versuche | CONFLICTING | Trennung (Phase OPS-4a): Business-Detail ohne Technikfelder; Diagnose-Endpunkt nur Plattform |
+| BP-43 | Tenant-Nutzer erhalten keine technischen Diagnosedaten | siehe BP-42 | CONFLICTING | wie BP-42 |
+| BP-44 | kein UI-Redesign | UI v2 unverändert | COMPLETE | Regression `ux-v2` |
+| BP-45 | AD-01…AD-18 | nicht als Suite vorhanden; Teile durch bestehende Tests abgedeckt (Referenzprozess, Resume, Ledger) | PARTIAL | Suite `apps/api/test/adaptive-orchestration.e2e-spec.ts` |
+
+**Reihenfolge:** zuerst BP-42/43 (Sicherheitslücke, mit OPS-4a), dann BP-32/33/34 (Resolution Ladder + autonome Rückfrage mit End-to-End-Nachweis), dann BP-39/40 (Limits, Completion),
+dann BP-35 (Human-Request-DTO) und die AD-Suite.
