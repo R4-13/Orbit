@@ -52,7 +52,7 @@ export class AgentDefinitionResolverService {
 
   private async buildRuntime(tenantId: string, allowedTools: string[]): Promise<AgentRuntime> {
     const scopedTools = this.toolRegistry.subset(allowedTools);
-    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    const llm = await this.aiProviders.resolveForTenant(tenantId, 'AGENT_TOOL_USE');
     return new AgentRuntime(llm, scopedTools, (action, context) => this.policy.resolveMode(context.tenantId, action));
   }
 

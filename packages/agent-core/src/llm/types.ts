@@ -26,10 +26,17 @@ export interface LLMToolCall {
 
 export type LLMStopReason = 'end_turn' | 'tool_use' | 'max_tokens';
 
+/** Token-Verbrauch eines Aufrufs, sofern der Anbieter ihn meldet (Amendment 03 §12.2). Nie erfunden: fehlt die Angabe, bleibt sie leer. */
+export interface LLMUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
 export interface LLMCompletionResult {
   text?: string;
   toolCalls: LLMToolCall[];
   stopReason: LLMStopReason;
+  usage?: LLMUsage;
 }
 
 export interface LLMCompletionRequest {

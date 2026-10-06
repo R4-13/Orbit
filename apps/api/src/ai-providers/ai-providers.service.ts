@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
-import { NotFoundError, type AiRuntimeStatus } from '@orbit/shared';
+import { AiProviderUnavailableError, NotFoundError, ValidationFailedError, type AiRuntimeStatus } from '@orbit/shared';
 import type { AIProviderConnection, AIProviderKey } from '@orbit/domain';
 import { ORBIT_ENV } from '../config/env.token';
+import { AiRegistryService } from '../ai-governance/ai-registry.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialEncryptionService } from '../security/credential-encryption.service';
@@ -45,6 +46,7 @@ export class AiProvidersService {
     private readonly encryption: CredentialEncryptionService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
     private readonly resolver: AiProviderResolverService,
+    private readonly registry: AiRegistryService,
   ) {}
 
   /** Last on-demand verification of the platform-managed provider per tenant (process-local; BYOK keeps its own persisted test result). */
@@ -53,7 +55,7 @@ export class AiProvidersService {
   async getStatus(tenantId: string): Promise<AiProviderStatus> {
     const connection = await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } });
     const runtime = await this.describeRuntime(tenantId, connection);
-    if (!connection || connection.status !== 'CONNECTED') {
+    if (!connection || !connection.byokActiveSince) {
       return { mode: 'ORBIT_MANAGED', connection: connection ? toSummary(connection) : null, runtime };
     }
     return { mode: 'TENANT_MANAGED', connection: toSummary(connection), runtime };
@@ -64,7 +66,9 @@ export class AiProvidersService {
    * provider is reported as SIMULATED — it can never be "verified", because there is nothing external to verify.
    */
   async verifyRuntime(tenantId: string): Promise<AiRuntimeStatus> {
-    const llm = await this.resolver.resolveForTenant(tenantId);
+    const resolved = await this.resolveOrUnavailable(tenantId);
+    if (!resolved) return this.describeRuntime(tenantId, await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } }));
+    const llm = resolved;
     if (llm.providerName.toLowerCase().includes('mock')) {
       return this.describeRuntime(tenantId, await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } }));
     }
@@ -77,8 +81,26 @@ export class AiProvidersService {
     return this.describeRuntime(tenantId, await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } }));
   }
 
+  /** Löst den Provider auf; ist der Pfad bewusst blockiert (z. B. BYOK ohne funktionierende Verbindung), kommt `null` statt eines Fehlers. */
+  private async resolveOrUnavailable(tenantId: string) {
+    try {
+      return await this.resolver.resolveForTenant(tenantId);
+    } catch (error) {
+      if (error instanceof AiProviderUnavailableError) return null;
+      throw error;
+    }
+  }
+
   private async describeRuntime(tenantId: string, connection: AIProviderConnection | null): Promise<AiRuntimeStatus> {
-    const llm = await this.resolver.resolveForTenant(tenantId);
+    const llm = await this.resolveOrUnavailable(tenantId);
+    if (!llm) {
+      return {
+        provider: connection?.providerKey.toLowerCase() ?? 'unbekannt',
+        model: connection?.model ?? null,
+        executionMode: 'LIVE',
+        health: { state: 'ERROR', checkedAt: connection?.lastTestedAt?.toISOString() ?? null, detail: 'Die eigene KI-Verbindung ist nicht verfügbar. Es wird bewusst nicht auf einen anderen Anbieter ausgewichen – bitte die Verbindung prüfen.' },
+      };
+    }
     const simulated = llm.providerName.toLowerCase().includes('mock');
     const base = { provider: llm.providerName, model: llm.modelName ?? null, executionMode: simulated ? ('SIMULATED' as const) : ('LIVE' as const) };
     if (simulated) {
@@ -113,11 +135,21 @@ export class AiProvidersService {
     model: string | undefined,
   ): Promise<AiProviderConnectionSummary> {
     const resolvedModel = model ?? defaultModelFor(providerKey, this.env);
+    // Nur freigegebene Anbieter/Modelle (Amendment 03 §10.1): „eigener Schlüssel“ heißt nicht „beliebiger Endpunkt oder beliebiges Modell“.
+    // Ist das Register für den Anbieter noch nicht gepflegt (Bootstrap), gilt – wie bisher – keine Einschränkung.
+    const registryState = await this.registry.byokState(providerKey.toLowerCase(), resolvedModel);
+    if (registryState.providerKnown && !registryState.providerActive) {
+      throw new ValidationFailedError('Dieser KI-Anbieter ist derzeit nicht freigegeben.', { providerKey });
+    }
+    if (registryState.modelsKnown && !registryState.modelApproved) {
+      throw new ValidationFailedError('Dieses Modell ist nicht freigegeben. Bitte ein freigegebenes Modell wählen.', { providerKey, model: resolvedModel });
+    }
     const validation = await buildProviderAdapter(providerKey, apiKey, resolvedModel).validateConfiguration?.();
 
     const encryptedCredentials = new Uint8Array(this.encryption.encrypt(apiKey));
     const now = new Date();
     const status = validation?.valid === false ? 'ERROR' : 'CONNECTED';
+    const existingSince = (await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId }, select: { byokActiveSince: true } }))?.byokActiveSince ?? null;
 
     const updated = await this.prisma.forTenantId(tenantId).aIProviderConnection.upsert({
       where: { tenantId },
@@ -129,6 +161,7 @@ export class AiProvidersService {
         model: resolvedModel,
         lastTestedAt: now,
         lastTestStatus: validation?.valid === false ? validation.error : 'OK',
+        byokActiveSince: validation?.valid === false ? null : now,
         createdByUserId: actorUserId,
       },
       update: {
@@ -138,6 +171,7 @@ export class AiProvidersService {
         model: resolvedModel,
         lastTestedAt: now,
         lastTestStatus: validation?.valid === false ? validation.error : 'OK',
+        ...(validation?.valid === false ? {} : { byokActiveSince: existingSince ?? now }),
       },
     });
 
@@ -205,7 +239,7 @@ export class AiProvidersService {
 
     const updated = await this.prisma.forTenantId(tenantId).aIProviderConnection.update({
       where: { tenantId },
-      data: { status: 'DISCONNECTED', encryptedCredentials: null },
+      data: { status: 'DISCONNECTED', encryptedCredentials: null, byokActiveSince: null },
     });
 
     await this.audit.record({

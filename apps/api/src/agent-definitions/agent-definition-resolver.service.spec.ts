@@ -149,7 +149,7 @@ describe('AgentDefinitionResolverService', () => {
       expect(resolved.baseType).toBe('SALES');
       expect(resolved.runtime).toBeInstanceOf(AgentRuntime);
       expect(prisma.forTenantId).not.toHaveBeenCalled();
-      expect(aiProviders.resolveForTenant).toHaveBeenCalledWith('tenant_1');
+      expect(aiProviders.resolveForTenant).toHaveBeenCalledWith('tenant_1', 'AGENT_TOOL_USE');
     });
   });
 });

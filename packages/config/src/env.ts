@@ -101,6 +101,8 @@ export const envSchema = z.object({
   PLATFORM_STEP_UP_MINUTES: z.coerce.number().positive().max(60).default(5),
   /** Betriebsumgebung der Control Plane (Amendment 03 §21). Unbekannte Werte gelten nie als production. */
   ORBIT_ENVIRONMENT: z.enum(['development', 'test', 'staging', 'production']).default('development'),
+  /** Datenraum, der für die Modellauswahl (Amendment 03 §22) gilt, solange der Mandant keine eigene Region trägt. */
+  ORBIT_DEFAULT_DATA_REGION: z.string().min(2).max(20).default('EU'),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(1, 'CREDENTIAL_ENCRYPTION_KEY is required'),
   COOKIE_SECURE: booleanEnvVar(false),
   CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),

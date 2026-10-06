@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedContent, type LLMMessage } from '@orbit/agent-core';
+import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedContent, type LLMMessage, type LLMProvider } from '@orbit/agent-core';
 import type { Case, ProcessPlanSource, ProcessPlanStatus } from '@orbit/domain';
 import {
   NotFoundError,
@@ -8,6 +8,7 @@ import {
   type PlanProposal,
   type PlanValidationContext,
   type PlanValidationResult,
+  AiProviderUnavailableError,
 } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -196,7 +197,13 @@ export class PlannerService {
     context: PlanValidationContext,
     parent: PlanGraph | undefined,
   ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult }> {
-    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    let llm: LLMProvider;
+    try {
+      llm = await this.aiProviders.resolveForTenant(tenantId, 'COMPLEX_REASONING');
+    } catch (error) {
+      if (error instanceof AiProviderUnavailableError) return { status: 'UNAVAILABLE', reason: 'Die KI-Planung ist derzeit nicht verfügbar (kein freigegebenes Modell). Es wird bewusst nicht auf einen anderen Anbieter ausgewichen.' };
+      throw error;
+    }
     const policyMode = await this.policy.resolveMode(tenantId, 'process.plan');
     if (policyMode === 'DISABLED' || policyMode === 'SUGGEST_ONLY') {
       return { status: 'UNAVAILABLE', reason: 'Die KI-Planung (process.plan) ist per Policy nicht autonom erlaubt.' };

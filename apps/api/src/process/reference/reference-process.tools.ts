@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { AgentRuntime, ToolFailedError, ToolOutcomeUnknownError, buildLayeredSystemPrompt, wrapUntrustedContent, type ToolDefinition, type ToolRegistry } from '@orbit/agent-core';
 import type { Prisma } from '@orbit/domain';
-import { ExternalSystemError, IntegrationUnavailableError, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
+import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../../agent/agent.tokens';
 import { AiProviderResolverService } from '../../ai-providers/ai-provider-resolver.service';
@@ -173,7 +173,10 @@ export class ReferenceProcessTools implements OnModuleInit {
         for (const f of blueprint?.requiredFacts ?? []) if (f.key !== 'contact.email') allowed.set(f.key, { type: f.type, description: f.question ?? f.key });
         for (const r of rules) if (!allowed.has(r.factKey)) allowed.set(r.factKey, { type: r.valueType, description: r.question });
 
-        const llm = await this.aiProviders.resolveForTenant(ctx.tenantId);
+        const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
+          if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
+          throw error;
+        });
         const mode = llm.providerName.toLowerCase().includes('mock') ? 'SIMULATED' : 'LIVE';
         const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}`;
         const runtime = new AgentRuntime(llm, this.registry.subset([SUBMIT_FACTS_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));

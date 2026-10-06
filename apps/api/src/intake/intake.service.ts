@@ -143,7 +143,7 @@ export class IntakeService {
 
   /** Demo/test hook: a chosen scenario becomes the simulated provider's scripted structured answer. Impossible with a real provider. */
   private async seedSimulatedTriage(tenantId: string, scenario: SimulatedTriageScenario): Promise<void> {
-    const provider = await this.aiProviders.resolveForTenant(tenantId);
+    const provider = await this.aiProviders.resolveForTenant(tenantId, 'FAST_CLASSIFICATION');
     if (!(provider instanceof MockLLMProvider)) {
       throw new ValidationFailedError(
         'Simulationsszenarien sind nur mit einem simulierten KI-Provider möglich; ein echter Provider entscheidet selbst.',

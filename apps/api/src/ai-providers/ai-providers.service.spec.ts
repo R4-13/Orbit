@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { AiRegistryService } from '../ai-governance/ai-registry.service';
 import { AuditService } from '../audit/audit.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
@@ -39,6 +40,7 @@ describe('AiProvidersService', () => {
         { provide: CredentialEncryptionService, useValue: encryption },
         { provide: ORBIT_ENV, useValue: { ANTHROPIC_MODEL: 'claude-default', OPENAI_MODEL: 'gpt-default' } },
         { provide: AiProviderResolverService, useValue: resolver },
+        { provide: AiRegistryService, useValue: { byokState: jest.fn().mockResolvedValue({ providerKnown: false, providerActive: false, modelsKnown: false, modelApproved: false }) } },
       ],
     }).compile();
 
@@ -70,6 +72,7 @@ describe('AiProvidersService', () => {
         providerKey: 'ANTHROPIC',
         status: 'CONNECTED',
         encryptedCredentials: Buffer.from('secret'),
+        byokActiveSince: new Date(),
       });
       const status = await service.getStatus('tenant_1');
       expect(status.mode).toBe('TENANT_MANAGED');
@@ -241,7 +244,7 @@ describe('AiProvidersService', () => {
       const result = await service.disconnect('tenant_1', 'user_1');
 
       expect(scoped.aIProviderConnection.update).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: 'DISCONNECTED', encryptedCredentials: null } }),
+        expect.objectContaining({ data: { status: 'DISCONNECTED', encryptedCredentials: null, byokActiveSince: null } }),
       );
       expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'AI_PROVIDER_DISCONNECTED' }));
       // Must return a JSON-serializable summary, not void — an empty 200 body breaks apiFetch()'s

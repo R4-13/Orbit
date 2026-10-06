@@ -113,3 +113,13 @@ export class PlatformNotConfiguredError extends OrbitError {
   readonly httpStatus = 503;
   readonly retryable = false;
 }
+
+/**
+ * Amendment 03 §10–§11: für diesen Aufruf darf kein Modell bedient werden (kein Pfad erfüllt Freigabe, Region, Datenrichtlinie, Verbindung oder
+ * Gesundheit). Ehrlicher Blockzustand statt stillem Wechsel zu einem anderen Anbieter; `details.reasons` trägt stabile Codes.
+ */
+export class AiProviderUnavailableError extends OrbitError {
+  readonly code = 'AI_PROVIDER_UNAVAILABLE';
+  readonly httpStatus = 503;
+  readonly retryable = true;
+}

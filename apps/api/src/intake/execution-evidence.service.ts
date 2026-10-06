@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
-import type { ExecutionComponentEvidence, ExecutionEvidenceSnapshot } from '@orbit/shared';
+import { AiProviderUnavailableError, type ExecutionComponentEvidence, type ExecutionEvidenceSnapshot } from '@orbit/shared';
 import { ORBIT_ENV } from '../config/env.token';
 import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 
@@ -23,12 +23,18 @@ export class ExecutionEvidenceService {
   ) {}
 
   async capture(tenantId: string, input: { channelProvider: string; simulatedChannel: boolean }): Promise<ExecutionEvidenceSnapshot> {
-    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    const aiProvider = await this.aiProviders.resolveForTenant(tenantId, 'FAST_CLASSIFICATION').then(
+      (llm) => llm.providerName,
+      (error: unknown) => {
+        if (error instanceof AiProviderUnavailableError) return 'nicht verfügbar';
+        throw error;
+      },
+    );
     return {
       capturedAt: new Date().toISOString(),
       buildCommit: this.env.ORBIT_BUILD_COMMIT || null,
       channel: input.simulatedChannel ? { provider: input.channelProvider, mode: 'SIMULATED' } : { provider: input.channelProvider, mode: 'LIVE' },
-      ai: component(llm.providerName),
+      ai: aiProvider === 'nicht verfügbar' ? { provider: aiProvider, mode: 'LIVE' } : component(aiProvider),
       // CRM_CONNECTOR=mock is wired to PersistentMockCrmConnector ('mock-persistent') — still a test SoR.
       crm: component(this.env.CRM_CONNECTOR === 'mock' ? 'mock-persistent' : this.env.CRM_CONNECTOR),
       ocr: component(this.env.OCR_PROVIDER),

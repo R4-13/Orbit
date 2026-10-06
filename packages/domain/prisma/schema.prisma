@@ -282,6 +282,7 @@ enum AgentDefinitionStatus {
 // ============================================================================
 
 model Tenant {
+  aiUsageRecords AIUsageRecord[]
   id                        String       @id @default(uuid())
   name                      String
   slug                      String       @unique
@@ -1136,6 +1137,8 @@ model AIProviderConnection {
   model                String?
   lastTestedAt         DateTime?                    @map("last_tested_at")
   lastTestStatus       String?                      @map("last_test_status")
+  /// Amendment 03 §10: gesetzt, sobald der Mandant erfolgreich BYOK nutzt; ab dann gilt NO_FALLBACK (kein stilles Zurückfallen auf die Plattform). Wird nur durch ein ausdrückliches Trennen gelöscht.
+  byokActiveSince      DateTime?                    @map("byok_active_since")
   createdByUserId      String?                      @map("created_by_user_id")
   createdAt            DateTime                     @default(now()) @map("created_at")
   updatedAt            DateTime                     @updatedAt @map("updated_at")
@@ -2276,4 +2279,236 @@ model PlatformSession {
 
   @@index([platformUserId])
   @@map("platform_sessions")
+}
+
+
+// ============================================================================
+// AI Platform Governance (Amendment 03 §8–§12) — Plattformdomäne, ohne tenant_id (Ausnahme: AIUsageRecord)
+// ============================================================================
+
+enum AIProviderLifecycle {
+  DRAFT
+  VALIDATING
+  ACTIVE
+  DEPRECATED
+  SUSPENDED
+  RETIRED
+}
+
+enum AIModelLifecycle {
+  VALIDATING
+  APPROVED
+  DEPRECATED
+  BLOCKED
+  RETIRED
+}
+
+enum AIModelProfileLifecycle {
+  DRAFT
+  TESTING
+  PUBLISHED
+  DEPRECATED
+}
+
+enum AIFallbackMode {
+  NO_FALLBACK
+  SAME_PROVIDER_FALLBACK
+  APPROVED_CROSS_PROVIDER_FALLBACK
+}
+
+enum AIConnectionLifecycle {
+  CONFIGURING
+  ACTIVE
+  DEGRADED
+  SUSPENDED
+  REVOKED
+}
+
+enum AIHealthStatus {
+  UP
+  DEGRADED
+  RATE_LIMITED
+  DOWN
+  DISABLED
+  UNKNOWN
+}
+
+/// Welche Anbieter ORBIT unterstützt – unabhängig davon, ob ein SDK installiert ist (Amendment 03 §8.2).
+model AIProviderDefinition {
+  providerKey              String              @id @map("provider_key")
+  displayName              String              @map("display_name")
+  /// Schlüssel des Adapters im Code (openai, anthropic, mock, …); der Anbieter ist erst mit Lifecycle ACTIVE produktiv.
+  adapterKey               String              @map("adapter_key")
+  lifecycle                AIProviderLifecycle @default(DRAFT)
+  supportedCredentialTypes String[]            @default([]) @map("supported_credential_types")
+  supportedRegions         String[]            @default([]) @map("supported_regions")
+  supportedCapabilities    String[]            @default([]) @map("supported_capabilities")
+  dataPolicyRefs           String[]            @default([]) @map("data_policy_refs")
+  version                  Int                 @default(1)
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+
+  models      AIModelDefinition[]
+  connections PlatformAIConnection[]
+
+  @@map("ai_provider_definitions")
+}
+
+model AIModelDefinition {
+  id                        String           @id @default(uuid())
+  providerKey               String           @map("provider_key")
+  providerModelId           String           @map("provider_model_id")
+  displayName               String           @map("display_name")
+  lifecycle                 AIModelLifecycle @default(VALIDATING)
+  capabilityTags            String[]         @default([]) @map("capability_tags")
+  contextLimit              Int?             @map("context_limit")
+  toolUseSupported          Boolean          @default(false) @map("tool_use_supported")
+  structuredOutputSupported Boolean          @default(false) @map("structured_output_supported")
+  regionAvailability        String[]         @default([]) @map("region_availability")
+  dataPolicyRefs            String[]         @default([]) @map("data_policy_refs")
+  /// Kostenprofil je 1 Mio. Token (Währung in costCurrency); NULL = unbekannt (Kosten werden dann nicht geschätzt, nie erfunden).
+  costInputPerMtok          Decimal?         @map("cost_input_per_mtok") @db.Decimal(14, 6)
+  costOutputPerMtok         Decimal?         @map("cost_output_per_mtok") @db.Decimal(14, 6)
+  costCurrency              String           @default("EUR") @map("cost_currency")
+  /// NONE | PASSED | FAILED – Voraussetzung für die Freigabe (Amendment 03 §8.5).
+  evaluationStatus          String           @default("NONE") @map("evaluation_status")
+  approvedAt                DateTime?        @map("approved_at")
+  deprecatedAt              DateTime?        @map("deprecated_at")
+  version                   Int              @default(1)
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
+
+  provider AIProviderDefinition @relation(fields: [providerKey], references: [providerKey])
+  routes   AIProviderRoute[]
+
+  @@unique([providerKey, providerModelId])
+  @@map("ai_model_definitions")
+}
+
+/// Versionierte logische Modellprofile; PUBLISHED-Versionen sind unveränderlich (Trigger in der Migration), Änderungen erzeugen eine neue Version.
+model AIModelProfile {
+  id                     String                  @id @default(uuid())
+  profileKey             String                  @map("profile_key")
+  version                Int
+  purpose                String
+  requiredCapabilities   String[]                @default([]) @map("required_capabilities")
+  fallbackMode           AIFallbackMode          @default(NO_FALLBACK) @map("fallback_mode")
+  maxLatencyMs           Int?                    @map("max_latency_ms")
+  requiredDataPolicyRefs String[]                @default([]) @map("required_data_policy_refs")
+  lifecycle              AIModelProfileLifecycle @default(DRAFT)
+  publishedAt            DateTime?               @map("published_at")
+  createdByUserId        String?                 @map("created_by_user_id")
+  createdAt              DateTime                @default(now()) @map("created_at")
+
+  @@unique([profileKey, version])
+  @@map("ai_model_profiles")
+}
+
+/// Profil → Modell (Amendment 03 §11). Je (Profil, Umgebung, Mandantenscope) höchstens eine aktive Route (partieller Unique-Index).
+model AIProviderRoute {
+  id               String         @id @default(uuid())
+  modelProfileKey  String         @map("model_profile_key")
+  environment      String
+  /// NULL = global; sonst die Mandanten-ID eines Mandanten-Overrides (bewusst ohne FK; verschwindet ein Mandant, wird die Route wirkungslos).
+  tenantScope      String?        @map("tenant_scope")
+  primaryModelId   String         @map("primary_model_id")
+  fallbackModelIds String[]       @default([]) @map("fallback_model_ids")
+  fallbackMode     AIFallbackMode @default(NO_FALLBACK) @map("fallback_mode")
+  trafficPercent   Int            @default(100) @map("traffic_percent")
+  active           Boolean        @default(false)
+  activeFrom       DateTime?      @map("active_from")
+  activeUntil      DateTime?      @map("active_until")
+  policyVersion    String         @default("1") @map("policy_version")
+  version          Int            @default(1)
+  createdByUserId  String?        @map("created_by_user_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  primaryModel AIModelDefinition @relation(fields: [primaryModelId], references: [id])
+
+  @@index([modelProfileKey, environment])
+  @@map("ai_provider_routes")
+}
+
+/// ORBIT-Managed-Zugang je Anbieter/Umgebung. Das Secret liegt nie in dieser Tabelle, sondern hinter secretRef (vault:<id> oder env:<NAME>).
+model PlatformAIConnection {
+  id                 String                @id @default(uuid())
+  providerKey        String                @map("provider_key")
+  environment        String
+  regionKey          String?               @map("region_key")
+  credentialType     String                @default("API_KEY") @map("credential_type")
+  secretRef          String                @map("secret_ref")
+  lifecycle          AIConnectionLifecycle @default(CONFIGURING)
+  lastValidatedAt    DateTime?             @map("last_validated_at")
+  lastHealthStatus   String?               @map("last_health_status")
+  allowedProfileKeys String[]              @default([]) @map("allowed_profile_keys")
+  version            Int                   @default(1)
+  createdByUserId    String?               @map("created_by_user_id")
+  updatedByUserId    String?               @map("updated_by_user_id")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  provider AIProviderDefinition @relation(fields: [providerKey], references: [providerKey])
+
+  @@unique([providerKey, environment])
+  @@map("platform_ai_connections")
+}
+
+/// Aktueller Gesundheitszustand je Anbieter/Modell/Umgebung (Amendment 03 §12.1), gespeist aus echten Aufrufen und aktiven Prüfungen.
+model AIProviderHealth {
+  id                  String         @id @default(uuid())
+  providerKey         String         @map("provider_key")
+  /// * = gesamter Anbieter, sonst die Modell-ID des Anbieters.
+  modelRef            String         @default("*") @map("model_ref")
+  environment         String
+  status              AIHealthStatus @default(UNKNOWN)
+  consecutiveFailures Int            @default(0) @map("consecutive_failures")
+  lastSuccessAt       DateTime?      @map("last_success_at")
+  lastFailureAt       DateTime?      @map("last_failure_at")
+  lastErrorClass      String?        @map("last_error_class")
+  avgLatencyMs        Int?           @map("avg_latency_ms")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  @@unique([providerKey, modelRef, environment])
+  @@map("ai_provider_health")
+}
+
+/// Nutzung je Aufruf (Amendment 03 §12.2). Mandantengebunden (RLS) und für die Plattform-FinOps im Plattform-Scope lesbar. Kein Prompt-/Antwortinhalt.
+model AIUsageRecord {
+  id            String   @id @default(uuid())
+  tenantId      String   @map("tenant_id")
+  profileKey    String   @map("profile_key")
+  providerKey   String   @map("provider_key")
+  modelId       String?  @map("model_id")
+  routeId       String?  @map("route_id")
+  environment   String
+  /// ORBIT_MANAGED | BYOK | ENV_BOOTSTRAP
+  source        String
+  status        String
+  errorClass    String?  @map("error_class")
+  inputTokens   Int?     @map("input_tokens")
+  outputTokens  Int?     @map("output_tokens")
+  latencyMs     Int?     @map("latency_ms")
+  estimatedCost Decimal? @map("estimated_cost") @db.Decimal(14, 6)
+  costCurrency  String?  @map("cost_currency")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([profileKey, createdAt])
+  @@index([providerKey, createdAt])
+  @@map("ai_usage_records")
+}
+
+/// Verschlüsselte Plattform-Secrets (Amendment 03 §20). Nie im Klartext zurückgegeben; Zugriff nur über PlatformSecretVaultService.
+model PlatformSecret {
+  id              String   @id @default(uuid())
+  encryptedValue  Bytes    @map("encrypted_value")
+  version         Int      @default(1)
+  createdByUserId String?  @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_secrets")
 }

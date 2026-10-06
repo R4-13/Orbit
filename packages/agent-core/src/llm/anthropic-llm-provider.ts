@@ -76,6 +76,7 @@ export class AnthropicLLMProvider implements LLMProvider {
       text: text.length > 0 ? text : undefined,
       toolCalls,
       stopReason: toStopReason(response.stop_reason),
+      usage: response.usage ? { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens } : undefined,
     };
   }
 

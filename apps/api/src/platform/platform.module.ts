@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { PlatformAuditService } from './audit/platform-audit.service';
+import { AiGovernanceModule } from '../ai-governance/ai-governance.module';
+import { PlatformAuditModule } from './audit/platform-audit.module';
+import { PlatformAiController } from './ai/platform-ai.controller';
 import { PlatformAuthService } from './auth/platform-auth.service';
 import { PlatformAuthGuard, PlatformScopeGuard } from './auth/platform-guards';
 import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
@@ -14,9 +16,9 @@ import { PlatformTenantsService } from './tenants/platform-tenants.service';
  * Phase OPS-1: Identität, Rollen/Scopes, Sitzungen, Step-up, Audit, Mandantenregister (nur lesend). Weitere Funktionsbereiche folgen je Phase.
  */
 @Module({
-  imports: [JwtModule.register({})],
-  controllers: [PlatformAuthController, PlatformController, PlatformIdentityController],
-  providers: [PlatformAuditService, PlatformAuthService, PlatformDiagnosticsService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
-  exports: [PlatformAuditService, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],
+  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule],
+  controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController],
+  providers: [PlatformAuthService, PlatformDiagnosticsService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
+  exports: [PlatformAuditModule, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],
 })
 export class PlatformModule {}

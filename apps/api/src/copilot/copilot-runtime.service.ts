@@ -134,7 +134,7 @@ export class CopilotRuntimeService {
       data: { tenantId, conversationId, userId: actorUserId, role: 'USER', content },
     });
 
-    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    const llm = await this.aiProviders.resolveForTenant(tenantId, 'COPILOT_INTERACTIVE');
     const mode: SondeRequestMode = viewer?.mode ?? 'ASK';
     const scopedTools = this.toolRegistry.subset([...toolNamesForMode(mode)]);
     const runtime = new AgentRuntime(llm, scopedTools, (action, ctx) => this.policy.resolveMode(ctx.tenantId, action));

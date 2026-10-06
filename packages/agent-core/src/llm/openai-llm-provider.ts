@@ -122,6 +122,7 @@ export class OpenAILLMProvider implements LLMProvider {
       text: choice?.message.content ?? undefined,
       toolCalls,
       stopReason: toStopReason(choice?.finish_reason ?? 'stop'),
+      usage: response.usage ? { inputTokens: response.usage.prompt_tokens, outputTokens: response.usage.completion_tokens } : undefined,
     };
   }
 

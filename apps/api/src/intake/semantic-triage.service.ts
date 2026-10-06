@@ -6,6 +6,7 @@ import {
   wrapUntrustedContent,
   type AgentTurnResult,
   type LLMMessage,
+  type LLMProvider,
 } from '@orbit/agent-core';
 import {
   DEFAULT_TRIAGE_CATEGORIES,
@@ -13,6 +14,7 @@ import {
   TriageResultSchema,
   type ExecutionMode,
   type TriageResult,
+  AiProviderUnavailableError,
 } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -128,7 +130,22 @@ export class SemanticTriageService {
 
   async triage(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<TriageOutcome> {
     const startedAt = Date.now();
-    const llm = await this.aiProviders.resolveForTenant(tenantId);
+    let llm: LLMProvider;
+    try {
+      llm = await this.aiProviders.resolveForTenant(tenantId, 'FAST_CLASSIFICATION');
+    } catch (error) {
+      if (!(error instanceof AiProviderUnavailableError)) throw error;
+      // Kein freigegebenes Modell (z. B. eigener Schlüssel ausgefallen): ehrlich zurückstellen statt mit einem anderen Anbieter weiterzumachen.
+      const blockedRun = await this.runs.start({ tenantId, agentType: 'COMMUNICATION', triggerType: event.channel === 'SIMULATED' ? 'MANUAL' : 'EMAIL', input: { subject: event.subject, purpose: 'semantic-triage' } });
+      await this.runs.fail(tenantId, blockedRun.id, error.message);
+      return {
+        status: 'PENDING_TRIAGE',
+        failureReason: 'PROVIDER_UNAVAILABLE',
+        detail: error.message,
+        execution: { provider: 'nicht verfügbar', model: null, mode: 'LIVE', promptVersion: TRIAGE_PROMPT_VERSION, requestId: null, attempts: 0, latencyMs: Date.now() - startedAt, capturedAt: new Date().toISOString() },
+        agentRunId: blockedRun.id,
+      };
+    }
     const mode: ExecutionMode = llm.providerName.toLowerCase().includes('mock') ? 'SIMULATED' : 'LIVE';
     const baseExecution = {
       provider: llm.providerName,
