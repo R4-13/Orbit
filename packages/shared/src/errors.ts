@@ -99,3 +99,17 @@ export class PermissionDeniedError extends OrbitError {
 export function isOrbitError(error: unknown): error is OrbitError {
   return error instanceof OrbitError;
 }
+
+/** Amendment 03 §3.2: kritische Plattformoperation ohne aktuelles Step-up (erneute Passwortprüfung). */
+export class StepUpRequiredError extends OrbitError {
+  readonly code = 'STEP_UP_REQUIRED';
+  readonly httpStatus = 403;
+  readonly retryable = false;
+}
+
+/** Amendment 03 §3: die Plattformdomäne ist nicht konfiguriert (kein `PLATFORM_JWT_SECRET`) und daher ausgeschaltet. */
+export class PlatformNotConfiguredError extends OrbitError {
+  readonly code = 'PLATFORM_NOT_CONFIGURED';
+  readonly httpStatus = 503;
+  readonly retryable = false;
+}

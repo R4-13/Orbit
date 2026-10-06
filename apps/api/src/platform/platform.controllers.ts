@@ -1,0 +1,161 @@
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
+import { PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole } from '@orbit/shared';
+import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
+import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
+import { CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
+import {
+  CreatePlatformIdentityDto,
+  DiagnosticsQueryDto,
+  DisablePlatformIdentityDto,
+  PlatformAuditQueryDto,
+  PlatformLoginDto,
+  PlatformRefreshDto,
+  PlatformStepUpDto,
+  SetPlatformRolesDto,
+} from './dto/platform.dto';
+import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
+import { PlatformIdentityService, type PlatformIdentityView } from './identity/platform-identity.service';
+import { PlatformTenantsService, type PlatformOverview, type PlatformTenantSummary } from './tenants/platform-tenants.service';
+
+/** Anmeldung der Plattformdomäne – strenger gedrosselt als die Mandantenanmeldung (Betreiberzugang ist das lohnendere Ziel). */
+const PLATFORM_AUTH_THROTTLE = { default: { limit: Number(process.env.PLATFORM_AUTH_RATE_LIMIT_MAX ?? 20), ttl: Number(process.env.PLATFORM_AUTH_RATE_LIMIT_WINDOW_MS ?? 300_000) } };
+
+@Controller({ path: 'platform/auth' })
+export class PlatformAuthController {
+  constructor(private readonly auth: PlatformAuthService) {}
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  login(@Body() dto: PlatformLoginDto): Promise<PlatformTokens> {
+    return this.auth.login(dto.email, dto.password);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  refresh(@Body() dto: PlatformRefreshDto): Promise<PlatformTokens> {
+    return this.auth.refresh(dto.refreshToken);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(PlatformAuthGuard)
+  async logout(@CurrentPlatformPrincipal() principal: PlatformPrincipal): Promise<void> {
+    await this.auth.logout(principal);
+  }
+
+  /** Erneute Passwortprüfung für kritische Operationen (Amendment 03 §3.2). Kein MFA. */
+  @Post('step-up')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  @UseGuards(PlatformAuthGuard)
+  stepUp(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformStepUpDto) {
+    return this.auth.stepUp(principal, dto.password);
+  }
+}
+
+@Controller({ path: 'platform' })
+@UseGuards(PlatformAuthGuard, PlatformScopeGuard)
+export class PlatformController {
+  constructor(
+    private readonly tenants: PlatformTenantsService,
+    private readonly audit: PlatformAuditService,
+    private readonly diagnostics: PlatformDiagnosticsService,
+  ) {}
+
+  @Get('me')
+  me(@CurrentPlatformPrincipal() principal: PlatformPrincipal): PlatformPrincipal {
+    return principal;
+  }
+
+  @Get('overview')
+  @RequirePlatformScope(PLATFORM_SCOPES.CONFIG_READ)
+  overview(): Promise<PlatformOverview> {
+    return this.tenants.overview();
+  }
+
+  @Get('tenants')
+  @RequirePlatformScope(PLATFORM_SCOPES.TENANTS_READ)
+  listTenants(): Promise<PlatformTenantSummary[]> {
+    return this.tenants.list();
+  }
+
+  @Get('tenants/:id')
+  @RequirePlatformScope(PLATFORM_SCOPES.TENANTS_READ)
+  getTenant(@Param('id') id: string): Promise<PlatformTenantSummary> {
+    return this.tenants.get(id);
+  }
+
+  /**
+   * Diagnostic Projection eines Case (Amendment 02 v1.2 §35.3, Amendment 03 §17): technische Metadaten, mandantenscharf, begründet und auditiert.
+   * Keine Fachinhalte/Payloads; tiefere Einsicht gibt es nur über eine Support-Session (Phase OPS-5).
+   */
+  @Get('diagnostics/cases/:caseId')
+  @RequirePlatformScope(PLATFORM_SCOPES.DIAGNOSTICS_READ)
+  caseDiagnostics(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('caseId') caseId: string, @Query() query: DiagnosticsQueryDto): Promise<OrchestrationDiagnosticProjection> {
+    return this.diagnostics.caseDiagnostics(principal, { tenantId: query.tenantId, caseId, reason: query.reason });
+  }
+
+  /**
+   * Plattform-Audit (Amendment 03 §19). Der Detailgrad hängt von der Rolle ab: volle Sicht (`audit.read`), Fachbereichssicht (`audit.read.scoped`)
+   * oder nur eigene Handlungen (`audit.read.own`). Es gibt keinen Schreib-/Änderungs-/Löschpfad (OAS-03).
+   */
+  @Get('audit')
+  async auditTrail(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Query() query: PlatformAuditQueryDto): Promise<{ items: PlatformAuditEntry[]; nextBefore?: string }> {
+    const scopes = principal.platformScopes;
+    const common = { limit: query.limit ?? 50, before: query.before, eventTypes: query.eventType ? [query.eventType] : undefined, targetTenantId: query.targetTenantId };
+    if (scopes.includes(PLATFORM_SCOPES.AUDIT_READ)) return this.audit.list(common);
+    if (scopes.includes(PLATFORM_SCOPES.AUDIT_READ_SCOPED)) return this.audit.list({ ...common, restrict: { eventTypePrefixes: auditPrefixesFor(principal.platformRoles) } });
+    if (scopes.includes(PLATFORM_SCOPES.AUDIT_READ_OWN)) return this.audit.list({ ...common, restrict: { ownUserId: principal.userId } });
+    await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'Route', targetId: 'PlatformController.auditTrail', reason: 'missing scope', extra: { missing: [PLATFORM_SCOPES.AUDIT_READ] } });
+    throw new PermissionDeniedError('Missing required platform scope(s).', { missing: [PLATFORM_SCOPES.AUDIT_READ] });
+  }
+}
+
+/** Ereignispräfixe, die eine Rolle im eingeschränkten Audit sieht (Amendment 03 §2.3: „begrenzt“/„cost relevant“/„release relevant“). */
+export function auditPrefixesFor(roles: readonly PlatformRole[]): string[] {
+  const prefixes = new Set<string>();
+  const add = (...values: string[]) => values.forEach((v) => prefixes.add(v));
+  for (const role of roles) {
+    if (role === PLATFORM_ROLES.PLATFORM_FINOPS) add('PLATFORM_AI_', 'PLATFORM_SECRET');
+    if (role === PLATFORM_ROLES.PLATFORM_RELEASE_MANAGER) add('PLATFORM_FEATURE', 'PLATFORM_KILL', 'PLATFORM_CONNECTOR');
+    if (role === PLATFORM_ROLES.PLATFORM_ENGINEERING) add('PLATFORM_AI_', 'PLATFORM_CONNECTOR', 'PLATFORM_FEATURE');
+    if (role === PLATFORM_ROLES.PLATFORM_OPERATOR) add('PLATFORM_TENANT_', 'PLATFORM_AI_', 'PLATFORM_SECRET', 'PLATFORM_CONNECTOR', 'PLATFORM_FEATURE', 'PLATFORM_KILL', 'PLATFORM_SUPPORT_');
+  }
+  return [...prefixes];
+}
+
+@Controller({ path: 'platform/identities' })
+@UseGuards(PlatformAuthGuard, PlatformScopeGuard)
+@RequirePlatformScope(PLATFORM_SCOPES.IDENTITY_MANAGE)
+export class PlatformIdentityController {
+  constructor(private readonly identities: PlatformIdentityService) {}
+
+  @Get()
+  list(): Promise<PlatformIdentityView[]> {
+    return this.identities.list();
+  }
+
+  /** Neue Plattformidentität – kritische Operation: verlangt Step-up. */
+  @Post()
+  @RequireStepUp()
+  create(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: CreatePlatformIdentityDto): Promise<PlatformIdentityView> {
+    return this.identities.create(principal, dto);
+  }
+
+  @Put(':id/roles')
+  @RequireStepUp()
+  setRoles(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: SetPlatformRolesDto): Promise<PlatformIdentityView> {
+    return this.identities.setRoles(principal, id, dto);
+  }
+
+  @Post(':id/disable')
+  @HttpCode(HttpStatus.OK)
+  @RequireStepUp()
+  disable(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: DisablePlatformIdentityDto): Promise<PlatformIdentityView> {
+    return this.identities.disable(principal, id, dto.reason);
+  }
+}

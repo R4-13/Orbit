@@ -1,5 +1,6 @@
 export * from './errors';
 export * from './permissions';
+export * from './platform';
 export * from './policy';
 export * from './audit';
 export * from './result';
@@ -10,3 +11,4 @@ export * from './connector-operational-status';
 export * from './process-schemas';
 export * from './ui-projections';
 export * from './ui-labels';
+export * from './redaction';

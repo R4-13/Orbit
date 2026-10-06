@@ -1,3 +1,5 @@
+import { PLATFORM_AUDIT_EVENT_TYPES } from './platform';
+
 /**
  * Canonical audit event type names (see §31 of the master spec). Every
  * significant state transition in the system emits one of these via
@@ -91,6 +93,8 @@ export const AUDIT_EVENT_TYPES = [
   'CASE_COMMAND_EXECUTED',
   /** UI v2 §18.2 — ein Nutzer hat ein nicht unterstütztes System als Anfrage erfasst (kein erfundener Connector). */
   'CONNECTOR_REQUESTED',
+  /** Amendment 03 §19 — Ereignisse der Plattform-Domäne (`AuditLog.domain = PLATFORM`, ohne Mandant). */
+  ...PLATFORM_AUDIT_EVENT_TYPES,
 ] as const;
 
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];

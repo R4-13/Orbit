@@ -123,6 +123,11 @@ export interface ActionPreview {
   sourceNote?: string;
 }
 
+/**
+ * Business-Projektion eines Knotens (Amendment 02 v1.2 §35.2, BP-42/43): was ein Mandantennutzer mit `case.read` sehen darf. Bewusst OHNE
+ * technische Interna – keine Fehlercodes, kein Roh-Output des Schritts, keine Payload-Hashes, keine Anbieter-Referenzen, keine Versuchszähler,
+ * keine Prompt-/Token-/Providerdaten. Diese stehen ausschließlich in der Diagnostic Projection (`/platform/diagnostics`, Plattformrolle).
+ */
 export interface CaseNodeDetail {
   nodeId: string;
   title: string;
@@ -132,15 +137,16 @@ export interface CaseNodeDetail {
   capability?: { key: string; description: string; sideEffect: string };
   /** Business explanation of the current state, derived from facts — never raw model output. */
   stateExplanation: string;
-  attempts: number;
+  /** Der Schritt wurde mindestens einmal wiederholt (ohne Zähler). */
+  retried?: boolean;
   startedAt?: string;
   completedAt?: string;
   executionMode?: ExecutionMode;
-  error?: { code: string; message: string };
+  /** Fachlich formulierte Fehlerbeschreibung (geschwärzt, gekürzt) – ohne internen Fehlercode. */
+  error?: { message: string };
   inputs: Array<{ name: string; source: string; value?: unknown }>;
-  output?: unknown;
   facts: Array<{ key: string; value: unknown; status: string; sourceType: string; evidence?: string[] }>;
-  action?: { intentId: string; status: string; purpose?: string; approvalId?: string; payloadHash: string; receipts: Array<{ status: string; providerRef?: string; executionMode: string; at: string }> };
+  action?: { intentId: string; status: string; purpose?: string; approvalId?: string; receipts: Array<{ status: string; executionMode: string; at: string; evidenceAvailable: boolean }> };
   wait?: { eventType: string; status: string; deadlineAt?: string };
   preview?: ActionPreview;
   availableActions: ActionDescriptor[];

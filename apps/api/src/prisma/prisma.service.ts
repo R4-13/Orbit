@@ -68,4 +68,16 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
       return fn(tx);
     });
   }
+
+  /**
+   * Plattformdomäne (Amendment 03, ADR OPS-A4): Transaktion mit dem GUC `app.platform_scope`, den die RLS-Policies der
+   * `platform_*`-Tabellen und der Plattform-Audit-Zeilen verlangen. Ausschließlich vom Plattform-Zugriffspfad (apps/api/src/platform) aufzurufen –
+   * Mandantencode verwendet `forTenantId()`/`inTenantTransaction()` und sieht diese Zeilen dadurch nie.
+   */
+  async withPlatformScope<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.platform_scope', 'on', true)`;
+      return fn(tx);
+    });
+  }
 }

@@ -52,3 +52,17 @@ describe('loadEnv', () => {
     ).toThrow();
   });
 });
+
+describe('Plattformdomäne (Amendment 03)', () => {
+  it('ist ohne PLATFORM_JWT_SECRET ausgeschaltet, nicht mit einem Standardwert aktiv', () => {
+    const env = loadEnv(MINIMAL_VALID_ENV);
+    expect(env.PLATFORM_JWT_SECRET).toBeUndefined();
+    expect(env.ORBIT_ENVIRONMENT).toBe('development');
+  });
+
+  it('verlangt ein eigenes, ausreichend langes Secret', () => {
+    expect(() => loadEnv({ ...MINIMAL_VALID_ENV, PLATFORM_JWT_SECRET: 'short' })).toThrow(/PLATFORM_JWT_SECRET/);
+    expect(() => loadEnv({ ...MINIMAL_VALID_ENV, PLATFORM_JWT_SECRET: MINIMAL_VALID_ENV.JWT_SECRET })).toThrow(/must differ from JWT_SECRET/);
+    expect(loadEnv({ ...MINIMAL_VALID_ENV, PLATFORM_JWT_SECRET: 'p'.repeat(40) }).PLATFORM_JWT_SECRET).toBe('p'.repeat(40));
+  });
+});

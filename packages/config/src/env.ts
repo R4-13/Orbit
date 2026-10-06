@@ -90,6 +90,17 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
+
+  // ZERIONUS Platform Control Plane (Amendment 03) — eigene Sicherheitsdomäne mit eigenem Token-Secret.
+  // Ohne PLATFORM_JWT_SECRET ist die Plattformdomäne ausgeschaltet (Anmeldung/Routen antworten 503) – nie ein geteiltes oder Standard-Secret.
+  PLATFORM_JWT_SECRET: z.string().min(32, 'PLATFORM_JWT_SECRET must be at least 32 characters').optional(),
+  PLATFORM_ACCESS_TTL: z.string().default('15m'),
+  /** Absolute Obergrenze einer Plattformsitzung in Stunden; ein Refresh verlängert sie nie. */
+  PLATFORM_SESSION_MAX_HOURS: z.coerce.number().positive().max(72).default(8),
+  /** Dauer des Erhöhungsfensters nach einer erneuten Passwortprüfung (Step-up) für kritische Operationen. */
+  PLATFORM_STEP_UP_MINUTES: z.coerce.number().positive().max(60).default(5),
+  /** Betriebsumgebung der Control Plane (Amendment 03 §21). Unbekannte Werte gelten nie als production. */
+  ORBIT_ENVIRONMENT: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   CREDENTIAL_ENCRYPTION_KEY: z.string().min(1, 'CREDENTIAL_ENCRYPTION_KEY is required'),
   COOKIE_SECURE: booleanEnvVar(false),
   CORS_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
@@ -195,6 +206,9 @@ export function loadEnv(raw: Record<string, string | undefined> = process.env): 
       .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)
       .join('\n');
     throw new Error(`Invalid environment configuration:\n${issues}`);
+  }
+  if (result.data.PLATFORM_JWT_SECRET && result.data.PLATFORM_JWT_SECRET === result.data.JWT_SECRET) {
+    throw new Error('Invalid environment configuration:\n  - PLATFORM_JWT_SECRET: must differ from JWT_SECRET (separate security domains)');
   }
   return result.data;
 }

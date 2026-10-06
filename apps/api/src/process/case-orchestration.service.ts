@@ -16,6 +16,8 @@ import {
   type NodeState,
   type Permission,
   type PlanNode,
+  redactString,
+  redactValue,
 } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionLedgerService } from './action-ledger.service';
@@ -30,7 +32,6 @@ export type OrchestrationMode = 'COMBINED' | 'ACTUAL' | 'DEFINITION';
 const TERMINAL_CASE = new Set(['COMPLETED', 'REJECTED', 'CANCELLED', 'FAILED']);
 const PASSING: ReadonlySet<NodeState> = new Set<NodeState>(['SUCCEEDED', 'SKIPPED']);
 const ATTENTION: ReadonlySet<NodeState> = new Set<NodeState>(['RUNNING', 'WAITING', 'AWAITING_APPROVAL', 'READY', 'BLOCKED', 'FAILED', 'OUTCOME_UNKNOWN']);
-const MAX_OUTPUT_CHARS = 8_000;
 
 export interface Viewer {
   tenantId: string;
@@ -52,13 +53,15 @@ const STATE_EXPLANATIONS: Record<NodeState, string> = {
   OUTCOME_UNKNOWN: 'Es ist ungewiss, ob die Aktion ausgeführt wurde. Sie wird nicht erneut versucht, bevor das geklärt ist.',
 };
 
-function iso(date: Date | null | undefined): string | undefined {
-  return date ? date.toISOString() : undefined;
+/** Fachliche Fehlermeldung für die Business-Projektion: Secrets geschwärzt, gekürzt, ohne Zeilenumbrüche/Stacktrace-Reste (BP-42/43). */
+export function businessMessage(message: string | null | undefined): string {
+  const text = redactString(message ?? '').split(/\r?\n/)[0]?.trim() ?? '';
+  if (text.length === 0) return 'Der Schritt konnte nicht abgeschlossen werden.';
+  return text.length > 300 ? `${text.slice(0, 300)}…` : text;
 }
 
-function truncateJson(value: unknown): unknown {
-  const text = JSON.stringify(value ?? null);
-  return text.length <= MAX_OUTPUT_CHARS ? value : { truncated: true, preview: text.slice(0, MAX_OUTPUT_CHARS) };
+function iso(date: Date | null | undefined): string | undefined {
+  return date ? date.toISOString() : undefined;
 }
 
 /**
@@ -194,19 +197,18 @@ export class CaseOrchestrationService {
       state: node.state,
       purpose: def.purpose,
       capability: capability ? { key: capability.key, description: capability.description, sideEffect: capability.sideEffect } : undefined,
-      stateExplanation: node.errorMessage && ['FAILED', 'BLOCKED', 'OUTCOME_UNKNOWN'].includes(node.state) ? `${STATE_EXPLANATIONS[node.state]} ${node.errorMessage}` : STATE_EXPLANATIONS[node.state],
-      attempts: node.attempts,
+      stateExplanation: node.errorMessage && ['FAILED', 'BLOCKED', 'OUTCOME_UNKNOWN'].includes(node.state) ? `${STATE_EXPLANATIONS[node.state]} ${businessMessage(node.errorMessage)}` : STATE_EXPLANATIONS[node.state],
+      retried: node.attempts > 1 ? true : undefined,
       startedAt: iso(node.startedAt),
       completedAt: iso(node.completedAt),
       executionMode: (node.executionMode as 'LIVE' | 'SIMULATED' | null) ?? undefined,
-      error: node.errorCode ? { code: node.errorCode, message: node.errorMessage ?? '' } : undefined,
-      inputs,
-      output: node.output === null ? undefined : truncateJson(node.output),
+      error: node.errorCode ? { message: businessMessage(node.errorMessage) } : undefined,
+      inputs: redactValue(inputs) as CaseNodeDetail['inputs'],
       facts: currentFacts
         .filter((f) => factKeys.includes(f.key) || outputFacts.includes(f.key))
-        .map((f) => ({ key: f.key, value: f.value, status: f.status, sourceType: f.sourceType, evidence: f.evidenceRefs })),
+        .map((f) => ({ key: f.key, value: redactValue(f.value), status: f.status, sourceType: f.sourceType, evidence: f.evidenceRefs })),
       action: intent
-        ? { intentId: intent.id, status: intent.status, purpose: intent.purpose ?? undefined, approvalId: intent.approvalId ?? undefined, payloadHash: intent.payloadHash, receipts: receipts.map((r) => ({ status: r.status, providerRef: r.providerRef ?? undefined, executionMode: r.executionMode, at: r.createdAt.toISOString() })) }
+        ? { intentId: intent.id, status: intent.status, purpose: intent.purpose ?? undefined, approvalId: intent.approvalId ?? undefined, receipts: receipts.map((r) => ({ status: r.status, executionMode: r.executionMode, at: r.createdAt.toISOString(), evidenceAvailable: Boolean(r.providerRef) || r.status === 'CONFIRMED' })) }
         : undefined,
       wait: subscription ? { eventType: subscription.eventType, status: subscription.status, deadlineAt: iso(subscription.deadlineAt) } : undefined,
       preview,
@@ -228,7 +230,7 @@ export class CaseOrchestrationService {
       state: node.state,
       provenance: executed ? 'EXECUTED' : graph.plan.source === 'BLUEPRINT_INSTANTIATION' ? 'PLANNED' : 'PLANNED',
       executionMode: (node.executionMode as 'LIVE' | 'SIMULATED' | null) ?? undefined,
-      conciseReason: node.errorMessage ?? def.purpose ?? undefined,
+      conciseReason: node.errorMessage ? businessMessage(node.errorMessage) : (def.purpose ?? undefined),
       detailsRef: node.nodeKey,
       availableActions: this.nodeActions(viewer, caseRow, node, intents.filter((i) => i.nodeKey === node.nodeKey), drafts, isLatest),
     };

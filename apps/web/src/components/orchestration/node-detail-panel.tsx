@@ -52,7 +52,7 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
       <div className="flex flex-wrap items-center gap-2">
         <StateChip state={detail.state} />
         <ExecutionModeTag mode={detail.executionMode} />
-        {detail.attempts > 1 ? <span className="text-xs text-slate-600">{detail.attempts}. Versuch</span> : null}
+        {detail.retried ? <span className="text-xs text-slate-600">Wiederholt</span> : null}
       </div>
       <p className="text-slate-700">{detail.stateExplanation}</p>
       {detail.purpose ? <p className="text-slate-600">{detail.purpose}</p> : null}
@@ -75,7 +75,7 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
       {detail.error ? (
         <Section title="Fehler">
           <p className="rounded-md bg-red-50 px-3 py-2 text-red-800">
-            {detail.error.message || 'Der Schritt konnte nicht abgeschlossen werden.'} <span className="text-xs text-red-600">({detail.error.code})</span>
+            {detail.error.message || 'Der Schritt konnte nicht abgeschlossen werden.'}
           </p>
         </Section>
       ) : null}
@@ -90,7 +90,7 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
             {detail.action.receipts.map((r, i) => (
               <li key={i} className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
                 <span className="font-medium">{r.status === 'CONFIRMED' ? 'Bestätigt' : r.status === 'FAILED' ? 'Fehlgeschlagen' : 'Ungewiss'}</span>
-                {r.providerRef ? <span>Beleg {r.providerRef}</span> : null}
+                {r.evidenceAvailable ? <span>Nachweis vorhanden</span> : <span>Kein Nachweis</span>}
                 <span>{formatDateTime(r.at)}</span>
                 <ExecutionModeTag mode={r.executionMode as 'LIVE' | 'SIMULATED'} />
               </li>
@@ -134,15 +134,6 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
               </li>
             ))}
           </ul>
-        </Section>
-      ) : null}
-
-      {detail.output !== undefined ? (
-        <Section title="Ergebnis (technisch)">
-          <details>
-            <summary className="cursor-pointer text-xs text-slate-600">Anzeigen</summary>
-            <pre className="mt-1 max-h-48 overflow-auto rounded bg-slate-50 p-2 text-xs text-slate-700">{JSON.stringify(detail.output, null, 2)}</pre>
-          </details>
         </Section>
       ) : null}
 

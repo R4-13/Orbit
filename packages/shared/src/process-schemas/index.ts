@@ -11,3 +11,4 @@ export * from './graph';
 export * from './plan-validator';
 export * from './blueprint-validator';
 export * from './plan-runtime';
+export * from './orchestration-diagnostics';

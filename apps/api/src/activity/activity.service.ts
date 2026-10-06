@@ -95,7 +95,7 @@ export class ActivityService {
 
     const [logs, receipts] = await Promise.all([
       db.auditLog.findMany({
-        where: { eventType: { in: types }, createdAt: { gte: since }, ...(input.caseId ? { entityType: 'Case', entityId: input.caseId } : {}) },
+        where: { domain: 'TENANT', eventType: { in: types }, createdAt: { gte: since }, ...(input.caseId ? { entityType: 'Case', entityId: input.caseId } : {}) },
         orderBy: { createdAt: 'desc' },
         take: 300,
       }),
@@ -136,7 +136,7 @@ export class ActivityService {
         at: log.createdAt.toISOString(),
         title: presentation.title,
         actorLabel: log.actorType === 'USER' ? (log.actorUserId ? (userName.get(log.actorUserId) ?? 'Nutzer') : 'Nutzer') : log.actorType === 'AGENT' ? 'ORBIT (Assistent)' : 'ORBIT',
-        actorType: log.actorType,
+        actorType: log.actorType === 'PLATFORM_USER' ? 'SYSTEM' : log.actorType,
         kind: presentation.result ? 'RESULT' : 'EVENT',
         entity,
       });

@@ -11,6 +11,7 @@ import { ApprovalsModule } from './approvals/approvals.module';
 import { BrandingModule } from './branding/branding.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { PlatformModule } from './platform/platform.module';
 import { CasesModule } from './cases/cases.module';
 import { ChannelSyncModule } from './channel-sync/channel-sync.module';
 import { CompaniesModule } from './companies/companies.module';
@@ -96,6 +97,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     BrandingModule,
     UsersModule,
     AuthModule,
+    PlatformModule,
     CasesModule,
     TasksModule,
     DocumentsModule,

@@ -64,6 +64,14 @@ enum ActorType {
   USER
   AGENT
   SYSTEM
+  /// Amendment 03: Handlung einer Plattformidentität (Betreiber), nicht eines Mandantennutzers.
+  PLATFORM_USER
+}
+
+/// Amendment 03 / Governance: dieselbe Audit-Tabelle für beide Sicherheitsdomänen. PLATFORM-Zeilen haben nie eine `tenant_id` und sind unveränderlich.
+enum AuditDomain {
+  TENANT
+  PLATFORM
 }
 
 enum CaseType {
@@ -461,21 +469,31 @@ model PolicyConfig {
 /// Append-only. Kein FK auf User (siehe Datei-Kopfkommentar) — das Log muss
 /// unabhängig von Nutzer-Lifecycle lesbar bleiben.
 model AuditLog {
-  id          String    @id @default(uuid())
-  tenantId    String    @map("tenant_id")
+  id          String      @id @default(uuid())
+  /// NULL nur für `domain = PLATFORM` (CHECK-Constraint); Mandantenzeilen behalten Pflicht-Mandant + Cascade (DSGVO-Löschung).
+  tenantId    String?     @map("tenant_id")
+  domain      AuditDomain @default(TENANT)
   /// Event-Typ aus AUDIT_EVENT_TYPES (@orbit/shared/audit.ts).
-  eventType   String    @map("event_type")
-  actorType   ActorType @map("actor_type")
-  actorUserId String?   @map("actor_user_id")
-  entityType  String?   @map("entity_type")
-  entityId    String?   @map("entity_id")
+  eventType   String      @map("event_type")
+  actorType   ActorType   @map("actor_type")
+  actorUserId String?     @map("actor_user_id")
+  /// Plattform-Domäne: handelnde Plattformidentität (kein FK – der Audit-Eintrag überlebt jede Identitätsverwaltung).
+  actorPlatformUserId String? @map("actor_platform_user_id")
+  /// Plattform-Domäne: betroffener Mandant (ohne FK, damit eine Mandantenlöschung das Betreiber-Audit nicht kaskadiert löscht).
+  targetTenantId      String? @map("target_tenant_id")
+  correlationId       String? @map("correlation_id")
+  supportSessionId    String? @map("support_session_id")
+  entityType  String?     @map("entity_type")
+  entityId    String?     @map("entity_id")
   payload     Json?
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
   @@index([tenantId, entityType, entityId])
+  @@index([domain, createdAt])
+  @@index([targetTenantId, createdAt])
   @@map("audit_logs")
 }
 
@@ -2192,4 +2210,70 @@ model TenantSequence {
 
   @@id([tenantId, key])
   @@map("tenant_sequences")
+}
+
+
+// ============================================================================
+// ZERIONUS Platform Control Plane (Amendment 03) — Sicherheitsdomäne "Plattform"
+// ============================================================================
+// Bewusst OHNE tenant_id: Betreiberidentitäten gehören keinem Mandanten (ADR OPS-A1). Der Zugriff ist per Postgres-RLS an den
+// Transaktions-GUC `app.platform_scope` gebunden, der ausschließlich der Plattform-Zugriffspfad setzt (PrismaService.withPlatformScope).
+
+enum PlatformUserStatus {
+  ACTIVE
+  DISABLED
+}
+
+model PlatformUser {
+  id                     String             @id @default(uuid())
+  email                  String             @unique
+  passwordHash           String             @map("password_hash")
+  displayName            String             @map("display_name")
+  status                 PlatformUserStatus @default(ACTIVE)
+  lastLoginAt            DateTime?          @map("last_login_at")
+  createdByPlatformUserId String?           @map("created_by_platform_user_id")
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  roleAssignments PlatformRoleAssignment[]
+  sessions        PlatformSession[]
+
+  @@map("platform_users")
+}
+
+/// Rolle als Name aus PLATFORM_ROLES (@orbit/shared/platform.ts); pro Nutzer höchstens eine aktive Zuweisung je Rolle (partieller Unique-Index in der Migration).
+model PlatformRoleAssignment {
+  id                 String    @id @default(uuid())
+  platformUserId     String    @map("platform_user_id")
+  role               String
+  grantedByUserId    String?   @map("granted_by_user_id")
+  grantedAt          DateTime  @default(now()) @map("granted_at")
+  revokedAt          DateTime? @map("revoked_at")
+  revokedByUserId    String?   @map("revoked_by_user_id")
+
+  user PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
+
+  @@index([platformUserId])
+  @@map("platform_role_assignments")
+}
+
+model PlatformSession {
+  id               String    @id @default(uuid())
+  platformUserId   String    @map("platform_user_id")
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  /// 'PASSWORD' | 'PASSWORD_STEP_UP' | 'MFA' (MFA ist nur als Erweiterungsgrenze reserviert).
+  assurance        String    @default("PASSWORD")
+  stepUpUntil      DateTime? @map("step_up_until")
+  environment      String
+  /// Absolute Sitzungsgrenze: ein Refresh verlängert sie nie.
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  revokedReason    String?   @map("revoked_reason")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  lastSeenAt       DateTime  @default(now()) @map("last_seen_at")
+
+  user PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
+
+  @@index([platformUserId])
+  @@map("platform_sessions")
 }

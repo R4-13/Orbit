@@ -5,13 +5,15 @@ import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { MockLLMProvider } from '@orbit/agent-core';
-import { PERMISSIONS, triageFixtureForScenario, type CaseGraphView, type CaseNodeDetail } from '@orbit/shared';
+import { PERMISSIONS, PLATFORM_ROLES, triageFixtureForScenario, type CaseGraphView, type CaseNodeDetail, type OrchestrationDiagnosticProjection } from '@orbit/shared';
 import request from 'supertest';
 import { LLM_PROVIDER } from '../src/agent/agent.tokens';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbound-mail.port';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { PlatformAuthService } from '../src/platform/auth/platform-auth.service';
+import { PlatformIdentityService } from '../src/platform/identity/platform-identity.service';
 import { BlueprintRegistryService } from '../src/process/blueprint-registry.service';
 import { CaseOrchestrationService } from '../src/process/case-orchestration.service';
 import { ReferenceProcessService } from '../src/process/reference/reference-process.service';
@@ -164,7 +166,20 @@ describe('Case orchestration view (e2e)', () => {
     expect(after.nodes.find((n) => n.id === 'wait')?.state).toBe('WAITING');
     expect(after.lastEventSequence).toBeGreaterThan(graph.lastEventSequence);
     const send = (await request(app.getHttpServer()).get(`/api/v1/cases/${caseId}/orchestration/nodes/ask`).set(auth()).expect(200)).body as CaseNodeDetail;
-    expect(send.action?.receipts[0]).toMatchObject({ status: 'CONFIRMED', providerRef: 'gm-view-1', executionMode: 'SIMULATED' });
+    expect(send.action?.receipts[0]).toMatchObject({ status: 'CONFIRMED', executionMode: 'SIMULATED', evidenceAvailable: true });
+    // Business-Projektion (BP-42/43): Die Anbieter-Referenz ist ein technisches Detail und steht nur in der Diagnose.
+    expect(JSON.stringify(send)).not.toContain('gm-view-1');
+  });
+
+  it('die Business-Projektion enthält keine technischen Interna: keine Fehlercodes, Roh-Outputs, Payload-Hashes, Anbieter-Referenzen oder Versuchszähler (BP-42/43)', async () => {
+    const graph = (await request(app.getHttpServer()).get(`/api/v1/cases/${caseId}/orchestration`).set(auth()).expect(200)).body as CaseGraphView;
+    for (const node of graph.nodes.filter((n) => n.state !== 'PLANNED')) {
+      const detail = (await request(app.getHttpServer()).get(`/api/v1/cases/${caseId}/orchestration/nodes/${node.id}`).set(auth()).expect(200)).body as Record<string, unknown>;
+      for (const forbidden of ['output', 'attempts', 'payloadHash', 'providerRef', 'idempotencyKey', 'agentRunId']) expect(detail).not.toHaveProperty(forbidden);
+      expect(detail.error ? Object.keys(detail.error as object) : []).not.toContain('code');
+      const text = JSON.stringify(detail);
+      expect(text).not.toMatch(/payloadHash|providerRef|toolCallId|stack|at \w+ \(/);
+    }
   });
 
   it('definition and actual layers: the blueprint graph is always planned; the actual layer only holds what happened', async () => {
@@ -247,5 +262,72 @@ describe('Case orchestration view (e2e)', () => {
     });
     expect(received.map((e) => e.id)).toEqual(rest.map((e) => e.sequence));
     expect(received[0]!.id).toBeGreaterThan(cursor);
+  });
+
+  describe('Diagnostic Projection (Plattformdomäne, AD-15/16/17)', () => {
+    const suffix = randomUUID().slice(0, 8);
+    const pw = `Pf-${randomUUID().slice(0, 12)}-9!`;
+    const platformIds: string[] = [];
+    let supportToken: string;
+    let financeOnlyToken: string;
+
+    beforeAll(async () => {
+      const identities = app.get(PlatformIdentityService);
+      const platformAuth = app.get(PlatformAuthService);
+      for (const [role, tag] of [[PLATFORM_ROLES.PLATFORM_SUPPORT, 'support'], [PLATFORM_ROLES.PLATFORM_FINOPS, 'finops']] as const) {
+        const email = `ado-${suffix}-${tag}@platform-test.example`;
+        platformIds.push((await identities.create(null, { email, displayName: tag, password: pw, roles: [role] })).id);
+        const tokens = await platformAuth.login(email, pw);
+        if (tag === 'support') supportToken = tokens.accessToken;
+        else financeOnlyToken = tokens.accessToken;
+      }
+    });
+
+    afterAll(async () => {
+      await prisma.withPlatformScope((tx) => tx.platformUser.deleteMany({ where: { id: { in: platformIds } } }));
+    });
+
+    const diag = (token: string, query: string, id = caseId) => request(app.getHttpServer()).get(`/api/v1/platform/diagnostics/cases/${id}?${query}`).set(auth(token));
+
+    it('AD-15/16: ein Tenant-Nutzer – auch ein Tenant Admin – erreicht die Diagnose weder per Route noch per Raten', async () => {
+      const q = `tenantId=${tenantId}&reason=Selbsttest+Diagnose`;
+      expect([401, 403]).toContain((await diag(token, q)).status);
+      expect([401, 403]).toContain((await diag(otherTenantToken, q)).status);
+      // Es gibt keinen Mandanten-Diagnosepfad, den man erraten könnte.
+      await request(app.getHttpServer()).get(`/api/v1/cases/${caseId}/diagnostics`).set(auth()).expect(404);
+    });
+
+    it('AD-17: Support liest Metadaten – begründet, mandantenscharf, ohne Fachinhalte – und der Zugriff wird auditiert', async () => {
+      const res = await diag(supportToken, `tenantId=${tenantId}&reason=Kundenanfrage+Ticket+4711`).expect(200);
+      const projection = res.body as OrchestrationDiagnosticProjection;
+      expect(projection.caseId).toBe(caseId);
+      expect(projection.planRevisions.length).toBeGreaterThan(0);
+      expect(projection.nodes.find((n) => n.nodeKey === 'ask')).toMatchObject({ state: 'SUCCEEDED' });
+      expect(projection.actions.some((a) => a.capabilityKey === 'email.send' && a.payloadHash.length === 64)).toBe(true);
+      expect(projection.correlations).toBeDefined();
+      // keine Fachinhalte: weder Mailtext noch Entwurfstext noch Absenderadresse
+      const text = JSON.stringify(projection);
+      expect(text).not.toContain('Welche Menge benötigen Sie?');
+      expect(text).not.toContain(SENDER);
+      expect(text).not.toContain('Wir hätten gern ein Angebot');
+
+      const rows = await prisma.withPlatformScope((tx) => tx.auditLog.findMany({ where: { domain: 'PLATFORM', eventType: 'PLATFORM_DIAGNOSTICS_READ', entityId: caseId } }));
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0]).toMatchObject({ targetTenantId: tenantId, tenantId: null });
+      expect(JSON.stringify(rows[0].payload)).toContain('Ticket 4711');
+    });
+
+    it('Begründung ist Pflicht; ohne Diagnose-Scope (FinOps) ist der Zugriff verboten', async () => {
+      await diag(supportToken, `tenantId=${tenantId}`).expect(400);
+      await diag(supportToken, `tenantId=${tenantId}&reason=abc`).expect(400);
+      await diag(financeOnlyToken, `tenantId=${tenantId}&reason=Kostenanalyse+Test`).expect(403);
+    });
+
+    it('Mandantenisolation (OPS-32): ein Case eines anderen Mandanten ist über die Diagnose nicht zu finden – gleiche Antwort wie „existiert nicht“', async () => {
+      const other = await prisma.withRlsBypass((tx) => tx.tenant.findFirstOrThrow({ where: { id: { not: tenantId } } }));
+      const wrongTenant = await diag(supportToken, `tenantId=${other.id}&reason=Isolationstest+Diagnose`).expect(404);
+      const unknownCase = await diag(supportToken, `tenantId=${tenantId}&reason=Isolationstest+Diagnose`, randomUUID()).expect(404);
+      expect(wrongTenant.body.code).toBe(unknownCase.body.code);
+    });
   });
 });

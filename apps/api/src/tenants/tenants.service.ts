@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import {
+  assertTenantRoleName,
   DEFAULT_AGENT_DEFINITIONS,
   DEFAULT_POLICY_CONFIG,
   DEFAULT_ROLE_PERMISSIONS,
@@ -134,6 +135,7 @@ export class TenantsService {
       let tenantAdminRoleId: string | undefined;
 
       for (const roleName of Object.values(ROLES)) {
+        assertTenantRoleName(roleName);
         const role = await tx.role.create({
           data: { tenantId: tenant.id, name: roleName, isSystemDefault: true },
         });
