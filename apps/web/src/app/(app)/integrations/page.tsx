@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar, CheckCircle2, Mail, Phone, Plug, Receipt, Users } from 'lucide-react';
 import type { ConnectorMetadata } from '@orbit/integration-core';
-import { PERMISSIONS, connectorLabel, type ConnectorOperationalStatus } from '@orbit/shared';
+import { PERMISSIONS, connectorLabel, integrationErrorLabel, type ConnectorOperationalStatus } from '@orbit/shared';
 import { Button, ErrorState, Input, Label } from '@orbit/ui';
 import { Modal } from '../../../components/common/modal';
 import { LastUpdated, Notice, PageHeader, StatusBadge, type StatusTone } from '../../../components/common/primitives';
@@ -92,7 +92,7 @@ function OperationalChecks({ connectorId, enabled }: { connectorId: ConnectorMet
       {hasCurrentProblem ? (
         <p className="text-amber-800" role="status">
           Aktuell: {health?.latestRunFailed ? 'Der letzte echte Lauf ist fehlgeschlagen' : 'Betriebsfehler'}
-          {health?.lastErrorCode || health?.syncLastErrorCode ? ` (${health.lastErrorCode ?? health.syncLastErrorCode})` : ''}
+          {health?.lastErrorCode || health?.syncLastErrorCode ? ` (${integrationErrorLabel(health.lastErrorCode ?? health.syncLastErrorCode)})` : ''}
         </p>
       ) : null}
     </div>
@@ -322,7 +322,7 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
               <dt className="text-slate-600">Nächste Aktion</dt>
               <dd className="font-medium text-slate-900">{view.next}</dd>
             </dl>
-            {integration.status === 'ERROR' && integration.lastErrorCode ? <p className="mt-1 text-sm text-red-800">Aktuell: {integration.lastErrorCode}</p> : null}
+            {integration.status === 'ERROR' && integration.lastErrorCode ? <p className="mt-1 text-sm text-red-800">Aktuell: {integrationErrorLabel(integration.lastErrorCode)}</p> : null}
             <OperationalChecks connectorId={connector.id} enabled={connector.liveConnectSupported || connector.authentication.type === 'api_key'} />
           </div>
         </div>

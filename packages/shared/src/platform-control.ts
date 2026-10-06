@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { sha256Hex } from './sha256';
 import { stableBucket } from './ai-governance';
 
 /**
@@ -88,7 +88,7 @@ export function describeTenantTarget(target: { status: string; scopes: readonly 
 /** Bestätigungs-Token: bindet die Bestätigung an genau diesen Zielzustand und seine beschriebene Wirkung. */
 export function confirmationTokenFor(tenantId: string, target: { status: string; scopes: readonly string[]; cohorts: readonly string[] }, effects: readonly string[]): string {
   const canonical = JSON.stringify({ tenantId, status: target.status, scopes: [...target.scopes].sort(), cohorts: [...target.cohorts].sort(), effects });
-  return createHash('sha256').update(canonical).digest('hex').slice(0, 24);
+  return sha256Hex(canonical).slice(0, 24);
 }
 
 // ── Feature Flags ────────────────────────────────────────────────────────────────────────────────────────────────────

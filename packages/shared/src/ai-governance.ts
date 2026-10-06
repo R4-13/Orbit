@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { sha256Bytes } from './sha256';
 
 /**
  * AI Platform Governance (Amendment 03 §8–§12): reine, datenbankfreie Entscheidungslogik für Modellprofile, Routen und Fallback.
@@ -124,8 +124,8 @@ export function planFallbackChain(route: { primaryModelId: string; fallbackModel
 
 /** Stabiler Prozentsatz-Bucket (0–99) je Mandant und Route: dieselbe Zuordnung bei jedem Aufruf (Amendment 03 §14.3 – kein Flackern). */
 export function stableBucket(subject: string, salt: string): number {
-  const digest = createHash('sha256').update(`${salt}:${subject}`).digest();
-  return digest.readUInt32BE(0) % 100;
+  const digest = sha256Bytes(`${salt}:${subject}`);
+  return (((digest[0]! << 24) | (digest[1]! << 16) | (digest[2]! << 8) | digest[3]!) >>> 0) % 100;
 }
 
 export function routeInWindow(route: { activeFrom?: Date | null; activeUntil?: Date | null }, now: Date): boolean {

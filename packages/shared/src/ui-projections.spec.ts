@@ -100,3 +100,12 @@ describe('humanizeKnownKeys', () => {
     expect(riskFlagLabel('NOPE')).toBe(UNMAPPED_LABEL);
   });
 });
+
+describe('integrationErrorLabel', () => {
+  it('übersetzt bekannte Codes und zeigt unbekannte nie roh an', async () => {
+    const { integrationErrorLabel } = await import('./ui-labels');
+    expect(integrationErrorLabel('TOKEN_REFRESH_FAILED')).toBe('Zugriff abgelaufen – bitte neu verbinden');
+    expect(integrationErrorLabel('SOMETHING_NEW')).toBe('Technischer Fehler bei der Verbindung');
+    expect(integrationErrorLabel(null)).toBe('Technischer Fehler bei der Verbindung');
+  });
+});

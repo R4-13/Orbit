@@ -155,6 +155,13 @@ function lookup(table: Readonly<Record<string, string>>, key: string | null | un
   return table[key] ?? UNMAPPED_LABEL;
 }
 
+/** Fehlercodes der Verbindungen in Alltagssprache; unbekannte Codes werden nie roh angezeigt. */
+export const INTEGRATION_ERROR_LABELS: Readonly<Record<string, string>> = {
+  AUTH_REQUIRED: 'Anmeldung beim Anbieter erforderlich',
+  TOKEN_REFRESH_FAILED: 'Zugriff abgelaufen – bitte neu verbinden',
+};
+export const integrationErrorLabel = (code: string | null | undefined): string => (code && INTEGRATION_ERROR_LABELS[code]) || 'Technischer Fehler bei der Verbindung';
+
 export const categoryLabel = (key: string | null | undefined): string => lookup(CATEGORY_LABELS, key);
 export const caseTypeDisplay = (key: string | null | undefined): string => lookup(CASE_TYPE_DISPLAY, key);
 export const policyActionLabel = (key: string | null | undefined): string => lookup(POLICY_ACTION_LABELS, key);

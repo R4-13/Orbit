@@ -48,4 +48,23 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 ## 5. Verifikation
 
-Siehe Abschnitt „Teststand“ in [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) (Zeile „Plattformbetrieb“). Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen).
+**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 137, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 37 Suiten / 299 Tests grün, Playwright 94 bestanden / 1 übersprungen.
+Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; bei 429 vorher `throttler:*` in Redis leeren — das Login-Throttling summiert sich über Suiten).
+
+**Live im Docker-Stack (LIVE TESTED, lokale Entwicklungsumgebung, Build nach Commit `52f8b81` plus Folgefixes):**
+
+| Prüfung | Ergebnis |
+|---|---|
+| Images api/worker/web neu gebaut, Stack neu gestartet | API healthy, Worker ohne DI-Fehler gestartet |
+| Plattform-Owner per `scripts/platform-bootstrap.ts` (Passwort aus der Umgebung, nicht ausgegeben) | angelegt |
+| `POST /platform/auth/login` | 200, Rollen/Scopes aus der DB, Umgebung `development` |
+| `GET /platform/{me,overview,tenants,audit,features,kill-switches,connectors,ai/*}` | 200; Audit enthält den Login |
+| Domänengrenze | Plattformroute ohne Token 401; Plattform-Token an Mandantenroute 401 |
+| KI-Register | leer → ehrlich ENV_BOOTSTRAP (Adapter `anthropic`, `openai` registriert) |
+
+**Nicht live bewiesen:** schreibende Plattformoperationen (Step-up, Kill-Switch-Umschaltung, Support-Session) gegen den Docker-Stack — dafür gilt der automatisierte Nachweis; echter zweiter KI-Anbieter; echter Gmail-Versand.
+
+**Beim Live-Lauf gefundene und behobene Fehler:**
+
+1. Web-Build brach ab: `@orbit/shared` zog `node:crypto` (Rollout-Bucket, Bestätigungs-Token) in das Browser-Bundle. Ersetzt durch browserfähiges SHA-256 (`sha256.ts`, gegen `node:crypto` getestet).
+2. `/integrations` zeigte den rohen Fehlercode `TOKEN_REFRESH_FAILED`. Neu: `integrationErrorLabel` (unbekannte Codes erscheinen nie roh).
