@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { ProcessModule } from '../process/process.module';
 import { AiGovernanceModule } from '../ai-governance/ai-governance.module';
 import { PlatformAuditModule } from './audit/platform-audit.module';
 import { PlatformAiController } from './ai/platform-ai.controller';
+import { PlatformConnectorsController, PlatformFeaturesController, PlatformKillSwitchController, PlatformTenantLifecycleController } from './control/platform-control.controller';
 import { PlatformAuthService } from './auth/platform-auth.service';
 import { PlatformAuthGuard, PlatformScopeGuard } from './auth/platform-guards';
 import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
 import { PlatformIdentityService } from './identity/platform-identity.service';
 import { PlatformAuthController, PlatformController, PlatformIdentityController } from './platform.controllers';
+import { PlatformSupportController } from './support/platform-support.controller';
+import { PlatformSupportService } from './support/platform-support.service';
 import { PlatformTenantsService } from './tenants/platform-tenants.service';
 
 /**
@@ -16,9 +20,9 @@ import { PlatformTenantsService } from './tenants/platform-tenants.service';
  * Phase OPS-1: Identität, Rollen/Scopes, Sitzungen, Step-up, Audit, Mandantenregister (nur lesend). Weitere Funktionsbereiche folgen je Phase.
  */
 @Module({
-  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule],
-  controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController],
-  providers: [PlatformAuthService, PlatformDiagnosticsService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
+  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule, ProcessModule],
+  controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController, PlatformFeaturesController, PlatformKillSwitchController, PlatformConnectorsController, PlatformTenantLifecycleController, PlatformSupportController],
+  providers: [PlatformAuthService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
   exports: [PlatformAuditModule, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],
 })
 export class PlatformModule {}

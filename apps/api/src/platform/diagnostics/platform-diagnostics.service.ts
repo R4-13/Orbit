@@ -23,7 +23,7 @@ export class PlatformDiagnosticsService {
     private readonly audit: PlatformAuditService,
   ) {}
 
-  async caseDiagnostics(principal: PlatformPrincipal, input: { tenantId: string; caseId: string; reason: string }): Promise<OrchestrationDiagnosticProjection> {
+  async caseDiagnostics(principal: PlatformPrincipal, input: { tenantId: string; caseId: string; reason: string; supportSessionId?: string }): Promise<OrchestrationDiagnosticProjection> {
     const db = this.prisma.forTenantId(input.tenantId);
     const caseRow = await db.case.findFirst({ where: { id: input.caseId } });
     if (!caseRow) {
@@ -97,11 +97,12 @@ export class PlatformDiagnosticsService {
     };
 
     await this.audit.record({
-      eventType: 'PLATFORM_DIAGNOSTICS_READ',
+      eventType: input.supportSessionId ? 'PLATFORM_SUPPORT_ACCESS' : 'PLATFORM_DIAGNOSTICS_READ',
       actor: { userId: principal.userId, roles: principal.platformRoles },
       targetType: 'Case',
       targetId: caseRow.id,
       targetTenantId: input.tenantId,
+      supportSessionId: input.supportSessionId,
       reason: input.reason,
       extra: { nodes: projection.nodes.length, actions: projection.actions.length, agentRuns: projection.agentRuns.length },
     });

@@ -11,6 +11,8 @@ export interface PlatformTenantSummary {
   lifecycleStatus: string;
   userCount: number;
   deletionRequested: boolean;
+  suspensionScopes: string[];
+  featureCohorts: string[];
   createdAt: string;
 }
 
@@ -48,6 +50,8 @@ export class PlatformTenantsService {
         lifecycleStatus: t.status,
         userCount: userCount.get(t.id) ?? 0,
         deletionRequested: Boolean(t.deletionRequestedAt),
+        suspensionScopes: t.suspensionScopes,
+        featureCohorts: t.featureCohorts,
         createdAt: t.createdAt.toISOString(),
       }));
     });
@@ -79,7 +83,7 @@ export class PlatformTenantsService {
       platformIdentities: { active, disabled },
       activePlatformSessions: sessions,
       platformAuditEventsLast24h: auditCount,
-      notYetAvailable: ['AI-Provider-Gesundheit', 'Connector-Gesundheit', 'Queue/Worker-Gesundheit', 'Nutzung und Kosten', 'Feature-Rollouts', 'Support-Sessions'],
+      notYetAvailable: ['Connector-Gesundheit (Betriebsstatus je Verbindung)', 'Queue/Worker-Gesundheit', 'Kostenlimits und Anomalie-Alarme', 'Support-Sessions'],
     };
   }
 }

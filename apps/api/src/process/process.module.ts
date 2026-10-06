@@ -15,6 +15,7 @@ import { CaseCorrelationService } from './case-correlation.service';
 import { CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
+import { HumanInteractionService } from './human-interaction.service';
 import { OrchestratorService } from './orchestrator.service';
 import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
@@ -53,6 +54,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     DraftEditingService,
     ProcessSweepService,
     CaseOrchestrationService,
+    HumanInteractionService,
   ],
   exports: [
     CaseFactsService,
@@ -69,6 +71,7 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     ReferenceProcessService,
     ProcessSweepService,
     CaseOrchestrationService,
+    HumanInteractionService,
   ],
 })
 export class ProcessModule {}

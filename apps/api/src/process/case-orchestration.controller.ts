@@ -1,6 +1,6 @@
 import { Controller, Get, Headers, Param, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import type { CaseGraphView, CaseNodeDetail } from '@orbit/shared';
+import type { CaseGraphView, CaseNodeDetail, HumanInteractionRequest } from '@orbit/shared';
 import { PERMISSIONS } from '@orbit/shared';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -10,6 +10,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { CaseEventsService } from './case-events.service';
 import { CaseOrchestrationService, type OrchestrationMode } from './case-orchestration.service';
+import { HumanInteractionService } from './human-interaction.service';
 
 /** Poll interval of the stream. State is read from PostgreSQL, so every API replica serves the same events. */
 const STREAM_POLL_MS = 1000;
@@ -38,6 +39,7 @@ export class CaseOrchestrationController {
   constructor(
     private readonly orchestration: CaseOrchestrationService,
     private readonly events: CaseEventsService,
+    private readonly humanInteractions: HumanInteractionService,
   ) {}
 
   @Get(':id/orchestration')
@@ -49,6 +51,12 @@ export class CaseOrchestrationController {
   ): Promise<CaseGraphView> {
     const revision = planRevision && /^\d+$/.test(planRevision) ? Number(planRevision) : undefined;
     return this.orchestration.projection({ tenantId: user.tenantId, permissions: user.permissions }, caseId, { mode: parseMode(mode), planRevision: revision });
+  }
+
+  /** BP-35: wozu ORBIT gerade einen Menschen braucht – mit Grund, Frage und zulässigen Wirkungen (Projektion, keine eigene Tabelle). */
+  @Get(':id/human-interactions')
+  humanInteractionRequests(@CurrentUser() user: AuthenticatedUser, @Param('id') caseId: string): Promise<HumanInteractionRequest[]> {
+    return this.humanInteractions.forCase({ tenantId: user.tenantId, permissions: user.permissions }, caseId);
   }
 
   @Get(':id/orchestration/nodes/:nodeId')

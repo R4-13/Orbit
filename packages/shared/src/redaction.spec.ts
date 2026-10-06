@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { REDACTED, redactString, redactValue, safeErrorSummary } from './redaction';
 
+// Testzugriff auf beliebig tief geschwärzte Strukturen
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Rec = Record<string, any>;
+
 describe('redaction', () => {
   it('schwärzt sensible Schlüssel, egal wie tief', () => {
-    const out = redactValue({ name: 'x', apiKey: 'sk-live-123456789', nested: { Authorization: 'Bearer abc.def.ghi', refreshToken: 'r', ok: 1 }, list: [{ password: 'p' }] }) as Record<string, any>;
+    const out = redactValue({ name: 'x', apiKey: 'sk-live-123456789', nested: { Authorization: 'Bearer abc.def.ghi', refreshToken: 'r', ok: 1 }, list: [{ password: 'p' }] }) as Rec;
     expect(out.name).toBe('x');
     expect(out.apiKey).toBe(REDACTED);
     expect(out.nested.Authorization).toBe(REDACTED);
@@ -27,7 +31,7 @@ describe('redaction', () => {
   it('ist zyklensicher, kürzt Tiefe und verändert das Original nicht', () => {
     const a: Record<string, unknown> = { secret: 's', child: {} };
     (a.child as Record<string, unknown>).back = a;
-    const out = redactValue(a) as Record<string, any>;
+    const out = redactValue(a) as Rec;
     expect(a.secret).toBe('s');
     expect(out.secret).toBe(REDACTED);
     expect(out.child.back).toBe('[CIRCULAR]');

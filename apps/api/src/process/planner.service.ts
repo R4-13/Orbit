@@ -1,3 +1,4 @@
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedContent, type LLMMessage, type LLMProvider } from '@orbit/agent-core';
 import type { Case, ProcessPlanSource, ProcessPlanStatus } from '@orbit/domain';
@@ -9,6 +10,7 @@ import {
   type PlanValidationContext,
   type PlanValidationResult,
   AiProviderUnavailableError,
+  KILL_SWITCHES,
 } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -71,6 +73,7 @@ export class PlannerService {
     private readonly ledger: ActionLedgerService,
     private readonly store: PlanStoreService,
     private readonly aiProviders: AiProviderResolverService,
+    private readonly platformControl: PlatformControlService,
     private readonly policy: PolicyEnforcementService,
     private readonly runs: AgentRunRecorderService,
     private readonly audit: AuditService,
@@ -197,6 +200,9 @@ export class PlannerService {
     context: PlanValidationContext,
     parent: PlanGraph | undefined,
   ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult }> {
+    if (await this.platformControl.killSwitchEngaged(KILL_SWITCHES.ADAPTIVE_PLANNER)) {
+      return { status: 'UNAVAILABLE', reason: 'Der KI-Planer ist plattformweit vorübergehend gestoppt (Kill Switch).' };
+    }
     let llm: LLMProvider;
     try {
       llm = await this.aiProviders.resolveForTenant(tenantId, 'COMPLEX_REASONING');

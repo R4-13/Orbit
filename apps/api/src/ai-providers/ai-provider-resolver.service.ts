@@ -3,12 +3,14 @@ import { MockLLMProvider, type LLMProvider } from '@orbit/agent-core';
 import type { OrbitEnv } from '@orbit/config';
 import {
   AiProviderUnavailableError,
+  KILL_SWITCHES,
   effectiveHealth,
   evaluateCandidate,
   planFallbackChain,
   type AiProfileKey,
   type HealthState,
 } from '@orbit/shared';
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { AiAdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
 import { AiMeterService, type MeterContext } from '../ai-governance/ai-meter.service';
 import { AiRegistryService, type ModelWithProvider } from '../ai-governance/ai-registry.service';
@@ -55,6 +57,7 @@ export class AiProviderResolverService {
     private readonly adapters: AiAdapterRegistry,
     private readonly vault: PlatformSecretVaultService,
     private readonly meter: AiMeterService,
+    private readonly platformControl: PlatformControlService,
     @Inject(LLM_PROVIDER) private readonly platformDefault: LLMProvider,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
@@ -65,6 +68,10 @@ export class AiProviderResolverService {
   }
 
   async resolveProfile(tenantId: string, profileKey: AiProfileKey = DEFAULT_PROFILE): Promise<ResolvedLlm> {
+    // Plattform-Kill-Switch (Amendment 03 §15): sofort wirksam für NEUE Aufrufe, ohne Historie zu berühren; laufende Vorgänge erhalten einen ehrlichen Blockzustand.
+    if (await this.platformControl.killSwitchEngaged(KILL_SWITCHES.AI_EXECUTIONS)) {
+      throw new AiProviderUnavailableError('KI-Ausführungen sind plattformweit vorübergehend gestoppt.', { mode: 'PLATFORM', profileKey, reasons: [`KILL_SWITCH:${KILL_SWITCHES.AI_EXECUTIONS}`] });
+    }
     const byok = await this.resolveByok(tenantId, profileKey);
     if (byok) return byok;
     return this.resolveManaged(tenantId, profileKey);

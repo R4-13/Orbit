@@ -11,6 +11,7 @@ import {
 } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { ORBIT_ENV } from '../config/env.token';
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -33,6 +34,7 @@ export class CapabilityRegistryService {
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
     private readonly policy: PolicyEnforcementService,
     private readonly prisma: PrismaService,
+    private readonly platformControl: PlatformControlService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
 
@@ -100,6 +102,14 @@ export class CapabilityRegistryService {
     const policyModes = await this.policyModesFor(tenantId);
     const integrations = await this.prisma.forTenantId(tenantId).integration.findMany({ select: { connectorType: true, status: true, grantedCapabilities: true } });
     const result = new Map<string, CapabilityExecutability>();
+    // Plattformgrenzen (Amendment 03 §13.3, §6.2): global gesperrte Connectoren und Mandantensperre „Verbindungen“ machen Capabilities mit Connector
+    // nicht ausführbar – mit verständlichem Grund; der Orchestrator führt solche Schritte dann als „wartet auf externes System“.
+    const gate = await this.platformControl.tenantGate(tenantId);
+    const blockedConnectors = new Map<string, string>();
+    for (const connectorType of new Set([...this.catalogue().values()].flatMap((c) => (c.connectorRequirements ?? []).map((r) => r.connectorType)))) {
+      const blocked = await this.platformControl.connectorBlocked(connectorType);
+      if (blocked.blocked) blockedConnectors.set(connectorType, blocked.reason ?? '');
+    }
 
     for (const cap of this.catalogue().values()) {
       const reasons: string[] = [];
@@ -109,6 +119,14 @@ export class CapabilityRegistryService {
       for (const requirement of cap.connectorRequirements ?? []) {
         // Simulated outbound mail needs no mailbox permission — nothing is sent; every receipt is labelled SIMULATED.
         if (this.env.OUTBOUND_MAIL_MODE === 'simulated' && requirement.connectorType === 'GMAIL' && requirement.capability === 'email.send') continue;
+        if (!gate.connectorsAllowed) {
+          reasons.push('Die Verbindungsaktivität dieses Unternehmens ist vorübergehend gesperrt.');
+          continue;
+        }
+        if (blockedConnectors.has(requirement.connectorType)) {
+          reasons.push(`Der Connector ${requirement.connectorType} ist plattformweit vorübergehend gesperrt${blockedConnectors.get(requirement.connectorType) ? ` (${blockedConnectors.get(requirement.connectorType)})` : ''}.`);
+          continue;
+        }
         const integration = integrations.find((i) => i.connectorType === requirement.connectorType);
         const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
         if (!integration || integration.status !== 'CONNECTED') reasons.push(`Keine aktive ${requirement.connectorType}-Verbindung.`);

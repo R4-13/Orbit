@@ -12,3 +12,5 @@ export * from './plan-validator';
 export * from './blueprint-validator';
 export * from './plan-runtime';
 export * from './orchestration-diagnostics';
+export * from './human-interaction';
+export * from './resolution';

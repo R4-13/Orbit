@@ -42,7 +42,8 @@ describe('Platform AI governance (e2e)', () => {
   }
 
   async function stepUp(token: string): Promise<void> {
-    await request(app.getHttpServer()).post('/api/v1/platform/auth/step-up').set({ Authorization: `Bearer ${token}` }).send({ password }).expect(200);
+    const auth = app.get(PlatformAuthService);
+    await auth.stepUp(await auth.authenticate(token), password);
   }
 
   async function bootstrapTenant(label: string): Promise<{ id: string; token: string }> {

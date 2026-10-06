@@ -1,5 +1,6 @@
 'use client';
 
+import { describeResolutionAttempt, type ResolutionResult, type ResolutionStrategy } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
 import { errorMessage } from '../../lib/api-client';
 import { formatDateTime } from '../../lib/format';
@@ -10,6 +11,13 @@ function describe(event: CaseEventRow): string {
   switch (event.type) {
     case 'case.status_changed':
       return `Status geändert: ${String(p.from ?? '–')} → ${String(p.to ?? '–')}`;
+    case 'context.resolution_attempted':
+      return describeResolutionAttempt({
+        requirementKey: String(p.requirementKey),
+        strategy: p.strategy as ResolutionStrategy,
+        result: p.result as ResolutionResult,
+        nextAllowedStrategies: (p.nextAllowedStrategies as ResolutionStrategy[] | undefined) ?? [],
+      });
     case 'case.completed':
       return 'Vorgang abgeschlossen (Abschlusskriterien erfüllt)';
     case 'plan.created':

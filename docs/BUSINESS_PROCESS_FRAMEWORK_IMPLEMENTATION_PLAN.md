@@ -182,3 +182,24 @@ Befund aus dem Code (Orchestrator, Planner, Fakten-, Korrelations-, Ledger-Diens
 
 **Reihenfolge:** zuerst BP-42/43 (Sicherheitslücke, mit OPS-4a), dann BP-32/33/34 (Resolution Ladder + autonome Rückfrage mit End-to-End-Nachweis), dann BP-39/40 (Limits, Completion),
 dann BP-35 (Human-Request-DTO) und die AD-Suite.
+
+### Umsetzungsstand Revision 1.2 (Stand 07.10.2026)
+
+Nachweis jeweils **TESTED LOCALLY** (echte Postgres mit RLS, echte Guards; Modell und Mailtransport sind Testdoubles, Versand `SIMULATED`). Keine Live-Validierung mit echtem Gmail-Versand
+(**BLOCKED_BY_EXTERNAL_PERMISSION**, `gmail.send`-Zustimmung) und keine Live-Validierung der neuen Pfade mit einem echten Modell.
+
+| Req | Status | Umsetzung / Nachweis | Offener Rest |
+|---|---|---|---|
+| BP-31 | PARTIAL | persistierter Zyklus besteht (Restart-/Resume-Tests); Reassess nach Ereignis über `consumeInbound` | Reassess nach *jeder* Aktion nicht als eigener Schritt |
+| BP-32 | COMPLETE | `packages/shared/src/process-schemas/resolution.ts` (Leiter R0…R6, deterministisch, 9 Unit-Tests); `resolve_requirements` schreibt je Anforderung `context.resolution_attempted` als `CaseEvent` (keine neue Tabelle, Dedupe über Faktenstand); Historienwortlaut im Web; AD-03 prüft Reihenfolge (erst Kommunikation, dann externe Rückfrage, kein Mensch) | Stufen `SYSTEM_OF_RECORD`/`AUTHORIZED_SOURCE` werden nur ausgewertet, soweit die Tools sie bereits als Faktenquelle liefern |
+| BP-33 | COMPLETE | AD-03: Rückfrage geht bei Policy `AUTONOMOUS` ohne Freigabe und ohne internen Benutzer hinaus; bei `DISABLED` entfällt die Stufe aus `nextAllowedStrategies` | – |
+| BP-34 | COMPLETE | AD-04: Antwort wird per Thread/`In-Reply-To` demselben Fall zugeordnet und setzt ihn ohne „Fortsetzen“ fort | – |
+| BP-35 | COMPLETE | `HumanInteractionService` (Projektion, keine Tabelle), Endpunkt `GET /cases/:id/human-interactions`, Test BP-35 | UI nutzt weiter die vorhandenen Freigabe-/Aufgabenansichten |
+| BP-36/37 | COMPLETE | AD-07/08/09: Planer kann Policy nicht lockern; Plattformobergrenze (OPS-5) darf nie lockern | – |
+| BP-38 | COMPLETE | AD-10/11 (bestehende Suiten): Replanning begrenzt, versioniert, idempotent | – |
+| BP-39 | PARTIAL | Limit für automatische Rückfragen belegt (AD-05/12) | `maxActionsPerCase`, `maxConsecutiveCapabilityFailures`, Kostenlimit fehlen |
+| BP-40 | PARTIAL | deterministische Abschlusskriterien bestehen | kein `CompletionEvaluation`-Snapshot, kein Goal-Status |
+| BP-41 | COMPLETE | `OUTCOME_UNKNOWN` → `MANUAL_REVIEW`, Test BP-35 und Ledger-Suite | – |
+| BP-42/43 | COMPLETE | Business-Projektion ohne Technikfelder; Diagnose nur Plattform (AD-15/16/17) | – |
+| BP-44 | COMPLETE | UI v2 unverändert, `ux-v2` als Regression | Playwright-Regression nach Knotenpanel-Änderung noch einmal laufen lassen |
+| BP-45 | PARTIAL | `adaptive-orchestration.e2e-spec.ts` (5 Tests: AD-03/04/05/06/07/12 + BP-32/35) plus bestehende Suiten für AD-01/02/08–11/13–18 | AD-13 (Quelle zeitweise nicht verfügbar) nicht eigens getestet |

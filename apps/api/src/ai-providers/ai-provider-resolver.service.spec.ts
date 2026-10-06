@@ -4,6 +4,7 @@ import type { AiAdapterRegistry } from '../ai-governance/ai-adapter-registry.ser
 import { AiAdapterRegistry as AdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
 import type { AiMeterService } from '../ai-governance/ai-meter.service';
 import type { AiRegistryService, ModelWithProvider, RoutingSnapshot } from '../ai-governance/ai-registry.service';
+import type { PlatformControlService } from '../platform-control/platform-control.service';
 import type { PlatformSecretVaultService } from '../ai-governance/platform-secret-vault.service';
 import type { CredentialEncryptionService } from '../security/credential-encryption.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -61,6 +62,7 @@ function model(id: string, providerKey: string, overrides: Partial<ModelWithProv
 }
 
 interface Setup {
+  killSwitch?: boolean;
   snapshot?: Partial<RoutingSnapshot> & { route?: RoutingSnapshot['route'] };
   tenantConnection?: Record<string, unknown> | null;
   byok?: { providerKnown: boolean; providerActive: boolean; modelsKnown: boolean; modelApproved: boolean };
@@ -79,7 +81,8 @@ function build(setup: Setup) {
   const vault = { read: jest.fn(async () => ({ apiKey: 'sk-platform-secret' })) } as unknown as PlatformSecretVaultService;
   const prisma = { forTenantId: () => ({ aIProviderConnection: { findUnique: async () => setup.tenantConnection ?? null } }) } as unknown as PrismaService;
   const encryption = { decrypt: () => 'sk-tenant-key' } as unknown as CredentialEncryptionService;
-  const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, platformDefault, ENV);
+  const control = { killSwitchEngaged: jest.fn(async () => setup.killSwitch === true) } as unknown as PlatformControlService;
+  const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, control, platformDefault, ENV);
   return { service, adapters, platformDefault, meter, recorded, registry, vault };
 }
 
@@ -258,6 +261,19 @@ describe('AiProviderResolverService', () => {
     it('ein Mandant, der nie erfolgreich BYOK genutzt hat (oder ausdrücklich getrennt hat), läuft über ORBIT Managed/Bootstrap', async () => {
       const never = build({ tenantConnection: { ...connected, byokActiveSince: null, status: 'ERROR' } });
       expect((await never.service.resolveProfile('t1', 'AGENT_TOOL_USE')).source).toBe('ENV_BOOTSTRAP');
+    });
+  });
+
+  describe('Kill Switch ai.executions (OCF-05)', () => {
+    it('stoppt NEUE Aufrufe aller Pfade (Managed, BYOK, Bootstrap) mit ehrlichem Grund – bevor irgendein Adapter gebaut wird', async () => {
+      const connected = { providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('x'), model: 'gpt-x', byokActiveSince: new Date() };
+      for (const setup of [{ ...managed({}), killSwitch: true }, { tenantConnection: connected, killSwitch: true }, { killSwitch: true }] as Setup[]) {
+        const built = build(setup);
+        const error = await built.service.resolveProfile('t1', 'COMPLEX_REASONING').catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(AiProviderUnavailableError);
+        expect((error as AiProviderUnavailableError).details?.reasons).toEqual(['KILL_SWITCH:ai.executions']);
+        expect(built.registry.routingSnapshot).not.toHaveBeenCalled();
+      }
     });
   });
 

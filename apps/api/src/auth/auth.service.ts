@@ -3,7 +3,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import type { OrbitEnv } from '@orbit/config';
-import { AuthenticationExpiredError, parseDurationToMs, type Permission } from '@orbit/shared';
+import { AuthenticationExpiredError, parseDurationToMs, tenantGateOf, type Permission } from '@orbit/shared';
 import { Prisma } from '@orbit/domain';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
@@ -46,7 +46,7 @@ export class AuthService {
       tx.user.findUnique({ where: { email }, include: USER_WITH_ROLES_INCLUDE }),
     );
 
-    if (!user || user.status !== 'ACTIVE' || user.tenant.status !== 'ACTIVE') {
+    if (!user || user.status !== 'ACTIVE' || !tenantGateOf(user.tenant.status, user.tenant.suspensionScopes).loginAllowed) {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
@@ -79,7 +79,7 @@ export class AuthService {
       return tx.user.findUnique({ where: { id: stored.userId }, include: USER_WITH_ROLES_INCLUDE });
     });
 
-    if (!user || user.status !== 'ACTIVE' || user.tenant.status !== 'ACTIVE') {
+    if (!user || user.status !== 'ACTIVE' || !tenantGateOf(user.tenant.status, user.tenant.suspensionScopes).loginAllowed) {
       throw new AuthenticationExpiredError('User or tenant is no longer active.');
     }
 

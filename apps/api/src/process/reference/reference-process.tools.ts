@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { AgentRuntime, ToolFailedError, ToolOutcomeUnknownError, buildLayeredSystemPrompt, wrapUntrustedContent, type ToolDefinition, type ToolRegistry } from '@orbit/agent-core';
 import type { Prisma } from '@orbit/domain';
-import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
+import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError, resolutionAttemptFor, resolutionDedupeKey, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../../agent/agent.tokens';
 import { AiProviderResolverService } from '../../ai-providers/ai-provider-resolver.service';
@@ -12,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { BlueprintRegistryService } from '../blueprint-registry.service';
 import { hashOf } from '../canonical';
+import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { clarificationBody, quoteDeliveryBody, replySubject } from './communication-templates';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
@@ -68,6 +69,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly aiProviders: AiProviderResolverService,
     private readonly policy: PolicyEnforcementService,
     private readonly blueprints: BlueprintRegistryService,
+    private readonly caseEvents: CaseEventsService,
   ) {}
 
   onModuleInit(): void {
@@ -248,6 +250,10 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         for (const f of blueprint?.requiredFacts ?? []) needed.set(f.key, { question: f.question ?? `Bitte geben Sie ${f.key} an.`, valueType: f.type });
         for (const r of rules) needed.set(r.factKey, { question: r.question, valueType: r.valueType });
 
+        // Auflösungsleiter (Amendment 02 v1.2 §30): bevor ein Mensch ins Spiel kommt, ist die externe Sachrückfrage nur zulässig, wenn die Policy sie nicht sperrt.
+        const clarificationMode = await this.policy.resolveMode(ctx.tenantId, 'email.send.clarification');
+        const externalClarificationAvailable = clarificationMode !== 'DISABLED';
+
         const requirements: Record<string, string> = {};
         const missing: Array<{ key: string; question: string }> = [];
         for (const [key, def] of needed) {
@@ -255,6 +261,11 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           const state = forKey.some((f) => f.status === 'CONFLICTED') ? 'CONFLICTED' : forKey.some((f) => f.status === 'CONFIRMED') ? 'SATISFIED' : forKey.some((f) => f.status === 'CANDIDATE') ? 'INVALID' : 'MISSING';
           requirements[key] = state;
           if (state !== 'SATISFIED' && key !== 'contact.email') missing.push({ key, question: def.question });
+          const attempt = resolutionAttemptFor(key, state, forKey.map((f) => ({ id: f.id, status: f.status, sourceType: f.sourceType })), { externalClarificationAvailable });
+          // Protokollierung darf die Anforderungsermittlung nie verhindern; derselbe Faktenstand wird nur einmal festgehalten.
+          await this.caseEvents
+            .append(ctx.tenantId, caseId, { type: CASE_EVENT_TYPES.CONTEXT_RESOLUTION_ATTEMPTED, payload: { ...attempt }, dedupeKey: resolutionDedupeKey(caseId, attempt) })
+            .catch(() => undefined);
         }
         return { requirements, missing, complete: missing.length === 0 && requirements['contact.email'] === 'SATISFIED', category: item?.category ?? null, executionMode: 'SIMULATED' };
       },

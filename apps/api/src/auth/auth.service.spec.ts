@@ -19,7 +19,7 @@ function buildUser(overrides: Partial<Record<string, unknown>> = {}) {
     tenantId: 'tenant_1',
     email: 'admin@musterwerk.example',
     status: 'ACTIVE',
-    tenant: { id: 'tenant_1', status: 'ACTIVE' },
+    tenant: { id: 'tenant_1', status: 'ACTIVE', suspensionScopes: [] as string[] },
     roles: [
       {
         role: {
@@ -85,7 +85,7 @@ describe('AuthService', () => {
 
     it('rejects a user on a suspended tenant', async () => {
       prisma.user.findUnique.mockResolvedValue(
-        buildUser({ tenant: { id: 'tenant_1', status: 'SUSPENDED' } }),
+        buildUser({ tenant: { id: 'tenant_1', status: 'SUSPENDED', suspensionScopes: [] } }),
       );
       await expect(service.login('admin@musterwerk.example', 'whatever')).rejects.toBeInstanceOf(
         UnauthorizedException,

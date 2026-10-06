@@ -105,3 +105,49 @@ keine Änderung an Home, Navigation oder Sonde (OPS-29). Die UI folgt der API: e
 * UI/UX v2 Addendum 01 („Production Diagnostics Boundary“) wurde nicht mitgeliefert.
 * MFA/WebAuthn: nicht Teil dieser Umsetzung (OPS-A5).
 * Echte Zweitanbieter (z. B. Azure/Mistral): nur Mock-/Contract-Nachweis (OPS-35), keine Live-Credentials.
+
+
+## 8. Umsetzungsstand je Kriterium (Stand 07.10.2026)
+
+Legende: **COMPLETE** = serverseitig umgesetzt und automatisiert getestet · **PARTIAL** = Teil umgesetzt, Rest benannt · **MISSING** = nicht umgesetzt. Alle Nachweise sind **TESTED LOCALLY** (echte Postgres-Instanz mit RLS,
+echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MOCK** bzw. **REQUIRES PROVIDER CREDENTIALS**. Es gibt **keine Live-Validierung** gegen einen Drittanbieter-Account.
+
+| ID | Status | Nachweis (Test) | Offener Rest |
+|---|---|---|---|
+| OPS-01 | COMPLETE | `platform-security-boundary` OPR-01/02/03, DB-Checks, Token-Fälschung | – |
+| OPS-02 | COMPLETE | OPR-02/03 (Tenant-Admin an jeder Plattformroute abgewiesen, Rollen nur `PLATFORM_*`) | – |
+| OPS-03 | COMPLETE (API) | alle `/platform/*`-Routen hinter `PlatformAuthGuard` + `PlatformScopeGuard` | **Plattform-UI fehlt** (siehe unten) |
+| OPS-04 | COMPLETE | Audit je Änderung mit Vorher/Nachher/Begründung (Identität, AI, Flags, Switches, Connectoren, Mandanten, Support) | Typen für Sicherheitsrichtlinie noch ohne Auslöser |
+| OPS-05 | COMPLETE | Adapter-Registry, `platform-ai-governance` | – |
+| OPS-06 | COMPLETE | Modell-/Profilregister, Immutability-Trigger | – |
+| OPS-07 | COMPLETE | alle Aufrufer nutzen Profile | `BUSINESS_DRAFTING` ohne Aufrufer |
+| OPS-08 | COMPLETE | Plattformverbindungen + Resolver; Env nur Bootstrap | – |
+| OPS-09 | PARTIAL | BYOK nur freigegebene Anbieter/Modelle (sobald Register gepflegt) | Profil-Fähigkeiten werden für BYOK-Modelle nicht geprüft |
+| OPS-10 | COMPLETE | OAI-07/08 (Unit + E2E) | – |
+| OPS-11 | COMPLETE | OAI-02/OPS-35 | – |
+| OPS-12 | PARTIAL | Health aus echten Aufrufen + Notbremse beeinflusst Routing | keine aktive periodische Prüfung |
+| OPS-13 | PARTIAL | Usage je Mandant/Profil/Anbieter/Modell, Kosten nur mit Kostenprofil | Kostenlimits/Anomalie-Alarme fehlen |
+| OPS-14 | COMPLETE | Overlay auf dem einen Katalog | Mehrversionen je Connector |
+| OPS-15 | PARTIAL | OCF-01 (neue Verbindungen/Aktionen gesperrt, verständlicher Status) | laufende Aktionen werden nicht aktiv beendet |
+| OPS-16 | COMPLETE | Global/Umgebung/Kohorte/Mandant (OCF-03/04) | – |
+| OPS-17 | COMPLETE | reservierte Schlüssel, Policy-Obergrenze (OCF-05) | – |
+| OPS-18 | COMPLETE | drei Kill Switches mit Durchsetzung (OCF-05/06) | feinere Schalter über vorhandene Mittel abgebildet |
+| OPS-19 | COMPLETE | Business-/Diagnose-Projektion getrennt (AD-15/16/17) | – |
+| OPS-20 | COMPLETE | zentrale Redaction, keine Payloads in der Diagnose | – |
+| OPS-21 | COMPLETE | OPR-04…07 (Support-Sessions) | – |
+| OPS-22 | COMPLETE | kein Impersonation-Pfad, `ASSISTED_ACTION` nicht verfügbar | – |
+| OPS-23 | COMPLETE | Audit je Anforderung/Freigabe/Zugriff/Schließen | – |
+| OPS-24 | PARTIAL | Präzedenz für AI, Policy, Connectoren, Sperren umgesetzt | Blueprint-/Agent-Ebene nicht eigens getestet |
+| OPS-25 | PARTIAL | Mandant kann Plattformobergrenze nicht lockern (getestet für Policy/Kill Switch) | Blueprint/LLM-Fälle nicht eigens getestet |
+| OPS-26 | PARTIAL | Sitzungen, Verbindungen, Routen, Nutzung, Flags umgebungsgebunden | nicht alle Konfigurationen |
+| OPS-27 | PARTIAL | Region/Datenrichtlinie vor Modellwahl | keine mandantenspezifische Region |
+| OPS-28 | COMPLETE | `expectedVersion` überall, Konkurrenztests (Route, Flag, Modell, Verbindung, Session) | – |
+| OPS-29 | COMPLETE | Mandanten-UI unverändert bis auf entfallene technische Felder im Knotenpanel | – |
+| OPS-30 | COMPLETE | Governance-Index | – |
+| OPS-31 | PARTIAL | OPR-01…08, OAI-01…10, OCF-01…06, OAS-01…04 automatisiert | OAS-05 (Diagnose-Export) und Teile von §29.5 (Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart, Kill Switch + Replan gleichzeitig) nicht abgedeckt |
+| OPS-32 | COMPLETE | Diagnose/Support mandantenscharf, gleiche 404-Antwort | – |
+| OPS-33 | COMPLETE | begründete, auditierte, minimierte Zugriffe | – |
+| OPS-34 | COMPLETE | `PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md` | – |
+| OPS-35 | COMPLETE (TESTED WITH MOCK) | zwei registrierte Adapter, Providerwechsel ohne Businesscode | kein zweiter echter Anbieter mit Zugangsdaten |
+
+**Nicht umgesetzt:** Plattform-UI (`/platform/*` im Web), MFA/WebAuthn, Kostenlimits und Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close` als Abläufe, Mandanten-Support-Historie.

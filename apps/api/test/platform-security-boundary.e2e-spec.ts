@@ -311,7 +311,7 @@ describe('Platform security boundary (e2e)', () => {
       const operator = await makeIdentity(PLATFORM_ROLES.PLATFORM_OPERATOR, 'tenants');
       const list = await get('/platform/tenants', operator.token).expect(200);
       expect(list.body.length).toBeGreaterThan(0);
-      expect(Object.keys(list.body[0]).sort()).toEqual(['createdAt', 'deletionRequested', 'displayName', 'lifecycleStatus', 'slug', 'tenantId', 'userCount']);
+      expect(Object.keys(list.body[0]).sort()).toEqual(['createdAt', 'deletionRequested', 'displayName', 'featureCohorts', 'lifecycleStatus', 'slug', 'suspensionScopes', 'tenantId', 'userCount']);
       const overview = await get('/platform/overview', operator.token).expect(200);
       expect(overview.body.notYetAvailable).toEqual(expect.arrayContaining(['Support-Sessions']));
       expect(overview.body.environment).toBe(env.ORBIT_ENVIRONMENT);

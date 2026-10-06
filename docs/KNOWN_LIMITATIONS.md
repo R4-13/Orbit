@@ -124,3 +124,19 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 * **UI v2 – Sonde:** keine Funktion „Antwort stoppen“ (kein Abbruch einer laufenden Modellantwort im Backend); die Modi DELEGATE/NAVIGATE sind nicht verfügbar.
 * **UI v2 – Konnektoren:** pro Anbieter ist nur ein Konto wählbar.
 * **UI v2 – Prüfungen:** keine manuelle Screenreader- und Mobile-Tastaturprüfung (nur axe-core automatisiert); kein automatisierter Mandantenwechsel A/B im Browser.
+
+## Plattformbetrieb (Amendment 03) und adaptive Orchestrierung (Amendment 02 v1.2)
+
+Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md).
+
+* **Kein Plattform-UI:** `/platform/*` existiert nur als API. Betreiber-Zugänge werden mit `scripts/platform-bootstrap.ts` angelegt (Passwort aus der Umgebung, nie im Chat/Log).
+* **Kein MFA:** Step-up ist Passwort-Re-Authentifizierung; eine echte zweite Stufe (TOTP/WebAuthn) fehlt.
+* **KI-Anbieter:** zwei Adapter sind registriert und mit Mock getestet; ein zweiter echter Anbieter ist **REQUIRES PROVIDER CREDENTIALS**. Profil-Fähigkeiten werden für BYOK-Modelle nicht geprüft; `BUSINESS_DRAFTING` hat noch keinen Aufrufer.
+* **Health/Kosten:** Health entsteht aus echten Aufrufen, es gibt keine aktive periodische Prüfung; Kosten nur mit hinterlegtem Kostenprofil, keine Kostenlimits oder Anomalie-Alarme.
+* **Connector-Sperre:** neue Verbindungen und Aktionen werden gesperrt, bereits laufende Aktionen aber nicht aktiv beendet.
+* **Region:** Region-/Datenrichtlinie wird vor der Modellwahl geprüft, es gibt keine mandantenspezifische Region.
+* **Diagnose:** kein Export (OAS-05); Queue-/Worker-Gesundheit fehlt; Tests für Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart und Kill Switch + Replan gleichzeitig fehlen.
+* **Mandantenlebenszyklus:** `provision`/`offboard`/`close` sind keine Abläufe; es gibt keine Mandanten-Support-Historie.
+* **Limits und Abschluss (BP-39/40):** `maxActionsPerCase`, `maxConsecutiveCapabilityFailures` und Kostenlimit fehlen; kein `CompletionEvaluation`-Snapshot und kein Goal-Status.
+* **Auflösungsleiter:** Stufen Fachsystem und weitere Quelle werden nur ausgewertet, soweit vorhandene Tools sie als Faktenquelle liefern; AD-13 (Quelle zeitweise nicht verfügbar) ist nicht eigens getestet.
+* **Live-Nachweis:** Versand bleibt `SIMULATED` (echter Gmail-Versand **BLOCKED_BY_EXTERNAL_PERMISSION**); die neuen Pfade sind nicht mit einem echten Modell live bewiesen.

@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, ParseEnumPipe, Post, Put, UseGuards, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS } from '@orbit/shared';
+import { IntegrationUnavailableError, PERMISSIONS } from '@orbit/shared';
 import { IntegrationConnectorType } from '@orbit/domain';
 import { CONNECTOR_REGISTRY, getConnectorMetadata } from '@orbit/integration-core';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { AuditService } from '../audit/audit.service';
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { TasksService } from '../tasks/tasks.service';
 import { ConnectorRequestDto } from './dto/connector-request.dto';
 import { ConnectorStatusService } from './connector-status.service';
@@ -28,7 +29,16 @@ export class IntegrationsController {
     private readonly connectorStatus: ConnectorStatusService,
     private readonly audit: AuditService,
     private readonly tasks: TasksService,
+    private readonly platformControl: PlatformControlService,
   ) {}
+
+  /** Plattformsperre eines Connectors (Amendment 03 §13.3): keine neuen Verbindungen, mit verständlicher Meldung. */
+  private async assertConnectorOpen(connectorType: IntegrationConnectorType): Promise<void> {
+    const blocked = await this.platformControl.connectorBlocked(connectorType);
+    if (blocked.blocked) {
+      throw new IntegrationUnavailableError(`Dieser Connector ist derzeit plattformweit gesperrt${blocked.reason ? `: ${blocked.reason}` : ''}. Neue Verbindungen sind vorübergehend nicht möglich; bestehende Daten bleiben erhalten.`, { connectorType });
+    }
+  }
 
   /**
    * UI v2 §18.2: ein System, das ORBIT nicht unterstützt, wird als Anfrage erfasst – nicht als erfundener Connector angeboten.
@@ -48,8 +58,9 @@ export class IntegrationsController {
 
   /** §4/§13 des Integration-Framework-Amendments — der statische Connector-Katalog, unabhängig vom Verbindungsstatus dieses Tenants. */
   @Get('connectors')
-  listConnectors() {
-    return CONNECTOR_REGISTRY;
+  async listConnectors() {
+    // Derselbe statische Katalog, ergänzt um den Plattformzustand (ohne Eintrag: ACTIVE) – keine zweite Registry.
+    return Promise.all(CONNECTOR_REGISTRY.map(async (metadata) => ({ ...metadata, platformStatus: (await this.platformControl.connectorGovernance(metadata.id)).lifecycle })));
   }
 
   @Get('connectors/:connectorType')
@@ -62,22 +73,24 @@ export class IntegrationsController {
   }
 
   @Put(':connectorType/credentials')
-  upsertCredentials(
+  async upsertCredentials(
     @CurrentUser() user: AuthenticatedUser,
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
     @Body() dto: UpsertIntegrationCredentialsDto,
   ) {
+    await this.assertConnectorOpen(connectorType);
     return this.integrationsService.upsertCredentials(user.tenantId, user.id, connectorType, dto.credentials, dto.config);
   }
 
   /** §5.1/§7.3 — startet den OAuth-Flow und liefert die Google-Autorisierungs-URL, zu der das Frontend weiterleitet. */
   @Post(':connectorType/connect')
-  startConnect(
+  async startConnect(
     @CurrentUser() user: AuthenticatedUser,
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
     @Query('send') send?: string,
   ) {
     this.assertOAuthCapable(connectorType, 'OAuth-Connect');
+    await this.assertConnectorOpen(connectorType);
     // `?send=true` additionally requests the gmail.send scope (explicit, minimal-permission opt-in).
     return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true' });
   }

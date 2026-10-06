@@ -6,6 +6,7 @@ import { ChannelSyncModule } from '../src/channel-sync/channel-sync.module';
 import { EnvModule } from '../src/config/env.module';
 import { IntakeModule } from '../src/intake/intake.module';
 import { MetricsModule } from '../src/metrics/metrics.module';
+import { PlatformControlModule } from '../src/platform-control/platform-control.module';
 import { PolicyModule } from '../src/policy/policy.module';
 import { ProcessModule } from '../src/process/process.module';
 import { PrismaModule } from '../src/prisma/prisma.module';
@@ -48,6 +49,8 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     PolicyModule,
     QueueModule,
     SecurityModule,
+    // Policy, KI-Auflösung und Capability-Ausführbarkeit fragen die Plattformsteuerung ab (Kill Switches, Sperren) – auch im Worker.
+    PlatformControlModule,
     WorkflowsModule,
     IntakeModule,
     ProcessModule,

@@ -44,6 +44,10 @@ datasource db {
 enum TenantStatus {
   ACTIVE
   SUSPENDED
+  /// Amendment 03 §6.2: Lebenszyklus der Plattform (Bereitstellung → aktiv → ausgesetzt → Offboarding → geschlossen).
+  PROVISIONING
+  OFFBOARDING
+  CLOSED
 }
 
 enum UserStatus {
@@ -294,6 +298,10 @@ model Tenant {
   /// Aufrufe als bewusste Sicherheitshürde gegen versehentliche Löschung.
   deletionRequestedAt       DateTime?    @map("deletion_requested_at")
   deletionRequestedByUserId String?      @map("deletion_requested_by_user_id")
+  /// Amendment 03 §6: Rollout-Kohorten und feingranulare Sperrarten (LOGIN, AUTOMATION, CONNECTORS, BILLING, SECURITY_QUARANTINE).
+  featureCohorts            String[]     @default([]) @map("feature_cohorts")
+  suspensionScopes          String[]     @default([]) @map("suspension_scopes")
+  lifecycleNote             String?      @map("lifecycle_note")
   createdAt                 DateTime     @default(now()) @map("created_at")
   updatedAt                 DateTime     @updatedAt @map("updated_at")
 
@@ -2511,4 +2519,113 @@ model PlatformSecret {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("platform_secrets")
+}
+
+// ============================================================================
+// Plattformsteuerung (Amendment 03 §13–§15): Feature Flags, Kill Switches, Connector-Lifecycle
+// ============================================================================
+
+enum PlatformFlagLifecycle {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  RETIRED
+}
+
+enum PlatformConnectorLifecycle {
+  DRAFT
+  TESTING
+  ACTIVE
+  DEPRECATED
+  SUSPENDED
+  RETIRED
+}
+
+model PlatformFeatureFlag {
+  id                   String                @id @default(uuid())
+  key                  String                @unique
+  description          String
+  lifecycle            PlatformFlagLifecycle @default(DRAFT)
+  defaultValue         Json                  @map("default_value")
+  environmentOverrides Json                  @default("[]") @map("environment_overrides")
+  cohortOverrides      Json                  @default("[]") @map("cohort_overrides")
+  tenantOverrides      Json                  @default("[]") @map("tenant_overrides")
+  owner                String
+  expiresAt            DateTime?             @map("expires_at")
+  exposeToTenant       Boolean               @default(false) @map("expose_to_tenant")
+  version              Int                   @default(1)
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+
+  @@map("platform_feature_flags")
+}
+
+model PlatformKillSwitch {
+  id              String    @id @default(uuid())
+  key             String    @unique
+  engaged         Boolean   @default(false)
+  reason          String?
+  changedByUserId String?   @map("changed_by_user_id")
+  changedAt       DateTime? @map("changed_at")
+  version         Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@map("platform_kill_switches")
+}
+
+/// Governance-Overlay auf dem einen Connector-Katalog (integration-core CONNECTOR_REGISTRY). Ohne Zeile gilt ACTIVE.
+model PlatformConnectorDefinition {
+  id              String                     @id @default(uuid())
+  connectorKey    String                     @unique @map("connector_key")
+  lifecycle       PlatformConnectorLifecycle @default(ACTIVE)
+  reason          String?
+  dataPolicyRefs  String[]                   @default([]) @map("data_policy_refs")
+  changedByUserId String?                    @map("changed_by_user_id")
+  version         Int                        @default(1)
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
+
+  @@map("platform_connector_definitions")
+}
+
+// ============================================================================
+// Support-Sessions (Amendment 03 §18) — expliziter, zeitlich begrenzter, scopebasierter Zugriff; kein stilles Impersonation
+// ============================================================================
+
+enum PlatformSupportSessionStatus {
+  REQUESTED
+  ACTIVE
+  EXPIRED
+  REVOKED
+  CLOSED
+}
+
+model PlatformSupportSession {
+  id              String                       @id @default(uuid())
+  /// Verweis auf den Mandanten (kein FK: der Nachweis überlebt eine Mandantenlöschung).
+  targetTenantId  String                       @map("target_tenant_id")
+  operatorUserId  String                       @map("operator_user_id")
+  reasonCode      String                       @map("reason_code")
+  freeTextReason  String                       @map("free_text_reason")
+  ticketRef       String?                      @map("ticket_ref")
+  mode            String
+  scopes          String[]                     @default([])
+  requestedMinutes Int                         @map("requested_minutes")
+  status          PlatformSupportSessionStatus @default(REQUESTED)
+  approvedByUserId String?                     @map("approved_by_user_id")
+  approvedAt      DateTime?                    @map("approved_at")
+  activatedAt     DateTime?                    @map("activated_at")
+  /// Wird bei Aktivierung gesetzt und nie verlängert (kein stilles Erneuern).
+  expiresAt       DateTime?                    @map("expires_at")
+  closedAt        DateTime?                    @map("closed_at")
+  closedByUserId  String?                      @map("closed_by_user_id")
+  closeReason     String?                      @map("close_reason")
+  version         Int                          @default(1)
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+
+  @@index([targetTenantId, status])
+  @@index([operatorUserId, status])
+  @@map("platform_support_sessions")
 }
