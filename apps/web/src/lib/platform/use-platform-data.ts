@@ -25,6 +25,16 @@ export interface PlatformTenantRow {
   createdAt: string;
 }
 
+export interface TenantLifecyclePreview {
+  tenantId: string;
+  current: { status: string; suspensionScopes: string[]; featureCohorts: string[] };
+  target: { status: string; suspensionScopes: string[]; featureCohorts: string[] };
+  effects: string[];
+  activeUsers: number;
+  /** Bindet die Bestätigung an genau die angezeigte Wirkung. */
+  confirmationToken: string;
+}
+
 export interface PlatformAuditRow {
   id: string;
   at: string;

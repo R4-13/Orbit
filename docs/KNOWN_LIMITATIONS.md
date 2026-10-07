@@ -129,7 +129,7 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 
 Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md).
 
-* **Plattform-UI teilweise:** `/platform/*` bietet Anmeldung, Übersicht, Mandantenliste, KI-Register (lesend), Notschalter, Anbindungskatalog und Audit ([`PLATFORM_UI.md`](PLATFORM_UI.md)). Mandantenzustand, Feature-Flags, KI-Routen/Profile, Betreiberidentitäten und Support-Sitzungen sind nur über die API bedienbar. Betreiber-Zugänge werden mit `scripts/platform-bootstrap.ts` angelegt (Passwort aus der Umgebung, nie im Chat/Log). Die Betreibersitzung liegt im `sessionStorage` des Tabs (kein httpOnly-Cookie).
+* **Plattform-UI teilweise:** `/platform/*` bietet Anmeldung, Übersicht, Mandantenliste mit Zustandsänderung, KI-Register (lesend), Notschalter, Anbindungskatalog und Audit ([`PLATFORM_UI.md`](PLATFORM_UI.md)). Feature-Flags, KI-Routen/Profile, Betreiberidentitäten und Support-Sitzungen sind nur über die API bedienbar. Betreiber-Zugänge werden mit `scripts/platform-bootstrap.ts` angelegt (Passwort aus der Umgebung, nie im Chat/Log). Die Betreibersitzung liegt im `sessionStorage` des Tabs (kein httpOnly-Cookie).
 * **Kein MFA:** Step-up ist Passwort-Re-Authentifizierung; eine echte zweite Stufe (TOTP/WebAuthn) fehlt.
 * **KI-Anbieter:** zwei Adapter sind registriert und mit Mock getestet; ein zweiter echter Anbieter ist **REQUIRES PROVIDER CREDENTIALS**. Profil-Fähigkeiten werden für BYOK-Modelle nicht geprüft; `BUSINESS_DRAFTING` hat noch keinen Aufrufer.
 * **Health/Kosten:** Health entsteht aus echten Aufrufen, es gibt keine aktive periodische Prüfung; Kosten nur mit hinterlegtem Kostenprofil, keine Kostenlimits oder Anomalie-Alarme.

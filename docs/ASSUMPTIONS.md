@@ -966,4 +966,6 @@ aufgerufen wird (kein Scheduler/Cron/Webhook existiert).
 
 | 520 | **Drosselgrenzen nur im E2E-Testprozess angehoben:** `AUTH_RATE_LIMIT_MAX`/`PLATFORM_AUTH_RATE_LIMIT_MAX` werden über jest `setupFiles` (`test/utils/e2e-env.ts`) auf 100000 gesetzt, weil die Suite hunderte Anmeldungen von einer Adresse macht und sonst reproduzierbar mit 429 scheitert (zweimal beobachtet; `.env` trägt bewusst die Betriebswerte). Anwendungs-Standardwerte und die Sicherheitsfunktion bleiben unverändert; Opt-out `E2E_KEEP_THROTTLE_LIMITS=1` für einen Drosselungstest. | Testpraxis |
 
+| 521 | **Mandantenzustand in der UI nur über Vorschau und gebundene Bestätigung:** jede Änderung am Ziel (Zustand, Sperren, Kohorten) verwirft die Vorschau; bestätigt wird mit dem Token der angezeigten Vorschau, der Server lehnt abweichende Ziele ab. Der Playwright-Test ändert nur eine unkritische Funktionsgruppe am Demo-Mandanten und setzt sie zurück (kein Zugriff betroffen). Anzeigenamen sind nicht eindeutig (mehrere „Musterwerk GmbH“), Auswahl in Tests daher über die Kennung. | Amendment 03 §6, §26.2 |
+
 Weitere Annahmen werden in den folgenden Phasen ergänzt.

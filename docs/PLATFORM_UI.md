@@ -16,14 +16,14 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 |---|---|---|
 | `/platform/login` | Betreiber-Anmeldung | – |
 | `/platform` | Kennzahlen: Mandanten nach Zustand, Betreiberzugänge, Sitzungen, Audit-Ereignisse (24 h), „Noch nicht verfügbar“ | – |
-| `/platform/tenants` | Mandantenliste mit Suche, Zustand, Sperren, Benutzerzahl (nur Stammdaten, keine Geschäftsdaten) | nein (siehe Lücken) |
+| `/platform/tenants` | Mandantenliste mit Suche, Zustand, Sperren, Funktionsgruppen, Benutzerzahl (nur Stammdaten, keine Geschäftsdaten); **Zustand ändern** (Zustand, Sperrarten, Kohorten): Wirkungsvorschau → Begründung → Bestätigung gebunden an die Vorschau (Bestätigungs-Token) → Step-up | ja |
 | `/platform/ai` | Anbieter, Modelle, Profile, Routen, Plattformverbindungen, Gesundheit, Nutzung (30 Tage, nur mit Kosten-Scope) | „Register aus der Umgebung anlegen“ (Step-up) |
 | `/platform/control` | Notschalter (auslösen/lösen), Anbindungskatalog mit Zustandswechsel und Wirkungsvorschau | ja (Step-up, Begründung) |
 | `/platform/audit` | unveränderliches Plattform-Audit, Filter Ereignistyp/Mandant, seitenweise | – |
 
 ## Bewusste Lücken
 
-* Mandantenzustand ändern (Sperren, Kohorten; API mit Vorschau + Bestätigungs-Token vorhanden), Feature-Flags, KI-Routen/Profile pflegen, Betreiberzugänge verwalten und Support-Sitzungen bedienen: **nur über die API**, noch nicht in der Oberfläche.
+* Feature-Flags, KI-Routen/Profile pflegen, Betreiberzugänge verwalten und Support-Sitzungen bedienen: **nur über die API**, noch nicht in der Oberfläche.
 * Kein MFA; Step-up ist Passwort-Re-Authentifizierung.
 * Der Sitzungsspeicher ist `sessionStorage` (MVP-Vereinfachung wie beim Mandanten-Token-Speicher): ein XSS auf dieser Herkunft könnte Token lesen. Eine httpOnly-Cookie-Sitzung wäre der nächste Härtungsschritt (Sicherheitshärtung).
 
@@ -33,4 +33,4 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 E2E_PLATFORM_EMAIL=<owner> E2E_PLATFORM_PASSWORD=<passwort> pnpm --filter @orbit/web exec playwright test e2e/platform.spec.ts
 ```
 
-Ohne diese Variablen werden die Tests übersprungen (nie mit erfundenen Zugangsdaten). Abgedeckt: Weiterleitung ohne Sitzung, falsches Passwort und Mandantenzugang, Anmeldung und Sitzungsspeicher, Seiten ohne Fehlerzustand, Notschalter mit Step-up (Abbruch ändert nichts; auslösen und lösen; Audit-Eintrag), Domänentrennung, axe A/AA.
+Ohne diese Variablen werden die Tests übersprungen (nie mit erfundenen Zugangsdaten). Abgedeckt: Weiterleitung ohne Sitzung, falsches Passwort und Mandantenzugang, Anmeldung und Sitzungsspeicher, Seiten ohne Fehlerzustand, Notschalter mit Step-up (Abbruch ändert nichts; auslösen und lösen; Audit-Eintrag), Mandantenzustand (Wirkung vorab, Pflichtbegründung, Vorschau verfällt bei Änderung, Funktionsgruppe setzen und entfernen, Audit), Domänentrennung, axe A/AA.

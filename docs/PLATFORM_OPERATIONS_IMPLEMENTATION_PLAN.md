@@ -116,7 +116,7 @@ echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MO
 |---|---|---|---|
 | OPS-01 | COMPLETE | `platform-security-boundary` OPR-01/02/03, DB-Checks, Token-Fälschung | – |
 | OPS-02 | COMPLETE | OPR-02/03 (Tenant-Admin an jeder Plattformroute abgewiesen, Rollen nur `PLATFORM_*`) | – |
-| OPS-03 | COMPLETE (API), PARTIAL (UI) | alle `/platform/*`-Routen hinter `PlatformAuthGuard` + `PlatformScopeGuard`; Oberfläche `/platform/*` ([`PLATFORM_UI.md`](PLATFORM_UI.md)) mit Anmeldung, Übersicht, Mandanten, KI-Steuerung, Notschalter/Anbindungen, Audit; Playwright `platform.spec.ts` (7 Tests) | Mandantenzustand, Feature-Flags, KI-Routen/Profile, Identitäten und Support-Sitzungen noch nur per API |
+| OPS-03 | COMPLETE (API), PARTIAL (UI) | alle `/platform/*`-Routen hinter `PlatformAuthGuard` + `PlatformScopeGuard`; Oberfläche `/platform/*` ([`PLATFORM_UI.md`](PLATFORM_UI.md)) mit Anmeldung, Übersicht, Mandanten, KI-Steuerung, Notschalter/Anbindungen, Audit; Playwright `platform.spec.ts` (8 Tests) | Feature-Flags, KI-Routen/Profile, Identitäten und Support-Sitzungen noch nur per API |
 | OPS-04 | COMPLETE | Audit je Änderung mit Vorher/Nachher/Begründung (Identität, AI, Flags, Switches, Connectoren, Mandanten, Support) | Typen für Sicherheitsrichtlinie noch ohne Auslöser |
 | OPS-05 | COMPLETE | Adapter-Registry, `platform-ai-governance` | – |
 | OPS-06 | COMPLETE | Modell-/Profilregister, Immutability-Trigger | – |
@@ -150,4 +150,4 @@ echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MO
 | OPS-34 | COMPLETE | `PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md` | – |
 | OPS-35 | COMPLETE (TESTED WITH MOCK) | zwei registrierte Adapter, Providerwechsel ohne Businesscode | kein zweiter echter Anbieter mit Zugangsdaten |
 
-**Nicht umgesetzt:** Plattform-UI für die schreibenden Bereiche Mandantenzustand, Flags, KI-Routen/Profile, Identitäten, Support-Sitzungen (lesende Seiten, Notschalter und Anbindungen sind umgesetzt), MFA/WebAuthn, Kostenlimits und Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close` als Abläufe, Mandanten-Support-Historie.
+**Nicht umgesetzt:** Plattform-UI für die schreibenden Bereiche Flags, KI-Routen/Profile, Identitäten, Support-Sitzungen (lesende Seiten, Notschalter und Anbindungen sind umgesetzt), MFA/WebAuthn, Kostenlimits und Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close` als Abläufe, Mandanten-Support-Historie.

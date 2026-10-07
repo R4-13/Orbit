@@ -3,9 +3,9 @@
 import { Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
 import { formatDateTime } from '../../lib/format';
 import { platformErrorMessage } from '../../lib/platform/platform-client';
+import { tenantStatusLabel } from '../../lib/platform/tenant-labels';
 import { usePlatformOverview } from '../../lib/platform/use-platform-data';
 
-const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Aktiv', SUSPENDED: 'Gesperrt', PENDING: 'In Einrichtung', CLOSED: 'Geschlossen' };
 
 function Figure({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -32,7 +32,7 @@ export default function PlatformOverviewPage() {
         <p className="text-sm text-slate-600">Stand {formatDateTime(data.generatedAt)} · Umgebung {data.environment}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Figure label="Mandanten" value={data.tenants.total} hint={Object.entries(data.tenants.byStatus).map(([status, count]) => `${STATUS_LABELS[status] ?? status}: ${count}`).join(' · ')} />
+        <Figure label="Mandanten" value={data.tenants.total} hint={Object.entries(data.tenants.byStatus).map(([status, count]) => `${tenantStatusLabel(status)}: ${count}`).join(' · ')} />
         <Figure label="Betreiberzugänge aktiv" value={data.platformIdentities.active} hint={data.platformIdentities.disabled > 0 ? `${data.platformIdentities.disabled} deaktiviert` : undefined} />
         <Figure label="Aktive Betreibersitzungen" value={data.activePlatformSessions} />
         <Figure label="Audit-Ereignisse (24 h)" value={data.platformAuditEventsLast24h} />
