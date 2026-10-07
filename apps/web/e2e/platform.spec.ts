@@ -160,6 +160,53 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(page.getByText('UI-Test: Funktionsgruppe entfernen').first()).toBeVisible();
   });
 
+  test('Feature-Flags: anlegen (Entwurf), Verteilung sehen, aktivieren mit Begründung, zurückziehen – alles im Audit', async ({ page }) => {
+    await loginViaApiSession(page);
+    const key = `ui.test_${Math.random().toString(16).slice(2, 8)}`;
+    await page.goto('/platform/features');
+    await expect(page.getByRole('heading', { name: 'Feature-Flags' })).toBeVisible();
+    await page.getByRole('button', { name: 'Neues Flag' }).click();
+    const form = page.getByRole('form', { name: 'Feature-Flag anlegen' });
+    await form.getByLabel('Schlüssel').fill(key);
+    await form.getByLabel('Verantwortlich').fill('UI-Test');
+    await form.getByLabel('Beschreibung').fill('UI-Test: Flag wird nach dem Test zurückgezogen');
+    await form.getByRole('button', { name: 'Flag anlegen' }).click();
+    const stepUp = page.getByRole('dialog', { name: 'Aktion bestätigen' });
+    if (await stepUp.waitFor({ state: 'visible', timeout: 4000 }).then(() => true, () => false)) {
+      await stepUp.getByLabel('Passwort').fill(PASSWORD as string);
+      await stepUp.getByRole('button', { name: 'Bestätigen' }).click();
+    }
+    const row = page.getByRole('row').filter({ hasText: key });
+    await expect(row.locator('span').getByText('Entwurf', { exact: true })).toBeVisible();
+
+    const edit = async (reason: string, change: () => Promise<void>) => {
+      await row.getByRole('button', { name: `Flag ${key} ändern` }).click();
+      const panel = page.getByLabel(`Flag ${key} ändern`, { exact: true }).last();
+      await expect(panel.getByText(/Aktuell für \d+ Mandanten/)).toBeVisible(); // die Verteilung ist vor der Änderung sichtbar
+      await expect(panel.getByRole('button', { name: 'Änderung prüfen' })).toBeDisabled();
+      await change.call(null);
+      await panel.getByRole('button', { name: 'Änderung prüfen' }).click();
+      await expect(panel.getByRole('button', { name: 'Änderung bestätigen' })).toBeDisabled(); // Begründung fehlt
+      await panel.getByLabel(/Begründung/).fill(reason);
+      await panel.getByRole('button', { name: 'Änderung bestätigen' }).click();
+    };
+    await edit('UI-Test: Flag aktivieren', async () => {
+      await page.getByLabel('Lebenszyklus').selectOption('ACTIVE');
+      await page.getByLabel('Standardwert').selectOption('true');
+    });
+    await expect(row.locator('span').getByText('Aktiv', { exact: true })).toBeVisible();
+    await expect(row.getByRole('cell', { name: 'An', exact: true })).toBeVisible();
+
+    await edit('UI-Test: Flag zurückziehen', async () => {
+      await page.getByLabel('Lebenszyklus').selectOption('RETIRED');
+    });
+    await expect(row.locator('span').getByText('Zurückgezogen', { exact: true })).toBeVisible();
+
+    await page.goto('/platform/audit');
+    await page.getByLabel('Ereignistyp').fill('PLATFORM_FEATURE_FLAG_CHANGED');
+    await expect(page.getByText('UI-Test: Flag zurückziehen').first()).toBeVisible();
+  });
+
   test('keine Verbindung zwischen den Domänen: die Mandanten-Oberfläche verlinkt den Plattformbereich nicht, ein Mandantenzugang öffnet ihn nicht', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await expect(page.locator('a[href^="/platform"]')).toHaveCount(0);

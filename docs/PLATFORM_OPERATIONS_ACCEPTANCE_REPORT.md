@@ -11,7 +11,7 @@ Plan und Gap-Matrix: [`PLATFORM_OPERATIONS_IMPLEMENTATION_PLAN.md`](PLATFORM_OPE
 | **Automatisiert getestet (TESTED LOCALLY)** | echte Postgres mit RLS, echte Guards/JWT-Domänen; Modell, Mail und zweiter KI-Anbieter sind Testdoubles (**TESTED WITH MOCK**) |
 | **Live bewiesen (LIVE TESTED)** | siehe §5 — nur das, was im Docker-Stack tatsächlich durchlaufen wurde |
 | **Externe Blocker** | echter Gmail-Versand (`gmail.send`-Zustimmung), zweiter echter KI-Anbieter (Zugangsdaten), MFA/WebAuthn-Dienst |
-| **Nicht umgesetzt** | Plattform-UI für Flags, KI-Routen/Profile, Identitäten, Support-Sitzungen (Übersicht, Mandanten inkl. Zustandsänderung, KI lesend, Notschalter, Anbindungen, Audit sind umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md)), MFA, Kostenlimits/Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
+| **Nicht umgesetzt** | Plattform-UI für KI-Routen/Profile und Identitäten (Übersicht, Mandanten inkl. Zustandsänderung, Feature-Flags, Support-Sitzungen mit Vier-Augen-Freigabe, KI lesend, Notschalter, Anbindungen, Audit sind umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md)), MFA, Kostenlimits/Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
 
 Es gibt **keine Live-Validierung gegen einen Drittanbieter-Account** für die neuen Pfade.
 
@@ -38,7 +38,7 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 | Punkt | Folge |
 |---|---|
-| Plattform-UI nur teilweise | Schreibende Bereiche außer Notschaltern, Anbindungen und Mandantenzustand nur über die API; Betreiberzugänge per `scripts/platform-bootstrap.ts` bzw. API |
+| Plattform-UI nur teilweise | KI-Routen/Profile und Identitäten nur über die API; Betreiberzugänge per `scripts/platform-bootstrap.ts` bzw. API |
 | MFA/WebAuthn fehlt | Step-up ist Passwort-Re-Auth |
 | BP-39 ohne Kostenlimit | Aktions-/Fehlerlimits und Abschlussbewertung (BP-40) sind umgesetzt; Kostenlimit fehlt (Kostenerfassung nötig) |
 | OAS-05 und §29.5-Fälle | Diagnose-Export; Flag-Änderung während Rollout; Connector-Sperre während laufender Aktion; Worker-Neustart; Kill Switch + Replan gleichzeitig |
@@ -48,7 +48,7 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 ## 5. Verifikation
 
-**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 37 Suiten / 300 Tests grün, Playwright 102 bestanden / 1 übersprungen (inkl. 8 Plattform-UI-Tests mit Betreiber-Zugang).
+**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 37 Suiten / 300 Tests grün, Playwright 104 bestanden / 1 übersprungen (inkl. 10 Plattform-UI-Tests mit Betreiber-Zugang).
 Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; die Anmelde-Drosselung wird nur im Testprozess angehoben, `apps/api/test/utils/e2e-env.ts` — sonst summierte sie sich über Suiten und führte ab der Mitte zu 429).
 
 **Live im Docker-Stack (LIVE TESTED, lokale Entwicklungsumgebung, Build nach Commit `52f8b81` plus Folgefixes):**

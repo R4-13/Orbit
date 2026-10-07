@@ -110,6 +110,66 @@ export function useAuditTrail(filter: { eventType?: string; targetTenantId?: str
   return useQuery({ queryKey: ['platform', 'audit', params.toString()], queryFn: () => platformFetch<{ items: PlatformAuditRow[]; nextBefore?: string }>(`/audit?${params.toString()}`) });
 }
 
+
+export interface SupportSessionRow {
+  id: string;
+  targetTenantId: string;
+  operatorUserId: string;
+  reasonCode: string;
+  freeTextReason: string;
+  ticketRef: string | null;
+  mode: string;
+  scopes: string[];
+  status: 'REQUESTED' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'CLOSED';
+  requestedMinutes: number;
+  requiresApproval: boolean;
+  approvedByUserId: string | null;
+  createdAt: string;
+  activatedAt: string | null;
+  expiresAt: string | null;
+  closedAt: string | null;
+  closeReason: string | null;
+  version: number;
+}
+
+export interface SupportTenantContextView {
+  tenantId: string;
+  status: string;
+  suspensionScopes: string[];
+  featureCohorts: string[];
+  policies: Array<{ action: string; mode: string }>;
+  integrations: Array<{ connectorType: string; status: string }>;
+}
+
+export const useSupportSessions = () => useQuery({ queryKey: ['platform', 'support-sessions'], queryFn: () => platformFetch<SupportSessionRow[]>('/support-sessions') });
+
+
+export type FlagValue = boolean | string | number;
+
+export interface FlagRow {
+  key: string;
+  description: string;
+  lifecycle: string;
+  defaultValue: FlagValue;
+  environmentOverrides: Array<{ environment: string; value: FlagValue }>;
+  cohortOverrides: Array<{ cohort: string; value: FlagValue; percent?: number }>;
+  tenantOverrides: Array<{ tenantId: string; value: FlagValue }>;
+  owner: string;
+  expiresAt: string | null;
+  exposeToTenant: boolean;
+  version: number;
+  updatedAt: string;
+}
+
+export interface FlagPreview {
+  key: string;
+  version: number;
+  tenants: number;
+  distribution: Array<{ value: FlagValue; count: number }>;
+}
+
+export const useFlags = () => useQuery({ queryKey: ['platform', 'features'], queryFn: () => platformFetch<FlagRow[]>('/features') });
+
 /** Schreibende Plattformaktion; invalidiert danach alle Plattformdaten, damit die Anzeige den bestätigten Serverstand zeigt. */
 export function usePlatformMutation<TInput, TResult = unknown>(run: (input: TInput) => Promise<TResult>) {
   const client = useQueryClient();

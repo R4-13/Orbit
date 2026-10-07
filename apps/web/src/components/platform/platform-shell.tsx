@@ -14,6 +14,8 @@ const NAV: Array<{ href: string; label: string; scope: string }> = [
   { href: '/platform/tenants', label: 'Mandanten', scope: PLATFORM_SCOPES.TENANTS_READ },
   { href: '/platform/ai', label: 'KI-Steuerung', scope: PLATFORM_SCOPES.AI_READ },
   { href: '/platform/control', label: 'Notschalter und Anbindungen', scope: PLATFORM_SCOPES.FEATURES_READ },
+  { href: '/platform/features', label: 'Feature-Flags', scope: PLATFORM_SCOPES.FEATURES_READ },
+  { href: '/platform/support', label: 'Support', scope: PLATFORM_SCOPES.SUPPORT_SESSION_READ },
   { href: '/platform/audit', label: 'Audit', scope: PLATFORM_SCOPES.AUDIT_READ },
 ];
 

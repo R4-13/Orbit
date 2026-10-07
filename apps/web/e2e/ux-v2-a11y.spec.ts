@@ -9,23 +9,21 @@ import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaStorage } from './utils/
 
 const ROUTES = ['/dashboard', '/dashboard/attention', '/inbox', '/finance/invoices', '/sales/leads', '/approvals', '/tasks', '/cases', '/activity', '/integrations', '/admin', '/admin/branding', '/admin/users', '/admin/policies', '/admin/ai-providers', '/admin/settings', '/admin/retention', '/admin/processes', '/admin/agents', '/admin/workflows', '/sales/contacts', '/sales/opportunities', '/finance/suppliers'];
 
+/**
+ * Vorgangsseiten halten einen Live-Stream (SSE) offen – `networkidle` wird dort nie erreicht und ließ den Test an der Zeitgrenze scheitern (die Ursache des
+ * bisher als „Flake“ geführten Fehlers im Gesamtlauf). Das Warten ist deshalb begrenzt: es genügt, dass das Rendern zur Ruhe kommt.
+ */
+async function settle(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle', { timeout: 4000 }).catch(() => undefined);
+}
+
 async function scan(page: Page) {
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   return result.violations;
 }
 
-/**
- * Ein Verstoß zählt nur, wenn er auch nach kurzer Beruhigung noch besteht: unmittelbar nach datenerzeugenden Specs rendern Seiten kurz Übergangszustände
- * (Einblenden, Nachladen), die axe sonst als Kontrastverstoß meldet (nur im Gesamtlauf beobachtet, einzeln und wiederholt nicht reproduzierbar).
- * Ein dauerhafter Verstoß wird weiterhin gemeldet – und zwar mit den Knoten der zweiten Prüfung.
- */
 async function violations(page: Page) {
-  let found = await scan(page);
-  if (found.length > 0) {
-    await page.waitForTimeout(700);
-    await page.waitForLoadState('networkidle');
-    found = await scan(page);
-  }
+  const found = await scan(page);
   return found.map((violation) => ({
     id: violation.id,
     impact: violation.impact,
@@ -41,12 +39,13 @@ test.describe('axe: keine A/AA-Verstöße in den Standardansichten', () => {
       await loginViaStorage(page, DEMO_USERS.admin);
       await page.goto(route);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await page.waitForLoadState('networkidle');
+      await settle(page);
       expect(await violations(page)).toEqual([]);
     });
   }
 
   test('Detailseiten: Eingang, Freigabe, Vorgang (Tabs) und Rechnung', async ({ page }) => {
+    test.setTimeout(90_000); // fünf Seiten, jeweils mit begrenzter Beruhigung und axe-Prüfung
     const token = await loginViaApi(DEMO_USERS.admin);
     const list = async <T>(path: string): Promise<T> => (await (await fetch(`${API_BASE_URL}/api/v1${path}`, { headers: { Authorization: `Bearer ${token}` } })).json()) as T;
     const inbox = await list<{ items: Array<{ id: string }> }>('/inbox/items');
@@ -67,7 +66,7 @@ test.describe('axe: keine A/AA-Verstöße in den Standardansichten', () => {
     for (const target of targets) {
       await page.goto(target);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await page.waitForLoadState('networkidle');
+      await settle(page);
       expect(await violations(page), target).toEqual([]);
     }
   });
