@@ -2,6 +2,7 @@ import { ConflictException, Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import {
   NotFoundError,
+  PLATFORM_MIN_PASSWORD_LENGTH,
   PLATFORM_ROLES,
   ValidationFailedError,
   isPlatformRole,
@@ -22,7 +23,7 @@ export interface PlatformIdentityView {
   createdAt: string;
 }
 
-const MIN_PASSWORD_LENGTH = 14;
+const MIN_PASSWORD_LENGTH = PLATFORM_MIN_PASSWORD_LENGTH;
 
 function toView(user: { id: string; email: string; displayName: string; status: 'ACTIVE' | 'DISABLED'; lastLoginAt: Date | null; createdAt: Date; roleAssignments: Array<{ role: string }> }): PlatformIdentityView {
   return {

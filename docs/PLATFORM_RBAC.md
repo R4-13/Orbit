@@ -47,5 +47,5 @@ Die erste Identität legt `apps/api/scripts/platform-bootstrap.ts` an (idempoten
 ## 5. Offene Punkte
 
 * MFA/WebAuthn, Identity-Provider-Anbindung (SSO) für Betreiber.
-* Kein Selbstbedienungs-Passwortwechsel für Plattformidentitäten (Rotation heute nur über neue Identität/Admin).
+* Selbstbedienungs-Passwortwechsel gibt es (`POST /platform/auth/change-password`, UI unter `/platform/account`): aktuelles Passwort wird erneut geprüft, alle **anderen** Sitzungen enden, Audit `PLATFORM_PASSWORD_CHANGED` ohne Passwort. Offen: ein Zurücksetzen durch den Owner für Personen, die ihr Passwort vergessen haben (heute: Zugang neu anlegen), und Ablaufdauer/Passwort-Verlauf.
 * Plattform-UI (`/platform/*`): umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md); maßgeblich bleibt die Prüfung der API. Die Verwaltung der Zugänge (anlegen, Rollen, deaktivieren) ist dort für den Owner verfügbar.

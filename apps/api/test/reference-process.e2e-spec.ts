@@ -239,7 +239,8 @@ describe('Reference process: request for quote (e2e)', () => {
     const status = await app.get(ConnectorStatusService).getStatus(tenantId, 'GMAIL');
     expect(status.verifiedRun).toMatchObject({ workflowRunId: caseId });
     expect(status.verifiedRun?.workflowKey).toContain('REQUEST_FOR_QUOTE');
-    expect(status.verifiedRun?.executionSummary).toContain('Versand: simuliert');
+    // Genau „simuliert“: interne Schritte (Entwurf, Angebot) sind „live“, der echte Versand ist simuliert – die Aussage nennt nur den Versand und ist stabil sortiert.
+    expect(status.verifiedRun?.executionSummary).toMatch(/ · Versand: simuliert$/);
     expect((await prisma.forTenantId(tenantId).intakeEvent.findMany({ where: { caseId } })).every((e) => e.status === 'COMPLETED')).toBe(true);
   });
 

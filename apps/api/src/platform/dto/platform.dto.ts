@@ -18,6 +18,18 @@ export class PlatformRefreshDto {
   refreshToken!: string;
 }
 
+export class PlatformChangePasswordDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  currentPassword!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  newPassword!: string;
+}
+
 export class PlatformStepUpDto {
   @IsString()
   @MinLength(1)

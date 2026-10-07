@@ -68,7 +68,7 @@ function CreateIdentityForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
       <RoleCheckboxes selected={roles} onChange={setRoles} idPrefix="id-new-role" />
-      <p className="text-xs text-slate-500">Ein Passwortwechsel durch die Person selbst ist noch nicht möglich. Das Startpasswort bleibt bis zu einer Neuanlage gültig – geben Sie es nur über einen sicheren Weg weiter.</p>
+      <p className="text-xs text-slate-500">Die Person sollte das Startpasswort nach der ersten Anmeldung unter „Mein Zugang“ ändern. Geben Sie es nur über einen sicheren Weg weiter.</p>
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       <div className="flex gap-2">
         <Button type="submit" disabled={create.isPending || roles.length === 0}>{create.isPending ? 'Wird angelegt …' : 'Zugang anlegen'}</Button>

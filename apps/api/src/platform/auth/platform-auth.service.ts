@@ -5,7 +5,9 @@ import * as argon2 from 'argon2';
 import type { OrbitEnv } from '@orbit/config';
 import {
   AuthenticationExpiredError,
+  PLATFORM_MIN_PASSWORD_LENGTH,
   PlatformNotConfiguredError,
+  ValidationFailedError,
   isPlatformRole,
   parseDurationToMs,
   scopesForRoles,
@@ -130,6 +132,31 @@ export class PlatformAuthService {
       tx.platformSession.updateMany({ where: { id: principal.sessionId, revokedAt: null }, data: { revokedAt: new Date(), revokedReason: 'LOGOUT' } }),
     );
     await this.audit.record({ eventType: 'PLATFORM_LOGOUT', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId });
+  }
+
+  /**
+   * Passwortwechsel durch die Person selbst. Das aktuelle Passwort wird erneut geprüft (ein gestohlenes Access Token reicht nicht), das neue muss die
+   * Mindestlänge erfüllen und sich unterscheiden. Alle **anderen** Sitzungen enden sofort (ein gestohlenes Refresh-Token wird damit wertlos); die aktuelle
+   * bleibt bestehen. Das Audit hält den Wechsel fest – nie ein Passwort.
+   */
+  async changePassword(principal: PlatformPrincipal, input: { currentPassword: string; newPassword: string }): Promise<{ revokedOtherSessions: number }> {
+    const user = await this.prisma.withPlatformScope((tx) => tx.platformUser.findUnique({ where: { id: principal.userId } }));
+    const valid = await this.verifyPassword(user?.passwordHash, input.currentPassword);
+    if (!user || !valid || user.status !== 'ACTIVE') {
+      await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformUser', targetId: principal.userId, reason: 'password change: current password check failed' });
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+    if (input.newPassword.length < PLATFORM_MIN_PASSWORD_LENGTH) throw new ValidationFailedError(`Das neue Passwort muss mindestens ${PLATFORM_MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
+    if (input.newPassword === input.currentPassword) throw new ValidationFailedError('Das neue Passwort muss sich vom bisherigen unterscheiden.');
+
+    const passwordHash = await argon2.hash(input.newPassword);
+    const revoked = await this.prisma.withPlatformScope(async (tx) => {
+      await tx.platformUser.update({ where: { id: principal.userId }, data: { passwordHash } });
+      const result = await tx.platformSession.updateMany({ where: { platformUserId: principal.userId, revokedAt: null, id: { not: principal.sessionId } }, data: { revokedAt: new Date(), revokedReason: 'PASSWORD_CHANGED' } });
+      return result.count;
+    });
+    await this.audit.record({ eventType: 'PLATFORM_PASSWORD_CHANGED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformUser', targetId: principal.userId, extra: { revokedOtherSessions: revoked } });
+    return { revokedOtherSessions: revoked };
   }
 
   /** Erneute Passwortprüfung → zeitlich begrenztes Erhöhungsfenster für kritische Operationen. */

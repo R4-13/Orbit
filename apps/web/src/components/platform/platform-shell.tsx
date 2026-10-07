@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { PLATFORM_SCOPES } from '@orbit/shared';
 import { Badge, Button } from '@orbit/ui';
 import { usePlatformAuth } from '../../lib/platform/platform-auth';
+import { platformRoleLabel } from '../../lib/platform/role-labels';
 
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT';
 
@@ -52,9 +53,9 @@ export function PlatformShell({ children }: { children: ReactNode }) {
             <EnvironmentBadge environment={principal.environment} />
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-600">
-            <span>
-              {principal.displayName} · {principal.platformRoles.join(', ')}
-            </span>
+            <Link href="/platform/account" className="underline-offset-2 hover:underline" aria-label="Mein Zugang und Passwort">
+              {principal.displayName} · {principal.platformRoles.map(platformRoleLabel).join(', ')}
+            </Link>
             <Button
               variant="secondary"
               onClick={async () => {

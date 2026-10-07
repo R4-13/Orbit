@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { IntegrationConnectorType } from '@orbit/domain';
 import {
   CONNECTOR_OPERATIONAL_STATUS_LEVELS,
+  DEFAULT_CAPABILITIES,
   describeExecutionModes,
   type ConnectorCurrentHealth,
   type ConnectorOperationalStatus,
@@ -156,8 +157,11 @@ export class ConnectorStatusService {
       // A cancelled intent (approval voided by an edit or a replan) is history; it only counts if its step never got a confirmed effect.
       const confirmedNodes = new Set(intents.filter((i) => i.status === 'CONFIRMED').map((i) => i.nodeKey));
       if (!intents.every((i) => i.status === 'CONFIRMED' || (i.status === 'CANCELLED' && confirmedNodes.has(i.nodeKey)))) continue;
-      const receipts = await this.prisma.forTenantId(tenantId).actionReceipt.findMany({ where: { intentId: { in: intents.map((i) => i.id) }, status: 'CONFIRMED' } });
-      const modes = [...new Set(receipts.map((r) => r.executionMode))];
+      // „Versand“ betrifft nur Aktionen, die nach außen wirken. Interne Schritte (Entwurf, Angebot anlegen/rendern) sind immer „live“ und dürfen die Aussage
+      // nicht verfälschen; Fähigkeiten außerhalb des Katalogs gelten vorsichtshalber als nach außen wirkend. Sortiert, damit die Aussage stabil ist.
+      const external = new Set(intents.filter((i) => (DEFAULT_CAPABILITIES.find((cap) => cap.key === i.capabilityKey)?.sideEffect ?? 'EXTERNAL_WRITE') === 'EXTERNAL_WRITE').map((i) => i.id));
+      const receipts = await this.prisma.forTenantId(tenantId).actionReceipt.findMany({ where: { intentId: { in: [...external] }, status: 'CONFIRMED' } });
+      const modes = [...new Set(receipts.map((r) => r.executionMode))].sort((a, b) => (a === b ? 0 : a === 'SIMULATED' ? -1 : 1));
       const execution = readExecution(candidate.metadata);
       const base = execution ? describeExecutionModes(execution) : 'Ausführungsmodus nicht erfasst';
       return {

@@ -48,7 +48,7 @@ test.describe('Plattformbetrieb (UI)', () => {
     await page.waitForURL(/\/platform$/);
     await expect(page.getByRole('heading', { name: 'Plattformübersicht' })).toBeVisible();
     await expect(page.getByText(/Umgebung: /).first()).toBeVisible();
-    await expect(page.getByText(/PLATFORM_OWNER/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Mein Zugang und Passwort' })).toContainText('Owner'); // Rolle in Alltagssprache, nie der technische Schlüssel
     const nav = page.getByRole('navigation', { name: 'Plattformbereiche' });
     for (const label of ['Übersicht', 'Mandanten', 'KI-Steuerung', 'Notschalter und Anbindungen', 'Audit']) await expect(nav.getByRole('link', { name: label })).toBeVisible();
     // Die Sitzung liegt im Tab-Speicher, nicht im Mandanten-Speicher und nicht im dauerhaften Browser-Speicher.

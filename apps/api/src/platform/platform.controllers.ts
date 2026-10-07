@@ -10,6 +10,7 @@ import {
   DiagnosticsQueryDto,
   DisablePlatformIdentityDto,
   PlatformAuditQueryDto,
+  PlatformChangePasswordDto,
   PlatformLoginDto,
   PlatformRefreshDto,
   PlatformStepUpDto,
@@ -45,6 +46,15 @@ export class PlatformAuthController {
   @UseGuards(PlatformAuthGuard)
   async logout(@CurrentPlatformPrincipal() principal: PlatformPrincipal): Promise<void> {
     await this.auth.logout(principal);
+  }
+
+  /** Passwortwechsel durch die Person selbst: aktuelles Passwort wird erneut geprüft, andere Sitzungen enden. */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  @UseGuards(PlatformAuthGuard)
+  changePassword(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformChangePasswordDto) {
+    return this.auth.changePassword(principal, dto);
   }
 
   /** Erneute Passwortprüfung für kritische Operationen (Amendment 03 §3.2). Kein MFA. */

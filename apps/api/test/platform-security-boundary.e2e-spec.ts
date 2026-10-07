@@ -255,6 +255,37 @@ describe('Platform security boundary (e2e)', () => {
       await expect(auth.login(victim.email, password)).rejects.toThrow(/Invalid credentials/);
     });
 
+    it('Passwortwechsel: aktuelles Passwort wird erneut geprüft, Mindestlänge gilt, andere Sitzungen enden sofort, die aktuelle bleibt; altes Passwort ist wertlos; das Audit enthält kein Passwort', async () => {
+      const person = await makeIdentity('PLATFORM_SUPPORT', 'pwchange');
+      const other = await auth.login(person.email, password); // zweite Sitzung (z. B. ein gestohlenes Token)
+      const newPassword = `Neu-${randomBytes(9).toString('base64url')}-7#`;
+      const change = (body: Record<string, string>, token = person.token) => request(app.getHttpServer()).post('/api/v1/platform/auth/change-password').set({ Authorization: `Bearer ${token}` }).send(body);
+
+      // Falsches aktuelles Passwort: abgewiesen und auditiert; zu kurz / gleich: abgelehnt, nichts ändert sich.
+      await change({ currentPassword: 'falsch-falsch-falsch', newPassword }).expect(401);
+      await change({ currentPassword: password, newPassword: 'kurz' }).expect(400);
+      await change({ currentPassword: password, newPassword: password }).expect(400);
+      await auth.login(person.email, password); // altes Passwort gilt weiterhin
+
+      const ok = await change({ currentPassword: password, newPassword }).expect(200);
+      expect(ok.body).toEqual({ revokedOtherSessions: expect.any(Number) });
+      expect(ok.body.revokedOtherSessions).toBeGreaterThanOrEqual(1);
+
+      // Die aktuelle Sitzung bleibt, die andere (und jede frühere) endet sofort.
+      await get('/platform/me', person.token).expect(200);
+      await get('/platform/me', other.accessToken).expect(401);
+
+      // Altes Passwort ist wertlos, das neue gilt.
+      await expect(auth.login(person.email, password)).rejects.toThrow();
+      await expect(auth.login(person.email, newPassword)).resolves.toBeTruthy();
+
+      // Audit: der Wechsel steht drin, kein Passwort.
+      const rows = await prisma.withPlatformScope((tx) => tx.auditLog.findMany({ where: { domain: 'PLATFORM', eventType: 'PLATFORM_PASSWORD_CHANGED', entityId: person.id } }));
+      expect(rows).toHaveLength(1);
+      const serialized = JSON.stringify(rows);
+      for (const secret of [password, newPassword]) expect(serialized).not.toContain(secret);
+    });
+
     it('Anmeldefehler werden auditiert, ohne die E-Mail-Adresse oder das Passwort im Klartext abzulegen', async () => {
       const email = `ops1-${suffix}-ghost@platform-test.example`;
       await request(app.getHttpServer()).post('/api/v1/platform/auth/login').send({ email, password: 'wrong-password-123' }).expect(401);
