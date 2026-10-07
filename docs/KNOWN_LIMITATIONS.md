@@ -136,7 +136,7 @@ Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM
 * **Health/Kosten:** Health entsteht aus echten Aufrufen, es gibt keine aktive periodische Prüfung; Kosten nur mit hinterlegtem Kostenprofil, keine Kostenlimits oder Anomalie-Alarme.
 * **Connector-Sperre:** neue Verbindungen und Aktionen werden gesperrt, bereits laufende Aktionen aber nicht aktiv beendet.
 * **Region:** Region-/Datenrichtlinie wird vor der Modellwahl geprüft, es gibt keine mandantenspezifische Region.
-* **Diagnose:** kein Export (OAS-05); Queue-/Worker-Gesundheit fehlt; Tests für Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart und Kill Switch + Replan gleichzeitig fehlen.
+* **Diagnose:** kein Export (OAS-05); Queue-/Worker-Gesundheit gibt es als Messung von Zählern und verbundenen Workern (kein Alarm, keine Verlaufsansicht, keine Auswertung nach Mandant oder Auftragsart); Tests für Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart und Kill Switch + Replan gleichzeitig fehlen.
 * **Mandantenlebenszyklus:** `provision`/`offboard`/`close` sind keine Abläufe; es gibt keine Mandanten-Support-Historie.
 * **Limits (BP-39):** Aktions- und Fehlerlimits gelten zentral (Standards und Plattformobergrenzen im Code, Blueprint nur verschärfend); ein Kostenlimit fehlt, und die Limits sind nicht je Mandant einstellbar. Der Zielstatus (`completion.evaluated`) steht als Ereignis in der Vorgangshistorie, nicht als eigene Ansicht.
 * **Auflösungsleiter:** Stufen Fachsystem und weitere Quelle werden nur ausgewertet, soweit vorhandene Tools sie als Faktenquelle liefern.

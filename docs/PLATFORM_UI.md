@@ -15,7 +15,7 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 | Route | Inhalt | Schreibend |
 |---|---|---|
 | `/platform/login` | Betreiber-Anmeldung | – |
-| `/platform` | Kennzahlen: Mandanten nach Zustand, Betreiberzugänge, Sitzungen, Audit-Ereignisse (24 h), „Noch nicht verfügbar“ | – |
+| `/platform` | Kennzahlen: Mandanten nach Zustand, Betreiberzugänge, Sitzungen, Audit-Ereignisse (24 h); **Hintergrundverarbeitung** (beide Warteschlangen: verbundene Worker, wartend/in Arbeit/zeitversetzt/fehlgeschlagen im Verlauf, Zustand „In Ordnung / Eingeschränkt / Steht still“, alle 15 s aktualisiert); „Noch nicht verfügbar“ | – |
 | `/platform/tenants` | Mandantenliste mit Suche, Zustand, Sperren, Funktionsgruppen, Benutzerzahl (nur Stammdaten, keine Geschäftsdaten); **Zustand ändern** (Zustand, Sperrarten, Kohorten): Wirkungsvorschau → Begründung → Bestätigung gebunden an die Vorschau (Bestätigungs-Token) → Step-up | ja |
 | `/platform/ai` | Anbieter, Modelle, Profile, Routen, Plattformverbindungen, Gesundheit, Nutzung (30 Tage, nur mit Kosten-Scope) | „Register aus der Umgebung anlegen“; **Profil veröffentlichen**; **Route anlegen** (inaktiv); **Route aktivieren** mit Vorprüfung (Vorbedingungen, betroffene Mandanten, ersetzte Route; eine nicht aktivierbare Route nennt ihre Gründe und lässt sich nicht bestätigen); **Route deaktivieren** – jeweils Begründung, Versionsprüfung, Step-up |
 | `/platform/account` | Eigener Zugang: Angaben und **Passwort ändern** (aktuelles Passwort wird erneut geprüft, Mindestlänge 14, muss sich unterscheiden; alle anderen Sitzungen enden sofort, die aktuelle bleibt) | ja |

@@ -207,6 +207,19 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(page.getByText('UI-Test: Flag zurückziehen').first()).toBeVisible();
   });
 
+  test('Übersicht: Hintergrundverarbeitung zeigt echte Messwerte beider Warteschlangen; mit laufendem Worker nicht „steht still“', async ({ page }) => {
+    await loginViaApiSession(page);
+    await page.goto('/platform');
+    const card = page.getByRole('heading', { name: /Hintergrundverarbeitung/ }).locator('xpath=ancestor::div[contains(@class,"rounded")][1]');
+    await expect(card.getByText('Abläufe und Vorgänge')).toBeVisible();
+    await expect(card.getByText('Postfach-Abgleich')).toBeVisible();
+    await expect(card.getByText(/\d+ Worker verbunden · \d+ wartend/).first()).toBeVisible();
+    await expect(card.getByText(/Gemessen .*aktualisiert sich alle 15 Sekunden/)).toBeVisible();
+    // Der Docker-Stack läuft mit Worker: dann darf keine Warteschlange „Steht still“ melden (ohne Worker wäre genau das richtig).
+    await expect(card.getByText('Steht still')).toHaveCount(0);
+    await expect(page.getByText('Queue/Worker-Gesundheit')).toHaveCount(0); // steht nicht mehr unter „Noch nicht verfügbar“
+  });
+
   test('keine Verbindung zwischen den Domänen: die Mandanten-Oberfläche verlinkt den Plattformbereich nicht, ein Mandantenzugang öffnet ihn nicht', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await expect(page.locator('a[href^="/platform"]')).toHaveCount(0);

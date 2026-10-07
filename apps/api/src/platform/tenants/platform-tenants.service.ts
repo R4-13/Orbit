@@ -83,7 +83,7 @@ export class PlatformTenantsService {
       platformIdentities: { active, disabled },
       activePlatformSessions: sessions,
       platformAuditEventsLast24h: auditCount,
-      notYetAvailable: ['Connector-Gesundheit (Betriebsstatus je Verbindung)', 'Queue/Worker-Gesundheit', 'Kostenlimits und Anomalie-Alarme', 'Support-Sessions'],
+      notYetAvailable: ['Connector-Gesundheit (Betriebsstatus je Verbindung)', 'Kostenlimits und Anomalie-Alarme'],
     };
   }
 }

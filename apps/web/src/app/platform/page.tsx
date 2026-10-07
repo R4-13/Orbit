@@ -1,11 +1,57 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { PLATFORM_SCOPES } from '@orbit/shared';
+import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
 import { formatDateTime } from '../../lib/format';
+import { usePlatformAuth } from '../../lib/platform/platform-auth';
 import { platformErrorMessage } from '../../lib/platform/platform-client';
 import { tenantStatusLabel } from '../../lib/platform/tenant-labels';
-import { usePlatformOverview } from '../../lib/platform/use-platform-data';
+import { useRuntimeHealth, usePlatformOverview } from '../../lib/platform/use-platform-data';
 
+
+const QUEUE_LABELS: Record<string, string> = { 'workflow-runs': 'Abläufe und Vorgänge', 'channel-sync': 'Postfach-Abgleich' };
+const STATUS_TONE = { OK: 'success', DEGRADED: 'warning', DOWN: 'danger' } as const;
+const STATUS_LABEL = { OK: 'In Ordnung', DEGRADED: 'Eingeschränkt', DOWN: 'Steht still' } as const;
+
+/** Hintergrundverarbeitung: ohne verbundenen Worker wird nichts bearbeitet – das steht ganz oben und nicht erst in einer Tabelle. */
+function RuntimeCard() {
+  const { hasScope } = usePlatformAuth();
+  const allowed = hasScope(PLATFORM_SCOPES.RUNTIME_READ);
+  const runtime = useRuntimeHealth(allowed);
+  if (!allowed) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          Hintergrundverarbeitung {runtime.data ? <Badge tone={STATUS_TONE[runtime.data.status]}>{STATUS_LABEL[runtime.data.status]}</Badge> : null}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {runtime.isLoading ? <p className="text-sm text-slate-600">Wird gemessen …</p> : null}
+        {runtime.isError ? <p role="alert" className="text-sm text-red-700">{platformErrorMessage(runtime.error, 'Der Zustand der Hintergrundverarbeitung konnte nicht gemessen werden.')}</p> : null}
+        {runtime.data ? (
+          <>
+            <ul className="divide-y divide-slate-100 text-sm">
+              {runtime.data.queues.map((q) => (
+                <li key={q.name} className="flex flex-wrap items-start justify-between gap-2 py-2">
+                  <div>
+                    <div className="font-medium text-slate-900">{QUEUE_LABELS[q.name] ?? 'Weitere Warteschlange'}</div>
+                    <div className="text-xs text-slate-500">
+                      {q.workers} {q.workers === 1 ? 'Worker' : 'Worker'} verbunden · {q.waiting} wartend · {q.active} in Arbeit · {q.delayed} zeitversetzt · {q.failed} fehlgeschlagen im Verlauf
+                    </div>
+                    {q.note ? <div className="mt-1 text-xs text-slate-700">{q.note}</div> : null}
+                  </div>
+                  <Badge tone={STATUS_TONE[q.status]}>{STATUS_LABEL[q.status]}</Badge>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs text-slate-500">Gemessen {formatDateTime(runtime.data.checkedAt)}; aktualisiert sich alle 15 Sekunden.</p>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Figure({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -37,6 +83,7 @@ export default function PlatformOverviewPage() {
         <Figure label="Aktive Betreibersitzungen" value={data.activePlatformSessions} />
         <Figure label="Audit-Ereignisse (24 h)" value={data.platformAuditEventsLast24h} />
       </div>
+      <RuntimeCard />
       {data.notYetAvailable.length > 0 ? (
         <Card>
           <CardHeader>

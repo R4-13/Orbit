@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
-import { PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole } from '@orbit/shared';
+import { PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth } from '@orbit/shared';
 import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
 import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
 import { CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
@@ -16,6 +16,7 @@ import {
   PlatformStepUpDto,
   SetPlatformRolesDto,
 } from './dto/platform.dto';
+import { PlatformRuntimeService } from './runtime/platform-runtime.service';
 import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
 import { PlatformIdentityService, type PlatformIdentityView } from './identity/platform-identity.service';
 import { PlatformTenantsService, type PlatformOverview, type PlatformTenantSummary } from './tenants/platform-tenants.service';
@@ -74,6 +75,7 @@ export class PlatformController {
     private readonly tenants: PlatformTenantsService,
     private readonly audit: PlatformAuditService,
     private readonly diagnostics: PlatformDiagnosticsService,
+    private readonly runtime: PlatformRuntimeService,
   ) {}
 
   @Get('me')
@@ -85,6 +87,13 @@ export class PlatformController {
   @RequirePlatformScope(PLATFORM_SCOPES.CONFIG_READ)
   overview(): Promise<PlatformOverview> {
     return this.tenants.overview();
+  }
+
+  /** Betriebszustand der Hintergrundverarbeitung (Queues, Worker): echte Messwerte, nur Zahlen. */
+  @Get('runtime')
+  @RequirePlatformScope(PLATFORM_SCOPES.RUNTIME_READ)
+  runtimeHealth(): Promise<RuntimeHealth> {
+    return this.runtime.health();
   }
 
   @Get('tenants')

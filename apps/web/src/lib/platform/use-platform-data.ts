@@ -95,6 +95,27 @@ export interface AiUsageRow {
   avgLatencyMs: number | null;
 }
 
+export interface RuntimeQueueRow {
+  name: string;
+  status: 'OK' | 'DEGRADED' | 'DOWN';
+  note: string;
+  waiting: number;
+  active: number;
+  delayed: number;
+  failed: number;
+  workers: number;
+  oldestWaitingAgeSec: number | null;
+}
+
+export interface RuntimeHealthView {
+  status: 'OK' | 'DEGRADED' | 'DOWN';
+  checkedAt: string;
+  queues: RuntimeQueueRow[];
+}
+
+/** Betriebszustand ändert sich laufend: alle 15 Sekunden neu messen, solange die Seite offen ist. */
+export const useRuntimeHealth = (enabled = true) => useQuery({ queryKey: ['platform', 'runtime'], queryFn: () => platformFetch<RuntimeHealthView>('/runtime'), enabled, refetchInterval: 15_000 });
+
 export const usePlatformOverview = () => useQuery({ queryKey: ['platform', 'overview'], queryFn: () => platformFetch<PlatformOverview>('/overview') });
 export const usePlatformTenants = () => useQuery({ queryKey: ['platform', 'tenants'], queryFn: () => platformFetch<PlatformTenantRow[]>('/tenants') });
 export const useAiOverview = (enabled = true) => useQuery({ queryKey: ['platform', 'ai'], queryFn: () => platformFetch<AiOverview>('/ai/overview'), enabled });
