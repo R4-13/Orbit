@@ -11,7 +11,7 @@ Plan und Gap-Matrix: [`PLATFORM_OPERATIONS_IMPLEMENTATION_PLAN.md`](PLATFORM_OPE
 | **Automatisiert getestet (TESTED LOCALLY)** | echte Postgres mit RLS, echte Guards/JWT-Domänen; Modell, Mail und zweiter KI-Anbieter sind Testdoubles (**TESTED WITH MOCK**) |
 | **Live bewiesen (LIVE TESTED)** | siehe §5 — nur das, was im Docker-Stack tatsächlich durchlaufen wurde |
 | **Externe Blocker** | echter Gmail-Versand (`gmail.send`-Zustimmung), zweiter echter KI-Anbieter (Zugangsdaten), MFA/WebAuthn-Dienst |
-| **Nicht umgesetzt** | Plattform-UI (`/platform/*` im Web), MFA, Kostenlimits/Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
+| **Nicht umgesetzt** | Plattform-UI für Mandantenzustand, Flags, KI-Routen/Profile, Identitäten, Support-Sitzungen (Übersicht, Mandanten, KI lesend, Notschalter, Anbindungen, Audit sind umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md)), MFA, Kostenlimits/Anomalie-Alarme, Queue-/Worker-Gesundheit, Diagnose-Export, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
 
 Es gibt **keine Live-Validierung gegen einen Drittanbieter-Account** für die neuen Pfade.
 
@@ -38,7 +38,7 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 | Punkt | Folge |
 |---|---|
-| Plattform-UI fehlt | Bedienung nur über API/Skript (`scripts/platform-bootstrap.ts`) |
+| Plattform-UI nur teilweise | Schreibende Bereiche außer Notschaltern/Anbindungen nur über die API; Betreiberzugänge per `scripts/platform-bootstrap.ts` bzw. API |
 | MFA/WebAuthn fehlt | Step-up ist Passwort-Re-Auth |
 | BP-39/BP-40 teilweise | Limits `maxActionsPerCase`, `maxConsecutiveCapabilityFailures`, Kosten; kein `CompletionEvaluation`-Snapshot |
 | OAS-05 und §29.5-Fälle | Diagnose-Export; Flag-Änderung während Rollout; Connector-Sperre während laufender Aktion; Worker-Neustart; Kill Switch + Replan gleichzeitig |
