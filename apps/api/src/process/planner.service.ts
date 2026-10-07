@@ -4,6 +4,7 @@ import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedCont
 import type { Case, ProcessPlanSource, ProcessPlanStatus } from '@orbit/domain';
 import {
   NotFoundError,
+  effectiveLimits,
   validatePlan,
   type BlueprintDefinition,
   type PlanProposal,
@@ -29,9 +30,6 @@ export const SUBMIT_PLAN_TOOL = 'submit_process_plan';
 export const PLANNER_PROMPT_VERSION = 'planner-prompt/1';
 /** One proposal plus one bounded repair attempt (Amendment 02 §11.3). */
 const MAX_PLANNER_ATTEMPTS = 2;
-
-/** Global ceilings; a blueprint may only tighten them. */
-const DEFAULT_LIMITS = { maxSteps: 30, maxExternalActions: 6, maxAutoQuestions: 2 } as const;
 
 export type PlanTrigger = 'INITIAL' | 'REPLAN';
 
@@ -96,11 +94,7 @@ export class PlannerService {
       collectableFactKeys: new Set((blueprint?.requiredFacts ?? []).map((f) => f.key)),
       policyModes,
       confirmedEffects: confirmed.map((c) => ({ nodeId: c.nodeKey, capability: c.capabilityKey, purpose: c.purpose ?? undefined })),
-      limits: {
-        maxSteps: Math.min(DEFAULT_LIMITS.maxSteps, blueprint?.limits?.maxSteps ?? DEFAULT_LIMITS.maxSteps),
-        maxExternalActions: DEFAULT_LIMITS.maxExternalActions,
-        maxAutoQuestions: Math.min(DEFAULT_LIMITS.maxAutoQuestions, blueprint?.limits?.maxAutoQuestions ?? DEFAULT_LIMITS.maxAutoQuestions),
-      },
+      limits: (({ maxSteps, maxExternalActions, maxAutoQuestions }) => ({ maxSteps, maxExternalActions, maxAutoQuestions }))(effectiveLimits(blueprint?.limits)),
     };
   }
 

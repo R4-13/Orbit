@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ActionIntent, ActionReceipt, Prisma } from '@orbit/domain';
-import { NotFoundError, type ExecutionMode } from '@orbit/shared';
+import { NotFoundError, checkActionLimits, type EffectiveLimits, type ExecutionMode } from '@orbit/shared';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashOf, sha256 } from './canonical';
@@ -15,6 +15,17 @@ export interface PrepareActionInput {
   capabilityKey: string;
   purpose?: string;
   payload: Record<string, unknown>;
+}
+
+/** Eine neue Aktion würde ein zentrales Limit (BP-39) überschreiten: der Vorgang geht zur Prüfung, es wird nichts vorbereitet. */
+export class ActionLimitReachedError extends Error {
+  constructor(
+    readonly code: 'LIMIT_ACTIONS_PER_CASE' | 'LIMIT_CONSECUTIVE_FAILURES',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ActionLimitReachedError';
+  }
 }
 
 export interface ConfirmedEffectRef {
@@ -47,10 +58,23 @@ export class ActionLedgerService {
     return sha256(`${tenantId}|${input.caseId}|${input.nodeKey}|${input.capabilityKey}|${input.purpose ?? ''}|${hashOf(input.payload)}`);
   }
 
-  async prepare(tenantId: string, input: PrepareActionInput): Promise<{ intent: ActionIntent; created: boolean }> {
+  /**
+   * Bereitet eine Aktion vor. Dieselbe Aktion (gleicher Schlüssel) liefert immer dieselbe Absicht zurück und zählt nie gegen ein Limit; nur eine **neue**
+   * Absicht wird gegen die Grenzen des Vorgangs geprüft (BP-39).
+   */
+  async prepare(tenantId: string, input: PrepareActionInput, limits?: Pick<EffectiveLimits, 'maxActionsPerCase' | 'maxConsecutiveCapabilityFailures'>): Promise<{ intent: ActionIntent; created: boolean }> {
     const idempotencyKey = this.idempotencyKeyFor(tenantId, input);
     const existing = await this.prisma.forTenantId(tenantId).actionIntent.findFirst({ where: { idempotencyKey } });
     if (existing) return { intent: existing, created: false };
+    if (limits) {
+      const scoped = this.prisma.forTenantId(tenantId);
+      const [existingActions, recent] = await Promise.all([
+        scoped.actionIntent.count({ where: { caseId: input.caseId, status: { not: 'CANCELLED' } } }),
+        scoped.actionIntent.findMany({ where: { caseId: input.caseId, status: { not: 'CANCELLED' } }, orderBy: { createdAt: 'desc' }, take: limits.maxConsecutiveCapabilityFailures, select: { status: true } }),
+      ]);
+      const verdict = checkActionLimits(limits, existingActions, recent.map((r) => r.status === 'FAILED'));
+      if (!verdict.allowed && verdict.code) throw new ActionLimitReachedError(verdict.code, verdict.message ?? 'Ein Limit ist erreicht.');
+    }
 
     const intent = await this.prisma.inTenantTransaction(tenantId, async (tx) => {
       const created = await tx.actionIntent.create({

@@ -58,6 +58,19 @@ export function validateBlueprintDefinition(input: unknown, catalogue: ReadonlyM
     error('COMPLETION_NOT_CHECKABLE', 'completionCriteria muss auf Fakten, Anforderungen oder Nachweise (Receipts) verweisen.', { check: 10 });
   }
 
+  for (const [goal, criteria] of Object.entries(blueprint.goalCriteria ?? {})) {
+    if (!blueprint.goals.includes(goal)) {
+      error('GOAL_CRITERIA_UNKNOWN_GOAL', `goalCriteria nennt das Ziel "${goal}", das nicht in goals steht.`, { check: 10 });
+      continue;
+    }
+    if (expressionDepth(criteria) > MAX_EXPRESSION_DEPTH) error('EXPRESSION_TOO_DEEP', `Kriterium für das Ziel "${goal}" ist zu tief verschachtelt.`, { check: 10 });
+    const refs = collectReferences(criteria);
+    for (const capability of refs.capabilities) if (!catalogue.has(capability)) error('COMPLETION_UNKNOWN_CAPABILITY', `Das Kriterium für "${goal}" verweist auf unbekannte Fähigkeit "${capability}".`, { check: 10 });
+    if (refs.receiptPurposes.size === 0 && refs.requirements.size === 0 && refs.facts.size === 0) {
+      error('COMPLETION_NOT_CHECKABLE', `Das Kriterium für "${goal}" muss auf Fakten, Anforderungen oder Nachweise (Receipts) verweisen.`, { check: 10 });
+    }
+  }
+
   if (blueprint.planMode !== 'AD_HOC' && !blueprint.referenceGraph) {
     error('REFERENCE_GRAPH_MISSING', `planMode ${blueprint.planMode} braucht einen referenceGraph.`, { check: 4 });
   }

@@ -222,6 +222,13 @@ describe('Reference process: request for quote (e2e)', () => {
     row = await caseOf(tenantId, caseId);
     expect(row.orchestrationStatus).toBe('COMPLETED');
     expect(row.outcome).toMatchObject({ code: 'COMPLETION_CRITERIA_MET' });
+    // BP-40: die Abschlussbewertung ist als Schnappschuss mit Zielen und Nachweisen festgehalten.
+    const evaluations = await prisma.forTenantId(tenantId).caseEvent.findMany({ where: { caseId, type: 'completion.evaluated' }, orderBy: { sequence: 'asc' } });
+    const finalEvaluation = evaluations[evaluations.length - 1]!.payload as { met: boolean; goals: Array<{ status: string }>; evidenceRefs: string[] };
+    expect(finalEvaluation.met).toBe(true);
+    expect(finalEvaluation.goals.length).toBeGreaterThan(0);
+    expect(finalEvaluation.goals.every((g) => g.status === 'ACHIEVED')).toBe(true);
+    expect(finalEvaluation.evidenceRefs.join(' ')).toContain('email.send/QUOTE_DELIVERY');
     const evidence = (row.outcome as { evidenceRefs: string[] }).evidenceRefs.join(' ');
     expect(evidence).toContain('email.send/CLARIFICATION:gm-1');
     expect(evidence).toContain('email.send/QUOTE_DELIVERY:gm-2');

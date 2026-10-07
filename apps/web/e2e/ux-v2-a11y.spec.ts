@@ -9,9 +9,24 @@ import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaStorage } from './utils/
 
 const ROUTES = ['/dashboard', '/dashboard/attention', '/inbox', '/finance/invoices', '/sales/leads', '/approvals', '/tasks', '/cases', '/activity', '/integrations', '/admin', '/admin/branding', '/admin/users', '/admin/policies', '/admin/ai-providers', '/admin/settings', '/admin/retention', '/admin/processes', '/admin/agents', '/admin/workflows', '/sales/contacts', '/sales/opportunities', '/finance/suppliers'];
 
-async function violations(page: Page) {
+async function scan(page: Page) {
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-  return result.violations.map((violation) => ({
+  return result.violations;
+}
+
+/**
+ * Ein Verstoß zählt nur, wenn er auch nach kurzer Beruhigung noch besteht: unmittelbar nach datenerzeugenden Specs rendern Seiten kurz Übergangszustände
+ * (Einblenden, Nachladen), die axe sonst als Kontrastverstoß meldet (nur im Gesamtlauf beobachtet, einzeln und wiederholt nicht reproduzierbar).
+ * Ein dauerhafter Verstoß wird weiterhin gemeldet – und zwar mit den Knoten der zweiten Prüfung.
+ */
+async function violations(page: Page) {
+  let found = await scan(page);
+  if (found.length > 0) {
+    await page.waitForTimeout(700);
+    await page.waitForLoadState('networkidle');
+    found = await scan(page);
+  }
+  return found.map((violation) => ({
     id: violation.id,
     impact: violation.impact,
     help: violation.help,

@@ -1,6 +1,6 @@
 'use client';
 
-import { describeResolutionAttempt, type ResolutionResult, type ResolutionStrategy } from '@orbit/shared';
+import { describeCompletionEvaluation, describeResolutionAttempt, type ResolutionResult, type ResolutionStrategy } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
 import { errorMessage } from '../../lib/api-client';
 import { formatDateTime } from '../../lib/format';
@@ -18,6 +18,8 @@ function describe(event: CaseEventRow): string {
         result: p.result as ResolutionResult,
         nextAllowedStrategies: (p.nextAllowedStrategies as ResolutionStrategy[] | undefined) ?? [],
       });
+    case 'completion.evaluated':
+      return describeCompletionEvaluation({ met: p.met === true, goals: (p.goals as Parameters<typeof describeCompletionEvaluation>[0]['goals'] | undefined) ?? [] });
     case 'case.completed':
       return 'Vorgang abgeschlossen (Abschlusskriterien erfüllt)';
     case 'plan.created':

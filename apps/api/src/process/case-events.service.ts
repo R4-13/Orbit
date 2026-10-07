@@ -26,6 +26,7 @@ export const CASE_EVENT_TYPES = {
   NODE_STATE_CHANGED: 'node.state_changed',
   FACT_RECORDED: 'fact.recorded',
   CONTEXT_RESOLUTION_ATTEMPTED: 'context.resolution_attempted',
+  COMPLETION_EVALUATED: 'completion.evaluated',
   ACTION_PREPARED: 'action.prepared',
   ACTION_CONFIRMED: 'action.confirmed',
   ACTION_UNKNOWN: 'action.outcome_unknown',

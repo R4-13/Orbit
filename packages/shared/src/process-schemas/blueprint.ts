@@ -71,6 +71,8 @@ export const LimitsSchema = z
     maxAutoQuestions: z.number().int().min(0).max(10).optional(),
     maxReminders: z.number().int().min(0).max(10).optional(),
     maxRuntimeHours: z.number().positive().max(24 * 90).optional(),
+    maxActionsPerCase: z.number().int().positive().max(50).optional(),
+    maxConsecutiveCapabilityFailures: z.number().int().positive().max(10).optional(),
   })
   .strict();
 
@@ -109,6 +111,8 @@ export const BlueprintDefinitionSchema = z
       .max(10)
       .default([]),
     completionCriteria: ExprSchema,
+    /** Optional: Kriterien je Ziel (Schlüssel = Eintrag aus `goals`). Ziele ohne Eintrag folgen `completionCriteria`; der Vorgang gilt erst als abgeschlossen, wenn alles erfüllt ist. */
+    goalCriteria: z.record(z.string().min(1).max(120), ExprSchema).optional(),
     /** Descriptive extras only (owner, revision notes, quality notes) — never read by the runtime. */
     metadata: z.record(z.string().max(60), z.unknown()).optional(),
   })

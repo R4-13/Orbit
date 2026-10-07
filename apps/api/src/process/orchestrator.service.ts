@@ -4,7 +4,8 @@ import type { Case, CaseFact, Prisma, ProcessPlanNode } from '@orbit/domain';
 import {
   NotFoundError,
   bindInputs,
-  evaluateExpr,
+  effectiveLimits,
+  evaluateCompletion,
   nextActions,
   type BlueprintDefinition,
   type EvalContext,
@@ -20,7 +21,7 @@ import { ApprovalsService } from '../approvals/approvals.service';
 import { AuditService } from '../audit/audit.service';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ActionLedgerService } from './action-ledger.service';
+import { ActionLedgerService, ActionLimitReachedError } from './action-ledger.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
@@ -32,7 +33,6 @@ import { PlanStoreService, type PlanGraph } from './plan-store.service';
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
 const DEFAULT_WAIT_HOURS = 72;
-const DEFAULT_MAX_REPLANS = 3;
 const TERMINAL_CASE_STATUSES = new Set(['COMPLETED', 'REJECTED', 'CANCELLED', 'FAILED']);
 
 export interface AdvanceResult {
@@ -301,16 +301,27 @@ export class OrchestratorService {
     let intentId: string | undefined;
 
     if (needsLedger) {
-      const { intent } = await this.ledger.prepare(tenantId, {
-        caseId: caseRow.id,
-        planId: graph.plan.id,
-        planRevision: graph.plan.revision,
-        caseRevision: caseRow.revision,
-        nodeKey: node.nodeKey,
-        capabilityKey: capability.key,
-        purpose,
-        payload: { capability: capability.key, purpose: purpose ?? null, input: bound.values },
-      });
+      let prepared: Awaited<ReturnType<ActionLedgerService['prepare']>>;
+      try {
+        prepared = await this.ledger.prepare(
+          tenantId,
+          {
+            caseId: caseRow.id,
+            planId: graph.plan.id,
+            planRevision: graph.plan.revision,
+            caseRevision: caseRow.revision,
+            nodeKey: node.nodeKey,
+            capabilityKey: capability.key,
+            purpose,
+            payload: { capability: capability.key, purpose: purpose ?? null, input: bound.values },
+          },
+          effectiveLimits((await this.blueprintFor(tenantId, caseRow))?.limits),
+        );
+      } catch (error) {
+        if (error instanceof ActionLimitReachedError) return this.blockNode(tenantId, caseRow, graph, node, def, error.code, error.message, 'MANUAL_REVIEW');
+        throw error;
+      }
+      const { intent } = prepared;
       intentId = intent.id;
 
       if (intent.status === 'CONFIRMED') {
@@ -479,19 +490,22 @@ export class OrchestratorService {
 
   private async completeCase(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, ctx: EvalContext): Promise<void> {
     const blueprint = await this.blueprintFor(tenantId, caseRow);
+    const evidence = (await this.ledger.confirmedEffects(tenantId, caseRow.id)).map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
     let met: boolean;
-    try {
-      met = blueprint ? evaluateExpr(blueprint.completionCriteria, ctx) : graph.nodes.every((n) => n.nodeKey === node.nodeKey || ['SUCCEEDED', 'SKIPPED', 'SUPERSEDED'].includes(n.state));
-    } catch (error) {
-      met = false;
-      this.logger.warn(`completion criteria of case ${caseRow.id} not evaluable: ${safeMessage(error)}`);
+    if (blueprint) {
+      // BP-40: deterministische Bewertung je Ziel; der Schnappschuss wird festgehalten, ob erfüllt oder nicht.
+      const evaluation = evaluateCompletion({ goals: blueprint.goals, completionCriteria: blueprint.completionCriteria, goalCriteria: blueprint.goalCriteria }, ctx, evidence);
+      met = evaluation.met;
+      await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.COMPLETION_EVALUATED, payload: { met: evaluation.met, criteriaMet: evaluation.criteriaMet, goals: evaluation.goals, evidenceRefs: evaluation.evidenceRefs } });
+      if (evaluation.criteriaMet === null) this.logger.warn(`completion criteria of case ${caseRow.id} not evaluable`);
+    } else {
+      met = graph.nodes.every((n) => n.nodeKey === node.nodeKey || ['SUCCEEDED', 'SKIPPED', 'SUPERSEDED'].includes(n.state));
     }
     if (!met) {
       await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: 'Die Abschlusskriterien sind nicht erfüllt.' });
       await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: ['Der Ablauf ist durchgelaufen, aber die Abschlusskriterien sind nicht nachweislich erfüllt.'] });
       return;
     }
-    const evidence = (await this.ledger.confirmedEffects(tenantId, caseRow.id)).map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
     await this.succeed(tenantId, caseRow.id, graph, node, { criteriaMet: true }, 'LIVE');
     await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'PLAN_EXECUTED', evidenceRefs: evidence } });
   }
@@ -597,7 +611,7 @@ export class OrchestratorService {
   async replan(tenantId: string, caseId: string, userId: string | undefined): Promise<StartCaseResult> {
     const caseRow = await this.loadCase(tenantId, caseId);
     const blueprint = await this.blueprintRefFor(tenantId, caseRow);
-    const maxReplans = blueprint?.definition.limits?.maxReplans ?? DEFAULT_MAX_REPLANS;
+    const maxReplans = effectiveLimits(blueprint?.definition.limits).maxReplans;
     const revisions = await this.store.listRevisions(tenantId, caseId);
     if (revisions.length > maxReplans) {
       const reasons = [`Das Limit von ${maxReplans} Neuplanungen ist erreicht.`];

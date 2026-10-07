@@ -36,7 +36,7 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
   const tenants: string[] = [];
   const connectionByTenant = new Map<string, string>();
 
-  async function newTenant(options: { autonomousClarification: boolean }): Promise<string> {
+  async function newTenant(options: { autonomousClarification: boolean; limits?: Record<string, number> }): Promise<string> {
     const suffix = randomUUID();
     const { tenant } = await app.get(TenantsService).bootstrapTenant({ name: `AD ${suffix.slice(0, 8)}`, slug: `e2e-ad-${suffix}`, adminEmail: `admin-${suffix}@e2e-ad.example`, adminPassword: 'Musterwerk#2026!', adminFirstName: 'A', adminLastName: 'D' });
     tenants.push(tenant.id);
@@ -44,7 +44,8 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     connectionByTenant.set(tenant.id, integration.id);
     await app.get(ReferenceProcessService).loadFixture(tenant.id, JSON.parse(readFileSync(join(FIXTURES, 'reference-data.demo.json'), 'utf8')));
     const blueprints = app.get(BlueprintRegistryService);
-    const blueprint = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.blueprint.json'), 'utf8')) as { key: string; version: string };
+    const blueprint = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.blueprint.json'), 'utf8')) as { key: string; version: string; limits?: Record<string, number> };
+    if (options.limits) blueprint.limits = { ...blueprint.limits, ...options.limits };
     await blueprints.importDraft(tenant.id, 'u1', blueprint);
     for (const to of ['VALIDATING', 'TESTING', 'STAGED', 'PUBLISHED'] as const) await blueprints.transition(tenant.id, 'u1', blueprint.key, blueprint.version, to);
     await blueprints.activate(tenant.id, 'u1', blueprint.key, blueprint.version);
@@ -159,6 +160,28 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
     expect(row.completedAt).toBeNull();
     expect(row.attentionReasons.join(' ')).not.toBe('');
+  });
+
+  it('BP-39: erreicht ein Vorgang das Aktionslimit des Blueprints (3: Extraktion, Entwurf und Versand der Rückfrage), wird keine weitere Aktion vorbereitet – Prüfung mit verständlichem Grund statt stiller Fortsetzung', async () => {
+    const tenantId = await newTenant({ autonomousClarification: true, limits: { maxActionsPerCase: 3 } });
+    seedTriage();
+    seedExtraction([{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'Fenster' }]);
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Angebot Fenster', content: 'Wir möchten ein Angebot für Fenster.', threadId: 'thr-ad-lim', rfcMessageId: '<adl1@kunde.example>' }));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1); // die ersten drei Aktionen (Extraktion, Entwurf, Versand der Rückfrage) sind erlaubt
+
+    // Die Extraktion der Antwort wäre die vierte Aktion und wird gar nicht erst vorbereitet – deshalb wird dafür keine Modellantwort bereitgestellt.
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Angebot Fenster', content: '12 Fenster, Hauptstr. 5, 12345 Berlin.', threadId: 'thr-ad-lim', inReplyTo: '<sent-1@mail.example>', rfcMessageId: '<adl2@kunde.example>' }));
+
+    const row = await caseOf(tenantId, caseId);
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(row.attentionReasons.join(' ')).toContain('Limit von 3');
+    expect(sent).toHaveLength(1); // nichts Weiteres wurde versendet
+    expect(row.completedAt).toBeNull();
+    const intents = await prisma.forTenantId(tenantId).actionIntent.count({ where: { caseId } });
+    expect(intents).toBe(3); // das Limit verhindert das Vorbereiten einer vierten Aktion
+    const blocked = (await store.getActive(tenantId, caseId))!.nodes.filter((n) => n.errorCode === 'LIMIT_ACTIONS_PER_CASE');
+    expect(blocked.length).toBeGreaterThan(0);
   });
 
   it('AD-06: widersprüchliche Antwort → Konflikt sichtbar, keine automatische riskante Fortsetzung, kein Angebot', async () => {

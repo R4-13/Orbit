@@ -20,9 +20,10 @@ und keinen Prompt.
 | `planMode` | `FIXED` (Referenzgraph unverändert), `CONSTRAINED_ADAPTIVE` (KI darf bei Neuplanung anpassen, Referenzgraph als Rückfall), `AD_HOC` (KI plant, Mensch bestätigt vor jeder Ausführung) |
 | `referenceGraph` | `{nodes[], edges[]}` – derselbe Knoten-/Kantentyp wie ein konkreter Plan |
 | `constraints` | nur bekannte Schlüssel: `forbid_unverified_prices`, `require_policy_before_writes`, `prevent_duplicate_deliveries`, `require_human_resolution_for_fact_conflicts` |
-| `limits` | `maxPlannerCalls`, `maxReplans`, `maxSteps`, `maxAutoQuestions`, `maxRuntimeHours` |
+| `limits` | `maxPlannerCalls`, `maxReplans`, `maxSteps`, `maxAutoQuestions`, `maxRuntimeHours`, `maxActionsPerCase` (Standard 20, Obergrenze 50), `maxConsecutiveCapabilityFailures` (Standard 3, Obergrenze 10). Ein Blueprint darf Grenzen nur **verschärfen**; Standards und Plattformobergrenzen stehen in `packages/shared/src/process-schemas/limits.ts` (`effectiveLimits`). `maxActionsPerCase` zählt alle Aktionen mit Wirkung (intern und extern) über alle Planrevisionen; wiederholte Ausführung derselben Aktion zählt nicht doppelt. |
 | `waitRules[]` | Warteregeln mit `timeoutPolicyRef` |
 | `completionCriteria` | Ausdruck, der deterministisch ausgewertet wird |
+| `goalCriteria` | optional: Ausdruck je Ziel (Schlüssel = Eintrag aus `goals`). Ziele ohne Eintrag folgen `completionCriteria`. Abgeschlossen wird erst, wenn die Abschlusskriterien **und** alle Zielkriterien erfüllt sind; jede Bewertung steht als Ereignis `completion.evaluated` (erfüllt oder nicht) mit Zielstatus und Nachweisen im Vorgang |
 
 ## Knotentypen (geschlossene Menge)
 

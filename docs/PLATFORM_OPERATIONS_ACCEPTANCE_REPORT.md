@@ -24,7 +24,7 @@ Es gibt **keine Live-Validierung gegen einen Drittanbieter-Account** für die ne
 | OPS-3 | Plattformsteuerung: Kill Switches `ai.executions`, `external.autonomous_send`, `planner.adaptive`; Policy-Obergrenze (lockert nie); Mandanten-Gates LOGIN/AUTOMATION/CONNECTORS/BILLING/SECURITY_QUARANTINE (≤ 5 s Cache); Feature Flags (Mandant > Kohorte > Umgebung > Default, reservierte Schlüssel); Connector-Lebenszyklus als Overlay auf dem einen Katalog; bestätigungsgebundene Änderungen | COMPLETE | `apps/api/src/{platform-control,platform/control}`, `packages/shared/src/platform-control.ts`, Migration `…120000` | `platform-control` (17), `platform-control.spec` |
 | OPS-4 | Diagnose: Business- und Diagnose-Projektion getrennt, Diagnose nur Plattform und mandantenscharf, zentrale Redaction | COMPLETE | `apps/api/src/platform/diagnostics`, `packages/shared/src/{redaction,process-schemas/orchestration-diagnostics}.ts` | `case-orchestration-view` (AD-15/16/17), `redaction.spec` |
 | OPS-5 | Support-Sessions: begründet, befristet, keine Verlängerung, Vier-Augen für Payload-Scope, Prüfung bei jedem Aufruf, kein Impersonation-Pfad | COMPLETE | `apps/api/src/platform/support`, `packages/shared/src/support-session.ts`, Migration `…140000` | `platform-support-sessions` (14), `support-session.spec` |
-| ADO | Adaptive Orchestrierung: Auflösungsleiter als `context.resolution_attempted` (BP-32), autonome Sachrückfrage (BP-33), Fortsetzung durch Antwort (BP-34), `HumanInteractionRequest` als Projektion (BP-35) | COMPLETE (Rest siehe §4) | `packages/shared/src/process-schemas/{resolution,human-interaction}.ts`, `apps/api/src/process/human-interaction.service.ts`, `reference-process.tools.ts` | `adaptive-orchestration` (5), `resolution.spec` (9) |
+| ADO | Adaptive Orchestrierung: Auflösungsleiter als `context.resolution_attempted` (BP-32), autonome Sachrückfrage (BP-33), Fortsetzung durch Antwort (BP-34), `HumanInteractionRequest` als Projektion (BP-35), zentrale Limits (BP-39), Abschlussbewertung `completion.evaluated` (BP-40) | COMPLETE (Rest siehe §4) | `packages/shared/src/process-schemas/{resolution,human-interaction}.ts`, `apps/api/src/process/human-interaction.service.ts`, `reference-process.tools.ts` | `adaptive-orchestration` (5), `resolution.spec` (9) |
 
 Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängigkeit zur Plattformsteuerung); `PlatformControlModule` wird jetzt importiert, der Tenant-Teil läuft in `TenantFeaturesModule`.
 
@@ -40,7 +40,7 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 |---|---|
 | Plattform-UI nur teilweise | Schreibende Bereiche außer Notschaltern/Anbindungen nur über die API; Betreiberzugänge per `scripts/platform-bootstrap.ts` bzw. API |
 | MFA/WebAuthn fehlt | Step-up ist Passwort-Re-Auth |
-| BP-39/BP-40 teilweise | Limits `maxActionsPerCase`, `maxConsecutiveCapabilityFailures`, Kosten; kein `CompletionEvaluation`-Snapshot |
+| BP-39 ohne Kostenlimit | Aktions-/Fehlerlimits und Abschlussbewertung (BP-40) sind umgesetzt; Kostenlimit fehlt (Kostenerfassung nötig) |
 | OAS-05 und §29.5-Fälle | Diagnose-Export; Flag-Änderung während Rollout; Connector-Sperre während laufender Aktion; Worker-Neustart; Kill Switch + Replan gleichzeitig |
 | OPS-12/13 | keine periodische Health-Prüfung, keine Kostenlimits/Anomalie-Alarme |
 | OPS-15 | laufende Aktionen werden bei Connector-Sperre nicht aktiv beendet |
@@ -48,8 +48,8 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 ## 5. Verifikation
 
-**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 137, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 37 Suiten / 299 Tests grün, Playwright 94 bestanden / 1 übersprungen.
-Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; bei 429 vorher `throttler:*` in Redis leeren — das Login-Throttling summiert sich über Suiten).
+**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 37 Suiten / 300 Tests grün, Playwright 101 bestanden / 1 übersprungen (inkl. 7 Plattform-UI-Tests mit Betreiber-Zugang).
+Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; die Anmelde-Drosselung wird nur im Testprozess angehoben, `apps/api/test/utils/e2e-env.ts` — sonst summierte sie sich über Suiten und führte ab der Mitte zu 429).
 
 **Live im Docker-Stack (LIVE TESTED, lokale Entwicklungsumgebung, Build nach Commit `52f8b81` plus Folgefixes):**
 

@@ -14,3 +14,5 @@ export * from './plan-runtime';
 export * from './orchestration-diagnostics';
 export * from './human-interaction';
 export * from './resolution';
+export * from './limits';
+export * from './completion';
