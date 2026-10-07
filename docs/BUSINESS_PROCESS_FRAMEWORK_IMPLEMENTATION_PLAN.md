@@ -202,4 +202,4 @@ Nachweis jeweils **TESTED LOCALLY** (echte Postgres mit RLS, echte Guards; Model
 | BP-41 | COMPLETE | `OUTCOME_UNKNOWN` → `MANUAL_REVIEW`, Test BP-35 und Ledger-Suite | – |
 | BP-42/43 | COMPLETE | Business-Projektion ohne Technikfelder; Diagnose nur Plattform (AD-15/16/17) | – |
 | BP-44 | COMPLETE | UI v2 unverändert, `ux-v2` als Regression | Playwright-Regression nach Knotenpanel-Änderung noch einmal laufen lassen |
-| BP-45 | PARTIAL | `adaptive-orchestration.e2e-spec.ts` (5 Tests: AD-03/04/05/06/07/12 + BP-32/35) plus bestehende Suiten für AD-01/02/08–11/13–18 | AD-13 (Quelle zeitweise nicht verfügbar) nicht eigens getestet |
+| BP-45 | COMPLETE | `adaptive-orchestration.e2e-spec.ts` (7 Tests: AD-03/04/05/06/07/12/13 + BP-32/35/39) plus bestehende Suiten für AD-01/02/08–11/14–18 | – |

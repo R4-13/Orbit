@@ -178,7 +178,16 @@ export class OrchestratorService {
         if (await this.resumeDecidedApprovals(tenantId, caseRow, graph, executed)) continue;
 
         const ctx = await this.buildEvalContext(tenantId, caseRow, graph);
-        const actions = nextActions(this.runtimeNodes(graph), this.runtimeEdges(graph), ctx);
+        const allActions = nextActions(this.runtimeNodes(graph), this.runtimeEdges(graph), ctx);
+        // Eine Wiederholung hat eine Wartezeit (Backoff): ein Schritt vor seinem `retryAt` wird nicht erneut versucht, sonst wären alle Versuche in
+        // Sekunden verbraucht. Der Sweep nimmt den Fall nach Ablauf der Wartezeit wieder auf.
+        const now = Date.now();
+        const retryAtOf = (nodeKey: string) => graph.nodes.find((n) => n.nodeKey === nodeKey)?.retryAt?.getTime() ?? 0;
+        const actions = allActions.filter((a) => a.action !== 'EXECUTE' || retryAtOf(a.nodeKey) <= now);
+        if (actions.length === 0 && allActions.length > 0) {
+          await this.lifecycle.transition(tenantId, caseId, { to: 'WAITING_FOR_EXTERNAL_SYSTEM', attentionReasons: ['Ein Schritt wird nach kurzer Wartezeit automatisch wiederholt.'] });
+          return { status: 'IDLE', executed };
+        }
         if (actions.length === 0) {
           await this.settle(tenantId, caseRow, graph);
           return { status: 'IDLE', executed };

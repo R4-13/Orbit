@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
-import { MockLLMProvider } from '@orbit/agent-core';
+import { MockLLMProvider, ToolFailedError, type ToolRegistry } from '@orbit/agent-core';
 import { PERMISSIONS, triageFixtureForScenario } from '@orbit/shared';
-import { LLM_PROVIDER } from '../src/agent/agent.tokens';
+import { LLM_PROVIDER, TOOL_REGISTRY } from '../src/agent/agent.tokens';
 import { IntakeService } from '../src/intake/intake.service';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbound-mail.port';
@@ -12,9 +12,15 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { BlueprintRegistryService } from '../src/process/blueprint-registry.service';
 import { CaseFactsService } from '../src/process/case-facts.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
+import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { ReferenceProcessService } from '../src/process/reference/reference-process.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+
+/** Nur der Teil des Blueprints, den Tests gezielt anpassen. */
+interface TestBlueprint {
+  referenceGraph: { nodes: Array<{ id: string; retry?: { maxAttempts: number } }> };
+}
 
 const FIXTURES = join(__dirname, '../../../fixtures/process');
 const SENDER = 'petra.adaptiv@kunde.example';
@@ -36,7 +42,7 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
   const tenants: string[] = [];
   const connectionByTenant = new Map<string, string>();
 
-  async function newTenant(options: { autonomousClarification: boolean; limits?: Record<string, number> }): Promise<string> {
+  async function newTenant(options: { autonomousClarification: boolean; limits?: Record<string, number>; mutateBlueprint?: (blueprint: TestBlueprint) => void }): Promise<string> {
     const suffix = randomUUID();
     const { tenant } = await app.get(TenantsService).bootstrapTenant({ name: `AD ${suffix.slice(0, 8)}`, slug: `e2e-ad-${suffix}`, adminEmail: `admin-${suffix}@e2e-ad.example`, adminPassword: 'Musterwerk#2026!', adminFirstName: 'A', adminLastName: 'D' });
     tenants.push(tenant.id);
@@ -46,6 +52,7 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     const blueprints = app.get(BlueprintRegistryService);
     const blueprint = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.blueprint.json'), 'utf8')) as { key: string; version: string; limits?: Record<string, number> };
     if (options.limits) blueprint.limits = { ...blueprint.limits, ...options.limits };
+    options.mutateBlueprint?.(blueprint as unknown as TestBlueprint);
     await blueprints.importDraft(tenant.id, 'u1', blueprint);
     for (const to of ['VALIDATING', 'TESTING', 'STAGED', 'PUBLISHED'] as const) await blueprints.transition(tenant.id, 'u1', blueprint.key, blueprint.version, to);
     await blueprints.activate(tenant.id, 'u1', blueprint.key, blueprint.version);
@@ -182,6 +189,52 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     expect(intents).toBe(3); // das Limit verhindert das Vorbereiten einer vierten Aktion
     const blocked = (await store.getActive(tenantId, caseId))!.nodes.filter((n) => n.errorCode === 'LIMIT_ACTIONS_PER_CASE');
     expect(blocked.length).toBeGreaterThan(0);
+  });
+
+  it('AD-13: die Preisquelle ist vorübergehend nicht erreichbar → der Schritt wird mit Wartezeit wiederholt, kein Mensch wird belästigt, nichts wird erfunden – danach geht derselbe Fall weiter', async () => {
+    const tenantId = await newTenant({
+      autonomousClarification: true,
+      mutateBlueprint: (blueprint) => {
+        blueprint.referenceGraph.nodes.find((n) => n.id === 'price')!.retry = { maxAttempts: 3 };
+      },
+    });
+    const tool = app.get<ToolRegistry>(TOOL_REGISTRY).get('resolve_price')!;
+    const original = tool.execute.bind(tool);
+    let sourceDown = true;
+    const spy = jest.spyOn(tool, 'execute').mockImplementation(async (input, ctx) => {
+      if (sourceDown) throw new ToolFailedError('Die Preisquelle ist gerade nicht erreichbar.', { errorCode: 'SOURCE_TEMPORARILY_UNAVAILABLE', retryable: true });
+      return original(input, ctx);
+    });
+    try {
+      seedTriage();
+      seedExtraction([
+        { key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'Fenster' },
+        { key: 'request.quantity', value: 12, evidence: '12 Fenster' },
+        { key: 'request.delivery_address', value: 'Hauptstr. 5, 12345 Berlin', evidence: 'Hauptstr. 5, 12345 Berlin' },
+      ]);
+      const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Angebot Fenster', content: 'Wir möchten 12 Fenster, Hauptstr. 5, 12345 Berlin.', threadId: 'thr-ad13', rfcMessageId: '<ad13@kunde.example>' }));
+      const caseId = first.case!.id;
+
+      // Die Quelle ist weg: der Schritt wartet auf seine Wiederholung – kein Preis, kein Angebot, keine Aufgabe, keine Eskalation an einen Menschen.
+      const waiting = (await store.getActive(tenantId, caseId))!.nodes.find((n) => n.nodeKey === 'price')!;
+      expect(waiting.state).toBe('PLANNED');
+      expect(waiting.errorCode).toBe('SOURCE_TEMPORARILY_UNAVAILABLE');
+      expect(waiting.retryAt!.getTime()).toBeGreaterThan(Date.now());
+      expect(await prisma.forTenantId(tenantId).quote.count({ where: { caseId } })).toBe(0);
+      expect(await prisma.forTenantId(tenantId).task.count({ where: { caseId } })).toBe(0);
+      expect(waiting.attempts).toBe(1); // genau ein Versuch – die Wartezeit schützt vor einem Sofort-Wiederholen aller Versuche
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_EXTERNAL_SYSTEM');
+
+      // Die Quelle ist zurück, die Wartezeit ist um: derselbe Fall setzt sich fort und erreicht den nächsten verifizierten Zustand.
+      sourceDown = false;
+      await prisma.forTenantId(tenantId).processPlanNode.updateMany({ where: { state: 'PLANNED', retryAt: { not: null }, plan: { caseId } }, data: { retryAt: new Date(Date.now() - 1000) } });
+      await app.get(ProcessSweepService).sweep();
+      expect(await nodeState(tenantId, caseId, 'price')).toBe('SUCCEEDED');
+      expect((await prisma.forTenantId(tenantId).quote.findFirstOrThrow({ where: { caseId } })).priceSource).toBe('TEST_SOR:catalog');
+      expect(await nodeState(tenantId, caseId, 'deliver')).toBe('AWAITING_APPROVAL');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('AD-06: widersprüchliche Antwort → Konflikt sichtbar, keine automatische riskante Fortsetzung, kein Angebot', async () => {

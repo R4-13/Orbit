@@ -138,5 +138,5 @@ Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM
 * **Diagnose:** kein Export (OAS-05); Queue-/Worker-Gesundheit fehlt; Tests für Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart und Kill Switch + Replan gleichzeitig fehlen.
 * **Mandantenlebenszyklus:** `provision`/`offboard`/`close` sind keine Abläufe; es gibt keine Mandanten-Support-Historie.
 * **Limits (BP-39):** Aktions- und Fehlerlimits gelten zentral (Standards und Plattformobergrenzen im Code, Blueprint nur verschärfend); ein Kostenlimit fehlt, und die Limits sind nicht je Mandant einstellbar. Der Zielstatus (`completion.evaluated`) steht als Ereignis in der Vorgangshistorie, nicht als eigene Ansicht.
-* **Auflösungsleiter:** Stufen Fachsystem und weitere Quelle werden nur ausgewertet, soweit vorhandene Tools sie als Faktenquelle liefern; AD-13 (Quelle zeitweise nicht verfügbar) ist nicht eigens getestet.
+* **Auflösungsleiter:** Stufen Fachsystem und weitere Quelle werden nur ausgewertet, soweit vorhandene Tools sie als Faktenquelle liefern.
 * **Live-Nachweis:** Versand bleibt `SIMULATED` (echter Gmail-Versand **BLOCKED_BY_EXTERNAL_PERMISSION**); die neuen Pfade sind nicht mit einem echten Modell live bewiesen.

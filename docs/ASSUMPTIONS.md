@@ -968,4 +968,6 @@ aufgerufen wird (kein Scheduler/Cron/Webhook existiert).
 
 | 521 | **Mandantenzustand in der UI nur über Vorschau und gebundene Bestätigung:** jede Änderung am Ziel (Zustand, Sperren, Kohorten) verwirft die Vorschau; bestätigt wird mit dem Token der angezeigten Vorschau, der Server lehnt abweichende Ziele ab. Der Playwright-Test ändert nur eine unkritische Funktionsgruppe am Demo-Mandanten und setzt sie zurück (kein Zugriff betroffen). Anzeigenamen sind nicht eindeutig (mehrere „Musterwerk GmbH“), Auswahl in Tests daher über die Kennung. | Amendment 03 §6, §26.2 |
 
+| 522 | **Wiederholung respektiert ihre Wartezeit (Fund aus AD-13):** der Orchestrator wählte einen für die Wiederholung vorgemerkten Schritt (`PLANNED` mit `retryAt`) im selben Durchlauf sofort erneut aus; alle Versuche waren in Sekunden verbraucht und der Fall landete in der Prüfung, obwohl die Quelle nur kurz weg war. Jetzt werden Schritte vor ihrem `retryAt` übersprungen; gibt es nur noch solche, wartet der Fall in `WAITING_FOR_EXTERNAL_SYSTEM`, und der Sweep nimmt ihn nach Ablauf wieder auf (bestehender Mechanismus). Die Wartezeit bleibt `30 s × bisherige Versuche`. | Amendment 02 v1.2 AD-13 |
+
 Weitere Annahmen werden in den folgenden Phasen ergänzt.
