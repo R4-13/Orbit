@@ -48,4 +48,4 @@ Die erste Identität legt `apps/api/scripts/platform-bootstrap.ts` an (idempoten
 
 * MFA/WebAuthn, Identity-Provider-Anbindung (SSO) für Betreiber.
 * Kein Selbstbedienungs-Passwortwechsel für Plattformidentitäten (Rotation heute nur über neue Identität/Admin).
-* Plattform-UI (`/platform/*` im Web) ist noch nicht umgesetzt; die API-Grenzen stehen und sind getestet.
+* Plattform-UI (`/platform/*`): umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md); maßgeblich bleibt die Prüfung der API. Die Verwaltung der Zugänge (anlegen, Rollen, deaktivieren) ist dort für den Owner verfügbar.

@@ -81,7 +81,7 @@ export interface AiOverview {
   providers: Array<{ providerKey: string; displayName: string; adapterKey: string; lifecycle: string; supportedRegions: string[] }>;
   models: Array<{ id: string; providerKey: string; providerModelId: string; displayName: string; lifecycle: string; evaluationStatus: string; costInputPerMtok: number | null; costOutputPerMtok: number | null; costCurrency: string }>;
   profiles: Array<{ id: string; profileKey: string; version: number; purpose: string; fallbackMode: string; lifecycle: string }>;
-  routes: Array<{ id: string; modelProfileKey: string; environment: string; tenantScope: string | null; primaryModelId: string; fallbackMode: string; trafficPercent: number; active: boolean }>;
+  routes: Array<{ id: string; modelProfileKey: string; environment: string; tenantScope: string | null; primaryModelId: string; fallbackModelIds: string[]; fallbackMode: string; trafficPercent: number; active: boolean; version: number }>;
   connections: Array<{ id: string; providerKey: string; environment: string; credentialType: string; lifecycle: string; lastHealthStatus: string | null; allowedProfileKeys: string[] }>;
   health: Array<{ providerKey: string; modelRef: string; environment: string; status: string; consecutiveFailures: number }>;
 }
@@ -169,6 +169,19 @@ export interface FlagPreview {
 }
 
 export const useFlags = () => useQuery({ queryKey: ['platform', 'features'], queryFn: () => platformFetch<FlagRow[]>('/features') });
+
+
+export interface IdentityRow {
+  id: string;
+  email: string;
+  displayName: string;
+  status: 'ACTIVE' | 'DISABLED';
+  roles: string[];
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+export const useIdentities = (enabled = true) => useQuery({ queryKey: ['platform', 'identities'], queryFn: () => platformFetch<IdentityRow[]>('/identities'), enabled });
 
 /** Schreibende Plattformaktion; invalidiert danach alle Plattformdaten, damit die Anzeige den bestätigten Serverstand zeigt. */
 export function usePlatformMutation<TInput, TResult = unknown>(run: (input: TInput) => Promise<TResult>) {

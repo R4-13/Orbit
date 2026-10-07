@@ -5,6 +5,7 @@ import { PLATFORM_SCOPES } from '@orbit/shared';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
 import { platformErrorMessage, platformFetch } from '../../../lib/platform/platform-client';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
+import { CreateRouteForm, FALLBACK_LABELS, ProfilePublish, RouteActivation, RouteDeactivation } from '../../../components/platform/ai-route-panels';
 import { useAiOverview, useAiUsage, usePlatformMutation } from '../../../lib/platform/use-platform-data';
 
 const LIFECYCLE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
@@ -44,11 +45,15 @@ export default function PlatformAiPage() {
   const canSeeCost = hasScope(PLATFORM_SCOPES.AI_COST_READ);
   const usage = useAiUsage(canSeeCost);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [creatingRoute, setCreatingRoute] = useState(false);
+  const [open, setOpen] = useState<{ kind: 'activate' | 'deactivate' | 'publish'; id: string } | null>(null);
+  const canWrite = hasScope(PLATFORM_SCOPES.AI_WRITE);
   const bootstrap = usePlatformMutation(() => withStepUp(() => platformFetch('/ai/bootstrap-from-environment', { method: 'POST' })));
 
   if (isLoading) return <p className="text-sm text-slate-600">Wird geladen …</p>;
   if (isError || !data) return <ErrorState message={platformErrorMessage(error, 'Die KI-Steuerung konnte nicht geladen werden.')} onRetry={() => refetch()} />;
 
+  const modelName = (id: string) => data.models.find((m) => m.id === id)?.displayName ?? 'Unbekanntes Modell';
   const registryEmpty = data.providers.length === 0 && data.models.length === 0 && data.routes.length === 0;
 
   return (
@@ -57,6 +62,7 @@ export default function PlatformAiPage() {
         <h1 className="text-xl font-semibold text-slate-900">KI-Steuerung</h1>
         <p className="text-sm text-slate-600">Register der Anbieter, Modelle, Profile und Routen. Geschäftsprozesse nutzen nur logische Profile; Anbieter und Modell wählt allein die Plattform.</p>
         <p className="mt-1 text-xs text-slate-500">Registrierte Adapter: {data.adapters.join(', ') || '–'}</p>
+        {canWrite && !creatingRoute && data.models.length > 0 ? <Button className="mt-3" variant="secondary" onClick={() => setCreatingRoute(true)}>Neue Route</Button> : null}
       </div>
 
       {registryEmpty ? (
@@ -112,22 +118,37 @@ export default function PlatformAiPage() {
 
       <Section title="Profile" count={data.profiles.length} empty="Keine Profile vorhanden.">
         {data.profiles.map((p) => (
-          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-            <span>
-              <span className="font-medium text-slate-900">{p.profileKey}</span> <span className="text-xs text-slate-500">Version {p.version} · {p.purpose} · Ausweichen: {p.fallbackMode}</span>
-            </span>
-            <Badge tone={tone(p.lifecycle)}>{p.lifecycle}</Badge>
+          <li key={p.id} className="py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                <span className="font-medium text-slate-900">{p.profileKey}</span> <span className="text-xs text-slate-500">Version {p.version} · {p.purpose} · Ausweichen: {FALLBACK_LABELS[p.fallbackMode] ?? 'unbekannt'}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Badge tone={tone(p.lifecycle)}>{p.lifecycle}</Badge>
+                {canWrite && p.lifecycle === 'DRAFT' ? <Button variant="secondary" onClick={() => setOpen({ kind: 'publish', id: p.id })} aria-label={`Profil ${p.profileKey} Version ${p.version} veröffentlichen`}>Veröffentlichen</Button> : null}
+              </span>
+            </div>
+            {open?.kind === 'publish' && open.id === p.id ? <div className="mt-2"><ProfilePublish profileKey={p.profileKey} version={p.version} onClose={() => setOpen(null)} /></div> : null}
           </li>
         ))}
       </Section>
 
+      {creatingRoute ? <CreateRouteForm overview={data} onDone={() => setCreatingRoute(false)} /> : null}
       <Section title="Routen" count={data.routes.length} empty="Keine Routen – Aufrufe laufen über die Umgebungskonfiguration.">
         {data.routes.map((r) => (
-          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-            <span>
-              <span className="font-medium text-slate-900">{r.modelProfileKey}</span> <span className="text-xs text-slate-500">{r.environment}{r.tenantScope ? ` · Mandant ${r.tenantScope}` : ''} · {r.trafficPercent} % · Ausweichen: {r.fallbackMode}</span>
-            </span>
-            <Badge tone={r.active ? 'success' : 'neutral'}>{r.active ? 'Aktiv' : 'Inaktiv'}</Badge>
+          <li key={r.id} className="py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                <span className="font-medium text-slate-900">{r.modelProfileKey}</span> <span className="text-xs text-slate-500">{r.environment}{r.tenantScope ? ` · Mandant ${r.tenantScope}` : ''} · {modelName(r.primaryModelId)} · {r.trafficPercent} % · {FALLBACK_LABELS[r.fallbackMode] ?? 'unbekannt'}</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <Badge tone={r.active ? 'success' : 'neutral'}>{r.active ? 'Aktiv' : 'Inaktiv'}</Badge>
+                {canWrite && !r.active ? <Button variant="secondary" onClick={() => setOpen({ kind: 'activate', id: r.id })} aria-label={`Route ${r.modelProfileKey} aktivieren`}>Aktivieren</Button> : null}
+                {canWrite && r.active ? <Button variant="secondary" onClick={() => setOpen({ kind: 'deactivate', id: r.id })} aria-label={`Route ${r.modelProfileKey} deaktivieren`}>Deaktivieren</Button> : null}
+              </span>
+            </div>
+            {open?.kind === 'activate' && open.id === r.id ? <div className="mt-2"><RouteActivation route={r} modelName={modelName} onClose={() => setOpen(null)} /></div> : null}
+            {open?.kind === 'deactivate' && open.id === r.id ? <div className="mt-2"><RouteDeactivation route={r} onClose={() => setOpen(null)} /></div> : null}
           </li>
         ))}
       </Section>
