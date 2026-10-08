@@ -111,3 +111,22 @@ export class UsageQueryDto {
   @IsOptional() @Type(() => Date) @IsDate() to?: Date;
   @IsOptional() @IsIn(['profileKey', 'providerKey', 'tenantId', 'modelId']) groupBy?: 'profileKey' | 'providerKey' | 'tenantId' | 'modelId';
 }
+
+export class UpsertCostLimitDto {
+  @IsIn(['GLOBAL', 'TENANT', 'PROFILE']) scope!: 'GLOBAL' | 'TENANT' | 'PROFILE';
+  @IsOptional() @IsString() @MinLength(8) @MaxLength(64) targetTenantId?: string;
+  @IsOptional() @IsString() @Matches(/^[A-Z][A-Z0-9_]{2,60}$/) profileKey?: string;
+  @IsOptional() @IsString() @Matches(/^[A-Za-z]{3}$/) currency?: string;
+  @IsOptional() @IsNumber() @Min(0.01) warnAmount?: number;
+  @IsOptional() @IsNumber() @Min(0.01) softAmount?: number;
+  @IsOptional() @IsNumber() @Min(0.01) hardAmount?: number;
+  @IsOptional() @IsBoolean() hardEnforced?: boolean;
+  /** Beim Ändern eines bestehenden Limits Pflicht (Konkurrenzschutz). */
+  @IsOptional() @IsInt() @Min(0) expectedVersion?: number;
+  @IsString() @MinLength(REASON.min) @MaxLength(REASON.max) reason!: string;
+}
+
+export class RemoveCostLimitDto {
+  @IsInt() @Min(1) expectedVersion!: number;
+  @IsString() @MinLength(REASON.min) @MaxLength(REASON.max) reason!: string;
+}

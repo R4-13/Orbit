@@ -11,7 +11,7 @@ Plan und Gap-Matrix: [`PLATFORM_OPERATIONS_IMPLEMENTATION_PLAN.md`](PLATFORM_OPE
 | **Automatisiert getestet (TESTED LOCALLY)** | echte Postgres mit RLS, echte Guards/JWT-Domänen; Modell, Mail und zweiter KI-Anbieter sind Testdoubles (**TESTED WITH MOCK**) |
 | **Live bewiesen (LIVE TESTED)** | siehe §5 — nur das, was im Docker-Stack tatsächlich durchlaufen wurde |
 | **Externe Blocker** | echter Gmail-Versand (`gmail.send`-Zustimmung), zweiter echter KI-Anbieter (Zugangsdaten), MFA/WebAuthn-Dienst |
-| **Nicht umgesetzt** | Plattform-UI zum Anlegen von KI-Anbietern, Modellen, Profilentwürfen und Plattformverbindungen (Übersicht, Mandanten inkl. Zustandsänderung, Feature-Flags, Support-Sitzungen mit Vier-Augen-Freigabe, KI-Routen und Profil-Veröffentlichung, Betreiberzugänge, Notschalter, Anbindungen, Audit sind umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md)), MFA, Kostenlimits/Anomalie-Alarme, Diagnose-Export, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
+| **Nicht umgesetzt** | Plattform-UI zum Anlegen von KI-Anbietern, Modellen, Profilentwürfen und Plattformverbindungen (Übersicht, Mandanten inkl. Zustandsänderung, Feature-Flags, Support-Sitzungen mit Vier-Augen-Freigabe, KI-Routen und Profil-Veröffentlichung, Betreiberzugänge, Notschalter, Anbindungen, Audit sind umgesetzt, siehe [`PLATFORM_UI.md`](PLATFORM_UI.md)), MFA, `provision`/`offboard`/`close`-Abläufe, mandantenspezifische Region, Mandanten-Support-Historie |
 
 Es gibt **keine Live-Validierung gegen einen Drittanbieter-Account** für die neuen Pfade.
 
@@ -42,13 +42,13 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 | MFA/WebAuthn fehlt | Step-up ist Passwort-Re-Auth |
 | BP-39 ohne Kostenlimit | Aktions-/Fehlerlimits und Abschlussbewertung (BP-40) sind umgesetzt; Kostenlimit fehlt (Kostenerfassung nötig) |
 | OAS-05 und §29.5-Fälle | Diagnose-Export; Flag-Änderung während Rollout; Connector-Sperre während laufender Aktion; Worker-Neustart; Kill Switch + Replan gleichzeitig |
-| OPS-12/13 | keine periodische Health-Prüfung, keine Kostenlimits/Anomalie-Alarme |
+| OPS-12 | keine aktive periodische Health-Prüfung der KI-Anbieter (würde echte, bezahlte Aufrufe auslösen); OPS-13 (Kosten-Leitplanken, Anomalie-Alarme) ist umgesetzt |
 | OPS-15 | laufende Aktionen werden bei Connector-Sperre nicht aktiv beendet |
 | OPS-27 | keine mandantenspezifische Region |
 
 ## 5. Verifikation
 
-**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 39 Suiten / 315 Tests grün, Playwright 112 bestanden / 1 übersprungen (inkl. 19 Plattform-UI-Tests mit Betreiber-Zugang).
+**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 40 Suiten / 322 Tests grün, Playwright 113 bestanden / 1 übersprungen (inkl. 20 Plattform-UI-Tests mit Betreiber-Zugang).
 Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; die Anmelde-Drosselung wird nur im Testprozess angehoben, `apps/api/test/utils/e2e-env.ts` — sonst summierte sie sich über Suiten und führte ab der Mitte zu 429).
 
 **Live im Docker-Stack (LIVE TESTED, lokale Entwicklungsumgebung, Build nach Commit `52f8b81` plus Folgefixes):**

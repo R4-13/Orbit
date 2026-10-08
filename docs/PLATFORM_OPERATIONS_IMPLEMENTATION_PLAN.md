@@ -126,7 +126,7 @@ echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MO
 | OPS-10 | COMPLETE | OAI-07/08 (Unit + E2E) | – |
 | OPS-11 | COMPLETE | OAI-02/OPS-35 | – |
 | OPS-12 | PARTIAL | Health aus echten Aufrufen + Notbremse beeinflusst Routing; **Queue-/Worker-Zustand** (`GET /platform/runtime`, Übersichtskarte): verbundene Worker, Zähler, Alter des ältesten wartenden Auftrags, Bewertung OK/Eingeschränkt/Steht still (`runtime-health.ts`, 4 Unit-, 3 E2E-Tests, live mit Worker an/aus belegt) | keine aktive periodische Prüfung der KI-Anbieter (würde echte Aufrufe kosten) |
-| OPS-13 | PARTIAL | Usage je Mandant/Profil/Anbieter/Modell, Kosten nur mit Kostenprofil | Kostenlimits/Anomalie-Alarme fehlen |
+| OPS-13 | COMPLETE | Usage je Mandant/Profil/Anbieter/Modell, Kosten nur mit Kostenprofil; **Kosten-Leitplanken**: Warnschwelle, Soft- und Hard-Limit je Plattform/Mandant/Profil (Monat, UTC), Durchsetzung des Hard-Limits nur auf ausdrückliche Konfiguration als ehrlicher Block (`COST_LIMIT_HARD`, nie für BYOK), Alarme bei Limit-Wechsel und bei ungewöhnlicher Nutzung (Audit `PLATFORM_COST_ALERT` + optionaler Webhook); Shared 6 Unit-, Resolver 4 Unit-, E2E 7, Playwright 1 | Kosten ohne Kostenprofil bleiben unbekannt (getrennt ausgewiesen); nur eine Währung je Limit; Limits sind monatlich (keine Tages-/Wochenfenster) |
 | OPS-14 | COMPLETE | Overlay auf dem einen Katalog | Mehrversionen je Connector |
 | OPS-15 | PARTIAL | OCF-01 (neue Verbindungen/Aktionen gesperrt, verständlicher Status) | laufende Aktionen werden nicht aktiv beendet |
 | OPS-16 | COMPLETE | Global/Umgebung/Kohorte/Mandant (OCF-03/04) | – |
@@ -150,4 +150,4 @@ echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MO
 | OPS-34 | COMPLETE | `PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md` | – |
 | OPS-35 | COMPLETE (TESTED WITH MOCK) | zwei registrierte Adapter, Providerwechsel ohne Businesscode | kein zweiter echter Anbieter mit Zugangsdaten |
 
-**Nicht umgesetzt:** Plattform-UI zum Anlegen von Anbietern, Modellen, Profilentwürfen und Plattformverbindungen (lesende Seiten, Flags, Support-Sitzungen, KI-Routen/Profil-Veröffentlichung, Betreiberzugänge, Notschalter und Anbindungen sind umgesetzt), MFA/WebAuthn, Kostenlimits und Anomalie-Alarme, Diagnose-Export, `provision`/`offboard`/`close` als Abläufe, Mandanten-Support-Historie.
+**Nicht umgesetzt:** Plattform-UI zum Anlegen von Anbietern, Modellen, Profilentwürfen und Plattformverbindungen (lesende Seiten, Flags, Support-Sitzungen, KI-Routen/Profil-Veröffentlichung, Betreiberzugänge, Notschalter und Anbindungen sind umgesetzt), MFA/WebAuthn, `provision`/`offboard`/`close` als Abläufe, Mandanten-Support-Historie.

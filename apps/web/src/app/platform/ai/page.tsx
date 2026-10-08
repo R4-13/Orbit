@@ -5,6 +5,7 @@ import { PLATFORM_SCOPES } from '@orbit/shared';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
 import { platformErrorMessage, platformFetch } from '../../../lib/platform/platform-client';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
+import { AiCostPanel } from '../../../components/platform/ai-cost-panel';
 import { CreateRouteForm, FALLBACK_LABELS, ProfilePublish, RouteActivation, RouteDeactivation } from '../../../components/platform/ai-route-panels';
 import { useAiOverview, useAiUsage, usePlatformMutation } from '../../../lib/platform/use-platform-data';
 
@@ -174,6 +175,8 @@ export default function PlatformAiPage() {
           </li>
         ))}
       </Section>
+
+      <AiCostPanel />
 
       {canSeeCost ? (
         <Section title="Nutzung der letzten 30 Tage (je Profil)" count={usage.data?.length ?? 0} empty={usage.isError ? platformErrorMessage(usage.error, 'Die Nutzung konnte nicht geladen werden.') : 'Keine gemessene Nutzung.'}>

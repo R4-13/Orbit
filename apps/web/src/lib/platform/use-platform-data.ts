@@ -96,6 +96,34 @@ export interface AiUsageRow {
   avgLatencyMs: number | null;
 }
 
+export interface CostLimitRow {
+  id: string;
+  scope: 'GLOBAL' | 'TENANT' | 'PROFILE';
+  targetTenantId: string | null;
+  profileKey: string | null;
+  currency: string;
+  warnAmount: number | null;
+  softAmount: number | null;
+  hardAmount: number | null;
+  hardEnforced: boolean;
+  version: number;
+  periodStart: string;
+  spent: number;
+  state: 'OK' | 'WARNING' | 'SOFT_EXCEEDED' | 'HARD_EXCEEDED';
+  unmeasuredRequests: number;
+}
+
+export interface CostAnomalyRow {
+  tenantId: string;
+  requestsLast24h: number;
+  costLast24h: number;
+  baselineDailyRequests: number;
+  factor: number;
+}
+
+export const useCostLimits = (enabled: boolean) => useQuery({ queryKey: ['platform', 'ai', 'cost-limits'], queryFn: () => platformFetch<CostLimitRow[]>('/ai/cost-limits'), enabled });
+export const useCostAnomalies = (enabled: boolean) => useQuery({ queryKey: ['platform', 'ai', 'cost-anomalies'], queryFn: () => platformFetch<CostAnomalyRow[]>('/ai/cost-anomalies'), enabled });
+
 export interface DiagnosticProjectionView {
   caseId: string;
   tenantId: string;

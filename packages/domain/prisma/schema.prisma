@@ -286,83 +286,83 @@ enum AgentDefinitionStatus {
 // ============================================================================
 
 model Tenant {
-  aiUsageRecords AIUsageRecord[]
-  id                        String       @id @default(uuid())
+  aiUsageRecords            AIUsageRecord[]
+  id                        String          @id @default(uuid())
   name                      String
-  slug                      String       @unique
-  status                    TenantStatus @default(ACTIVE)
-  locale                    String       @default("de-DE")
-  timezone                  String       @default("Europe/Berlin")
+  slug                      String          @unique
+  status                    TenantStatus    @default(ACTIVE)
+  locale                    String          @default("de-DE")
+  timezone                  String          @default("Europe/Berlin")
   /// §52 DSGVO-Löschworkflow: gesetzt durch POST /tenants/me/deletion-request,
   /// Voraussetzung für POST /tenants/me/deletion-confirm. Zwei getrennte
   /// Aufrufe als bewusste Sicherheitshürde gegen versehentliche Löschung.
-  deletionRequestedAt       DateTime?    @map("deletion_requested_at")
-  deletionRequestedByUserId String?      @map("deletion_requested_by_user_id")
+  deletionRequestedAt       DateTime?       @map("deletion_requested_at")
+  deletionRequestedByUserId String?         @map("deletion_requested_by_user_id")
   /// Amendment 03 §6: Rollout-Kohorten und feingranulare Sperrarten (LOGIN, AUTOMATION, CONNECTORS, BILLING, SECURITY_QUARANTINE).
-  featureCohorts            String[]     @default([]) @map("feature_cohorts")
-  suspensionScopes          String[]     @default([]) @map("suspension_scopes")
-  lifecycleNote             String?      @map("lifecycle_note")
-  createdAt                 DateTime     @default(now()) @map("created_at")
-  updatedAt                 DateTime     @updatedAt @map("updated_at")
+  featureCohorts            String[]        @default([]) @map("feature_cohorts")
+  suspensionScopes          String[]        @default([]) @map("suspension_scopes")
+  lifecycleNote             String?         @map("lifecycle_note")
+  createdAt                 DateTime        @default(now()) @map("created_at")
+  updatedAt                 DateTime        @updatedAt @map("updated_at")
 
-  users                   User[]
-  roles                   Role[]
-  policyConfigs           PolicyConfig[]
-  auditLogs               AuditLog[]
-  cases                   Case[]
-  tasks                   Task[]
-  documents               Document[]
-  emailMessages           EmailMessage[]
-  suppliers               Supplier[]
-  invoices                Invoice[]
-  bookingProposals        BookingProposal[]
-  financeTransfers        FinanceTransfer[]
-  approvals               Approval[]
-  companies               Company[]
-  contacts                Contact[]
-  leads                   Lead[]
-  opportunities           Opportunity[]
-  meetings                Meeting[]
-  integrations            Integration[]
+  users                        User[]
+  roles                        Role[]
+  policyConfigs                PolicyConfig[]
+  auditLogs                    AuditLog[]
+  cases                        Case[]
+  tasks                        Task[]
+  documents                    Document[]
+  emailMessages                EmailMessage[]
+  suppliers                    Supplier[]
+  invoices                     Invoice[]
+  bookingProposals             BookingProposal[]
+  financeTransfers             FinanceTransfer[]
+  approvals                    Approval[]
+  companies                    Company[]
+  contacts                     Contact[]
+  leads                        Lead[]
+  opportunities                Opportunity[]
+  meetings                     Meeting[]
+  integrations                 Integration[]
   integrationCredentialSecrets IntegrationCredentialSecret[]
-  aiProviderConnection    AIProviderConnection?
-  branding                TenantBranding?
-  conversations           Conversation[]
-  conversationMessages    ConversationMessage[]
-  agentRuns               AgentRun[]
-  toolInvocations         ToolInvocation[]
-  webhookEvents           WebhookEvent[]
-  retentionPolicies       RetentionPolicy[]
-  agentDefinitions        AgentDefinition[]
-  agentDefinitionVersions AgentDefinitionVersion[]
-  agentEvaluationCases    AgentEvaluationCase[]
-  workflowDefinitions     WorkflowDefinition[]
-  workflowStepDefinitions WorkflowStepDefinition[]
-  workflowRuns            WorkflowRun[]
-  workflowStepRuns        WorkflowStepRun[]
-  connectorSyncs          ConnectorSync[]
-  intakeEvents            IntakeEvent[]
+  aiProviderConnection         AIProviderConnection?
+  branding                     TenantBranding?
+  conversations                Conversation[]
+  conversationMessages         ConversationMessage[]
+  agentRuns                    AgentRun[]
+  toolInvocations              ToolInvocation[]
+  webhookEvents                WebhookEvent[]
+  retentionPolicies            RetentionPolicy[]
+  agentDefinitions             AgentDefinition[]
+  agentDefinitionVersions      AgentDefinitionVersion[]
+  agentEvaluationCases         AgentEvaluationCase[]
+  workflowDefinitions          WorkflowDefinition[]
+  workflowStepDefinitions      WorkflowStepDefinition[]
+  workflowRuns                 WorkflowRun[]
+  workflowStepRuns             WorkflowStepRun[]
+  connectorSyncs               ConnectorSync[]
+  intakeEvents                 IntakeEvent[]
+  mockCrmRecords               MockCrmRecord[]
+  intakeDecisions              IntakeDecision[]
+  caseFacts                    CaseFact[]
+  caseCorrelations             CaseCorrelation[]
+  processBlueprints            ProcessBlueprint[]
+  referenceCatalogItems        ReferenceCatalogItem[]
+  referenceRequirementRules    ReferenceRequirementRule[]
+  communicationDrafts          CommunicationDraft[]
+  quotes                       Quote[]
+  tenantSequences              TenantSequence[]
+  processActivations           TenantProcessActivation[]
+  processPlans                 ProcessPlan[]
+  processPlanNodes             ProcessPlanNode[]
+  processPlanEdges             ProcessPlanEdge[]
+  actionIntents                ActionIntent[]
+  actionReceipts               ActionReceipt[]
+  waitSubscriptions            WaitSubscription[]
+  caseEvents                   CaseEvent[]
+  caseCommands                 CaseCommand[]
 
   @@map("tenants")
-  mockCrmRecords MockCrmRecord[]
-  intakeDecisions IntakeDecision[]
-  caseFacts       CaseFact[]
-  caseCorrelations CaseCorrelation[]
-  processBlueprints ProcessBlueprint[]
-  referenceCatalogItems ReferenceCatalogItem[]
-  referenceRequirementRules ReferenceRequirementRule[]
-  communicationDrafts CommunicationDraft[]
-  quotes Quote[]
-  tenantSequences TenantSequence[]
-  processActivations TenantProcessActivation[]
-  processPlans ProcessPlan[]
-  processPlanNodes ProcessPlanNode[]
-  processPlanEdges ProcessPlanEdge[]
-  actionIntents ActionIntent[]
-  actionReceipts ActionReceipt[]
-  waitSubscriptions WaitSubscription[]
-  caseEvents CaseEvent[]
-  caseCommands CaseCommand[]
 }
 
 model User {
@@ -384,8 +384,8 @@ model User {
   assignedCases Case[] @relation("CaseAssignee")
   assignedTasks Task[] @relation("TaskAssignee")
 
-  conversations         Conversation[]
-  conversationMessages  ConversationMessage[]
+  conversations        Conversation[]
+  conversationMessages ConversationMessage[]
 
   @@index([tenantId])
   @@map("users")
@@ -478,24 +478,24 @@ model PolicyConfig {
 /// Append-only. Kein FK auf User (siehe Datei-Kopfkommentar) — das Log muss
 /// unabhängig von Nutzer-Lifecycle lesbar bleiben.
 model AuditLog {
-  id          String      @id @default(uuid())
+  id                  String      @id @default(uuid())
   /// NULL nur für `domain = PLATFORM` (CHECK-Constraint); Mandantenzeilen behalten Pflicht-Mandant + Cascade (DSGVO-Löschung).
-  tenantId    String?     @map("tenant_id")
-  domain      AuditDomain @default(TENANT)
+  tenantId            String?     @map("tenant_id")
+  domain              AuditDomain @default(TENANT)
   /// Event-Typ aus AUDIT_EVENT_TYPES (@orbit/shared/audit.ts).
-  eventType   String      @map("event_type")
-  actorType   ActorType   @map("actor_type")
-  actorUserId String?     @map("actor_user_id")
+  eventType           String      @map("event_type")
+  actorType           ActorType   @map("actor_type")
+  actorUserId         String?     @map("actor_user_id")
   /// Plattform-Domäne: handelnde Plattformidentität (kein FK – der Audit-Eintrag überlebt jede Identitätsverwaltung).
-  actorPlatformUserId String? @map("actor_platform_user_id")
+  actorPlatformUserId String?     @map("actor_platform_user_id")
   /// Plattform-Domäne: betroffener Mandant (ohne FK, damit eine Mandantenlöschung das Betreiber-Audit nicht kaskadiert löscht).
-  targetTenantId      String? @map("target_tenant_id")
-  correlationId       String? @map("correlation_id")
-  supportSessionId    String? @map("support_session_id")
-  entityType  String?     @map("entity_type")
-  entityId    String?     @map("entity_id")
-  payload     Json?
-  createdAt   DateTime    @default(now()) @map("created_at")
+  targetTenantId      String?     @map("target_tenant_id")
+  correlationId       String?     @map("correlation_id")
+  supportSessionId    String?     @map("support_session_id")
+  entityType          String?     @map("entity_type")
+  entityId            String?     @map("entity_id")
+  payload             Json?
+  createdAt           DateTime    @default(now()) @map("created_at")
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -545,23 +545,23 @@ model Case {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignee User?  @relation("CaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
-  tasks         Task[]
-  documents     Document[]
-  emailMessages EmailMessage[]
-  invoices      Invoice[]
-  leads         Lead[]
-  agentRuns     AgentRun[]
-  workflowRuns  WorkflowRun[]
-  intakeEvents  IntakeEvent[]
-  facts         CaseFact[]
-  correlations  CaseCorrelation[]
-  processPlans  ProcessPlan[]
-  actionIntents ActionIntent[]
-  waitSubscriptions WaitSubscription[]
-  caseEvents    CaseEvent[]
-  caseCommands  CaseCommand[]
+  tasks               Task[]
+  documents           Document[]
+  emailMessages       EmailMessage[]
+  invoices            Invoice[]
+  leads               Lead[]
+  agentRuns           AgentRun[]
+  workflowRuns        WorkflowRun[]
+  intakeEvents        IntakeEvent[]
+  facts               CaseFact[]
+  correlations        CaseCorrelation[]
+  processPlans        ProcessPlan[]
+  actionIntents       ActionIntent[]
+  waitSubscriptions   WaitSubscription[]
+  caseEvents          CaseEvent[]
+  caseCommands        CaseCommand[]
   communicationDrafts CommunicationDraft[]
-  quotes        Quote[]
+  quotes              Quote[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -921,29 +921,29 @@ model Meeting {
 /// jeweiligen Provider-Kontext nach erfolgreichem OAuth-Flow ermittelt (§7.2.1
 /// — niemals ein fest im Code hinterlegter Beispielwert).
 model Integration {
-  id                          String                   @id @default(uuid())
-  tenantId                    String                   @map("tenant_id")
-  connectorType                IntegrationConnectorType @map("connector_type")
-  status                       IntegrationStatus        @default(NOT_CONFIGURED)
+  id                         String                   @id @default(uuid())
+  tenantId                   String                   @map("tenant_id")
+  connectorType              IntegrationConnectorType @map("connector_type")
+  status                     IntegrationStatus        @default(NOT_CONFIGURED)
   /// Verweist auf `IntegrationCredentialSecret.id` — niemals ein Secret selbst.
-  credentialReference           String?                  @map("credential_reference")
+  credentialReference        String?                  @map("credential_reference")
   /// Dynamisch vom Provider ermittelt (z. B. die autorisierte Google-Account-ID), nie hartcodiert.
-  externalAccountId             String?                  @map("external_account_id")
+  externalAccountId          String?                  @map("external_account_id")
   /// Dynamisch vom Provider ermittelt (z. B. die autorisierte E-Mail-Adresse), nie hartcodiert.
-  externalAccountDisplayName    String?                  @map("external_account_display_name")
+  externalAccountDisplayName String?                  @map("external_account_display_name")
   /// Tatsächlich gewährte Capability-Strings (z. B. ["email.read"]) — kann enger sein als vom Connector maximal unterstützt.
-  grantedCapabilities           Json?                    @map("granted_capabilities")
+  grantedCapabilities        Json?                    @map("granted_capabilities")
   /// Nicht-geheime Konfiguration (z. B. gewählte DATEV-Umgebung, Postfach-Adresse).
-  config                        Json?
-  lastTestedAt                  DateTime?                @map("last_tested_at")
-  lastTestStatus                String?                  @map("last_test_status")
-  lastSuccessAt                 DateTime?                @map("last_success_at")
-  lastErrorAt                   DateTime?                @map("last_error_at")
-  lastErrorCode                 String?                  @map("last_error_code")
-  createdAt                     DateTime                 @default(now()) @map("created_at")
-  updatedAt                     DateTime                 @updatedAt @map("updated_at")
+  config                     Json?
+  lastTestedAt               DateTime?                @map("last_tested_at")
+  lastTestStatus             String?                  @map("last_test_status")
+  lastSuccessAt              DateTime?                @map("last_success_at")
+  lastErrorAt                DateTime?                @map("last_error_at")
+  lastErrorCode              String?                  @map("last_error_code")
+  createdAt                  DateTime                 @default(now()) @map("created_at")
+  updatedAt                  DateTime                 @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   connectorSync ConnectorSync?
   intakeEvents  IntakeEvent[]
 
@@ -1000,21 +1000,21 @@ enum ConnectorSyncStatus {
 }
 
 model ConnectorSync {
-  id            String              @id @default(uuid())
-  tenantId      String              @map("tenant_id")
-  connectionId  String              @unique @map("connection_id")
+  id            String                   @id @default(uuid())
+  tenantId      String                   @map("tenant_id")
+  connectionId  String                   @unique @map("connection_id")
   connectorType IntegrationConnectorType @map("connector_type")
-  syncMode      ConnectorSyncMode   @map("sync_mode")
+  syncMode      ConnectorSyncMode        @map("sync_mode")
   /// Opaker Fortsetzungspunkt (z. B. die zuletzt gesehene Gmail-Message-ID) — vom jeweiligen Channel-Poll-Adapter interpretiert, nie vom generischen Sync-Runtime selbst geparst.
   cursor        String?
-  status        ConnectorSyncStatus @default(IDLE)
-  lastAttemptAt DateTime?           @map("last_attempt_at")
-  lastSuccessAt DateTime?           @map("last_success_at")
-  nextRunAt     DateTime?           @map("next_run_at")
-  retryCount    Int                 @default(0) @map("retry_count")
-  lastErrorCode String?             @map("last_error_code")
-  createdAt     DateTime            @default(now()) @map("created_at")
-  updatedAt     DateTime            @updatedAt @map("updated_at")
+  status        ConnectorSyncStatus      @default(IDLE)
+  lastAttemptAt DateTime?                @map("last_attempt_at")
+  lastSuccessAt DateTime?                @map("last_success_at")
+  nextRunAt     DateTime?                @map("next_run_at")
+  retryCount    Int                      @default(0) @map("retry_count")
+  lastErrorCode String?                  @map("last_error_code")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
 
   tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   connection Integration @relation(fields: [connectionId], references: [id], onDelete: Cascade)
@@ -1064,45 +1064,45 @@ enum IntakeEventStatus {
 /// `EmailMessage.toAddresses: String[]`). `IntakeEvent` trägt nur, was der
 /// Orchestrierungs-/Triage-/Routing-Entscheidungspfad selbst braucht.
 model IntakeEvent {
-  id              String    @id @default(uuid())
-  tenantId        String    @map("tenant_id")
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
   /// `Integration.id` — null beim SIMULATED-Channel (kein echter Connector dahinter).
-  connectionId    String?   @map("connection_id")
+  connectionId    String?       @map("connection_id")
   channel         IntakeChannel
   /// z. B. "gmail" | "simulated" — freier String statt Enum, damit neue Provider keine Migration brauchen (vgl. `ConnectorMetadata.provider` in packages/integration-core).
   provider        String
   /// Die eigene Ereignis-/Nachrichten-ID des Providers (z. B. Gmail-Message-ID) — zusammen mit `tenantId`+`provider` die Idempotenz-Grenze, siehe `@@unique` unten. Bei SIMULATED eine generierte UUID.
-  externalEventId String    @map("external_event_id")
-  occurredAt      DateTime  @map("occurred_at")
+  externalEventId String        @map("external_event_id")
+  occurredAt      DateTime      @map("occurred_at")
 
   /// `PartyReference`-JSON ({address?, displayName?}) — bewusst JSON statt fester E-Mail-Spalten, damit künftige Kanäle (Telefon: Nummer statt Adresse) keine neue Spalte brauchen.
-  senderRef       Json?     @map("sender_ref")
-  recipientRefs   Json?     @map("recipient_refs")
-  subject         String?
+  senderRef     Json?   @map("sender_ref")
+  recipientRefs Json?   @map("recipient_refs")
+  subject       String?
 
   /// Verweis auf den vollständigen Quelldatensatz — der Body bleibt dort, nicht hier dupliziert.
-  emailMessageId  String?   @unique @map("email_message_id")
-  documentIds     String[]  @map("document_ids")
+  emailMessageId String?  @unique @map("email_message_id")
+  documentIds    String[] @map("document_ids")
 
-  relevance       IntakeRelevance?
+  relevance      IntakeRelevance?
   /// Bewusst ein freier String statt eines harten Enums (nur FINANCE/SALES/OTHER heute) — neue Domänen dürfen ohne Schema-Migration hinzukommen.
-  domainCategory  String?   @map("domain_category")
-  caseId          String?   @map("case_id")
+  domainCategory String?          @map("domain_category")
+  caseId         String?          @map("case_id")
   /// Korrelation zum durablen WorkflowRun — seit Increment G von `IntakeService.triggerWorkflow()` für jedes FINANCE/SALES-Intake-Event gesetzt (vorher stets null, da Finance/Sales über den inzwischen entfernten `runAgentTurn()`-Pfad liefen).
-  workflowRunId   String?   @map("workflow_run_id")
+  workflowRunId  String?          @map("workflow_run_id")
 
-  status          IntakeEventStatus @default(RECEIVED)
-  errorMessage    String?   @map("error_message")
+  status       IntakeEventStatus @default(RECEIVED)
+  errorMessage String?           @map("error_message")
 
-  metadata        Json?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  connection   Integration?  @relation(fields: [connectionId], references: [id], onDelete: SetNull)
-  emailMessage EmailMessage? @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
-  case         Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
-  workflowRun  WorkflowRun?  @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection   Integration?    @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  emailMessage EmailMessage?   @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
+  case         Case?           @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  workflowRun  WorkflowRun?    @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
   decision     IntakeDecision?
 
   @@unique([tenantId, provider, externalEventId])
@@ -1136,20 +1136,20 @@ enum AIProviderConnectionStatus {
 }
 
 model AIProviderConnection {
-  id                   String                      @id @default(uuid())
-  tenantId             String                      @unique @map("tenant_id")
-  providerKey          AIProviderKey               @map("provider_key")
-  status               AIProviderConnectionStatus  @default(NOT_CONFIGURED)
-  encryptedCredentials Bytes?                       @map("encrypted_credentials")
+  id                   String                     @id @default(uuid())
+  tenantId             String                     @unique @map("tenant_id")
+  providerKey          AIProviderKey              @map("provider_key")
+  status               AIProviderConnectionStatus @default(NOT_CONFIGURED)
+  encryptedCredentials Bytes?                     @map("encrypted_credentials")
   /// Optionales Modell-Override (z. B. "gpt-4o" statt des Plattform-Defaults) — leer = Provider-Default aus @orbit/config verwenden.
   model                String?
-  lastTestedAt         DateTime?                    @map("last_tested_at")
-  lastTestStatus       String?                      @map("last_test_status")
+  lastTestedAt         DateTime?                  @map("last_tested_at")
+  lastTestStatus       String?                    @map("last_test_status")
   /// Amendment 03 §10: gesetzt, sobald der Mandant erfolgreich BYOK nutzt; ab dann gilt NO_FALLBACK (kein stilles Zurückfallen auf die Plattform). Wird nur durch ein ausdrückliches Trennen gelöscht.
-  byokActiveSince      DateTime?                    @map("byok_active_since")
-  createdByUserId      String?                      @map("created_by_user_id")
-  createdAt            DateTime                     @default(now()) @map("created_at")
-  updatedAt            DateTime                     @updatedAt @map("updated_at")
+  byokActiveSince      DateTime?                  @map("byok_active_since")
+  createdByUserId      String?                    @map("created_by_user_id")
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1170,23 +1170,23 @@ enum BrandingBorderRadiusPreset {
 }
 
 model TenantBranding {
-  id                    String                     @id @default(uuid())
-  tenantId              String                     @unique @map("tenant_id")
-  companyDisplayName    String?                    @map("company_display_name")
-  logoUrl               String?                    @map("logo_url")
-  logoMarkUrl           String?                    @map("logo_mark_url")
-  primaryColor          String?                    @map("primary_color")
-  primaryForeground     String?                    @map("primary_foreground")
-  secondaryColor        String?                    @map("secondary_color")
-  secondaryForeground   String?                    @map("secondary_foreground")
-  accentColor           String?                    @map("accent_color")
-  accentForeground      String?                    @map("accent_foreground")
-  navigationBackground  String?                    @map("navigation_background")
-  navigationForeground  String?                    @map("navigation_foreground")
-  borderRadiusPreset    BrandingBorderRadiusPreset? @map("border_radius_preset")
-  updatedByUserId       String?                    @map("updated_by_user_id")
-  createdAt             DateTime                   @default(now()) @map("created_at")
-  updatedAt             DateTime                   @updatedAt @map("updated_at")
+  id                   String                      @id @default(uuid())
+  tenantId             String                      @unique @map("tenant_id")
+  companyDisplayName   String?                     @map("company_display_name")
+  logoUrl              String?                     @map("logo_url")
+  logoMarkUrl          String?                     @map("logo_mark_url")
+  primaryColor         String?                     @map("primary_color")
+  primaryForeground    String?                     @map("primary_foreground")
+  secondaryColor       String?                     @map("secondary_color")
+  secondaryForeground  String?                     @map("secondary_foreground")
+  accentColor          String?                     @map("accent_color")
+  accentForeground     String?                     @map("accent_foreground")
+  navigationBackground String?                     @map("navigation_background")
+  navigationForeground String?                     @map("navigation_foreground")
+  borderRadiusPreset   BrandingBorderRadiusPreset? @map("border_radius_preset")
+  updatedByUserId      String?                     @map("updated_by_user_id")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -1273,9 +1273,9 @@ model AgentRun {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
-  toolInvocations       ToolInvocation[]
-  workflowStepRuns      WorkflowStepRun[]
-  conversationMessages  ConversationMessage[]
+  toolInvocations      ToolInvocation[]
+  workflowStepRuns     WorkflowStepRun[]
+  conversationMessages ConversationMessage[]
 
   @@index([tenantId, status])
   @@map("agent_runs")
@@ -1469,7 +1469,7 @@ model WorkflowRun {
   /// relevante Vorschritt-Outputs fest, damit FollowUpResumeService die
   /// verbleibenden Schritte fortsetzen kann, ohne bereits ausgeführte
   /// Schritte erneut laufen zu lassen. Siehe docs/ORBIT_UNIFIED_EVOLUTION_CONCEPT.md §5.
-  contextSnapshot Json? @map("context_snapshot")
+  contextSnapshot      Json?          @map("context_snapshot")
   errorMessage         String?        @map("error_message")
   startedAt            DateTime       @default(now()) @map("started_at")
   completedAt          DateTime?      @map("completed_at")
@@ -1489,21 +1489,21 @@ model WorkflowRun {
 /// Zuordnungstabelle. `agentRunId` fehlt bei einem übersprungenen
 /// Schritt (`skipped: true`, Bedingung nicht erfüllt).
 model WorkflowStepRun {
-  id            String   @id @default(uuid())
-  tenantId      String   @map("tenant_id")
-  workflowRunId String   @map("workflow_run_id")
-  stepOrder     Int      @map("step_order")
-  agentRunId    String?  @map("agent_run_id")
-  skipped       Boolean  @default(false)
+  id             String                @id @default(uuid())
+  tenantId       String                @map("tenant_id")
+  workflowRunId  String                @map("workflow_run_id")
+  stepOrder      Int                   @map("step_order")
+  agentRunId     String?               @map("agent_run_id")
+  skipped        Boolean               @default(false)
   /// Tatsächliches Ergebnis des Schritts (siehe WorkflowStepRunStatus). Ein zurückgegebener Tool-Fehler macht den Schritt FAILED, auch wenn keine Exception flog.
-  status        WorkflowStepRunStatus @default(SUCCEEDED)
-  attempt       Int      @default(1)
+  status         WorkflowStepRunStatus @default(SUCCEEDED)
+  attempt        Int                   @default(1)
   /// Sicherer, maschinenlesbarer Fehlercode (z. B. TOOL_RETURNED_ERROR, POLICY_BLOCKED) — nie eine rohe Provider-Meldung.
-  errorCode     String?  @map("error_code")
-  errorMessage  String?  @map("error_message")
+  errorCode      String?               @map("error_code")
+  errorMessage   String?               @map("error_message")
   /// Name des Tools, dessen Ergebnis den Schritt scheitern ließ (Nachvollziehbarkeit Tool → StepRun).
-  failedToolName String? @map("failed_tool_name")
-  createdAt     DateTime @default(now()) @map("created_at")
+  failedToolName String?               @map("failed_tool_name")
+  createdAt      DateTime              @default(now()) @map("created_at")
 
   tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workflowRun WorkflowRun @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
@@ -1578,12 +1578,12 @@ enum RetentionCategory {
 /// `TenantsService.bootstrapTenant()` vorbefüllt (anders als
 /// `PolicyConfig`), genau aus diesem Grund.
 model RetentionPolicy {
-  id                String            @id @default(uuid())
-  tenantId          String            @map("tenant_id")
-  category          RetentionCategory
-  retentionDays     Int               @map("retention_days")
-  updatedByUserId   String?           @map("updated_by_user_id")
-  updatedAt         DateTime          @updatedAt @map("updated_at")
+  id              String            @id @default(uuid())
+  tenantId        String            @map("tenant_id")
+  category        RetentionCategory
+  retentionDays   Int               @map("retention_days")
+  updatedByUserId String?           @map("updated_by_user_id")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -2158,23 +2158,23 @@ model ReferenceRequirementRule {
 /// Unveraenderliche Version einer ausgehenden Nachricht. Jede Bearbeitung legt eine neue Version an; die Freigabe
 /// bindet ueber `contentHash` an genau diesen Inhalt.
 model CommunicationDraft {
-  id                  String                   @id @default(uuid())
-  tenantId            String                   @map("tenant_id")
-  caseId              String                   @map("case_id")
-  purpose             String
-  version             Int
-  parentDraftId       String?                  @map("parent_draft_id")
-  toAddress           String                   @map("to_address")
-  subject             String
-  bodyText            String                   @map("body_text")
-  attachmentDocumentIds String[]               @default([]) @map("attachment_document_ids")
-  contentHash         String                   @map("content_hash")
+  id                    String                   @id @default(uuid())
+  tenantId              String                   @map("tenant_id")
+  caseId                String                   @map("case_id")
+  purpose               String
+  version               Int
+  parentDraftId         String?                  @map("parent_draft_id")
+  toAddress             String                   @map("to_address")
+  subject               String
+  bodyText              String                   @map("body_text")
+  attachmentDocumentIds String[]                 @default([]) @map("attachment_document_ids")
+  contentHash           String                   @map("content_hash")
   /// Antwort im bestehenden Thread: Provider-Thread und RFC-Message-ID der Nachricht, auf die geantwortet wird.
-  threadId            String?                  @map("thread_id")
-  inReplyTo           String?                  @map("in_reply_to")
-  status              CommunicationDraftStatus @default(DRAFT)
-  createdByUserId     String?                  @map("created_by_user_id")
-  createdAt           DateTime                 @default(now()) @map("created_at")
+  threadId              String?                  @map("thread_id")
+  inReplyTo             String?                  @map("in_reply_to")
+  status                CommunicationDraftStatus @default(DRAFT)
+  createdByUserId       String?                  @map("created_by_user_id")
+  createdAt             DateTime                 @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
@@ -2223,7 +2223,6 @@ model TenantSequence {
   @@map("tenant_sequences")
 }
 
-
 // ============================================================================
 // ZERIONUS Platform Control Plane (Amendment 03) — Sicherheitsdomäne "Plattform"
 // ============================================================================
@@ -2236,17 +2235,17 @@ enum PlatformUserStatus {
 }
 
 model PlatformUser {
-  id                     String             @id @default(uuid())
-  email                  String             @unique
-  passwordHash           String             @map("password_hash")
-  displayName            String             @map("display_name")
-  status                 PlatformUserStatus @default(ACTIVE)
-  lastLoginAt            DateTime?          @map("last_login_at")
+  id                      String             @id @default(uuid())
+  email                   String             @unique
+  passwordHash            String             @map("password_hash")
+  displayName             String             @map("display_name")
+  status                  PlatformUserStatus @default(ACTIVE)
+  lastLoginAt             DateTime?          @map("last_login_at")
   /// Nach Zurücksetzen oder Anlage mit Startpasswort: bis zum Wechsel sind nur Passwortwechsel, Abmelden und die eigene Kontoabfrage erlaubt.
-  passwordChangeRequired Boolean            @default(false) @map("password_change_required")
-  createdByPlatformUserId String?           @map("created_by_platform_user_id")
-  createdAt              DateTime           @default(now()) @map("created_at")
-  updatedAt              DateTime           @updatedAt @map("updated_at")
+  passwordChangeRequired  Boolean            @default(false) @map("password_change_required")
+  createdByPlatformUserId String?            @map("created_by_platform_user_id")
+  createdAt               DateTime           @default(now()) @map("created_at")
+  updatedAt               DateTime           @updatedAt @map("updated_at")
 
   roleAssignments PlatformRoleAssignment[]
   sessions        PlatformSession[]
@@ -2256,13 +2255,13 @@ model PlatformUser {
 
 /// Rolle als Name aus PLATFORM_ROLES (@orbit/shared/platform.ts); pro Nutzer höchstens eine aktive Zuweisung je Rolle (partieller Unique-Index in der Migration).
 model PlatformRoleAssignment {
-  id                 String    @id @default(uuid())
-  platformUserId     String    @map("platform_user_id")
-  role               String
-  grantedByUserId    String?   @map("granted_by_user_id")
-  grantedAt          DateTime  @default(now()) @map("granted_at")
-  revokedAt          DateTime? @map("revoked_at")
-  revokedByUserId    String?   @map("revoked_by_user_id")
+  id              String    @id @default(uuid())
+  platformUserId  String    @map("platform_user_id")
+  role            String
+  grantedByUserId String?   @map("granted_by_user_id")
+  grantedAt       DateTime  @default(now()) @map("granted_at")
+  revokedAt       DateTime? @map("revoked_at")
+  revokedByUserId String?   @map("revoked_by_user_id")
 
   user PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
 
@@ -2290,7 +2289,6 @@ model PlatformSession {
   @@index([platformUserId])
   @@map("platform_sessions")
 }
-
 
 // ============================================================================
 // AI Platform Governance (Amendment 03 §8–§12) — Plattformdomäne, ohne tenant_id (Ausnahme: AIUsageRecord)
@@ -2484,6 +2482,29 @@ model AIProviderHealth {
 }
 
 /// Nutzung je Aufruf (Amendment 03 §12.2). Mandantengebunden (RLS) und für die Plattform-FinOps im Plattform-Scope lesbar. Kein Prompt-/Antwortinhalt.
+/// Kosten-Leitplanken (Amendment 03 §12.3): Plattformtabelle ohne tenant_id (die Mandanten-ID ist ein Verweis, kein Besitz), RLS über app.platform_scope.
+model AICostLimit {
+  id              String   @id @default(uuid())
+  /// GLOBAL | TENANT | PROFILE – höchstens ein Limit je Bereich (`scopeKey`).
+  scope           String
+  scopeKey        String   @unique @map("scope_key")
+  targetTenantId  String?  @map("target_tenant_id")
+  profileKey      String?  @map("profile_key")
+  currency        String   @default("USD")
+  warnAmount      Decimal? @map("warn_amount") @db.Decimal(14, 2)
+  softAmount      Decimal? @map("soft_amount") @db.Decimal(14, 2)
+  hardAmount      Decimal? @map("hard_amount") @db.Decimal(14, 2)
+  hardEnforced    Boolean  @default(false) @map("hard_enforced")
+  version         Int      @default(1)
+  note            String?
+  createdByUserId String?  @map("created_by_user_id")
+  updatedByUserId String?  @map("updated_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_cost_limits")
+}
+
 model AIUsageRecord {
   id            String   @id @default(uuid())
   tenantId      String   @map("tenant_id")
@@ -2604,28 +2625,28 @@ enum PlatformSupportSessionStatus {
 }
 
 model PlatformSupportSession {
-  id              String                       @id @default(uuid())
+  id               String                       @id @default(uuid())
   /// Verweis auf den Mandanten (kein FK: der Nachweis überlebt eine Mandantenlöschung).
-  targetTenantId  String                       @map("target_tenant_id")
-  operatorUserId  String                       @map("operator_user_id")
-  reasonCode      String                       @map("reason_code")
-  freeTextReason  String                       @map("free_text_reason")
-  ticketRef       String?                      @map("ticket_ref")
-  mode            String
-  scopes          String[]                     @default([])
-  requestedMinutes Int                         @map("requested_minutes")
-  status          PlatformSupportSessionStatus @default(REQUESTED)
-  approvedByUserId String?                     @map("approved_by_user_id")
-  approvedAt      DateTime?                    @map("approved_at")
-  activatedAt     DateTime?                    @map("activated_at")
+  targetTenantId   String                       @map("target_tenant_id")
+  operatorUserId   String                       @map("operator_user_id")
+  reasonCode       String                       @map("reason_code")
+  freeTextReason   String                       @map("free_text_reason")
+  ticketRef        String?                      @map("ticket_ref")
+  mode             String
+  scopes           String[]                     @default([])
+  requestedMinutes Int                          @map("requested_minutes")
+  status           PlatformSupportSessionStatus @default(REQUESTED)
+  approvedByUserId String?                      @map("approved_by_user_id")
+  approvedAt       DateTime?                    @map("approved_at")
+  activatedAt      DateTime?                    @map("activated_at")
   /// Wird bei Aktivierung gesetzt und nie verlängert (kein stilles Erneuern).
-  expiresAt       DateTime?                    @map("expires_at")
-  closedAt        DateTime?                    @map("closed_at")
-  closedByUserId  String?                      @map("closed_by_user_id")
-  closeReason     String?                      @map("close_reason")
-  version         Int                          @default(1)
-  createdAt       DateTime                     @default(now()) @map("created_at")
-  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  expiresAt        DateTime?                    @map("expires_at")
+  closedAt         DateTime?                    @map("closed_at")
+  closedByUserId   String?                      @map("closed_by_user_id")
+  closeReason      String?                      @map("close_reason")
+  version          Int                          @default(1)
+  createdAt        DateTime                     @default(now()) @map("created_at")
+  updatedAt        DateTime                     @updatedAt @map("updated_at")
 
   @@index([targetTenantId, status])
   @@index([operatorUserId, status])

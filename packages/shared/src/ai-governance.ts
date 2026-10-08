@@ -195,6 +195,7 @@ export function describeAiReason(code: string): string {
     FALLBACK_EXCEEDS_PROFILE: 'Der Fallback geht über das hinaus, was das Profil erlaubt.',
     PROVIDER_MISMATCH: 'Das Fallback-Modell gehört zu einem anderen Anbieter.',
     PRIMARY_MODEL_NOT_FOUND: 'Das primäre Modell existiert nicht.',
+    COST_LIMIT_HARD: 'Das Kostenlimit für die KI-Nutzung ist erreicht; neue KI-Aufrufe sind vorübergehend nicht möglich.',
   };
   return labels[base ?? ''] ?? 'Die Voraussetzungen sind nicht erfüllt.';
 }

@@ -10,7 +10,7 @@ const OTHER_TENANT_ID = 'tenant_2';
 // indirectly, via User/Role) and no RLS policy of their own — see
 // docs/SECURITY.md §1 and TENANT_SCOPED_MODELS' own doc comment.
 // Plattform-Domäne (Amendment 03): bewusst ohne tenant_id, geschützt durch app.platform_scope statt app.tenant_id.
-const MODELS_WITHOUT_OWN_TENANT_ID = ['Tenant', 'RefreshToken', 'RolePermission', 'UserRole', 'PlatformUser', 'PlatformRoleAssignment', 'PlatformSession', 'AIProviderDefinition', 'AIModelDefinition', 'AIModelProfile', 'AIProviderRoute', 'PlatformAIConnection', 'AIProviderHealth', 'PlatformSecret', 'PlatformFeatureFlag', 'PlatformKillSwitch', 'PlatformConnectorDefinition', 'PlatformSupportSession'] as const;
+const MODELS_WITHOUT_OWN_TENANT_ID = ['Tenant', 'RefreshToken', 'RolePermission', 'UserRole', 'PlatformUser', 'PlatformRoleAssignment', 'PlatformSession', 'AIProviderDefinition', 'AIModelDefinition', 'AIModelProfile', 'AIProviderRoute', 'PlatformAIConnection', 'AIProviderHealth', 'PlatformSecret', 'PlatformFeatureFlag', 'PlatformKillSwitch', 'PlatformConnectorDefinition', 'PlatformSupportSession', 'AICostLimit'] as const;
 
 describe('TENANT_SCOPED_MODELS', () => {
   it('covers every Prisma model except Tenant and the three indirectly-scoped tables', () => {

@@ -442,8 +442,8 @@ describe('Platform security boundary (e2e)', () => {
       expect(Object.keys(list.body[0]).sort()).toEqual(['createdAt', 'deletionRequested', 'displayName', 'featureCohorts', 'lifecycleStatus', 'slug', 'suspensionScopes', 'tenantId', 'userCount']);
       const overview = await get('/platform/overview', operator.token).expect(200);
       // Die Übersicht nennt ehrlich, was fehlt – und nicht, was es gibt (Support-Sitzungen und Queue-/Worker-Zustand sind umgesetzt).
-      expect(overview.body.notYetAvailable).toEqual(expect.arrayContaining(['Kostenlimits und Anomalie-Alarme']));
-      for (const implemented of ['Support-Sessions', 'Queue/Worker-Gesundheit']) expect(overview.body.notYetAvailable).not.toContain(implemented);
+      expect(overview.body.notYetAvailable).toEqual(expect.arrayContaining([expect.stringContaining('Aktive Prüfung der KI-Anbieter')]));
+      for (const implemented of ['Support-Sessions', 'Queue/Worker-Gesundheit', 'Kostenlimits und Anomalie-Alarme']) expect(overview.body.notYetAvailable).not.toContain(implemented);
       expect(overview.body.environment).toBe(env.ORBIT_ENVIRONMENT);
     });
   });

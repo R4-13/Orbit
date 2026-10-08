@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { PLATFORM_SCOPES, type PlatformPrincipal } from '@orbit/shared';
 import { AiAdapterRegistry } from '../../ai-governance/ai-adapter-registry.service';
+import { AiCostGuardrailService } from '../../ai-governance/ai-cost-guardrail.service';
 import { AiRegistryAdminService } from '../../ai-governance/ai-registry-admin.service';
 import { CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from '../auth/platform-guards';
 import {
@@ -13,10 +14,12 @@ import {
   DisableProviderDto,
   PublishProfileDto,
   RecordEvaluationDto,
+  RemoveCostLimitDto,
   RotateSecretDto,
   RouteChangeDto,
   TransitionModelDto,
   TransitionProviderDto,
+  UpsertCostLimitDto,
   UsageQueryDto,
 } from './platform-ai.dto';
 
@@ -30,6 +33,7 @@ export class PlatformAiController {
   constructor(
     private readonly admin: AiRegistryAdminService,
     private readonly adapters: AiAdapterRegistry,
+    private readonly costGuard: AiCostGuardrailService,
   ) {}
 
   @Get('overview')
@@ -213,6 +217,36 @@ export class PlatformAiController {
     const to = query.to ?? new Date();
     const from = query.from ?? new Date(to.getTime() - 30 * 24 * 3_600_000);
     return this.admin.usageSummary({ from, to, groupBy: query.groupBy ?? 'profileKey' });
+  }
+
+  /** Kosten-Leitplanken (Amendment 03 §12.3): Limits mit aufgelaufenen Kosten des Monats und Zustand. */
+  @Get('cost-limits')
+  @RequirePlatformScope(PLATFORM_SCOPES.AI_COST_READ)
+  costLimits() {
+    return this.costGuard.list();
+  }
+
+  /** Ungewöhnliche Nutzung der letzten 24 Stunden je Mandant. */
+  @Get('cost-anomalies')
+  @RequirePlatformScope(PLATFORM_SCOPES.AI_COST_READ)
+  costAnomalies() {
+    return this.costGuard.anomalies();
+  }
+
+  @Put('cost-limits')
+  @RequirePlatformScope(PLATFORM_SCOPES.AI_WRITE, PLATFORM_SCOPES.AI_COST_READ)
+  @RequireStepUp()
+  upsertCostLimit(@CurrentPlatformPrincipal() actor: PlatformPrincipal, @Body() dto: UpsertCostLimitDto) {
+    return this.costGuard.upsert(actor, dto);
+  }
+
+  @Post('cost-limits/:id/remove')
+  @HttpCode(HttpStatus.OK)
+  @RequirePlatformScope(PLATFORM_SCOPES.AI_WRITE, PLATFORM_SCOPES.AI_COST_READ)
+  @RequireStepUp()
+  async removeCostLimit(@CurrentPlatformPrincipal() actor: PlatformPrincipal, @Param('id') id: string, @Body() dto: RemoveCostLimitDto) {
+    await this.costGuard.remove(actor, id, dto);
+    return { removed: true };
   }
 
   @Post('bootstrap-from-environment')

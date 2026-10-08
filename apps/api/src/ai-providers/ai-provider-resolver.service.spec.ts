@@ -2,6 +2,7 @@ import { MockLLMProvider, type LLMCompletionRequest, type LLMProvider } from '@o
 import { AiProviderUnavailableError, type HealthState } from '@orbit/shared';
 import type { AiAdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
 import { AiAdapterRegistry as AdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
+import type { AiCostGuardrailService } from '../ai-governance/ai-cost-guardrail.service';
 import type { AiMeterService } from '../ai-governance/ai-meter.service';
 import type { AiRegistryService, ModelWithProvider, RoutingSnapshot } from '../ai-governance/ai-registry.service';
 import type { PlatformControlService } from '../platform-control/platform-control.service';
@@ -63,6 +64,8 @@ function model(id: string, providerKey: string, overrides: Partial<ModelWithProv
 
 interface Setup {
   killSwitch?: boolean;
+  /** Das durchgesetzte Hard-Limit der Kosten-Leitplanken ist erreicht (gilt für plattformfinanzierte Aufrufe). */
+  budgetExceeded?: boolean;
   snapshot?: Partial<RoutingSnapshot> & { route?: RoutingSnapshot['route'] };
   tenantConnection?: Record<string, unknown> | null;
   byok?: { providerKnown: boolean; providerActive: boolean; modelsKnown: boolean; modelApproved: boolean };
@@ -82,8 +85,13 @@ function build(setup: Setup) {
   const prisma = { forTenantId: () => ({ aIProviderConnection: { findUnique: async () => setup.tenantConnection ?? null } }) } as unknown as PrismaService;
   const encryption = { decrypt: () => 'sk-tenant-key' } as unknown as CredentialEncryptionService;
   const control = { killSwitchEngaged: jest.fn(async () => setup.killSwitch === true) } as unknown as PlatformControlService;
-  const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, control, platformDefault, ENV);
-  return { service, adapters, platformDefault, meter, recorded, registry, vault };
+  const costGuard = {
+    assertWithinBudget: jest.fn(async () => {
+      if (setup.budgetExceeded) throw new AiProviderUnavailableError('Kostenlimit erreicht.', { mode: 'COST_LIMIT', reasons: ['COST_LIMIT_HARD'] });
+    }),
+  } as unknown as AiCostGuardrailService;
+  const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, costGuard, control, platformDefault, ENV);
+  return { service, adapters, platformDefault, meter, recorded, registry, vault, costGuard };
 }
 
 const profile = { id: 'p1', profileKey: 'COMPLEX_REASONING', version: 1, purpose: 'x', requiredCapabilities: ['chat', 'tool_use'], fallbackMode: 'APPROVED_CROSS_PROVIDER_FALLBACK', maxLatencyMs: null, requiredDataPolicyRefs: [], lifecycle: 'PUBLISHED', publishedAt: new Date(), createdByUserId: null, createdAt: new Date() } as unknown as RoutingSnapshot['profile'];
@@ -226,6 +234,44 @@ describe('AiProviderResolverService', () => {
       const noFallback = build(managed({ health: { 'alpha|*': down } }));
       noFallback.adapters.register('adapter-alpha', () => stubAdapter('alpha', 'm-a').adapter);
       await expect(noFallback.service.resolveProfile('t1', 'COMPLEX_REASONING')).rejects.toBeInstanceOf(AiProviderUnavailableError);
+    });
+  });
+
+  describe('Kosten-Leitplanken: durchgesetztes Hard-Limit (Amendment 03 §12.3)', () => {
+    it('ORBIT Managed: ist das Hard-Limit erreicht, wird der Aufruf ehrlich abgewiesen – der Anbieter wird gar nicht erst angefragt und es wird nichts gemessen', async () => {
+      const setup = build({ ...managed({}), budgetExceeded: true });
+      const a = stubAdapter('alpha', 'm-a');
+      const completeSpy = jest.spyOn(a.adapter, 'complete');
+      setup.adapters.register('adapter-alpha', () => a.adapter);
+      const resolved = await setup.service.resolveProfile('t1', 'COMPLEX_REASONING'); // die Auflösung selbst gelingt …
+      const error = await resolved.provider.complete(REQUEST).catch((e: unknown) => e); // … der Aufruf nicht
+      expect(error).toBeInstanceOf(AiProviderUnavailableError);
+      expect((error as AiProviderUnavailableError).details).toMatchObject({ reasons: ['COST_LIMIT_HARD'] });
+      expect(completeSpy).not.toHaveBeenCalled();
+      expect(setup.recorded).toHaveLength(0);
+    });
+
+    it('Umgebungs-Bootstrap (plattformfinanziert) wird ebenso geprüft; der Mock bleibt unverpackt und unbegrenzt', async () => {
+      const bootstrap = build({ budgetExceeded: true });
+      expect((await bootstrap.service.resolveProfile('t1', 'COMPLEX_REASONING')).source).toBe('ENV_BOOTSTRAP'); // Mock: keine Wirkung, keine Kosten
+      expect(bootstrap.costGuard.assertWithinBudget).not.toHaveBeenCalled();
+    });
+
+    it('ist kein Hard-Limit erreicht, läuft der Aufruf ganz normal und gemessen; der Mandant und das Profil werden geprüft', async () => {
+      const setup = build(managed({}));
+      setup.adapters.register('adapter-alpha', () => stubAdapter('alpha', 'm-a').adapter);
+      const resolved = await setup.service.resolveProfile('t7', 'COMPLEX_REASONING');
+      expect((await resolved.provider.complete(REQUEST)).text).toBe('alpha:m-a');
+      expect(setup.costGuard.assertWithinBudget).toHaveBeenCalledWith('t7', 'COMPLEX_REASONING');
+      expect(setup.recorded).toHaveLength(1);
+    });
+
+    it('BYOK ist ausgenommen: der Mandant trägt seine Kosten selbst, ein Plattform-Limit darf ihn nicht blockieren', async () => {
+      const connected = { providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('x'), model: 'gpt-x', byokActiveSince: new Date() };
+      const setup = build({ tenantConnection: connected, budgetExceeded: true, ...managed({}) });
+      const resolved = await setup.service.resolveProfile('t1', 'COMPLEX_REASONING');
+      expect(resolved.source).toBe('BYOK');
+      expect(setup.costGuard.assertWithinBudget).not.toHaveBeenCalled();
     });
   });
 

@@ -16,6 +16,8 @@ export class MeteredLLMProvider implements LLMProvider {
     private readonly inner: LLMProvider,
     private readonly meter: AiMeterService,
     private readonly context: MeterContext,
+    /** Vorabprüfung vor jedem externen Aufruf (z. B. durchgesetztes Kostenlimit); wirft einen ehrlichen Fehler, ruft den Anbieter dann nicht auf und misst nichts. */
+    private readonly guard?: () => Promise<void>,
   ) {
     if (inner.validateConfiguration) this.validateConfiguration = () => (inner.validateConfiguration as () => Promise<ProviderValidationResult>)();
   }
@@ -29,6 +31,7 @@ export class MeteredLLMProvider implements LLMProvider {
   }
 
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
+    await this.guard?.();
     const startedAt = Date.now();
     try {
       const result = await this.inner.complete(request);

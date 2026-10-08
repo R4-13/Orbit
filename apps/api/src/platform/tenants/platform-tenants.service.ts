@@ -83,7 +83,7 @@ export class PlatformTenantsService {
       platformIdentities: { active, disabled },
       activePlatformSessions: sessions,
       platformAuditEventsLast24h: auditCount,
-      notYetAvailable: ['Kostenlimits und Anomalie-Alarme'],
+      notYetAvailable: ['Aktive Prüfung der KI-Anbieter (ihre Gesundheit entsteht nur aus echten Aufrufen)'],
     };
   }
 }

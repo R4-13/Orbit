@@ -12,6 +12,7 @@ import {
 } from '@orbit/shared';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { AiAdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
+import { AiCostGuardrailService } from '../ai-governance/ai-cost-guardrail.service';
 import { AiMeterService, type MeterContext } from '../ai-governance/ai-meter.service';
 import { AiRegistryService, type ModelWithProvider } from '../ai-governance/ai-registry.service';
 import { FailoverLLMProvider, MeteredLLMProvider } from '../ai-governance/metered-llm-provider';
@@ -57,6 +58,7 @@ export class AiProviderResolverService {
     private readonly adapters: AiAdapterRegistry,
     private readonly vault: PlatformSecretVaultService,
     private readonly meter: AiMeterService,
+    private readonly costGuard: AiCostGuardrailService,
     private readonly platformControl: PlatformControlService,
     @Inject(LLM_PROVIDER) private readonly platformDefault: LLMProvider,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
@@ -150,7 +152,7 @@ export class AiProviderResolverService {
           cost: model.costInputPerMtok !== null && model.costOutputPerMtok !== null ? { inputPerMtok: Number(model.costInputPerMtok), outputPerMtok: Number(model.costOutputPerMtok), currency: model.costCurrency } : null,
         };
         // Der Mock-Adapter verursacht keine externe Nutzung und bleibt unverpackt (Tests/Simulation erkennen ihn weiterhin).
-        const wrapped = adapter instanceof MockLLMProvider ? adapter : new MeteredLLMProvider(adapter, this.meter, context);
+        const wrapped = adapter instanceof MockLLMProvider ? adapter : new MeteredLLMProvider(adapter, this.meter, context, () => this.costGuard.assertWithinBudget(tenantId, profileKey));
         usable.push({ model, degraded: verdict.degraded || usable.length > 0 || modelId !== route.primaryModelId, adapter: wrapped });
       } catch {
         allReasons.push(`${model.providerKey}/${model.providerModelId}:SECRET_UNAVAILABLE`);
@@ -180,6 +182,6 @@ export class AiProviderResolverService {
     const providerKey = llm.providerName.toLowerCase();
     if (llm instanceof MockLLMProvider) return { provider: llm, source: 'ENV_BOOTSTRAP', providerKey, modelId: undefined, degraded: false };
     const context: MeterContext = { tenantId, profileKey, providerKey, modelId: llm.modelName, source: 'ENV_BOOTSTRAP', trackHealth: true };
-    return { provider: new MeteredLLMProvider(llm, this.meter, context), source: 'ENV_BOOTSTRAP', providerKey, modelId: llm.modelName, degraded: false };
+    return { provider: new MeteredLLMProvider(llm, this.meter, context, () => this.costGuard.assertWithinBudget(tenantId, profileKey)), source: 'ENV_BOOTSTRAP', providerKey, modelId: llm.modelName, degraded: false };
   }
 }
