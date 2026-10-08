@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { QUEUE_STALL_SECONDS, assessQueue, assessRuntime, type QueueSnapshot } from './runtime-health';
+import { QUEUE_STALL_SECONDS, assessQueue, assessRuntime, backlogAttention, type QueueSnapshot } from './runtime-health';
 
 const queue = (over: Partial<QueueSnapshot> = {}): QueueSnapshot => ({ name: 'workflow-runs', waiting: 0, active: 0, delayed: 0, failed: 0, workers: 1, oldestWaitingAgeSec: null, ...over });
 
@@ -28,5 +28,19 @@ describe('Betriebszustand der Queues', () => {
     expect(assessRuntime([queue({ oldestWaitingAgeSec: 999, waiting: 1 }), queue({ name: 'channel-sync', workers: 0 })], at).status).toBe('DOWN');
     expect(assessRuntime([], at)).toMatchObject({ status: 'DOWN', queues: [] });
     expect(assessRuntime([queue()], at).checkedAt).toBe('2026-10-07T10:00:00.000Z');
+  });
+});
+
+describe('Arbeitsstand: was Aufmerksamkeit braucht (Amendment 03 §16.2)', () => {
+  it('im Normalbetrieb – Warten, Wiederholungen, Prüfungen – gibt es nichts zu melden', () => {
+    expect(backlogAttention({ stuckCases: 0, unknownOutcomes: 0 })).toEqual([]);
+  });
+
+  it('hängende Vorgänge und ungewisse Aktionsergebnisse werden benannt, in der richtigen Einzahl und Mehrzahl', () => {
+    expect(backlogAttention({ stuckCases: 1, unknownOutcomes: 0 })).toEqual([{ code: 'STUCK_CASES', count: 1, message: '1 Vorgang kommt trotz offener Arbeit nicht voran.' }]);
+    const both = backlogAttention({ stuckCases: 3, unknownOutcomes: 2 });
+    expect(both.map((a) => a.code)).toEqual(['STUCK_CASES', 'UNKNOWN_OUTCOMES']);
+    expect(both[0]!.message).toBe('3 Vorgänge kommen trotz offener Arbeit nicht voran.');
+    expect(both[1]!.message).toContain('2 Aktionen haben ein ungewisses Ergebnis und müssen von einer Person abgeglichen werden.');
   });
 });

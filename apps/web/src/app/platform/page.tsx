@@ -1,12 +1,12 @@
 'use client';
 
-import { PLATFORM_SCOPES } from '@orbit/shared';
+import { PLATFORM_SCOPES, backlogAttention } from '@orbit/shared';
 import { Badge, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
 import { formatDateTime } from '../../lib/format';
 import { usePlatformAuth } from '../../lib/platform/platform-auth';
 import { platformErrorMessage } from '../../lib/platform/platform-client';
 import { tenantStatusLabel } from '../../lib/platform/tenant-labels';
-import { useRuntimeHealth, usePlatformOverview } from '../../lib/platform/use-platform-data';
+import { useRuntimeHealth, usePlatformOverview, useWorkBacklog } from '../../lib/platform/use-platform-data';
 
 
 const QUEUE_LABELS: Record<string, string> = { 'workflow-runs': 'Abläufe und Vorgänge', 'channel-sync': 'Postfach-Abgleich' };
@@ -53,6 +53,57 @@ function RuntimeCard() {
   );
 }
 
+/** Arbeitsstand: Warten und Wiederholen sind Normalbetrieb und stehen nur als Zahl da; Aufmerksamkeit braucht, was nicht von selbst weitergeht. */
+function WorkBacklogCard() {
+  const { hasScope } = usePlatformAuth();
+  const allowed = hasScope(PLATFORM_SCOPES.RUNTIME_READ);
+  const work = useWorkBacklog(allowed);
+  if (!allowed) return null;
+  const attention = work.data ? backlogAttention(work.data) : [];
+  const rows: Array<[string, number, string]> = work.data
+    ? [
+        ['Erwartungen offen', work.data.openWaits, `${work.data.overdueWaits} mit überschrittener Frist`],
+        ['Wiederholungen geplant', work.data.scheduledRetries, `${work.data.dueRetries} fällig`],
+        ['Vorgänge in manueller Prüfung', work.data.casesInReview, ''],
+        ['Fehlgeschlagene Schritte (24 h)', work.data.failedSteps24h, ''],
+      ]
+    : [];
+  return (
+    <Card data-testid="work-backlog">
+      <CardHeader>
+        <CardTitle>
+          Arbeitsstand {work.data ? <Badge tone={attention.length > 0 ? 'warning' : 'success'}>{attention.length > 0 ? 'Braucht Aufmerksamkeit' : 'Nichts hängt'}</Badge> : null}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {work.isLoading ? <p className="text-sm text-slate-600">Wird gemessen …</p> : null}
+        {work.isError ? <p role="alert" className="text-sm text-red-700">{platformErrorMessage(work.error, 'Der Arbeitsstand konnte nicht gemessen werden.')}</p> : null}
+        {work.data ? (
+          <>
+            {attention.length > 0 ? (
+              <ul role="alert" className="mb-3 space-y-1 text-sm text-amber-900">
+                {attention.map((a) => (
+                  <li key={a.code}>{a.message}</li>
+                ))}
+              </ul>
+            ) : null}
+            <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              {rows.map(([label, value, hint]) => (
+                <div key={label}>
+                  <dt className="text-slate-600">{label}</dt>
+                  <dd className="text-xl font-semibold text-slate-900">{value}</dd>
+                  {hint ? <dd className="text-xs text-slate-500">{hint}</dd> : null}
+                </div>
+              ))}
+            </dl>
+            <p className="mt-2 text-xs text-slate-500">Nur Zähler über alle Mandanten; Einzelfälle finden Sie über die Kennungssuche in der Diagnose. Gemessen {formatDateTime(work.data.checkedAt)}.</p>
+          </>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function Figure({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
     <Card>
@@ -84,6 +135,7 @@ export default function PlatformOverviewPage() {
         <Figure label="Audit-Ereignisse (24 h)" value={data.platformAuditEventsLast24h} />
       </div>
       <RuntimeCard />
+      <WorkBacklogCard />
       {data.notYetAvailable.length > 0 ? (
         <Card>
           <CardHeader>

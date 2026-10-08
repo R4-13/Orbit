@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
-import { NotFoundError, redactString, redactValue, type OrchestrationDiagnosticProjection, type PlatformPrincipal } from '@orbit/shared';
+import { NotFoundError, redactString, redactValue, type DiagnosticSearchHit, type OrchestrationDiagnosticProjection, type PlatformPrincipal } from '@orbit/shared';
 import { ORBIT_ENV } from '../../config/env.token';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PlatformAuditService } from '../audit/platform-audit.service';
@@ -26,6 +26,46 @@ export class PlatformDiagnosticsService {
     private readonly audit: PlatformAuditService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
+
+  /**
+   * Referenzsuche (Amendment 03 §16.1): zu einer Kennung (Vorgang, Plan, Aktion, Lauf, Support-Sitzung) wird gefunden, zu welchem Mandanten und Vorgang sie
+   * gehört. Antwort nur mit Art, Mandant, Vorgang und Zustand – nie Inhalte. Wie jeder Plattformzugriff ist die Suche begründet und auditiert; die Treffer
+   * führen zur mandantenscharfen Diagnose. Ein unbekanntes oder fremdes Format liefert keine Treffer (keine Fehlermeldung, die etwas verrät).
+   */
+  async search(principal: PlatformPrincipal, input: { reference: string; reason: string }): Promise<DiagnosticSearchHit[]> {
+    const reference = input.reference.trim();
+    const hits: DiagnosticSearchHit[] = [];
+    const looksLikeId = /^[0-9a-fA-F-]{8,64}$/.test(reference);
+    if (looksLikeId) {
+      // Support-Sitzungen sind nur im Plattform-Scope lesbar (eigene Policy), die Betriebstabellen der Mandanten nur mit RLS-Bypass.
+      const sessions = await this.prisma.withPlatformScope((tx) => tx.platformSupportSession.findMany({ where: { id: reference }, select: { id: true, targetTenantId: true, status: true, createdAt: true }, take: 5 }));
+      const [cases, plans, intents, runs] = await this.prisma.withRlsBypass((tx) =>
+        Promise.all([
+          tx.case.findMany({ where: { id: reference }, select: { id: true, tenantId: true, orchestrationStatus: true, createdAt: true }, take: 5 }),
+          tx.processPlan.findMany({ where: { id: reference }, select: { id: true, tenantId: true, caseId: true, status: true, createdAt: true }, take: 5 }),
+          tx.actionIntent.findMany({ where: { id: reference }, select: { id: true, tenantId: true, caseId: true, status: true, createdAt: true }, take: 5 }),
+          tx.agentRun.findMany({ where: { id: reference }, select: { id: true, tenantId: true, caseId: true, status: true, startedAt: true }, take: 5 }),
+        ]),
+      );
+      const tenantIds = [...new Set([...cases.map((c) => c.tenantId), ...plans.map((p) => p.tenantId), ...intents.map((i) => i.tenantId), ...runs.map((r) => r.tenantId), ...sessions.map((s) => s.targetTenantId)])];
+      const names = new Map((await this.prisma.withRlsBypass((tx) => tx.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } }))).map((t) => [t.id, t.name]));
+      const name = (id: string) => names.get(id) ?? 'Unbekannter Mandant';
+      for (const c of cases) hits.push({ kind: 'CASE', tenantId: c.tenantId, tenantName: name(c.tenantId), caseId: c.id, status: c.orchestrationStatus, createdAt: c.createdAt.toISOString() });
+      for (const p of plans) hits.push({ kind: 'PLAN', tenantId: p.tenantId, tenantName: name(p.tenantId), caseId: p.caseId, status: p.status, createdAt: p.createdAt.toISOString() });
+      for (const i of intents) hits.push({ kind: 'ACTION', tenantId: i.tenantId, tenantName: name(i.tenantId), caseId: i.caseId, status: i.status, createdAt: i.createdAt.toISOString() });
+      for (const r of runs) hits.push({ kind: 'AGENT_RUN', tenantId: r.tenantId, tenantName: name(r.tenantId), caseId: r.caseId ?? undefined, status: r.status, createdAt: r.startedAt.toISOString() });
+      for (const s of sessions) hits.push({ kind: 'SUPPORT_SESSION', tenantId: s.targetTenantId, tenantName: name(s.targetTenantId), status: s.status, createdAt: s.createdAt.toISOString() });
+    }
+    await this.audit.record({
+      eventType: 'PLATFORM_DIAGNOSTICS_READ',
+      actor: { userId: principal.userId, roles: principal.platformRoles },
+      targetType: 'ReferenceSearch',
+      targetId: looksLikeId ? reference : 'ungueltige-kennung',
+      reason: input.reason,
+      extra: { kind: 'REFERENCE_SEARCH', hits: hits.length, kinds: [...new Set(hits.map((h) => h.kind))] },
+    });
+    return hits;
+  }
 
   /**
    * Diagnose-Export (OAS-05): dieselbe Projektion wie die Ansicht, als Datei – mit Kopfdaten (Version, Zeitpunkt, Umgebung, Rollen des Exportierenden, Begründung),

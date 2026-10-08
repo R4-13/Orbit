@@ -5,13 +5,14 @@ import { ORBIT_ENV } from '../config/env.token';
 import { clearCookieOptions, isCookieMode, PLATFORM_REFRESH_COOKIE, readRefreshCookie, refreshCookieOptions } from './auth/platform-cookie';
 import { Throttle } from '@nestjs/throttler';
 import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
-import { AuthenticationExpiredError, PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth } from '@orbit/shared';
+import { AuthenticationExpiredError, PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth, type WorkBacklog } from '@orbit/shared';
 import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
 import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
 import { AllowWhilePasswordChangePending, CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
 import {
   CreatePlatformIdentityDto,
   DiagnosticsQueryDto,
+  DiagnosticsSearchQueryDto,
   DisablePlatformIdentityDto,
   PlatformAuditQueryDto,
   PlatformChangePasswordDto,
@@ -123,6 +124,13 @@ export class PlatformController {
     return this.runtime.health();
   }
 
+  /** Arbeitsstand der Hintergrundverarbeitung (Amendment 03 §16.2): Erwartungen, Wiederholungen, hängende Vorgänge – nur Zähler. */
+  @Get('runtime/work')
+  @RequirePlatformScope(PLATFORM_SCOPES.RUNTIME_READ)
+  runtimeWork(): Promise<WorkBacklog> {
+    return this.runtime.backlog();
+  }
+
   @Get('tenants')
   @RequirePlatformScope(PLATFORM_SCOPES.TENANTS_READ)
   listTenants(): Promise<PlatformTenantSummary[]> {
@@ -143,6 +151,13 @@ export class PlatformController {
   @RequirePlatformScope(PLATFORM_SCOPES.DIAGNOSTICS_READ)
   caseDiagnostics(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('caseId') caseId: string, @Query() query: DiagnosticsQueryDto): Promise<OrchestrationDiagnosticProjection> {
     return this.diagnostics.caseDiagnostics(principal, { tenantId: query.tenantId, caseId, reason: query.reason });
+  }
+
+  /** Referenzsuche (Amendment 03 §16.1): zu einer Kennung Mandant und Vorgang finden – begründet, auditiert, ohne Inhalte. */
+  @Get('diagnostics/search')
+  @RequirePlatformScope(PLATFORM_SCOPES.DIAGNOSTICS_READ)
+  searchReferences(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Query() query: DiagnosticsSearchQueryDto) {
+    return this.diagnostics.search(principal, { reference: query.reference, reason: query.reason });
   }
 
   /** Diagnose-Export als Datei (OAS-05): Step-up, Begründung, Audit mit Prüfsumme. */

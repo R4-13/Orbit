@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { PLATFORM_SCOPES } from '@orbit/shared';
+import { PLATFORM_SCOPES, type DiagnosticSearchHit } from '@orbit/shared';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
 import { platformDownload, platformErrorMessage, platformFetch } from '../../../lib/platform/platform-client';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
 import { usePlatformTenants, type DiagnosticProjectionView } from '../../../lib/platform/use-platform-data';
+
+const KIND_LABEL: Record<DiagnosticSearchHit['kind'], string> = { CASE: 'Vorgang', PLAN: 'Plan', ACTION: 'Aktion', AGENT_RUN: 'Lauf', SUPPORT_SESSION: 'Support-Sitzung' };
 
 const NODE_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
   SUCCEEDED: 'success',
@@ -32,6 +34,11 @@ export default function PlatformDiagnosticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [projection, setProjection] = useState<DiagnosticProjectionView | null>(null);
+  const [searchRef, setSearchRef] = useState('');
+  const [searchReason, setSearchReason] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [hits, setHits] = useState<DiagnosticSearchHit[] | null>(null);
 
   if (!hasScope(PLATFORM_SCOPES.DIAGNOSTICS_READ)) return <p className="text-sm text-slate-600">Für die Diagnose fehlt die Berechtigung.</p>;
 
@@ -51,6 +58,31 @@ export default function PlatformDiagnosticsPage() {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function runSearch(event: FormEvent) {
+    event.preventDefault();
+    setSearching(true);
+    setSearchError(null);
+    setHits(null);
+    try {
+      const params = new URLSearchParams({ reference: searchRef.trim(), reason: searchReason.trim() });
+      setHits(await platformFetch<DiagnosticSearchHit[]>(`/diagnostics/search?${params.toString()}`));
+    } catch (err) {
+      setSearchError(platformErrorMessage(err, 'Die Suche ist fehlgeschlagen.'));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  /** Treffer übernehmen: Mandant, Vorgang und Begründung der Suche füllen das Diagnoseformular vor. */
+  function adopt(hit: DiagnosticSearchHit) {
+    setTenantId(hit.tenantId);
+    if (hit.caseId) setCaseId(hit.caseId);
+    setReason(searchReason.trim());
+    setProjection(null);
+    setNotice(null);
+    setError(null);
   }
 
   async function exportFile() {
@@ -81,6 +113,42 @@ export default function PlatformDiagnosticsPage() {
           Technische Sicht auf einen Vorgang: Plan, Schritte, Aktionen und Belege, Läufe. Es werden nie Mailtexte, Entwürfe oder Nutzdaten gezeigt; Fehlermeldungen sind geschwärzt. Jeder Aufruf wird mit Ihrer Begründung im Audit festgehalten.
         </p>
       </div>
+
+      <form onSubmit={runSearch} className="space-y-4 rounded-md border border-slate-200 bg-white p-4" aria-label="Kennung suchen">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">Kennung suchen</h2>
+          <p className="text-xs text-slate-600">Eine Vorgangs-, Plan-, Aktions-, Lauf- oder Support-Sitzungs-ID aus einer Meldung oder einem Ticket: Sie erfahren, zu welchem Mandanten und Vorgang sie gehört – ohne Inhalte.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor="ds-ref">Kennung</Label>
+            <Input id="ds-ref" required minLength={3} maxLength={80} value={searchRef} onChange={(e) => setSearchRef(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="ds-reason">Begründung (wird im Audit festgehalten)</Label>
+            <Input id="ds-reason" required minLength={5} maxLength={300} value={searchReason} onChange={(e) => setSearchReason(e.target.value)} />
+          </div>
+        </div>
+        {searchError ? <p role="alert" className="text-sm text-red-700">{searchError}</p> : null}
+        <Button type="submit" variant="secondary" disabled={searching || searchRef.trim().length < 3 || searchReason.trim().length < 5}>{searching ? 'Wird gesucht …' : 'Suchen'}</Button>
+        {hits !== null ? (
+          hits.length === 0 ? (
+            <p role="status" className="text-sm text-slate-600">Keine Treffer. Die Kennung ist unbekannt oder hat kein gültiges Format.</p>
+          ) : (
+            <ul aria-label="Treffer" className="divide-y divide-slate-100 text-sm">
+              {hits.map((hit, index) => (
+                <li key={`${hit.kind}-${index}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span>
+                    <Badge tone="info">{KIND_LABEL[hit.kind]}</Badge> <span className="ml-1 font-medium text-slate-900">{hit.tenantName}</span>
+                    <span className="ml-2 text-xs text-slate-500">{hit.status}{hit.caseId ? ` · Vorgang ${hit.caseId}` : ''}</span>
+                  </span>
+                  <Button type="button" variant="secondary" onClick={() => adopt(hit)}>{hit.caseId ? 'In Diagnose übernehmen' : 'Mandant übernehmen'}</Button>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : null}
+      </form>
 
       <form onSubmit={load} className="space-y-4 rounded-md border border-slate-200 bg-white p-4" aria-label="Diagnose abrufen">
         <div className="grid gap-4 md:grid-cols-2">

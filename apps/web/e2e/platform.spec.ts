@@ -306,6 +306,58 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(page.getByText('PLATFORM_DIAGNOSTIC_EXPORTED').first()).toBeVisible();
   });
 
+  test('Übersicht: Arbeitsstand zeigt echte Zähler; Aufmerksamkeit nur bei hängenden Vorgängen oder ungewissen Aktionen (simulierte Antwort)', async ({ page }) => {
+    await loginViaApiSession(page);
+    await page.goto('/platform');
+    const card = page.getByTestId('work-backlog');
+    await expect(card.getByRole('heading', { name: /Arbeitsstand/ })).toBeVisible();
+    for (const label of ['Erwartungen offen', 'Wiederholungen geplant', 'Vorgänge in manueller Prüfung', 'Fehlgeschlagene Schritte (24 h)']) await expect(card.getByText(label)).toBeVisible();
+    await expect(card.getByText(/Nur Zähler über alle Mandanten/)).toBeVisible();
+
+    // Darstellung der Aufmerksamkeit mit vorgegebener Antwort (der echte Zustand hängt vom Datenbestand ab).
+    const backlog = { checkedAt: new Date().toISOString(), openWaits: 4, overdueWaits: 1, scheduledRetries: 2, dueRetries: 0, stuckCases: 2, casesInReview: 1, unknownOutcomes: 1, failedSteps24h: 3 };
+    await page.route('**/api/v1/platform/runtime/work', (route) => route.fulfill({ json: backlog }));
+    await page.goto('/platform');
+    const attention = page.getByTestId('work-backlog');
+    await expect(attention.getByText('Braucht Aufmerksamkeit')).toBeVisible();
+    await expect(attention.getByRole('alert')).toContainText('2 Vorgänge kommen trotz offener Arbeit nicht voran.');
+    await expect(attention.getByRole('alert')).toContainText('1 Aktion hat ein ungewisses Ergebnis');
+    await expect(attention.getByText('1 mit überschrittener Frist')).toBeVisible();
+  });
+
+  test('Diagnose: Kennung suchen (begründet) findet Mandant und Vorgang und übernimmt sie in die Diagnose; Unbekanntes liefert keine Treffer', async ({ page }) => {
+    const tenantLogin = (await (await fetch(`${API_BASE_URL}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: DEMO_USERS.admin, password: DEMO_PASSWORD }) })).json()) as { accessToken: string; user: { tenantId: string } };
+    const cases = (await (await fetch(`${API_BASE_URL}/api/v1/cases/overview?filter=ALL`, { headers: { Authorization: `Bearer ${tenantLogin.accessToken}` } })).json()) as { items: Array<{ id: string }> };
+    expect(cases.items.length, 'ein Vorgang des Demo-Mandanten').toBeGreaterThan(0);
+    const caseId = cases.items[0]!.id;
+
+    await loginViaApiSession(page);
+    await page.goto('/platform/diagnostics');
+    const search = page.getByRole('form', { name: 'Kennung suchen' });
+    await expect(search.getByRole('button', { name: 'Suchen' })).toBeDisabled();
+    await search.getByLabel('Kennung').fill(caseId);
+    await search.getByLabel(/Begründung/).fill('UI-Test: Kennung suchen');
+    await search.getByRole('button', { name: 'Suchen' }).click();
+    const hit = search.getByRole('list', { name: 'Treffer' }).getByRole('listitem').first();
+    await expect(hit).toContainText('Vorgang');
+    await expect(hit).toContainText(caseId);
+    await hit.getByRole('button', { name: 'In Diagnose übernehmen' }).click();
+
+    const form = page.getByRole('form', { name: 'Diagnose abrufen' });
+    await expect(form.getByLabel('Vorgangs-ID')).toHaveValue(caseId);
+    await expect(form.getByLabel(/Begründung/)).toHaveValue('UI-Test: Kennung suchen');
+    await form.getByRole('button', { name: 'Diagnose laden' }).click();
+    await expect(page.getByRole('heading', { name: /^Vorgang / })).toBeVisible();
+
+    await search.getByLabel('Kennung').fill('00000000-0000-4000-8000-000000000000');
+    await search.getByRole('button', { name: 'Suchen' }).click();
+    await expect(search.getByRole('status')).toContainText('Keine Treffer');
+
+    await page.goto('/platform/audit');
+    await page.getByLabel('Ereignistyp').fill('PLATFORM_DIAGNOSTICS_READ');
+    await expect(page.getByText('PLATFORM_DIAGNOSTICS_READ').first()).toBeVisible();
+  });
+
   test('keine Verbindung zwischen den Domänen: die Mandanten-Oberfläche verlinkt den Plattformbereich nicht, ein Mandantenzugang öffnet ihn nicht', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await expect(page.locator('a[href^="/platform"]')).toHaveCount(0);

@@ -118,6 +118,19 @@ export class PlatformAuditQueryDto {
   view?: 'all';
 }
 
+export class DiagnosticsSearchQueryDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(80)
+  reference!: string;
+
+  /** Begründung der Suche (Amendment 03 §17.4): wird mit dem Zugriff auditiert. */
+  @IsString()
+  @MinLength(5)
+  @MaxLength(300)
+  reason!: string;
+}
+
 export class DiagnosticsQueryDto {
   @IsString()
   @MinLength(8)

@@ -5,7 +5,7 @@ import { OrchestratorService } from './orchestrator.service';
 
 const BATCH = 50;
 /** A case that is IN_PROGRESS but untouched for this long, with no live lease, was most likely abandoned by a crashed worker. */
-const STALE_IN_PROGRESS_MS = 2 * 60_000;
+export const STALE_IN_PROGRESS_MS = 2 * 60_000;
 
 export interface SweepResult {
   advanced: number;

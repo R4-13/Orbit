@@ -43,3 +43,21 @@ export interface OrchestrationDiagnosticProjection {
   /** Provider-/Modelllauf-Metadaten werden mit der AI-Plattform (Phase OPS-2, `AIUsageRecord`) ergänzt. */
   providerRuns: Array<{ providerKey: string; modelProfile: string; modelId?: string; latencyMs?: number; usageUnits?: number; status: string }>;
 }
+
+/**
+ * Treffer der Referenzsuche (Amendment 03 §16.1): wo eine Kennung (Vorgang, Plan, Aktion, Lauf, Support-Sitzung) hingehört. Nur Art, Mandant, Vorgang und
+ * Zustand – nie Inhalte. Von hier aus führt die Diagnose des Vorgangs weiter (begründet, mandantenscharf, auditiert).
+ */
+export const DIAGNOSTIC_REFERENCE_KINDS = ['CASE', 'PLAN', 'ACTION', 'AGENT_RUN', 'SUPPORT_SESSION'] as const;
+export type DiagnosticReferenceKind = (typeof DIAGNOSTIC_REFERENCE_KINDS)[number];
+
+export interface DiagnosticSearchHit {
+  kind: DiagnosticReferenceKind;
+  tenantId: string;
+  tenantName: string;
+  /** Vorgang, zu dem die Kennung gehört (für Support-Sitzungen leer). */
+  caseId?: string;
+  /** Zustand des gefundenen Objekts (z. B. Vorgangsstatus, Planstatus, Aktionsstatus). */
+  status: string;
+  createdAt: string;
+}

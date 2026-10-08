@@ -1,5 +1,6 @@
 'use client';
 
+import type { WorkBacklog } from '@orbit/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { platformFetch } from './platform-client';
 
@@ -157,6 +158,9 @@ export interface RuntimeHealthView {
 
 /** Betriebszustand ändert sich laufend: alle 15 Sekunden neu messen, solange die Seite offen ist. */
 export const useRuntimeHealth = (enabled = true) => useQuery({ queryKey: ['platform', 'runtime'], queryFn: () => platformFetch<RuntimeHealthView>('/runtime'), enabled, refetchInterval: 15_000 });
+
+/** Arbeitsstand der Hintergrundverarbeitung (Zähler, keine Inhalte); ändert sich langsamer als die Queues, deshalb alle 30 Sekunden. */
+export const useWorkBacklog = (enabled = true) => useQuery({ queryKey: ['platform', 'runtime', 'work'], queryFn: () => platformFetch<WorkBacklog>('/runtime/work'), enabled, refetchInterval: 30_000 });
 
 export const usePlatformOverview = () => useQuery({ queryKey: ['platform', 'overview'], queryFn: () => platformFetch<PlatformOverview>('/overview') });
 export const usePlatformTenants = () => useQuery({ queryKey: ['platform', 'tenants'], queryFn: () => platformFetch<PlatformTenantRow[]>('/tenants') });
