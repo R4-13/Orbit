@@ -4,7 +4,7 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 
 ## Grundsätze
 
-* **Eigener Bereich, eigene Sitzung.** `/platform/*` hat eine eigene Shell (keine Mandanten-Navigation, keine Sonde, kein Mandanten-Branding) und einen eigenen Sitzungsspeicher (`sessionStorage`, Schlüssel `orbit.platform.auth`). Die Mandanten-Oberfläche verlinkt den Plattformbereich nicht; ein Mandantenzugang kann sich dort nicht anmelden (andere Signatur, andere Zielgruppe).
+* **Eigener Bereich, eigene Sitzung.** `/platform/*` hat eine eigene Shell (keine Mandanten-Navigation, keine Sonde, kein Mandanten-Branding) und eine eigene Sitzung (Zugangstoken nur im Arbeitsspeicher, Refresh-Token als httpOnly-Cookie – **nichts im Browser-Speicher**). Die Mandanten-Oberfläche verlinkt den Plattformbereich nicht; ein Mandantenzugang kann sich dort nicht anmelden (andere Signatur, andere Zielgruppe).
 * **Die Oberfläche ist Komfort, die API ist maßgeblich.** Weiterleitung und ausgeblendete Navigationspunkte folgen den Scopes aus der Anmeldung; jede Anfrage prüft der Server erneut (Sitzung, Rollen, Scopes aus der Datenbank).
 * **Umgebung immer sichtbar.** Ein Kennzeichen in der Kopfzeile zeigt `development`/`staging`/`production` (Produktion rot).
 * **Kritische Änderungen:** beschriebene Wirkung vor der Bestätigung, Pflichtbegründung (mindestens 5 Zeichen, geht ins Audit), erneute Passwortprüfung (Step-up) bei Bedarf. Optimistische Versionsprüfung (`expectedVersion`): ein zwischenzeitlich geänderter Stand führt zu einem verständlichen Konflikt statt zu einem stillen Überschreiben.
@@ -29,7 +29,7 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 
 * Anbieter, Modelle, Profil-Entwürfe und Plattformverbindungen (Zugangsdaten) anlegen: **nur über die API** (die Oberfläche zeigt sie, zeigt aber nie Geheimnisse). Flag-Ausnahmen (Umgebung, Kohorte, Mandant) und der Zugriff auf Vorgangsinhalte in Support-Sitzungen (`case.payload.read`, `case.metadata.read`) ebenfalls nur über die API – Inhalte sehen bleibt bewusst eine Handlung außerhalb der Oberfläche.
 * Kein MFA; Step-up ist Passwort-Re-Authentifizierung.
-* Der Sitzungsspeicher ist `sessionStorage` (MVP-Vereinfachung wie beim Mandanten-Token-Speicher): ein XSS auf dieser Herkunft könnte Token lesen. Eine httpOnly-Cookie-Sitzung wäre der nächste Härtungsschritt (Sicherheitshärtung).
+* **Sitzung:** das Zugangstoken (15 Minuten) lebt nur im Arbeitsspeicher des Tabs; das Refresh-Token steckt in einem httpOnly-Cookie (`orbit_platform_rt`, `SameSite=Strict`, Pfad nur `/api/v1/platform/auth`, Sitzungs-Cookie, `Secure` außer in Entwicklung/Test) und ist für Skripte der Seite unlesbar. Nach dem Neuladen stellt die Seite die Sitzung über das Cookie wieder her; mehrere Tabs serialisieren den Refresh (Web Locks). **Restrisiko:** ein Skript auf der Seite (XSS) kann den Refresh im Namen des Browsers auslösen, solange die Seite offen ist – es kann das Token aber nicht mitnehmen. Der Refresh über das Cookie verlangt den Header `X-Orbit-Platform-Cookie` (löst eine CORS-Vorabprüfung aus; fremde Seiten können ihn nicht setzen).
 
 ## Test
 

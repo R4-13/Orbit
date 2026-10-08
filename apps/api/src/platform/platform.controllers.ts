@@ -1,7 +1,11 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import type { OrbitEnv } from '@orbit/config';
+import { ORBIT_ENV } from '../config/env.token';
+import { clearCookieOptions, isCookieMode, PLATFORM_REFRESH_COOKIE, readRefreshCookie, refreshCookieOptions } from './auth/platform-cookie';
 import { Throttle } from '@nestjs/throttler';
 import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
-import { PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth } from '@orbit/shared';
+import { AuthenticationExpiredError, PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth } from '@orbit/shared';
 import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
 import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
 import { CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
@@ -26,27 +30,46 @@ const PLATFORM_AUTH_THROTTLE = { default: { limit: Number(process.env.PLATFORM_A
 
 @Controller({ path: 'platform/auth' })
 export class PlatformAuthController {
-  constructor(private readonly auth: PlatformAuthService) {}
+  constructor(
+    private readonly auth: PlatformAuthService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+  ) {}
+
+  /** Im Cookie-Modus (Browser) gelangt das Refresh-Token nur als httpOnly-Cookie zum Client, nie in den Antwortkörper. */
+  private deliver(tokens: PlatformTokens, request: Request, response: Response): PlatformTokens {
+    if (!isCookieMode(request)) return tokens;
+    response.cookie(PLATFORM_REFRESH_COOKIE, tokens.refreshToken, refreshCookieOptions(this.env));
+    return { ...tokens, refreshToken: '' };
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle(PLATFORM_AUTH_THROTTLE)
-  login(@Body() dto: PlatformLoginDto): Promise<PlatformTokens> {
-    return this.auth.login(dto.email, dto.password);
+  async login(@Body() dto: PlatformLoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<PlatformTokens> {
+    return this.deliver(await this.auth.login(dto.email, dto.password), request, response);
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Throttle(PLATFORM_AUTH_THROTTLE)
-  refresh(@Body() dto: PlatformRefreshDto): Promise<PlatformTokens> {
-    return this.auth.refresh(dto.refreshToken);
+  async refresh(@Body() dto: PlatformRefreshDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<PlatformTokens> {
+    // Das Cookie gilt nur im Cookie-Modus (Header als Schutz gegen fremde Auslöser); ein Token im Körper hat Vorrang und braucht keinen Header.
+    const token = dto.refreshToken || (isCookieMode(request) ? readRefreshCookie(request) : undefined);
+    if (!token) throw new AuthenticationExpiredError('Kein Refresh-Token vorhanden.');
+    try {
+      return this.deliver(await this.auth.refresh(token), request, response);
+    } catch (error) {
+      if (isCookieMode(request)) response.clearCookie(PLATFORM_REFRESH_COOKIE, clearCookieOptions(this.env));
+      throw error;
+    }
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(PlatformAuthGuard)
-  async logout(@CurrentPlatformPrincipal() principal: PlatformPrincipal): Promise<void> {
+  async logout(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Res({ passthrough: true }) response: Response): Promise<void> {
     await this.auth.logout(principal);
+    response.clearCookie(PLATFORM_REFRESH_COOKIE, clearCookieOptions(this.env));
   }
 
   /** Passwortwechsel durch die Person selbst: aktuelles Passwort wird erneut geprüft, andere Sitzungen enden. */

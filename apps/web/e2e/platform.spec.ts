@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { API_BASE_URL, DEMO_PASSWORD, DEMO_USERS, loginViaUi } from './utils/login';
+import { installPlatformSession, platformApiLogin } from './utils/platform-session';
 
 /**
  * Plattform-Oberfläche (Amendment 03, /platform/*). Braucht einen echten Betreiberzugang der laufenden Umgebung:
@@ -11,12 +12,9 @@ const EMAIL = process.env.E2E_PLATFORM_EMAIL;
 const PASSWORD = process.env.E2E_PLATFORM_PASSWORD;
 test.skip(!EMAIL || !PASSWORD, 'E2E_PLATFORM_EMAIL/E2E_PLATFORM_PASSWORD nicht gesetzt');
 
-/** Meldet über die echte Plattform-API an und legt die Sitzung vor dem ersten Seitenaufruf ab (die Anmeldung selbst prüft der UI-Test). */
+/** Legt eine echte Sitzung wie die Anwendung selbst an (httpOnly-Cookie); die Anmeldung über die Oberfläche prüft ein eigener Test. */
 async function loginViaApiSession(page: Page): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/platform/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: EMAIL, password: PASSWORD }) });
-  expect(response.ok, `Plattform-Login über die API: ${response.status}`).toBe(true);
-  const data = (await response.json()) as { accessToken: string; refreshToken: string; principal: unknown };
-  await page.addInitScript((auth) => window.sessionStorage.setItem('orbit.platform.auth', JSON.stringify(auth)), { accessToken: data.accessToken, refreshToken: data.refreshToken, principal: data.principal });
+  await installPlatformSession(page.context(), await platformApiLogin(EMAIL as string, PASSWORD as string));
 }
 
 test.describe('Plattformbetrieb (UI)', () => {
@@ -51,9 +49,30 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(page.getByRole('link', { name: 'Mein Zugang und Passwort' })).toContainText('Owner'); // Rolle in Alltagssprache, nie der technische Schlüssel
     const nav = page.getByRole('navigation', { name: 'Plattformbereiche' });
     for (const label of ['Übersicht', 'Mandanten', 'KI-Steuerung', 'Notschalter und Anbindungen', 'Audit']) await expect(nav.getByRole('link', { name: label })).toBeVisible();
-    // Die Sitzung liegt im Tab-Speicher, nicht im Mandanten-Speicher und nicht im dauerhaften Browser-Speicher.
-    const storage = await page.evaluate(() => ({ session: window.sessionStorage.getItem('orbit.platform.auth') !== null, tenant: window.localStorage.getItem('orbit.auth'), platformInLocal: window.localStorage.getItem('orbit.platform.auth') }));
-    expect(storage).toEqual({ session: true, tenant: null, platformInLocal: null });
+    // Es liegt nichts im Browser-Speicher: das Zugangstoken lebt nur im Arbeitsspeicher, das Refresh-Token nur in einem httpOnly-Cookie (für Skripte unlesbar).
+    const storage = await page.evaluate(() => ({ session: window.sessionStorage.length, local: window.localStorage.getItem('orbit.platform.auth'), tenant: window.localStorage.getItem('orbit.auth'), readableCookie: document.cookie }));
+    expect(storage).toEqual({ session: 0, local: null, tenant: null, readableCookie: '' });
+    const cookie = (await page.context().cookies()).find((c) => c.name === 'orbit_platform_rt');
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/api/v1/platform/auth' });
+    // Neuladen: die Sitzung wird über das Cookie wiederhergestellt, ohne erneute Anmeldung.
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Plattformübersicht' })).toBeVisible();
+    // Abmelden löscht das Cookie; danach führt jeder Aufruf zur Anmeldung.
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.waitForURL('**/platform/login');
+    expect((await page.context().cookies()).some((c) => c.name === 'orbit_platform_rt')).toBe(false);
+    await page.goto('/platform');
+    await page.waitForURL('**/platform/login');
+  });
+
+  test('mehrere Tabs gleichzeitig: alle stellen die Sitzung über das rotierende Cookie wieder her (Refresh wird tab-übergreifend serialisiert)', async ({ page }) => {
+    await loginViaApiSession(page);
+    const tabs = [page, await page.context().newPage(), await page.context().newPage()];
+    await Promise.all(tabs.map((tab) => tab.goto('/platform')));
+    for (const tab of tabs) await expect(tab.getByRole('heading', { name: 'Plattformübersicht' })).toBeVisible();
+    // Auch nach erneutem gleichzeitigem Laden bleibt jede Sitzung bestehen – das Cookie wurde nicht durch parallele Rotation entwertet.
+    await Promise.all(tabs.map((tab) => tab.reload()));
+    for (const tab of tabs) await expect(tab.getByRole('heading', { name: 'Plattformübersicht' })).toBeVisible();
   });
 
   test('Mandanten, KI-Steuerung und Audit laden ohne Fehlerzustand', async ({ page }) => {

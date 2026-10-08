@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { API_BASE_URL } from './utils/login';
+import { installPlatformSession } from './utils/platform-session';
 
 /**
  * Betreiberzugänge in der Plattform-Oberfläche (Amendment 03 §2, §4): anlegen, Rollen ändern, deaktivieren – jeweils mit Begründung und Passwortbestätigung.
@@ -15,7 +16,7 @@ const json = { 'Content-Type': 'application/json' };
 
 test('Betreiberzugänge: anlegen, Rollen ändern, deaktivieren; die deaktivierte Person kann sich nicht mehr anmelden', async ({ page }) => {
   const login = (await (await fetch(api('/auth/login'), { method: 'POST', headers: json, body: JSON.stringify({ email: EMAIL, password: PASSWORD }) })).json()) as { accessToken: string; refreshToken: string; principal: unknown };
-  await page.addInitScript((a) => window.sessionStorage.setItem('orbit.platform.auth', JSON.stringify(a)), { accessToken: login.accessToken, refreshToken: login.refreshToken, principal: login.principal });
+  await installPlatformSession(page.context(), login);
 
   const tag = randomBytes(3).toString('hex');
   const email = `ui-ident-${tag}@orbit.local`;

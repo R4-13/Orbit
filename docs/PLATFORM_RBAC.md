@@ -32,7 +32,7 @@ aktive Support-Session verleihen (Phase OPS-5, noch nicht umgesetzt).
 
 * `POST /platform/auth/login` – argon2-Prüfung auch bei unbekannter E-Mail (keine Konto-Enumeration über die Antwortzeit), strengere Drosselung als die Mandantenanmeldung
   (`PLATFORM_AUTH_RATE_LIMIT_MAX`, Standard 20 je 5 min). Fehlschläge werden auditiert; die E-Mail nur als Hash.
-* Access Token 15 min (`PLATFORM_ACCESS_TTL`); Refresh-Token rotiert (einmal verwendbar); absolute Sitzungsgrenze `PLATFORM_SESSION_MAX_HOURS` (Standard 8) – ein Refresh verlängert sie nie.
+* Access Token 15 min (`PLATFORM_ACCESS_TTL`); Refresh-Token rotiert (einmal verwendbar); im **Cookie-Modus** (Header `X-Orbit-Platform-Cookie: 1`, Browser) nur als httpOnly-Cookie, nie im Antwortkörper; absolute Sitzungsgrenze `PLATFORM_SESSION_MAX_HOURS` (Standard 8) – ein Refresh verlängert sie nie.
 * Sitzungen sind an die Umgebung gebunden (`ORBIT_ENVIRONMENT`); eine Sitzung aus einer anderen Umgebung wird abgewiesen.
 * **Step-up** (`POST /platform/auth/step-up`): erneute Passwortprüfung öffnet ein Erhöhungsfenster (`PLATFORM_STEP_UP_MINUTES`, Standard 5). Kritische Operationen
   (`@RequireStepUp()`): Identitäten anlegen/Rollen ändern/deaktivieren, Anbieter/Modelle/Profile/Routen ändern, Plattform-Secrets setzen/rotieren, Notbremse.

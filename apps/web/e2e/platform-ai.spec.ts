@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { API_BASE_URL } from './utils/login';
+import { installPlatformSession } from './utils/platform-session';
 
 /**
  * KI-Steuerung in der Plattform-Oberfläche (Amendment 03 §9–12): Profil veröffentlichen, Route anlegen, Vorprüfung der Aktivierung.
@@ -32,7 +33,7 @@ test('KI-Routen: Profil veröffentlichen, Route anlegen, Aktivierung wird mit Gr
   await post('/ai/models', { providerKey, providerModelId: `ui-test-model-${tag}`, displayName: `UI Testmodell ${tag}` });
   await post('/ai/model-profiles', { profileKey, purpose: 'UI-Test: Profil ohne Aufrufer', requiredCapabilities: ['chat'] });
 
-  await page.addInitScript((a) => window.sessionStorage.setItem('orbit.platform.auth', JSON.stringify(a)), { accessToken: login.accessToken, refreshToken: login.refreshToken, principal: login.principal });
+  await installPlatformSession(page.context(), login);
   await page.goto('/platform/ai');
   await expect(page.getByRole('heading', { name: 'KI-Steuerung' })).toBeVisible();
 

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { API_BASE_URL, DEMO_PASSWORD, DEMO_USERS } from './utils/login';
+import { installPlatformSession } from './utils/platform-session';
 
 /**
  * Support-Sitzungen in der Plattform-Oberfläche (Amendment 03 §18): Anforderung durch die Support-Rolle, Vier-Augen-Freigabe durch eine andere Person,
@@ -22,7 +23,7 @@ async function login(email: string, password: string): Promise<{ accessToken: st
 
 async function pageFor(browser: Browser, session: { accessToken: string; refreshToken: string; principal: unknown }): Promise<Page> {
   const context = await browser.newContext();
-  await context.addInitScript((auth) => window.sessionStorage.setItem('orbit.platform.auth', JSON.stringify(auth)), session);
+  await installPlatformSession(context, session);
   return context.newPage();
 }
 

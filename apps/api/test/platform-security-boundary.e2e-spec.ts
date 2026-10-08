@@ -175,6 +175,45 @@ describe('Platform security boundary (e2e)', () => {
       await get('/platform/me', operator.token).expect(401);
     });
 
+    it('Cookie-Modus (Browser): das Refresh-Token kommt nur als httpOnly-Cookie, nie im Körper; ohne den Modus-Header gibt es kein Cookie und der Körper trägt das Token (API-Clients)', async () => {
+      const person = await makeIdentity('PLATFORM_SUPPORT', 'cookie');
+      const login = (headers: Record<string, string> = {}) => request(app.getHttpServer()).post('/api/v1/platform/auth/login').set(headers).send({ email: person.email, password });
+      const cookieOf = (response: request.Response): string => ((response.headers['set-cookie'] as unknown as string[] | undefined) ?? []).find((c) => c.startsWith('orbit_platform_rt=')) ?? '';
+
+      const api = await login().expect(200);
+      expect(cookieOf(api)).toBe('');
+      expect(api.body.refreshToken).toEqual(expect.stringMatching(/^[a-f0-9]{64}$/));
+
+      const browser = await login({ 'X-Orbit-Platform-Cookie': '1' }).expect(200);
+      const cookie = cookieOf(browser);
+      expect(browser.body.refreshToken).toBe(''); // nie im Körper, also nie für Skripte der Seite lesbar
+      expect(cookie).toMatch(/HttpOnly/i);
+      expect(cookie).toMatch(/SameSite=Strict/i);
+      expect(cookie).toContain('Path=/api/v1/platform/auth'); // nur an den Anmelderouten
+      expect(cookie).not.toMatch(/Max-Age|Expires/i); // Sitzungs-Cookie: endet mit dem Browser
+      expect(cookie).not.toMatch(/Secure/i); // Entwicklungsumgebung ohne TLS; in staging/production gesetzt (siehe Unit-Test)
+      const rawToken = decodeURIComponent(cookie.split(';')[0]!.split('=')[1]!);
+      expect(rawToken).toMatch(/^[a-f0-9]{64}$/);
+
+      // Refresh über das Cookie braucht den Modus-Header: ein fremder Auslöser ohne Header bekommt nichts, selbst wenn der Browser das Cookie mitsendet.
+      await request(app.getHttpServer()).post('/api/v1/platform/auth/refresh').set('Cookie', `orbit_platform_rt=${rawToken}`).send({}).expect(401);
+      const refreshed = await request(app.getHttpServer()).post('/api/v1/platform/auth/refresh').set({ Cookie: `orbit_platform_rt=${rawToken}`, 'X-Orbit-Platform-Cookie': '1' }).send({}).expect(200);
+      const next = cookieOf(refreshed);
+      expect(next).toMatch(/HttpOnly/i);
+      expect(next.split(';')[0]).not.toBe(cookie.split(';')[0]); // das Token rotiert
+      expect(refreshed.body.refreshToken).toBe('');
+      await get('/platform/me', refreshed.body.accessToken as string).expect(200);
+
+      // Das alte Cookie ist wertlos; der Fehlschlag löscht das Cookie beim Browser.
+      const stale = await request(app.getHttpServer()).post('/api/v1/platform/auth/refresh').set({ Cookie: `orbit_platform_rt=${rawToken}`, 'X-Orbit-Platform-Cookie': '1' }).send({}).expect(401);
+      expect(cookieOf(stale)).toMatch(/orbit_platform_rt=;/);
+
+      // Abmelden beendet die Sitzung und löscht das Cookie.
+      const out = await request(app.getHttpServer()).post('/api/v1/platform/auth/logout').set({ Authorization: `Bearer ${refreshed.body.accessToken}` }).expect(204);
+      expect(cookieOf(out)).toMatch(/orbit_platform_rt=;/);
+      await get('/platform/me', refreshed.body.accessToken as string).expect(401);
+    });
+
     it('Refresh rotiert: das alte Refresh-Token ist nach Gebrauch wertlos', async () => {
       const email = `ops1-${suffix}-refresh@platform-test.example`;
       const identity = await identities.create(null, { email, displayName: 'Refresh', password, roles: [PLATFORM_ROLES.PLATFORM_AUDITOR] });

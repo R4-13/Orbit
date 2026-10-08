@@ -12,6 +12,8 @@ export class PlatformLoginDto {
 }
 
 export class PlatformRefreshDto {
+  /** Fehlt im Cookie-Modus: dann kommt das Token aus dem httpOnly-Cookie. */
+  @IsOptional()
   @IsString()
   @MinLength(16)
   @MaxLength(256)

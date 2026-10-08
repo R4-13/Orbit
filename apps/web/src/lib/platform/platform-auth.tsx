@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { StepUpDialog } from '../../components/platform/step-up-dialog';
-import { isStepUpRequired, platformLogin, platformLogout, platformStepUp } from './platform-client';
+import { isStepUpRequired, platformLogin, platformLogout, platformStepUp, restorePlatformSession } from './platform-client';
 import { getStoredPlatformAuth, subscribeToPlatformAuth, type PlatformPrincipalView, type StoredPlatformAuth } from './platform-store';
 
 interface PlatformAuthValue {
@@ -25,9 +25,13 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
   const pending = useRef<{ resolve: () => void; reject: (error: unknown) => void } | null>(null);
 
   useEffect(() => {
-    setAuth(getStoredPlatformAuth());
-    setIsLoading(false);
-    return subscribeToPlatformAuth(setAuth);
+    const unsubscribe = subscribeToPlatformAuth(setAuth);
+    // Nach einem Neuladen ist der Arbeitsspeicher leer: das httpOnly-Cookie stellt die Sitzung wieder her (oder es bleibt bei der Anmeldung).
+    void restorePlatformSession().finally(() => {
+      setAuth(getStoredPlatformAuth());
+      setIsLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   const login = useCallback((email: string, password: string) => platformLogin(email, password), []);
