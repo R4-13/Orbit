@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import {
@@ -55,14 +56,14 @@ export class PlatformIdentityService {
     return users.map(toView);
   }
 
-  async create(actor: PlatformPrincipal | null, input: { email: string; displayName: string; password: string; roles: string[] }): Promise<PlatformIdentityView> {
+  async create(actor: PlatformPrincipal | null, input: { email: string; displayName: string; password: string; roles: string[]; requirePasswordChange?: boolean }): Promise<PlatformIdentityView> {
     const roles = this.validateRoles(input.roles);
     if (input.password.length < MIN_PASSWORD_LENGTH) throw new ValidationFailedError(`Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
     const email = input.email.trim().toLowerCase();
     const passwordHash = await argon2.hash(input.password);
     try {
       const created = await this.prisma.withPlatformScope(async (tx) => {
-        const user = await tx.platformUser.create({ data: { email, displayName: input.displayName.trim(), passwordHash, createdByPlatformUserId: actor?.userId } });
+        const user = await tx.platformUser.create({ data: { email, displayName: input.displayName.trim(), passwordHash, passwordChangeRequired: input.requirePasswordChange === true, createdByPlatformUserId: actor?.userId } });
         for (const role of roles) await tx.platformRoleAssignment.create({ data: { platformUserId: user.id, role, grantedByUserId: actor?.userId } });
         await this.audit.record(
           { eventType: 'PLATFORM_IDENTITY_CREATED', actor: actor ? { userId: actor.userId, roles: actor.platformRoles } : null, targetType: 'PlatformUser', targetId: user.id, after: { email, displayName: user.displayName, roles } },
@@ -75,6 +76,24 @@ export class PlatformIdentityService {
       if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Diese E-Mail-Adresse ist bereits als Plattformidentität vorhanden.');
       throw error;
     }
+  }
+
+  /**
+   * Zurücksetzen eines vergessenen Passworts durch den Owner. Das System erzeugt ein einmaliges Startpasswort und gibt es **nur in dieser Antwort** zurück
+   * (es wird nirgends gespeichert oder protokolliert); alle Sitzungen der Person enden sofort, und bis zum eigenen Passwortwechsel ist nur dieser erlaubt.
+   * Das eigene Passwort lässt sich so nicht zurücksetzen (dafür gibt es den Wechsel mit Prüfung des aktuellen Passworts), ebenso kein deaktivierter Zugang.
+   */
+  async resetPassword(actor: PlatformPrincipal, targetUserId: string, reason: string): Promise<{ temporaryPassword: string; revokedSessions: number }> {
+    if (targetUserId === actor.userId) throw new ValidationFailedError('Das eigene Passwort wird unter „Mein Zugang“ geändert, nicht zurückgesetzt.');
+    const target = await this.prisma.withPlatformScope((tx) => tx.platformUser.findUnique({ where: { id: targetUserId } }));
+    if (!target) throw new NotFoundError('Plattformidentität nicht gefunden.');
+    if (target.status !== 'ACTIVE') throw new ValidationFailedError('Ein deaktivierter Zugang lässt sich nicht zurücksetzen.');
+    const temporaryPassword = `${randomBytes(15).toString('base64url')}-${randomBytes(2).toString('hex')}`;
+    const passwordHash = await argon2.hash(temporaryPassword);
+    await this.prisma.withPlatformScope((tx) => tx.platformUser.update({ where: { id: targetUserId }, data: { passwordHash, passwordChangeRequired: true } }));
+    const revokedSessions = await this.auth.revokeAllSessions(targetUserId, 'PASSWORD_RESET');
+    await this.audit.record({ eventType: 'PLATFORM_PASSWORD_RESET', actor: { userId: actor.userId, roles: actor.platformRoles }, targetType: 'PlatformUser', targetId: targetUserId, reason, extra: { revokedSessions } });
+    return { temporaryPassword, revokedSessions };
   }
 
   /** Setzt die aktiven Rollen exakt auf `roles` (Hinzufügen und Entziehen in einer Transaktion, mit Vorher/Nachher im Audit). */

@@ -194,6 +194,8 @@ export interface PlatformPrincipal {
   issuedAt: string;
   expiresAt: string;
   environment: string;
+  /** Der Zugang muss das Passwort ändern, bevor irgendetwas anderes erlaubt ist (Zurücksetzen durch den Owner, Startpasswort). */
+  passwordChangeRequired: boolean;
 }
 
 /** Plattform-Audit-Ereignistypen (Amendment 03 §19.1). Dieselbe Audit-Tabelle wie die Mandanten, `domain = PLATFORM`. */
@@ -206,6 +208,7 @@ export const PLATFORM_AUDIT_EVENT_TYPES = [
   'PLATFORM_LOGOUT',
   'PLATFORM_STEP_UP',
   'PLATFORM_PASSWORD_CHANGED',
+  'PLATFORM_PASSWORD_RESET',
   'PLATFORM_RUNTIME_STATE_CHANGED',
   'PLATFORM_ACCESS_DENIED',
   'PLATFORM_IDENTITY_CREATED',

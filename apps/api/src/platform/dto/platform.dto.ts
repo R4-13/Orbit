@@ -1,4 +1,4 @@
-import { ArrayMaxSize, IsArray, IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class PlatformLoginDto {
@@ -57,6 +57,11 @@ export class CreatePlatformIdentityDto {
   @ArrayMaxSize(8)
   @IsString({ each: true })
   roles!: string[];
+
+  /** Die Person muss das Startpasswort bei der ersten Anmeldung ändern. Standard aus: API-Clients und Skripte legen Zugänge ohne Zwang an. */
+  @IsOptional()
+  @IsBoolean()
+  requirePasswordChange?: boolean;
 }
 
 export class SetPlatformRolesDto {
@@ -65,6 +70,13 @@ export class SetPlatformRolesDto {
   @IsString({ each: true })
   roles!: string[];
 
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class ResetPlatformPasswordDto {
   @IsString()
   @MinLength(5)
   @MaxLength(500)

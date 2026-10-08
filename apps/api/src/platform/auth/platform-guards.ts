@@ -7,13 +7,17 @@ import {
   type ExecutionContext,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PermissionDeniedError, StepUpRequiredError, type PlatformPrincipal, type PlatformScope } from '@orbit/shared';
+import { PasswordChangeRequiredError, PermissionDeniedError, StepUpRequiredError, type PlatformPrincipal, type PlatformScope } from '@orbit/shared';
 import { PlatformAuditService } from '../audit/platform-audit.service';
 import { PlatformAuthService } from './platform-auth.service';
 import type { PlatformRequest } from './platform-auth.types';
 
 const SCOPES_KEY = 'orbit:platform-scopes';
 const STEP_UP_KEY = 'orbit:platform-step-up';
+const PASSWORD_PENDING_KEY = 'orbit:platform-allow-password-pending';
+
+/** Routen, die auch erlaubt sind, solange ein Passwortwechsel aussteht: Passwort ändern, Abmelden, eigene Kontoabfrage. Alles andere bleibt gesperrt. */
+export const AllowWhilePasswordChangePending = () => SetMetadata(PASSWORD_PENDING_KEY, true);
 
 /** Verlangt ALLE genannten Plattform-Scopes (serverseitig; Amendment 03 §23.3). */
 export const RequirePlatformScope = (...scopes: PlatformScope[]) => SetMetadata(SCOPES_KEY, scopes);
@@ -33,14 +37,22 @@ export const CurrentPlatformPrincipal = createParamDecorator((_data: unknown, ct
  */
 @Injectable()
 export class PlatformAuthGuard implements CanActivate {
-  constructor(private readonly auth: PlatformAuthService) {}
+  constructor(
+    private readonly auth: PlatformAuthService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<PlatformRequest>();
     const header = request.headers.authorization;
     const value = Array.isArray(header) ? header[0] : header;
     if (!value || !value.startsWith('Bearer ')) throw new UnauthorizedException('Missing platform bearer token.');
-    request.platformPrincipal = await this.auth.authenticate(value.slice('Bearer '.length).trim());
+    const principal = await this.auth.authenticate(value.slice('Bearer '.length).trim());
+    request.platformPrincipal = principal;
+    // Aussteht: ein Passwortwechsel (Zurücksetzen durch den Owner, Startpasswort) – bis dahin nichts außer den ausdrücklich freigegebenen Routen.
+    if (principal.passwordChangeRequired && !this.reflector.getAllAndOverride<boolean | undefined>(PASSWORD_PENDING_KEY, [context.getHandler(), context.getClass()])) {
+      throw new PasswordChangeRequiredError('Bitte ändern Sie zuerst Ihr Passwort.');
+    }
     return true;
   }
 }

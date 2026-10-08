@@ -325,6 +325,64 @@ describe('Platform security boundary (e2e)', () => {
       for (const secret of [password, newPassword]) expect(serialized).not.toContain(secret);
     });
 
+    it('Passwort zurücksetzen (Owner): einmaliges Startpasswort nur in der Antwort, Sitzungen enden, bis zum eigenen Wechsel ist alles außer Wechseln/Abmelden/Kontoabfrage gesperrt; nur Owner, nicht für sich selbst, kein Passwort im Audit', async () => {
+      const owner = await makeIdentity('PLATFORM_OWNER', 'resetowner');
+      const person = await makeIdentity('PLATFORM_OPERATOR', 'resetperson');
+      const support = await makeIdentity('PLATFORM_SUPPORT', 'resetsupport');
+      await request(app.getHttpServer()).post('/api/v1/platform/auth/step-up').set({ Authorization: `Bearer ${owner.token}` }).send({ password }).expect(200);
+      const reset = (id: string, token: string, reason = 'Passwort vergessen (Test)') => request(app.getHttpServer()).post(`/api/v1/platform/identities/${id}/reset-password`).set({ Authorization: `Bearer ${token}` }).send({ reason });
+
+      // Nur Owner; nicht für sich selbst; nicht ohne Begründung.
+      await reset(person.id, support.token).expect(403);
+      await reset(owner.id, owner.token).expect(400);
+      await request(app.getHttpServer()).post(`/api/v1/platform/identities/${person.id}/reset-password`).set({ Authorization: `Bearer ${owner.token}` }).send({ reason: 'x' }).expect(400);
+
+      const oldSession = person.token;
+      await get('/platform/overview', oldSession).expect(200);
+      const result = await reset(person.id, owner.token).expect(200);
+      const temporary = result.body.temporaryPassword as string;
+      expect(temporary.length).toBeGreaterThanOrEqual(14);
+      expect(result.body.revokedSessions).toBeGreaterThanOrEqual(1);
+      await get('/platform/me', oldSession).expect(401); // alte Sitzungen enden sofort
+      await expect(auth.login(person.email, password)).rejects.toThrow(); // das alte Passwort gilt nicht mehr
+
+      // Mit dem Startpasswort: Anmeldung gelingt, aber nur Konto, Abmelden und Passwortwechsel sind erlaubt.
+      const session = await auth.login(person.email, temporary);
+      expect(session.principal.passwordChangeRequired).toBe(true);
+      await get('/platform/me', session.accessToken).expect(200);
+      for (const path of ['/platform/overview', '/platform/tenants', '/platform/audit', '/platform/runtime']) {
+        const blocked = await get(path, session.accessToken).expect(403);
+        expect(blocked.body.code).toBe('PASSWORD_CHANGE_REQUIRED');
+      }
+      await request(app.getHttpServer()).post('/api/v1/platform/auth/step-up').set({ Authorization: `Bearer ${session.accessToken}` }).send({ password: temporary }).expect(403); // auch kein Erhöhungsfenster
+
+      // Wechsel: Zwang endet, alles funktioniert, das Startpasswort ist wertlos.
+      const chosen = `Eig-${randomBytes(9).toString('base64url')}-5#`;
+      await request(app.getHttpServer()).post('/api/v1/platform/auth/change-password').set({ Authorization: `Bearer ${session.accessToken}` }).send({ currentPassword: temporary, newPassword: chosen }).expect(200);
+      await get('/platform/overview', session.accessToken).expect(200);
+      const fresh = await auth.login(person.email, chosen);
+      expect(fresh.principal.passwordChangeRequired).toBe(false);
+      await expect(auth.login(person.email, temporary)).rejects.toThrow();
+
+      // Audit: Zurücksetzen und Wechsel stehen drin – ohne ein Passwort.
+      const rows = await prisma.withPlatformScope((tx) => tx.auditLog.findMany({ where: { domain: 'PLATFORM', eventType: { in: ['PLATFORM_PASSWORD_RESET', 'PLATFORM_PASSWORD_CHANGED'] }, entityId: person.id } }));
+      expect(rows.map((r) => r.eventType).sort()).toEqual(['PLATFORM_PASSWORD_CHANGED', 'PLATFORM_PASSWORD_RESET']);
+      const serialized = JSON.stringify(rows);
+      for (const secret of [temporary, chosen, password]) expect(serialized).not.toContain(secret);
+    });
+
+    it('Anlegen mit „Passwortwechsel verlangen“: der Zwang gilt ab der ersten Anmeldung; ohne die Option (API-Clients) gibt es keinen', async () => {
+      const owner = await makeIdentity('PLATFORM_OWNER', 'forceowner');
+      await request(app.getHttpServer()).post('/api/v1/platform/auth/step-up').set({ Authorization: `Bearer ${owner.token}` }).send({ password }).expect(200);
+      const create = (tag: string, extra: Record<string, unknown>) =>
+        request(app.getHttpServer()).post('/api/v1/platform/identities').set({ Authorization: `Bearer ${owner.token}` }).send({ email: `ops1-${suffix}-${tag}@platform-test.example`, displayName: tag, password, roles: ['PLATFORM_AUDITOR'], ...extra });
+      const forced = await create('forced', { requirePasswordChange: true }).expect(201);
+      const plain = await create('plain', {}).expect(201);
+      created.push(forced.body.id as string, plain.body.id as string);
+      expect((await auth.login(`ops1-${suffix}-forced@platform-test.example`, password)).principal.passwordChangeRequired).toBe(true);
+      expect((await auth.login(`ops1-${suffix}-plain@platform-test.example`, password)).principal.passwordChangeRequired).toBe(false);
+    });
+
     it('Anmeldefehler werden auditiert, ohne die E-Mail-Adresse oder das Passwort im Klartext abzulegen', async () => {
       const email = `ops1-${suffix}-ghost@platform-test.example`;
       await request(app.getHttpServer()).post('/api/v1/platform/auth/login').send({ email, password: 'wrong-password-123' }).expect(401);

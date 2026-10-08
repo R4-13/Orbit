@@ -14,6 +14,7 @@ const actor: PlatformPrincipal = {
   issuedAt: new Date().toISOString(),
   expiresAt: new Date().toISOString(),
   environment: 'test',
+  passwordChangeRequired: false,
 };
 
 function build(options: { otherActiveOwners: number; targetRoles: string[] }) {

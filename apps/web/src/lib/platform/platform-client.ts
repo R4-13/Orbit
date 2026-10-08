@@ -68,6 +68,11 @@ function refreshAccessToken(): Promise<string | null> {
   return tracked;
 }
 
+/** Holt über das Cookie ein neues Zugangstoken samt aktuellem Kontext – z. B. nach einem Passwortwechsel, damit der Zwang entfällt. */
+export async function reloadPlatformSession(): Promise<boolean> {
+  return (await refreshAccessToken()) !== null;
+}
+
 /** Nach dem Laden der Seite: gibt es ein gültiges Cookie, wird die Sitzung ohne erneute Anmeldung wiederhergestellt. */
 export async function restorePlatformSession(): Promise<boolean> {
   if (getStoredPlatformAuth()) return true;

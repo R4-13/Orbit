@@ -57,11 +57,15 @@ export function PlatformShell({ children }: { children: ReactNode }) {
   const { principal, isAuthenticated, isLoading, logout, hasScope } = usePlatformAuth();
   const onLogin = pathname === '/platform/login';
 
+  const mustChangePassword = principal?.passwordChangeRequired === true;
+
   useEffect(() => {
     if (isLoading) return;
     if (!isAuthenticated && !onLogin) router.replace('/platform/login');
-    if (isAuthenticated && onLogin) router.replace('/platform');
-  }, [isLoading, isAuthenticated, onLogin, router]);
+    if (isAuthenticated && onLogin) router.replace(mustChangePassword ? '/platform/account' : '/platform');
+    // Solange ein Passwortwechsel aussteht, ist nur „Mein Zugang“ erreichbar (der Server sperrt alles andere ohnehin).
+    if (isAuthenticated && mustChangePassword && pathname !== '/platform/account' && !onLogin) router.replace('/platform/account');
+  }, [isLoading, isAuthenticated, onLogin, mustChangePassword, pathname, router]);
 
   if (onLogin) return <>{children}</>;
   if (isLoading || !isAuthenticated || !principal) {
@@ -92,7 +96,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav aria-label="Plattformbereiche" className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4">
-          {NAV.filter((item) => hasScope(item.scope)).map((item) => {
+          {NAV.filter((item) => !mustChangePassword && hasScope(item.scope)).map((item) => {
             const active = item.href === '/platform' ? pathname === '/platform' : pathname.startsWith(item.href);
             return (
               <Link

@@ -100,7 +100,7 @@ export class PlatformAuthService {
       });
     });
     await this.audit.record({ eventType: 'PLATFORM_LOGIN', actor: { userId: user.id, roles }, targetType: 'PlatformSession', targetId: session.id });
-    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken);
+    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken, user.passwordChangeRequired);
   }
 
   async refresh(rawRefreshToken: string): Promise<PlatformTokens> {
@@ -124,7 +124,7 @@ export class PlatformAuthService {
     if (!claimed) throw new AuthenticationExpiredError('Refresh token is invalid, revoked or expired.');
     const roles = claimed.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new AuthenticationExpiredError('No platform role assigned.');
-    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next);
+    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next, claimed.user.passwordChangeRequired);
   }
 
   async logout(principal: PlatformPrincipal): Promise<void> {
@@ -151,7 +151,7 @@ export class PlatformAuthService {
 
     const passwordHash = await argon2.hash(input.newPassword);
     const revoked = await this.prisma.withPlatformScope(async (tx) => {
-      await tx.platformUser.update({ where: { id: principal.userId }, data: { passwordHash } });
+      await tx.platformUser.update({ where: { id: principal.userId }, data: { passwordHash, passwordChangeRequired: false } });
       const result = await tx.platformSession.updateMany({ where: { platformUserId: principal.userId, revokedAt: null, id: { not: principal.sessionId } }, data: { revokedAt: new Date(), revokedReason: 'PASSWORD_CHANGED' } });
       return result.count;
     });
@@ -212,10 +212,10 @@ export class PlatformAuthService {
     }
     const roles = session.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new UnauthorizedException('No platform role assigned.');
-    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload);
+    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload, session.user.passwordChangeRequired);
   }
 
-  private issue(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, rawRefresh: string): PlatformTokens {
+  private issue(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, rawRefresh: string, passwordChangeRequired: boolean): PlatformTokens {
     const secret = this.assertEnabled();
     const payload: PlatformJwtPayload = { sub: userId, sid: session.id, dom: 'PLATFORM', env: this.env.ORBIT_ENVIRONMENT };
     const accessToken = this.jwt.sign(payload, { secret, audience: PLATFORM_AUDIENCE, issuer: PLATFORM_ISSUER, expiresIn: this.env.PLATFORM_ACCESS_TTL });
@@ -223,11 +223,11 @@ export class PlatformAuthService {
       accessToken,
       refreshToken: rawRefresh,
       expiresIn: Math.floor(parseDurationToMs(this.env.PLATFORM_ACCESS_TTL) / 1000),
-      principal: this.toPrincipal(userId, email, displayName, roles, session, payload),
+      principal: this.toPrincipal(userId, email, displayName, roles, session, payload, passwordChangeRequired),
     };
   }
 
-  private toPrincipal(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, payload: PlatformJwtPayload & { iat?: number; exp?: number }): PlatformPrincipal {
+  private toPrincipal(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, payload: PlatformJwtPayload & { iat?: number; exp?: number }, passwordChangeRequired: boolean): PlatformPrincipal {
     const stepUpActive = Boolean(session.stepUpUntil && session.stepUpUntil.getTime() > Date.now());
     const issuedAt = payload.iat ? new Date(payload.iat * 1000) : new Date();
     const expiresAt = payload.exp ? new Date(payload.exp * 1000) : new Date(Date.now() + parseDurationToMs(this.env.PLATFORM_ACCESS_TTL));
@@ -243,6 +243,7 @@ export class PlatformAuthService {
       issuedAt: issuedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       environment: this.env.ORBIT_ENVIRONMENT,
+      passwordChangeRequired,
     };
   }
 }

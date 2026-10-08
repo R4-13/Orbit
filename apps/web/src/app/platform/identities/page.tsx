@@ -37,8 +37,9 @@ function CreateIdentityForm({ onDone }: { onDone: () => void }) {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
+  const [requireChange, setRequireChange] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const create = usePlatformMutation(() => withStepUp(() => platformFetch('/identities', { method: 'POST', body: JSON.stringify({ email: email.trim(), displayName: displayName.trim(), password, roles }) })));
+  const create = usePlatformMutation(() => withStepUp(() => platformFetch('/identities', { method: 'POST', body: JSON.stringify({ email: email.trim(), displayName: displayName.trim(), password, roles, requirePasswordChange: requireChange }) })));
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -68,7 +69,11 @@ function CreateIdentityForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
       <RoleCheckboxes selected={roles} onChange={setRoles} idPrefix="id-new-role" />
-      <p className="text-xs text-slate-500">Die Person sollte das Startpasswort nach der ersten Anmeldung unter „Mein Zugang“ ändern. Geben Sie es nur über einen sicheren Weg weiter.</p>
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input type="checkbox" checked={requireChange} onChange={(e) => setRequireChange(e.target.checked)} />
+        Passwortwechsel bei der ersten Anmeldung verlangen (empfohlen)
+      </label>
+      <p className="text-xs text-slate-500">Geben Sie das Startpasswort nur über einen sicheren Weg weiter.</p>
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       <div className="flex gap-2">
         <Button type="submit" disabled={create.isPending || roles.length === 0}>{create.isPending ? 'Wird angelegt …' : 'Zugang anlegen'}</Button>
@@ -108,6 +113,40 @@ function RoleEditor({ identity, onClose }: { identity: IdentityRow; onClose: () 
   );
 }
 
+/** Passwort zurücksetzen: das einmalige Startpasswort erscheint nur hier und nie wieder – es wird nirgends gespeichert oder protokolliert. */
+function ResetPasswordPanel({ identity, onClose }: { identity: IdentityRow; onClose: () => void }) {
+  const { withStepUp } = usePlatformAuth();
+  const [issued, setIssued] = useState<string | null>(null);
+  const reset = usePlatformMutation(({ reason }: { reason: string }) =>
+    withStepUp(() => platformFetch<{ temporaryPassword: string; revokedSessions: number }>(`/identities/${encodeURIComponent(identity.id)}/reset-password`, { method: 'POST', body: JSON.stringify({ reason }) })),
+  );
+  if (issued) {
+    return (
+      <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50 p-4" role="status">
+        <p className="text-sm text-emerald-900">
+          Das Passwort von {identity.displayName} wurde zurückgesetzt. Geben Sie dieses Startpasswort jetzt über einen sicheren Weg weiter – es wird nicht erneut angezeigt:
+        </p>
+        <code className="block select-all break-all rounded bg-white px-3 py-2 text-sm text-slate-900" data-testid="temporary-password">{issued}</code>
+        <p className="text-xs text-emerald-900">Die Person muss es bei der nächsten Anmeldung sofort ändern; bis dahin ist nur „Mein Zugang“ erreichbar. Alle bisherigen Sitzungen sind beendet.</p>
+        <Button variant="secondary" onClick={onClose}>Verstanden, Anzeige schließen</Button>
+      </div>
+    );
+  }
+  return (
+    <ReasonForm
+      id={`reset-${identity.id}`}
+      effect={`Für ${identity.displayName} wird ein einmaliges Startpasswort erzeugt und nur Ihnen jetzt angezeigt. Alle Sitzungen dieser Person enden sofort, das bisherige Passwort gilt nicht mehr, und die Person muss bei der nächsten Anmeldung ein eigenes Passwort wählen.`}
+      confirmLabel="Passwort zurücksetzen"
+      danger
+      onCancel={onClose}
+      onConfirm={async (reason) => {
+        const result = await reset.mutateAsync({ reason });
+        setIssued(result.temporaryPassword);
+      }}
+    />
+  );
+}
+
 function DisablePanel({ identity, onClose }: { identity: IdentityRow; onClose: () => void }) {
   const { withStepUp } = usePlatformAuth();
   const disable = usePlatformMutation(({ reason }: { reason: string }) => withStepUp(() => platformFetch(`/identities/${encodeURIComponent(identity.id)}/disable`, { method: 'POST', body: JSON.stringify({ reason }) })));
@@ -131,7 +170,7 @@ export default function PlatformIdentitiesPage() {
   const canManage = hasScope(PLATFORM_SCOPES.IDENTITY_MANAGE);
   const identities = useIdentities(canManage);
   const [creating, setCreating] = useState(false);
-  const [open, setOpen] = useState<{ id: string; action: 'roles' | 'disable' } | null>(null);
+  const [open, setOpen] = useState<{ id: string; action: 'roles' | 'disable' | 'reset' } | null>(null);
 
   if (!canManage) return <p className="text-sm text-slate-600">Die Verwaltung der Betreiberzugänge ist dem Owner vorbehalten.</p>;
   if (identities.isLoading) return <p className="text-sm text-slate-600">Wird geladen …</p>;
@@ -178,6 +217,7 @@ export default function PlatformIdentitiesPage() {
                         {identity.status === 'ACTIVE' ? (
                           <div className="flex flex-wrap justify-end gap-2">
                             <Button variant="secondary" onClick={() => setOpen({ id: identity.id, action: 'roles' })} aria-label={`Rollen von ${identity.displayName} ändern`}>Rollen</Button>
+                            {!own ? <Button variant="secondary" onClick={() => setOpen({ id: identity.id, action: 'reset' })} aria-label={`Passwort von ${identity.displayName} zurücksetzen`}>Passwort zurücksetzen</Button> : null}
                             <Button variant="danger" onClick={() => setOpen({ id: identity.id, action: 'disable' })} aria-label={`Zugang von ${identity.displayName} deaktivieren`}>Deaktivieren</Button>
                           </div>
                         ) : null}
@@ -186,7 +226,7 @@ export default function PlatformIdentitiesPage() {
                     {isOpen ? (
                       <tr className="border-b border-slate-100">
                         <td colSpan={5} className="px-4 pb-4">
-                          {open?.action === 'roles' ? <RoleEditor identity={identity} onClose={() => setOpen(null)} /> : <DisablePanel identity={identity} onClose={() => setOpen(null)} />}
+                          {open?.action === 'roles' ? <RoleEditor identity={identity} onClose={() => setOpen(null)} /> : open?.action === 'reset' ? <ResetPasswordPanel identity={identity} onClose={() => setOpen(null)} /> : <DisablePanel identity={identity} onClose={() => setOpen(null)} />}
                         </td>
                       </tr>
                     ) : null}

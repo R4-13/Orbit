@@ -8,7 +8,7 @@ import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
 import { AuthenticationExpiredError, PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth } from '@orbit/shared';
 import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
 import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
-import { CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
+import { AllowWhilePasswordChangePending, CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
 import {
   CreatePlatformIdentityDto,
   DiagnosticsQueryDto,
@@ -18,6 +18,7 @@ import {
   PlatformLoginDto,
   PlatformRefreshDto,
   PlatformStepUpDto,
+  ResetPlatformPasswordDto,
   SetPlatformRolesDto,
 } from './dto/platform.dto';
 import { PlatformRuntimeService } from './runtime/platform-runtime.service';
@@ -66,6 +67,7 @@ export class PlatformAuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @AllowWhilePasswordChangePending()
   @UseGuards(PlatformAuthGuard)
   async logout(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Res({ passthrough: true }) response: Response): Promise<void> {
     await this.auth.logout(principal);
@@ -76,6 +78,7 @@ export class PlatformAuthController {
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   @Throttle(PLATFORM_AUTH_THROTTLE)
+  @AllowWhilePasswordChangePending()
   @UseGuards(PlatformAuthGuard)
   changePassword(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformChangePasswordDto) {
     return this.auth.changePassword(principal, dto);
@@ -102,6 +105,7 @@ export class PlatformController {
   ) {}
 
   @Get('me')
+  @AllowWhilePasswordChangePending()
   me(@CurrentPlatformPrincipal() principal: PlatformPrincipal): PlatformPrincipal {
     return principal;
   }
@@ -192,6 +196,14 @@ export class PlatformIdentityController {
   @RequireStepUp()
   setRoles(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: SetPlatformRolesDto): Promise<PlatformIdentityView> {
     return this.identities.setRoles(principal, id, dto);
+  }
+
+  /** Vergessenes Passwort zurücksetzen: einmaliges Startpasswort nur in dieser Antwort, Wechsel wird erzwungen, Sitzungen enden. */
+  @Post(':id/reset-password')
+  @HttpCode(HttpStatus.OK)
+  @RequireStepUp()
+  resetPassword(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: ResetPlatformPasswordDto) {
+    return this.identities.resetPassword(principal, id, dto.reason);
   }
 
   @Post(':id/disable')

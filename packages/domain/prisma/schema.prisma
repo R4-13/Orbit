@@ -2242,6 +2242,8 @@ model PlatformUser {
   displayName            String             @map("display_name")
   status                 PlatformUserStatus @default(ACTIVE)
   lastLoginAt            DateTime?          @map("last_login_at")
+  /// Nach Zurücksetzen oder Anlage mit Startpasswort: bis zum Wechsel sind nur Passwortwechsel, Abmelden und die eigene Kontoabfrage erlaubt.
+  passwordChangeRequired Boolean            @default(false) @map("password_change_required")
   createdByPlatformUserId String?           @map("created_by_platform_user_id")
   createdAt              DateTime           @default(now()) @map("created_at")
   updatedAt              DateTime           @updatedAt @map("updated_at")

@@ -107,6 +107,13 @@ export class StepUpRequiredError extends OrbitError {
   readonly retryable = false;
 }
 
+/** Der Zugang muss zuerst das Passwort ändern (nach Zurücksetzen durch den Owner oder bei Startpasswort); bis dahin sind nur Passwortwechsel, Abmelden und die Kontoabfrage erlaubt. */
+export class PasswordChangeRequiredError extends OrbitError {
+  readonly code = 'PASSWORD_CHANGE_REQUIRED';
+  readonly httpStatus = 403;
+  readonly retryable = false;
+}
+
 /** Amendment 03 §3: die Plattformdomäne ist nicht konfiguriert (kein `PLATFORM_JWT_SECRET`) und daher ausgeschaltet. */
 export class PlatformNotConfiguredError extends OrbitError {
   readonly code = 'PLATFORM_NOT_CONFIGURED';

@@ -14,6 +14,8 @@ export interface PlatformPrincipalView {
   authenticationAssurance: string;
   environment: string;
   expiresAt: string;
+  /** Der Zugang muss zuerst das Passwort ändern; bis dahin ist nur „Mein Zugang“ erreichbar. */
+  passwordChangeRequired: boolean;
 }
 
 export interface StoredPlatformAuth {

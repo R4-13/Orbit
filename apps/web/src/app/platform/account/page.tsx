@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { PLATFORM_MIN_PASSWORD_LENGTH } from '@orbit/shared';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from '@orbit/ui';
-import { PlatformApiError, platformFetch } from '../../../lib/platform/platform-client';
+import { PlatformApiError, platformFetch, reloadPlatformSession } from '../../../lib/platform/platform-client';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
 import { platformRoleLabel } from '../../../lib/platform/role-labels';
 
@@ -30,6 +30,7 @@ export default function PlatformAccountPage() {
       setCurrent('');
       setNext('');
       setRepeat('');
+      await reloadPlatformSession(); // der Zwang zum Wechsel entfällt; Navigation und Rechte stehen wieder zur Verfügung
       setDone(result.revokedOtherSessions > 0 ? `Ihr Passwort wurde geändert. ${result.revokedOtherSessions} andere Sitzung${result.revokedOtherSessions === 1 ? '' : 'en'} wurde${result.revokedOtherSessions === 1 ? '' : 'n'} beendet.` : 'Ihr Passwort wurde geändert.');
     } catch (err) {
       if (err instanceof PlatformApiError && err.status === 401) setError('Das aktuelle Passwort ist nicht korrekt.');
@@ -49,6 +50,11 @@ export default function PlatformAccountPage() {
           {principal?.displayName} · {principal?.email} · {principal?.platformRoles.map(platformRoleLabel).join(', ')}
         </p>
       </div>
+      {principal?.passwordChangeRequired ? (
+        <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Bitte ändern Sie zuerst Ihr Passwort. Bis dahin ist nur diese Seite erreichbar – Ihr Startpasswort wurde von einer anderen Person festgelegt und gilt nur für diesen Schritt.
+        </p>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Passwort ändern</CardTitle>
