@@ -28,14 +28,26 @@ test.describe('Auth', () => {
     await page.waitForURL('**/login');
   });
 
+  test('die Sitzung liegt nur im Arbeitsspeicher und in einem httpOnly-Cookie – nie im Browser-Speicher; ein Neuladen stellt sie über das Cookie wieder her', async ({ page }) => {
+    await loginViaUi(page, DEMO_USERS.admin);
+    const visible = await page.evaluate(() => ({ local: Object.keys(window.localStorage).filter((k) => /auth|token/i.test(k)), session: Object.keys(window.sessionStorage).filter((k) => /auth|token/i.test(k)), readableCookie: document.cookie }));
+    expect(visible).toEqual({ local: [], session: [], readableCookie: '' });
+    const cookie = (await page.context().cookies()).find((c) => c.name === 'orbit_rt');
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Strict', path: '/api/v1/auth' });
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Hauptnavigation' })).toBeVisible(); // ohne erneute Anmeldung
+    await expect(page).toHaveURL(/\/dashboard/);
+  });
+
   test('logs out, clears the session and redirects to /login', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await page.getByRole('button', { name: 'Profilmenü' }).click();
     await page.getByRole('menuitem', { name: 'Abmelden' }).click();
     await page.waitForURL('**/login');
 
-    const authStorage = await page.evaluate(() => window.localStorage.getItem('orbit.auth'));
-    expect(authStorage).toBeNull();
+    // Es bleibt nichts zurück: kein Eintrag im Browser-Speicher, und das httpOnly-Cookie ist gelöscht.
+    expect(await page.evaluate(() => window.localStorage.getItem('orbit.auth'))).toBeNull();
+    expect((await page.context().cookies()).some((c) => c.name === 'orbit_rt')).toBe(false);
 
     // Redirect protection holds again after logout.
     await page.goto('/dashboard');

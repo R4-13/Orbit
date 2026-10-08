@@ -1,13 +1,11 @@
 /**
- * Plain (non-React) module holding the current session so `apiFetch` can
- * read/refresh it outside of component tree — React state alone can't be
- * read from a fetch helper. `AuthProvider` (auth-context.tsx) is the only
- * thing that should call `setStoredAuth`; everything else only reads.
+ * Plain (non-React) module holding the current session so `apiFetch` can read/refresh it outside of the component tree — React state alone can't be read
+ * from a fetch helper. `AuthProvider` (auth-context.tsx) and the refresh in `api-client.ts` are the only places that call `setStoredAuth`.
  *
- * MVP simplification: the JWT pair lives in localStorage, not an httpOnly
- * cookie — acceptable for this demo/MVP stage, but it means a successful
- * XSS on this origin could read the tokens. Revisit as part of Phase 15
- * (Security Hardening) if this ships beyond an internal demo.
+ * Es liegt **nichts** im Browser-Speicher: das kurzlebige Zugangstoken lebt nur hier (im Arbeitsspeicher dieses Tabs), das langlebige Refresh-Token steckt
+ * ausschließlich in einem httpOnly-Cookie und ist für Skripte der Seite unlesbar. Nach einem Neuladen holt sich die Seite über dieses Cookie ein neues
+ * Zugangstoken (`restoreSession` in api-client.ts). Ein Skript auf der Seite (XSS) kann das Token so nicht mehr mitnehmen; es kann den Refresh höchstens
+ * im Namen des Browsers auslösen, solange die Seite offen ist.
  */
 export interface AuthUser {
   id: string;
@@ -19,42 +17,29 @@ export interface AuthUser {
 
 export interface StoredAuth {
   accessToken: string;
-  refreshToken: string;
   user: AuthUser;
 }
 
-const STORAGE_KEY = 'orbit.auth';
+/** Frühere Versionen legten Zugangs- und Refresh-Token im localStorage ab; dieser Eintrag wird entfernt (die betroffenen Nutzer melden sich einmal neu an). */
+const LEGACY_STORAGE_KEY = 'orbit.auth';
 
-let current: StoredAuth | null | undefined;
-const listeners = new Set<(auth: StoredAuth | null) => void>();
-
-function readFromStorage(): StoredAuth | null {
-  if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
+if (typeof window !== 'undefined') {
   try {
-    return JSON.parse(raw) as StoredAuth;
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
-    return null;
+    // Speicher nicht verfügbar: nichts zu bereinigen.
   }
 }
 
+let current: StoredAuth | null = null;
+const listeners = new Set<(auth: StoredAuth | null) => void>();
+
 export function getStoredAuth(): StoredAuth | null {
-  if (current === undefined) {
-    current = readFromStorage();
-  }
   return current;
 }
 
 export function setStoredAuth(auth: StoredAuth | null): void {
   current = auth;
-  if (typeof window !== 'undefined') {
-    if (auth) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }
   for (const listener of listeners) listener(auth);
 }
 

@@ -14,32 +14,55 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Cookie-Modus (Browser): Cookies mitsenden und den Modus-Header setzen; der Server liefert das Refresh-Token dann nur als httpOnly-Cookie und verlangt den
+ * Header beim Refresh über das Cookie.
+ */
 function rawFetch(path: string, options: RequestInit, token?: string): Promise<Response> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-Orbit-Cookie': '1' };
   if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(`${API_BASE_URL}/api${path}`, {
+    credentials: 'include',
     ...options,
     headers: { ...headers, ...(options.headers as Record<string, string> | undefined) },
   });
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  const auth = getStoredAuth();
-  if (!auth) return null;
+let refreshing: Promise<string | null> | null = null;
 
-  const response = await rawFetch('/v1/auth/refresh', {
-    method: 'POST',
-    body: JSON.stringify({ refreshToken: auth.refreshToken }),
+/**
+ * Holt über das httpOnly-Cookie ein neues Zugangstoken. Pro Tab nur ein Refresh gleichzeitig, und tab-übergreifend serialisiert (Web Locks): das Cookie
+ * rotiert bei jedem Refresh, zwei gleichzeitige Versuche würden sich sonst gegenseitig das Token entwerten. Nach dem Warten auf die Sperre sendet der
+ * Browser automatisch das jeweils aktuelle Cookie.
+ */
+function refreshAccessToken(): Promise<string | null> {
+  if (refreshing) return refreshing;
+  const run = async (): Promise<string | null> => {
+    const response = await rawFetch('/v1/auth/refresh', { method: 'POST', body: '{}' });
+    if (!response.ok) {
+      setStoredAuth(null);
+      return null;
+    }
+    const data = (await response.json()) as { accessToken: string; user: NonNullable<ReturnType<typeof getStoredAuth>>['user'] };
+    setStoredAuth({ accessToken: data.accessToken, user: data.user });
+    return data.accessToken;
+  };
+  const locked: Promise<string | null> = typeof navigator !== 'undefined' && 'locks' in navigator ? (navigator.locks.request('orbit-tenant-refresh', run) as unknown as Promise<string | null>) : run();
+  const tracked = locked.finally(() => {
+    refreshing = null;
   });
+  refreshing = tracked;
+  return tracked;
+}
 
-  if (!response.ok) {
-    setStoredAuth(null);
-    return null;
+/** Nach dem Laden der Seite: gibt es ein gültiges Cookie, wird die Sitzung ohne erneute Anmeldung wiederhergestellt. */
+export async function restoreSession(): Promise<boolean> {
+  if (getStoredAuth()) return true;
+  try {
+    return (await refreshAccessToken()) !== null;
+  } catch {
+    return false;
   }
-
-  const data = (await response.json()) as { accessToken: string; refreshToken: string; user: typeof auth.user };
-  setStoredAuth({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user });
-  return data.accessToken;
 }
 
 /**

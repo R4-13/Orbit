@@ -1,12 +1,11 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import { apiFetch } from './api-client';
+import { apiFetch, restoreSession } from './api-client';
 import { getStoredAuth, setStoredAuth, subscribeToAuth, type AuthUser, type StoredAuth } from './token-store';
 
 interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
   user: AuthUser;
 }
@@ -28,9 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setAuth(getStoredAuth());
-    setIsLoading(false);
-    return subscribeToAuth(setAuth);
+    const unsubscribe = subscribeToAuth(setAuth);
+    // Nach einem Neuladen ist der Arbeitsspeicher leer: das httpOnly-Cookie stellt die Sitzung wieder her (oder es bleibt bei der Anmeldung).
+    void restoreSession().finally(() => {
+      setAuth(getStoredAuth());
+      setIsLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -38,20 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    setStoredAuth({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user });
+    setStoredAuth({ accessToken: data.accessToken, user: data.user });
   }, []);
 
   const logout = useCallback(async () => {
-    const current = getStoredAuth();
-    if (current) {
-      try {
-        await apiFetch('/v1/auth/logout', {
-          method: 'POST',
-          body: JSON.stringify({ refreshToken: current.refreshToken }),
-        });
-      } catch {
-        // Best-effort server-side revocation; clear the local session regardless.
-      }
+    try {
+      // Das Refresh-Token kommt aus dem httpOnly-Cookie; der Server widerruft es und löscht das Cookie.
+      await apiFetch('/v1/auth/logout', { method: 'POST', body: '{}' });
+    } catch {
+      // Best-effort server-side revocation; clear the local session regardless.
     }
     setStoredAuth(null);
   }, []);

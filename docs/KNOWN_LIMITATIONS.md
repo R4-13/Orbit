@@ -66,9 +66,12 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 
 ## Sicherheit
 
-- **JWT-Session in `localStorage`**, nicht in einem httpOnly-Cookie
-  (`docs/ASSUMPTIONS.md` #68, bewusst nicht in Phase 15 migriert, #92) —
-  ein erfolgreicher XSS auf der Web-Origin könnte die Tokens auslesen.
+- **Sitzungen der Mandanten- und der Betreiberanmeldung** liegen nicht mehr im Browser-Speicher: das Zugangstoken nur im Arbeitsspeicher des Tabs, das
+  Refresh-Token in einem httpOnly-Cookie (`docs/ASSUMPTIONS.md` #530 Betreiber, #539 Mandanten; ersetzt #68/#92). **Restrisiko:** ein Skript auf der Seite
+  (XSS) kann den Refresh im Namen des Browsers auslösen, solange die Seite offen ist – es kann die Tokens aber nicht mehr auslesen und mitnehmen. Nach dem
+  Update müssen sich Mandantennutzer einmal neu anmelden (frühere Sitzungen lagen im `localStorage`).
+- **Anmelde-Drosselung und Tests:** Die Playwright-Suite meldet sich je Test neu an (das Refresh-Token rotiert, eine Sitzung lässt sich nicht mehr zwischen
+  Tests teilen). `AUTH_RATE_LIMIT_MAX` muss für Testläufe deshalb ausreichend hoch stehen (lokal 500); der Standard 60 je 5 Minuten bleibt für den Betrieb.
 - **Row-Level Security** deckt 21 von 24 tenant-gescopten Tabellen ab;
   `role_permissions`, `user_roles`, `refresh_tokens` haben keine eigene
   `tenant_id`-Spalte und sind nur indirekt (über die Elterntabelle)

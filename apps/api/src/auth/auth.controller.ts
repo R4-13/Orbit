@@ -1,4 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import type { OrbitEnv } from '@orbit/config';
+import { AuthenticationExpiredError, parseDurationToMs } from '@orbit/shared';
+import { ORBIT_ENV } from '../config/env.token';
+import { TENANT_REFRESH_COOKIE, tenantSessionCookie } from './auth-cookie';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService, type AuthTokens, type UserProfile } from './auth.service';
@@ -35,20 +40,38 @@ const AUTH_THROTTLE = {
 @ApiTags('auth')
 @Controller({ path: 'auth' })
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+  ) {}
+
+  /** Im Cookie-Modus (Browser) gelangt das Refresh-Token nur als httpOnly-Cookie zum Client, nie in den Antwortkörper. */
+  private deliver(tokens: AuthTokens, request: Request, response: Response): AuthTokens {
+    if (!tenantSessionCookie.isCookieMode(request)) return tokens;
+    response.cookie(TENANT_REFRESH_COOKIE, tokens.refreshToken, tenantSessionCookie.options(this.env, parseDurationToMs(this.env.JWT_REFRESH_TTL)));
+    return { ...tokens, refreshToken: '' };
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle(AUTH_THROTTLE)
-  login(@Body() dto: LoginDto): Promise<AuthTokens> {
-    return this.authService.login(dto.email, dto.password);
+  async login(@Body() dto: LoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthTokens> {
+    return this.deliver(await this.authService.login(dto.email, dto.password), request, response);
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Throttle(AUTH_THROTTLE)
-  refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokens> {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(@Body() dto: RefreshTokenDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthTokens> {
+    // Das Cookie gilt nur im Cookie-Modus (Header als Schutz gegen fremde Auslöser); ein Token im Körper hat Vorrang und braucht keinen Header.
+    const token = dto.refreshToken || (tenantSessionCookie.isCookieMode(request) ? tenantSessionCookie.read(request) : undefined);
+    if (!token) throw new AuthenticationExpiredError('Kein Refresh-Token vorhanden.');
+    try {
+      return this.deliver(await this.authService.refresh(token), request, response);
+    } catch (error) {
+      if (tenantSessionCookie.isCookieMode(request)) response.clearCookie(TENANT_REFRESH_COOKIE, tenantSessionCookie.clearOptions(this.env));
+      throw error;
+    }
   }
 
   /** Anzeigename des angemeldeten Nutzers (Begrüßung, Profil) – bewusst getrennt vom Token, das keine Namen trägt. */
@@ -60,7 +83,9 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
-    await this.authService.logout(dto.refreshToken);
+  async logout(@Body() dto: RefreshTokenDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<void> {
+    const token = dto.refreshToken || (tenantSessionCookie.isCookieMode(request) ? tenantSessionCookie.read(request) : undefined);
+    if (token) await this.authService.logout(token);
+    if (tenantSessionCookie.isCookieMode(request)) response.clearCookie(TENANT_REFRESH_COOKIE, tenantSessionCookie.clearOptions(this.env));
   }
 }

@@ -55,10 +55,14 @@ export async function loginViaApi(email: string, password = DEMO_PASSWORD): Prom
 }
 
 /**
- * Meldet über die echte API an und legt die Sitzung vor dem ersten Seitenaufruf in den localStorage – spart den UI-Login in
- * Tests, die viele Viewports durchlaufen (der Login selbst ist in auth.spec.ts abgedeckt).
+ * Meldet über die echte API an und legt die Sitzung vor dem ersten Seitenaufruf so im Browser an, wie es die Anwendung selbst tut: als httpOnly-Cookie
+ * (kein Browser-Speicher). Die Seite stellt daraus beim Laden ihr Zugangstoken her – das spart den UI-Login in Tests, die viele Viewports durchlaufen (der
+ * Login selbst ist in auth.spec.ts abgedeckt). Das Refresh-Token rotiert bei jeder Nutzung; deshalb gibt es hier **keine** Wiederverwendung wie bei
+ * `loginViaApi`, jeder Aufruf meldet neu an (die Anmelde-Drosselung der API muss dafür ausreichend hoch stehen, siehe docs/KNOWN_LIMITATIONS.md).
  */
 export async function loginViaStorage(page: Page, email: string, password = DEMO_PASSWORD): Promise<void> {
-  const session = await apiSession(email, password);
-  await page.addInitScript((value) => window.localStorage.setItem('orbit.auth', value), JSON.stringify({ accessToken: session.accessToken, refreshToken: session.refreshToken, user: session.user }));
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  if (!response.ok) throw new Error(`Login über die API für ${email} fehlgeschlagen: ${response.status} ${await response.text()}`);
+  const session = (await response.json()) as ApiSession;
+  await page.context().addCookies([{ name: 'orbit_rt', value: session.refreshToken, domain: new URL(API_BASE_URL).hostname, path: '/api/v1/auth', httpOnly: true, secure: false, sameSite: 'Strict' }]);
 }
