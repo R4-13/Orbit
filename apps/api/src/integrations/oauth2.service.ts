@@ -1,6 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import { ExternalSystemError } from '@orbit/shared';
 
+/**
+ * Der Anbieter hat das Refresh-Token endgültig abgelehnt (widerrufen, abgelaufen, Konto/Client geändert): nur eine neue Zustimmung der Person hilft.
+ * Alles andere – Netzwerkfehler, Zeitüberschreitung, 5xx, 429 – ist vorübergehend und darf die Verbindung nie als „abgemeldet“ markieren.
+ */
+export class OAuthGrantRejectedError extends ExternalSystemError {
+  constructor(
+    message: string,
+    readonly oauthError: string,
+  ) {
+    super(message, { oauthError });
+  }
+}
+
+/** OAuth-2.0-Fehlercodes (RFC 6749 §5.2), bei denen ein erneuter Versuch mit demselben Token nie gelingt. */
+const DEFINITIVE_REFRESH_ERRORS = new Set(['invalid_grant', 'invalid_client', 'unauthorized_client']);
+
 export interface OAuth2ProviderConfig {
   authorizationEndpoint: string;
   tokenEndpoint: string;
@@ -76,18 +92,30 @@ export class OAuth2Service {
   }
 
   async refreshAccessToken(config: OAuth2ProviderConfig, refreshToken: string): Promise<OAuth2Tokens> {
-    const response = await fetch(config.tokenEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: refreshToken,
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: 'refresh_token',
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(config.tokenEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          refresh_token: refreshToken,
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          grant_type: 'refresh_token',
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch (error) {
+      // Netzwerk, DNS, Zeitüberschreitung: vorübergehend – die Verbindung bleibt bestehen und der nächste Versuch läuft von selbst.
+      throw new ExternalSystemError('OAuth token refresh unreachable.', { transient: true, cause: error instanceof Error ? error.message : String(error) });
+    }
     if (!response.ok) {
-      throw new ExternalSystemError(`OAuth token refresh failed (${response.status}).`, { status: response.status, body: await response.text() });
+      const body = await response.text();
+      const oauthError = this.readOAuthError(body);
+      if ((response.status === 400 || response.status === 401) && oauthError && DEFINITIVE_REFRESH_ERRORS.has(oauthError)) {
+        throw new OAuthGrantRejectedError(`OAuth token refresh rejected (${oauthError}).`, oauthError);
+      }
+      throw new ExternalSystemError(`OAuth token refresh failed (${response.status}).`, { status: response.status, transient: response.status >= 500 || response.status === 429, body });
     }
     // Google's refresh response omits refresh_token (it stays valid, not reissued) — keep the one we already stored.
     return this.parseTokenResponse((await response.json()) as RawTokenResponse, refreshToken);
@@ -108,6 +136,15 @@ export class OAuth2Service {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ token }),
     });
+  }
+
+  private readOAuthError(body: string): string | undefined {
+    try {
+      const parsed = JSON.parse(body) as { error?: unknown };
+      return typeof parsed.error === 'string' ? parsed.error : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private parseTokenResponse(body: RawTokenResponse, existingRefreshToken?: string): OAuth2Tokens {

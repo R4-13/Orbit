@@ -27,6 +27,27 @@ ein administrativer Vorgang außerhalb der Codebasis und kann nicht durch
 Implementierungsarbeit allein gelöst werden — ein echter, dokumentierter
 Blocker (§62 des Master-Prompts).
 
+## Die Verbindung muss dauerhaft bestehen bleiben
+
+Eine Verbindung wird **einmal** hergestellt und erneuert sich danach selbst: ORBIT löst das Refresh-Token bei Bedarf ein (ein Zugangstoken gilt rund eine Stunde). Damit das
+über Wochen funktioniert, gilt:
+
+* **Veröffentlichungsstatus des OAuth-Zustimmungsbildschirms.** Steht die App in der Google Cloud Console auf **„Testing“** (externer Nutzertyp), läuft jede Zustimmung –
+  und damit das Refresh-Token – nach **7 Tagen** ab, egal wie oft ORBIT es verwendet
+  ([Google: Manage App Audience](https://support.google.com/cloud/answer/15549945),
+  [Google: OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)). Dann zeigt ORBIT „Verbindung unterbrochen“, und die Person muss neu zustimmen. Das
+  ist die häufigste Ursache für eine Verbindung, die sich „nach einer Zeit“ trennt. Abhilfe: Status auf **„In production“** stellen (Google Cloud Console →
+  APIs & Dienste → OAuth-Zustimmungsbildschirm → Zielgruppe). Die Gmail-Berechtigungen gelten bei Google als sensibel bzw. eingeschränkt; eine nicht verifizierte App
+  in Produktion zeigt beim Zustimmen eine Warnung und ist auf 100 Nutzer begrenzt, die Tokens laufen aber nicht nach 7 Tagen ab. Für den allgemeinen Betrieb ist die
+  Verifizierung der App durch Google nötig.
+* **Was ORBIT selbst tut.** Nur eine *endgültige* Ablehnung durch Google (`invalid_grant`: widerrufen, abgelaufen, Passwort/Zustimmung geändert) setzt die Verbindung auf
+  „Anmeldung erforderlich“. Netzwerkfehler, Zeitüberschreitungen, 5xx und 429 lassen sie bestehen; der nächste Abgleich versucht es erneut. Früher als „abgemeldet“
+  markierte Verbindungen versuchen eine einmalige Selbstwiederherstellung (`TOKEN_REFRESH_FAILED`, höchstens alle 30 Minuten).
+* **Was die Person sieht.** Ein Banner auf jeder Seite („Die Verbindung zu Gmail ist unterbrochen … Jetzt erneuern“), die Dashboard-Meldung und das Audit
+  (`INTEGRATION_AUTH_REQUIRED`, `INTEGRATION_RECOVERED`).
+* **Freigabe bei unterbrochener Verbindung.** Scheitert die Ausführung wegen einer fehlenden oder unterbrochenen Verbindung, bleibt die **Freigabe offen** und die Person
+  erhält die Ursache; nach dem Erneuern genügt eine erneute Freigabe. Eine E-Mail gilt erst als gesendet, wenn Gmail den Versand bestätigt hat.
+
 ## Was hier ergänzt wird, sobald der Zugang vorliegt
 
 - Konkrete Endpunkte/Scopes für `MailConnector.listNewMessages()`

@@ -10,8 +10,7 @@ import {
   type CaseListItem,
   type CaseListResponse,
   type CaseOrchestrationStatusValue,
-  type EntityRef,
-} from '@orbit/shared';
+  type EntityRef, type CaseSortKey, type ListSortDirection } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const CASE_PAGE_SIZE = 25;
@@ -75,14 +74,14 @@ function whereFor(filter: CaseListFilter, type: 'FINANCE' | 'SALES' | undefined,
 export class CasesOverviewService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(tenantId: string, input: { filter: CaseListFilter; type?: 'FINANCE' | 'SALES'; page: number; search?: string }, now: Date = new Date()): Promise<CaseListResponse> {
+  async list(tenantId: string, input: { filter: CaseListFilter; type?: 'FINANCE' | 'SALES'; page: number; search?: string; sort?: CaseSortKey; dir?: ListSortDirection }, now: Date = new Date()): Promise<CaseListResponse> {
     const db = this.prisma.forTenantId(tenantId);
     const page = Math.max(1, input.page);
     const where = whereFor(input.filter, input.type, input.search);
     const filters: CaseListFilter[] = ['OPEN', 'ATTENTION', 'DONE', 'ALL'];
 
     const [rows, total, ...counts] = await Promise.all([
-      db.case.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }], skip: (page - 1) * CASE_PAGE_SIZE, take: CASE_PAGE_SIZE, include: { assignee: { select: { firstName: true, lastName: true } } } }),
+      db.case.findMany({ where, orderBy: [{ [input.sort ?? 'updatedAt']: input.dir ?? 'desc' }, { id: 'asc' }], skip: (page - 1) * CASE_PAGE_SIZE, take: CASE_PAGE_SIZE, include: { assignee: { select: { firstName: true, lastName: true } } } }),
       db.case.count({ where }),
       ...filters.map((filter) => db.case.count({ where: whereFor(filter, input.type, input.search) })),
     ]);
@@ -130,6 +129,7 @@ export class CasesOverviewService {
         statusTone: TONES[status] ?? 'neutral',
         nextStep: humanizeKnownKeys(row.attentionReasons[0] ?? NEXT_STEPS[status] ?? 'Fortschritt ansehen'),
         ownerLabel: owner,
+        createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         needsAttention: (ATTENTION_STATES as readonly string[]).includes(status),
         hasProcess: Boolean(row.blueprintKey) || status !== 'RECEIVED',

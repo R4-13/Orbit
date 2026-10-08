@@ -51,6 +51,10 @@ export class GmailPollAdapter implements ChannelPollAdapter {
     return { events, nextCursor };
   }
 
+  recover(tenantId: string): Promise<boolean> {
+    return this.gmailConnector.attemptRecovery(tenantId);
+  }
+
   /** The mailbox this connection authenticated as — read from the Integration, never hardcoded (Amendment 02 §0.2). */
   private async connectedAddress(tenantId: string, connectionId: string): Promise<string | undefined> {
     const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { id: connectionId } });

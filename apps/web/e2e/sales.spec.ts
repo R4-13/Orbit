@@ -18,6 +18,8 @@ test.describe('Sales', () => {
   test('leads list shows the seeded Musterwerk fixtures', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.sales);
     await page.goto('/sales/leads');
+    // Die Entwicklungsumgebung sammelt viele Testdaten an: die Demo-Einträge werden über die Suche gefunden, nicht über ihre Position in der Liste.
+    await page.getByRole('searchbox', { name: /Interessenten/ }).fill('Julia');
 
     // UI v2 §13.1: Standard ist „Offene Anfragen“ – die qualifizierte Anfrage ist dort sichtbar, die bereits gewonnene erst unter
     // „Abgeschlossen“. Zeilen werden per Kontaktname gefunden (die Notizen stehen nicht mehr in der Liste).
@@ -25,6 +27,7 @@ test.describe('Sales', () => {
     await expect(qualifiedRow.getByText('Qualifiziert')).toBeVisible();
     await expect(page.locator('tbody tr', { hasText: 'Petra Klein' })).toHaveCount(0);
 
+    await page.getByRole('searchbox', { name: /Interessenten/ }).fill('Petra Klein');
     await page.getByRole('button', { name: /^Abgeschlossen/ }).click();
     const convertedRow = page.locator('tbody tr', { hasText: 'Petra Klein' }).first();
     await expect(convertedRow.getByText('Konvertiert')).toBeVisible();

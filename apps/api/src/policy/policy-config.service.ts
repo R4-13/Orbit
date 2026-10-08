@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundError, PolicyViolationError, policyModeRank } from '@orbit/shared';
-import { DEFAULT_POLICY_CONFIG, type PolicyActionKey, type PolicyMode } from '@orbit/shared';
+import { AUTOMATION_PRESETS, AUTOMATION_PRESET_KEYS, DEFAULT_POLICY_CONFIG, POLICY_ACTIONS, detectAutomationLevel, presetModeFor, type AutomationLevel, type AutomationPresetKey, type PolicyActionKey, type PolicyMode } from '@orbit/shared';
 import type { PolicyConfig } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -19,6 +19,42 @@ export class PolicyConfigService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  /** Der aktuelle Automatisierungsgrad und was jede Stufe gegenüber den heutigen Regeln ändern würde. */
+  async automation(tenantId: string): Promise<{
+    current: AutomationLevel;
+    presets: Array<{ key: AutomationPresetKey; label: string; description: string; changes: Array<{ action: string; from: PolicyMode; to: PolicyMode }> }>;
+  }> {
+    const rows = await this.findAll(tenantId);
+    const modes = Object.fromEntries(rows.map((row) => [row.action, row.mode as PolicyMode]));
+    return {
+      current: detectAutomationLevel(modes),
+      presets: AUTOMATION_PRESET_KEYS.map((key) => ({
+        key,
+        label: AUTOMATION_PRESETS[key].label,
+        description: AUTOMATION_PRESETS[key].description,
+        changes: rows
+          .filter((row) => (Object.values(POLICY_ACTIONS) as string[]).includes(row.action))
+          .map((row) => ({ action: row.action, from: row.mode as PolicyMode, to: presetModeFor(key, row.action as PolicyActionKey) }))
+          .filter((change) => change.from !== change.to),
+      })),
+    };
+  }
+
+  /** Setzt alle Regeln auf eine Stufe. Gesperrte Aktionen bleiben unverändert (feste Obergrenze); jede Änderung wird einzeln protokolliert. */
+  async applyAutomation(tenantId: string, actorUserId: string, preset: AutomationPresetKey): Promise<{ current: AutomationLevel; changed: number }> {
+    const rows = await this.findAll(tenantId);
+    let changed = 0;
+    for (const row of rows) {
+      if (!(Object.values(POLICY_ACTIONS) as string[]).includes(row.action)) continue;
+      const target = presetModeFor(preset, row.action as PolicyActionKey);
+      if (row.mode === target) continue;
+      await this.updateMode(tenantId, actorUserId, row.action as PolicyActionKey, target);
+      changed += 1;
+    }
+    const after = await this.automation(tenantId);
+    return { current: after.current, changed };
+  }
 
   findAll(tenantId: string): Promise<PolicyConfig[]> {
     return this.prisma.forTenantId(tenantId).policyConfig.findMany({ orderBy: { action: 'asc' } });

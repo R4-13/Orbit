@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Opportunity } from '@orbit/domain';
 import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
+import { formatListDateTime } from '../../../../lib/home-format';
 import { formatAmount } from '../../../../lib/format';
 import { useCompanies } from '../../../../lib/hooks/use-companies';
 import { useCreateOpportunity, useOpportunities } from '../../../../lib/hooks/use-opportunities';
@@ -14,6 +15,7 @@ const SORT_ACCESSORS = {
   name: (o: Opportunity) => o.name,
   value: (o: Opportunity) => (o.value !== null ? Number(o.value) : null),
   stage: (o: Opportunity) => o.stage,
+  createdAt: (o: Opportunity) => new Date(o.createdAt).toISOString(),
 };
 
 export default function OpportunitiesPage() {
@@ -124,12 +126,13 @@ export default function OpportunitiesPage() {
               <SortableTh label="Bezeichnung" sortKey="name" sort={sort} onSort={requestSort} />
               <SortableTh label="Wert" sortKey="value" sort={sort} onSort={requestSort} />
               <SortableTh label="Phase" sortKey="stage" sort={sort} onSort={requestSort} />
+              <SortableTh label="Angelegt am" sortKey="createdAt" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={4}>
                   Wird geladen …
                 </td>
               </tr>
@@ -152,12 +155,13 @@ export default function OpportunitiesPage() {
                     <td className="px-4 py-3">
                       <Badge tone={stage.tone}>{stage.label}</Badge>
                     </td>
+                    <td className="px-4 py-3 text-slate-600">{formatListDateTime(opportunity.createdAt)}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={3}>
+                <td className="px-4 py-6 text-slate-600" colSpan={4}>
                   Keine Opportunities gefunden.
                 </td>
               </tr>

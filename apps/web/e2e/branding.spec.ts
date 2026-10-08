@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { snapshotBranding } from './utils/branding-guard';
 import { DEMO_USERS, loginViaUi } from './utils/login';
 
 /** A 1x1 transparent PNG — the smallest valid PNG byte sequence. */
@@ -8,6 +9,15 @@ const ONE_PIXEL_PNG = Buffer.from(
 );
 
 test.describe('Branding — logo upload', () => {
+  // Das Speichern des Test-Logos darf das Erscheinungsbild der Person, die diese Umgebung nutzt, nicht dauerhaft ersetzen.
+  let restoreBranding: () => Promise<void>;
+  test.beforeAll(async () => {
+    restoreBranding = await snapshotBranding();
+  });
+  test.afterAll(async () => {
+    await restoreBranding();
+  });
+
   test('uploads a real PNG via the hidden file input, the public URL lands in the Logo field, and survives a reload', async ({
     page,
   }) => {

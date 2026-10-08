@@ -1,6 +1,7 @@
 import { AuthenticationExpiredError, IntegrationUnavailableError } from '@orbit/shared';
 import { GmailConnectorService } from './gmail-connector.service';
-import { OAuth2Service } from './oauth2.service';
+import { ExternalSystemError } from '@orbit/shared';
+import { OAuth2Service, OAuthGrantRejectedError } from './oauth2.service';
 import { OAuthStateService } from './oauth-state.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -105,6 +106,23 @@ describe('GmailConnectorService', () => {
       expect(result).toEqual({ tenantId: 'tenant_1', externalAccountDisplayName: 'nutzer@example.com' });
     });
 
+    it('erkennt die gewährte Sendeberechtigung aus der echten, durch Leerzeichen getrennten Scope-Liste von Google', async () => {
+      state.verify.mockReturnValue({ tenantId: 'tenant_1', userId: 'user_1' });
+      oauth2.exchangeCodeForTokens.mockResolvedValue({
+        accessToken: 'at_1',
+        refreshToken: 'rt_1',
+        expiresAt: new Date('2099-01-01T00:00:00Z'),
+        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
+      });
+      scopedIntegration.findUnique.mockResolvedValue(null);
+      vault.storeSecret.mockResolvedValue('secret_1');
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ emailAddress: 'me@example.com' }) });
+
+      await service.completeConnection('code', 'state');
+
+      expect(scopedIntegration.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ grantedCapabilities: ['email.read', 'email.send'] }) }));
+    });
+
     it('updates the existing vault secret in place on a reconnect, instead of creating a second one', async () => {
       scopedIntegration.findUnique.mockResolvedValue({ credentialReference: 'secret_existing' });
       scopedIntegration.upsert.mockResolvedValue({});
@@ -183,6 +201,89 @@ describe('GmailConnectorService', () => {
       const result = await service.testConnection('tenant_1');
       expect(result).toBe(false);
       expect(scopedIntegration.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Verbindung bleibt bestehen (Token-Erneuerung)', () => {
+    const expired = { accessToken: 'at_old', refreshToken: 'rt_1', expiresAt: '2000-01-01T00:00:00.000Z' };
+    beforeEach(() => {
+      scopedIntegration.update.mockResolvedValue({});
+      scopedIntegration.findUnique.mockResolvedValue({ credentialReference: 'secret_1', status: 'CONNECTED', lastErrorCode: null });
+      vault.readSecret.mockResolvedValue({ value: expired });
+    });
+    const statusUpdates = () => scopedIntegration.update.mock.calls.map((c) => (c[0] as { data: Record<string, unknown> }).data).filter((d) => 'status' in d);
+
+    it('ein vorübergehender Fehler (Netzwerk, 5xx, 429) setzt die Verbindung NICHT auf „Anmeldung erforderlich“ – sie bleibt verbunden und wird beim nächsten Abgleich erneut versucht', async () => {
+      oauth2.refreshAccessToken.mockRejectedValue(new ExternalSystemError('OAuth token refresh failed (503).', { transient: true }));
+
+      await expect(service.listMessages('tenant_1')).rejects.toThrow(ExternalSystemError);
+
+      expect(statusUpdates()).toEqual([]);
+      expect(scopedIntegration.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ lastErrorCode: 'TOKEN_REFRESH_TRANSIENT' }) }));
+    });
+
+    it('nur eine endgültige Ablehnung (invalid_grant: widerrufen oder abgelaufen) markiert die Verbindung als unterbrochen – mit benanntem Grund und Audit', async () => {
+      oauth2.refreshAccessToken.mockRejectedValue(new OAuthGrantRejectedError('rejected', 'invalid_grant'));
+
+      await expect(service.listMessages('tenant_1')).rejects.toThrow(OAuthGrantRejectedError);
+
+      expect(scopedIntegration.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'AUTH_REQUIRED', lastErrorCode: 'GRANT_REVOKED_OR_EXPIRED' }) }));
+      expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'INTEGRATION_AUTH_REQUIRED', payload: expect.objectContaining({ reason: 'GRANT_REVOKED_OR_EXPIRED' }) }));
+    });
+
+    it('gleichzeitige Aufrufe teilen sich EINE Erneuerung, statt das Refresh-Token mehrfach einzulösen', async () => {
+      let release!: (value: unknown) => void;
+      oauth2.refreshAccessToken.mockReturnValue(new Promise((resolve) => (release = resolve)));
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ emailAddress: 'x@example.com', messages: [] }) });
+
+      const calls = [service.listMessages('tenant_1'), service.listMessages('tenant_1'), service.listMessages('tenant_1')];
+      await new Promise((r) => setImmediate(r));
+      release({ accessToken: 'at_new', refreshToken: 'rt_1', expiresAt: new Date('2099-01-01T00:00:00Z') });
+      await Promise.all(calls);
+
+      expect(oauth2.refreshAccessToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('eine erfolgreiche Erneuerung heilt eine frühere Störung: Status wieder verbunden, Fehlerspur gelöscht', async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ credentialReference: 'secret_1', status: 'CONNECTED', lastErrorCode: 'TOKEN_REFRESH_TRANSIENT' });
+      oauth2.refreshAccessToken.mockResolvedValue({ accessToken: 'at_new', refreshToken: 'rt_1', expiresAt: new Date('2099-01-01T00:00:00Z') });
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ messages: [] }) });
+
+      await service.listMessages('tenant_1');
+
+      expect(scopedIntegration.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CONNECTED', lastErrorCode: null }) }));
+    });
+  });
+
+  describe('attemptRecovery (früher fälschlich abgemeldete Verbindungen)', () => {
+    const stuck = { credentialReference: 'secret_1', status: 'AUTH_REQUIRED', lastErrorCode: 'TOKEN_REFRESH_FAILED', lastTestedAt: null };
+    beforeEach(() => vault.readSecret.mockResolvedValue({ value: { accessToken: 'at_old', refreshToken: 'rt_1', expiresAt: '2000-01-01T00:00:00.000Z' } }));
+
+    it('stellt die Verbindung wieder her, wenn das Refresh-Token noch gilt – ohne neue Zustimmung', async () => {
+      scopedIntegration.findUnique.mockResolvedValue(stuck);
+      oauth2.refreshAccessToken.mockResolvedValue({ accessToken: 'at_new', refreshToken: 'rt_1', expiresAt: new Date('2099-01-01T00:00:00Z') });
+
+      expect(await service.attemptRecovery('tenant_1')).toBe(true);
+
+      expect(scopedIntegration.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'CONNECTED', lastErrorCode: null }) }));
+      expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'INTEGRATION_RECOVERED' }));
+    });
+
+    it('lässt eine endgültig widerrufene Verbindung unterbrochen und merkt sich den Grund (kein Dauerfeuer)', async () => {
+      scopedIntegration.findUnique.mockResolvedValue(stuck);
+      oauth2.refreshAccessToken.mockRejectedValue(new OAuthGrantRejectedError('rejected', 'invalid_grant'));
+
+      expect(await service.attemptRecovery('tenant_1')).toBe(false);
+
+      expect(scopedIntegration.update).toHaveBeenCalledWith(expect.objectContaining({ data: { lastErrorCode: 'GRANT_REVOKED_OR_EXPIRED' } }));
+    });
+
+    it('versucht es nicht, wenn die Verbindung endgültig unterbrochen ist oder zuletzt vor kurzem versucht wurde', async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ ...stuck, lastErrorCode: 'GRANT_REVOKED_OR_EXPIRED' });
+      expect(await service.attemptRecovery('tenant_1')).toBe(false);
+      scopedIntegration.findUnique.mockResolvedValue({ ...stuck, lastTestedAt: new Date() });
+      expect(await service.attemptRecovery('tenant_1')).toBe(false);
+      expect(oauth2.refreshAccessToken).not.toHaveBeenCalled();
     });
   });
 
@@ -290,6 +391,12 @@ describe('GmailConnectorService', () => {
     const connected = { status: "CONNECTED", credentialReference: "ref_1", externalAccountDisplayName: "firma@example.com", grantedCapabilities: ["email.read", "email.send"] };
     const message = { to: "kunde@kunde.example", subject: "Rückfrage", bodyText: "Hallo", threadId: "thread_9", inReplyTo: "<orig@mail.example>" };
     const tokenOk = () => vault.readSecret.mockResolvedValue({ value: { accessToken: "tok", refreshToken: "r", expiresAt: new Date(Date.now() + 3_600_000).toISOString() } });
+
+    it("Versand bei unterbrochener Verbindung: verständliche Meldung, nichts wird gesendet", async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ status: 'AUTH_REQUIRED', grantedCapabilities: ['email.read', 'email.send'], externalAccountDisplayName: 'me@example.com' });
+      await expect(service.sendMessage('tenant_1', { to: 'a@example.com', subject: 'S', bodyText: 'B' })).rejects.toThrow(/Verbindung zu Gmail ist unterbrochen.*nicht gesendet/);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
 
     it("refuses to send without the send capability (read-only connection)", async () => {
       scopedIntegration.findUnique.mockResolvedValue({ ...connected, grantedCapabilities: ["email.read"] });

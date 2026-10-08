@@ -1,13 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { ErrorState } from '@orbit/ui';
-import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, StatusBadge } from '../../../components/common/primitives';
+import type { ApprovalQueueItem } from '@orbit/shared';
+import { ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { EmptyState, EntityLink, FilterTabs, FocusNotice, LastUpdated, PageHeader, StatusBadge } from '../../../components/common/primitives';
 import { errorMessage } from '../../../lib/api-client';
 import { useMainWidth } from '../../../lib/hooks/use-element-size';
+import { useFocusParam } from '../../../lib/hooks/use-focus-param';
 import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
 import { useApprovalQueue } from '../../../lib/hooks/use-ui-projections';
-import { formatListTime } from '../../../lib/home-format';
+import { formatListDateTime } from '../../../lib/home-format';
+
+const SORT_ACCESSORS = {
+  action: (a: ApprovalQueueItem) => a.actionLabel,
+  object: (a: ApprovalQueueItem) => a.object?.label ?? null,
+  requestedAt: (a: ApprovalQueueItem) => a.requestedAt,
+  status: (a: ApprovalQueueItem) => STATUS_LABEL[a.status],
+};
 
 interface QueueState {
   scope: 'MINE' | 'TEAM';
@@ -26,6 +35,9 @@ export default function ApprovalsPage() {
   const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useApprovalQueue(state.scope);
   const width = useMainWidth();
   const compact = width > 0 && width < 900;
+  const focus = useFocusParam('focus');
+  const { sorted, sort, requestSort } = useSortableList(data, SORT_ACCESSORS);
+  const visible = sorted?.filter((item) => (focus.value ? item.id === focus.value : true));
   const open = data?.filter((item) => item.status === 'PENDING').length ?? 0;
   const critical = data?.filter((item) => item.status === 'PENDING' && item.risk === 'CRITICAL').length ?? 0;
 
@@ -49,6 +61,8 @@ export default function ApprovalsPage() {
         <LastUpdated at={data ? new Date(dataUpdatedAt).toISOString() : null} fetching={isFetching} />
       </div>
 
+      {focus.value ? <FocusNotice what="eine Freigabe" onClear={focus.clear} /> : null}
+
       {isError ? (
         <ErrorState message={errorMessage(error, 'Die Freigaben konnten nicht geladen werden.')} onRetry={() => void refetch()} />
       ) : (
@@ -57,22 +71,15 @@ export default function ApprovalsPage() {
             <caption className="sr-only">Freigaben mit Aktion, Objekt, Grund und Status</caption>
             <thead className="bg-slate-50 text-xs font-medium text-slate-700">
               <tr>
-                <th scope="col" className="px-3 py-2.5">
-                  Angeforderte Aktion
-                </th>
-                {compact ? null : (
-                  <th scope="col" className="w-56 px-3 py-2.5">
-                    Betroffenes Objekt
-                  </th>
-                )}
+                <SortableTh label="Angeforderte Aktion" sortKey="action" sort={sort} onSort={requestSort} className="px-3 py-2.5" />
+                {compact ? null : <SortableTh label="Betroffenes Objekt" sortKey="object" sort={sort} onSort={requestSort} className="w-56 px-3 py-2.5" />}
                 {compact ? null : (
                   <th scope="col" className="w-28 px-3 py-2.5 text-right">
                     Betrag
                   </th>
                 )}
-                <th scope="col" className="w-40 px-3 py-2.5">
-                  Status
-                </th>
+                {compact ? null : <SortableTh label="Angefragt am" sortKey="requestedAt" sort={sort} onSort={requestSort} className="w-40 px-3 py-2.5" />}
+                <SortableTh label="Status" sortKey="status" sort={sort} onSort={requestSort} className="w-40 px-3 py-2.5" />
                 <th scope="col" className="w-28 px-3 py-2.5">
                   <span className="sr-only">Entscheidung</span>
                 </th>
@@ -81,12 +88,12 @@ export default function ApprovalsPage() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={compact ? 3 : 5} className="px-4 py-8 text-slate-600">
+                  <td colSpan={compact ? 3 : 6} className="px-4 py-8 text-slate-600">
                     Wird geladen …
                   </td>
                 </tr>
-              ) : data && data.length > 0 ? (
-                data.map((item) => (
+              ) : visible && visible.length > 0 ? (
+                visible.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-3 py-3 align-top">
                       <Link href={item.href} className="block truncate font-medium text-slate-900 hover:underline" title={item.actionLabel}>
@@ -94,13 +101,15 @@ export default function ApprovalsPage() {
                       </Link>
                       <p className="line-clamp-2 text-[13px] text-slate-700">{item.reason}</p>
                       {compact && item.object ? <p className="mt-0.5 truncate text-xs text-slate-600">{item.object.label}{item.amountText ? ` · ${item.amountText}` : ''}</p> : null}
+                      {compact ? <p className="mt-0.5 text-xs text-slate-600">angefragt {formatListDateTime(item.requestedAt)}</p> : null}
                     </td>
                     {compact ? null : <td className="px-3 py-3 align-top">{item.object ? <EntityLink entity={item.object} /> : <span className="text-slate-600">–</span>}</td>}
                     {compact ? null : <td className="px-3 py-3 text-right align-top tabular-nums text-slate-900">{item.amountText ?? '–'}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{formatListDateTime(item.requestedAt)}</td>}
                     <td className="px-3 py-3 align-top">
                       <div className="flex flex-col items-start gap-1">
                         {item.risk === 'CRITICAL' && item.status === 'PENDING' ? <StatusBadge tone="danger">Kritisch prüfen</StatusBadge> : <StatusBadge tone={STATUS_TONE[item.status]}>{STATUS_LABEL[item.status]}</StatusBadge>}
-                        <span className="text-xs text-slate-600">{formatListTime(item.decidedAt ?? item.requestedAt)}</span>
+                        {item.decidedAt ? <span className="text-xs text-slate-600">entschieden {formatListDateTime(item.decidedAt)}</span> : null}
                       </div>
                     </td>
                     <td className="px-3 py-3 align-top">
@@ -112,7 +121,7 @@ export default function ApprovalsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={compact ? 3 : 5}>
+                  <td colSpan={compact ? 3 : 6}>
                     <EmptyState title={state.scope === 'MINE' ? 'Keine offenen Freigaben' : 'Keine Freigaben vorhanden'}>
                       {state.scope === 'MINE' ? 'Im Moment wartet nichts auf Ihre Entscheidung. Sobald ORBIT etwas vorbereitet hat, das Ihre Freigabe braucht, erscheint es hier.' : 'Es wurden noch keine Freigaben angefordert.'}
                     </EmptyState>

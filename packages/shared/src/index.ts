@@ -18,3 +18,4 @@ export * from './process-schemas';
 export * from './ui-projections';
 export * from './ui-labels';
 export * from './redaction';
+export * from './automation-presets';

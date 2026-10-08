@@ -163,6 +163,18 @@ export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warning' 
   );
 }
 
+/** Hinweis über einer Übersicht, die auf einen Suchtreffer beschränkt ist – mit dem Weg zurück zur ganzen Liste. */
+export function FocusNotice({ what, onClear }: { what: string; onClear: () => void }) {
+  return (
+    <Notice tone="info">
+      Angezeigt wird nur der Treffer aus der Suche: {what}.{' '}
+      <button type="button" onClick={onClear} className="font-medium underline hover:no-underline">
+        Alle anzeigen
+      </button>
+    </Notice>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // FilterTabs – Filter als sichtbare, zurücksetzbare Schalter mit ehrlichem Zähler
 // ---------------------------------------------------------------------------------------------------------------------

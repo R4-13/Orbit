@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { PolicyMode } from '@orbit/shared';
-import { Badge, Card, ErrorState, type BadgeTone } from '@orbit/ui';
+import type { AutomationPresetKey, PolicyMode } from '@orbit/shared';
+import { Badge, Button, Card, ErrorState, type BadgeTone } from '@orbit/ui';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
-import { usePolicies, useUpdatePolicyMode } from '../../../../lib/hooks/use-policies';
+import { useApplyAutomation, useAutomation, usePolicies, useUpdatePolicyMode } from '../../../../lib/hooks/use-policies';
 
 const MODE_LABELS: Record<PolicyMode, { label: string; tone: BadgeTone }> = {
   DISABLED: { label: 'Deaktiviert', tone: 'danger' },
@@ -43,6 +43,67 @@ const ACTION_LABELS: Record<string, string> = {
   'process.plan': 'Prozessplan durch die KI vorschlagen',
 };
 
+function AutomationLevelCard({ onError }: { onError: (message: string | null) => void }) {
+  const { data, isLoading } = useAutomation();
+  const apply = useApplyAutomation();
+  const [notice, setNotice] = useState<string | null>(null);
+  if (isLoading || !data) return null;
+  return (
+    <Card className="mt-6 p-5" data-testid="automation-level">
+      <h2 className="text-base font-semibold text-slate-900">Automatisierungsgrad</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        Wie viel erledigt ORBIT ohne Ihre Freigabe? Die Stufe setzt die Regeln unten gesammelt; einzelne Regeln können Sie danach weiter anpassen. Gesperrte Aktionen
+        (neuer Lieferant, geänderte Bankdaten, Zahlung) bleiben in jeder Stufe unverändert.
+      </p>
+      <p className="mt-2 text-sm text-slate-800">
+        Aktuell: <strong>{data.current === 'CUSTOM' ? 'Individuell (einzelne Regeln weichen ab)' : (data.presets.find((p) => p.key === data.current)?.label ?? data.current)}</strong>
+      </p>
+      <div role="radiogroup" aria-label="Automatisierungsgrad" className="mt-3 grid gap-3 md:grid-cols-3">
+        {data.presets.map((preset) => {
+          const active = data.current === preset.key;
+          return (
+            <div key={preset.key} className={`flex flex-col rounded-lg border p-3 ${active ? 'border-brand bg-brand/5' : 'border-slate-200'}`}>
+              <p className="text-sm font-semibold text-slate-900">
+                {preset.label} {active ? <Badge tone="success">Aktiv</Badge> : null}
+              </p>
+              <p className="mt-1 flex-1 text-[13px] text-slate-700">{preset.description}</p>
+              {!active && preset.changes.length > 0 ? (
+                <ul className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-slate-600">
+                  {preset.changes.map((change) => (
+                    <li key={change.action}>
+                      {ACTION_LABELS[change.action] ?? change.action}: {MODE_LABELS[change.from].label} → {MODE_LABELS[change.to].label}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <Button
+                className="mt-3"
+                variant={active ? 'secondary' : 'primary'}
+                disabled={active || apply.isPending}
+                onClick={() => {
+                  onError(null);
+                  setNotice(null);
+                  apply.mutate(preset.key as AutomationPresetKey, {
+                    onSuccess: (result) => setNotice(`Stufe „${preset.label}“ gesetzt (${result.changed} ${result.changed === 1 ? 'Regel' : 'Regeln'} geändert).`),
+                    onError: (error) => onError(error instanceof ApiError ? error.message : 'Die Stufe konnte nicht gesetzt werden.'),
+                  });
+                }}
+              >
+                {active ? 'Aktuelle Stufe' : `Stufe „${preset.label}“ wählen`}
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+      {notice ? (
+        <p role="status" className="mt-3 text-sm text-emerald-700">
+          {notice}
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
 export default function AdminPoliciesPage() {
   const { data: policies, isLoading, isError, error: loadError, refetch } = usePolicies();
   const updateMode = useUpdatePolicyMode();
@@ -61,6 +122,8 @@ export default function AdminPoliciesPage() {
           {actionError}
         </p>
       ) : null}
+
+      <AutomationLevelCard onError={setActionError} />
 
       {isError ? (
         <ErrorState

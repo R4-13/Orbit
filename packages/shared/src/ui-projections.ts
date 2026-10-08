@@ -383,6 +383,17 @@ export interface ActivityFeed {
 
 export type CaseListFilter = 'OPEN' | 'ATTENTION' | 'DONE' | 'ALL';
 
+/** Sortierung serverseitig paginierter Listen: nur diese Schlüssel sind erlaubt (kein frei wählbares Feld). */
+export type ListSortDirection = 'asc' | 'desc';
+export const CASE_SORT_KEYS = ['updatedAt', 'createdAt', 'title'] as const;
+export type CaseSortKey = (typeof CASE_SORT_KEYS)[number];
+export const INBOX_SORT_KEYS = ['occurredAt', 'subject'] as const;
+export type InboxSortKey = (typeof INBOX_SORT_KEYS)[number];
+
+export function parseSortDirection(raw: string | undefined): ListSortDirection {
+  return raw === 'asc' ? 'asc' : 'desc';
+}
+
 export interface CaseListItem {
   id: string;
   title: string;
@@ -394,6 +405,8 @@ export interface CaseListItem {
   /** Nächster Schritt bzw. Wartegrund in Klartext. */
   nextStep: string;
   ownerLabel?: string;
+  /** Wann der Vorgang entstanden ist (Eingang bzw. Anlage). */
+  createdAt: string;
   updatedAt: string;
   needsAttention: boolean;
   hasProcess: boolean;
@@ -422,6 +435,8 @@ export interface TaskListItem {
   expectedResult?: string;
   status: 'OPEN' | 'DONE' | 'CANCELLED';
   section: TaskSection;
+  /** Wann die Aufgabe angelegt wurde. */
+  createdAt: string;
   dueAt?: string;
   assigneeLabel?: string;
   assignedToMe: boolean;

@@ -25,7 +25,14 @@ export class LeadsOverviewService {
     const range = periodRange('TODAY', now, input.timezone);
     const q = input.search?.trim().toLowerCase() ?? '';
 
+    // Die Suche gehört in die Abfrage, nicht hinter die Begrenzung: sonst wären ältere Interessenten auch über die Suche nicht mehr auffindbar.
+    // Jedes Wort der Suche muss zu Vorname, Nachname oder Unternehmen passen („Petra Klein“ findet Petra Klein).
+    const tokens = q.split(/\s+/).filter((token) => token.length >= 2);
+    const searchWhere = tokens.length > 0
+      ? { AND: tokens.map((token) => ({ OR: [{ contact: { is: { firstName: { contains: token, mode: 'insensitive' as const } } } }, { contact: { is: { lastName: { contains: token, mode: 'insensitive' as const } } } }, { company: { is: { name: { contains: token, mode: 'insensitive' as const } } } }] })) }
+      : {};
     const leads = await db.lead.findMany({
+      where: searchWhere,
       orderBy: { createdAt: 'desc' },
       take: 500,
       include: { contact: true, company: { select: { name: true } }, case: { select: { id: true, title: true, orchestrationStatus: true, attentionReasons: true } } },

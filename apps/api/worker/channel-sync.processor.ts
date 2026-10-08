@@ -170,6 +170,27 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     for (const connection of dueConnections) {
       await this.queue.add('poll', connection, { attempts: 1 });
     }
+
+    await this.recoverWronglySuspended(pollableTypes);
+  }
+
+  /**
+   * Verbindungen, die früher schon bei einem nur vorübergehenden Fehler auf „Anmeldung erforderlich“ gesetzt wurden (Code `TOKEN_REFRESH_FAILED`),
+   * versuchen sich selbst wiederherzustellen. Endgültig widerrufene Verbindungen tragen einen anderen Code und bleiben unangetastet.
+   */
+  private async recoverWronglySuspended(pollableTypes: IntegrationConnectorType[]): Promise<void> {
+    const suspended = await this.prisma.withRlsBypass((tx) =>
+      tx.integration.findMany({ where: { status: 'AUTH_REQUIRED', lastErrorCode: 'TOKEN_REFRESH_FAILED', connectorType: { in: pollableTypes } }, select: { tenantId: true, connectorType: true }, take: 50 }),
+    );
+    for (const { tenantId, connectorType } of suspended) {
+      const adapter = this.adapters.find((a) => a.connectorType === connectorType);
+      if (!adapter?.recover) continue;
+      try {
+        if (await adapter.recover(tenantId)) this.logger.log(`Connection ${connectorType} of tenant ${tenantId} recovered automatically.`);
+      } catch (error) {
+        this.logger.warn(`Recovery of ${connectorType} (tenant ${tenantId}) failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
   }
 
   private async pollConnection(data: PollJobData): Promise<void> {

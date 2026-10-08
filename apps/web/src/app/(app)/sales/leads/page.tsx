@@ -4,8 +4,8 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { LeadSource } from '@orbit/domain';
-import type { LeadFilter } from '@orbit/shared';
-import { Button, ErrorState } from '@orbit/ui';
+import type { LeadFilter, LeadListItem } from '@orbit/shared';
+import { Button, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, Notice, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
@@ -14,9 +14,16 @@ import { useContacts } from '../../../../lib/hooks/use-contacts';
 import { useCreateLead } from '../../../../lib/hooks/use-leads';
 import { usePersistentState } from '../../../../lib/hooks/use-persistent-state';
 import { useLeadList } from '../../../../lib/hooks/use-ui-projections';
-import { formatDue } from '../../../../lib/home-format';
+import { formatDue, formatListDateTime } from '../../../../lib/home-format';
 
 const SOURCE_LABELS: Record<LeadSource, string> = { EMAIL: 'E-Mail', PHONE: 'Telefon', WEB: 'Web', MANUAL: 'Manuell' };
+
+const SORT_ACCESSORS = {
+  contact: (l: LeadListItem) => l.contactLabel,
+  source: (l: LeadListItem) => l.sourceLabel,
+  status: (l: LeadListItem) => l.statusLabel,
+  createdAt: (l: LeadListItem) => l.createdAt,
+};
 
 interface LeadViewState {
   filter: LeadFilter;
@@ -32,6 +39,7 @@ export default function LeadsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } = useLeadList(view);
   const { data: contacts } = useContacts();
   const createLead = useCreateLead();
+  const { sorted, sort, requestSort } = useSortableList(data?.items, SORT_ACCESSORS);
   const width = useMainWidth();
   const compact = width > 0 && width < 900;
 
@@ -150,17 +158,10 @@ export default function LeadsPage() {
             <caption className="sr-only">Interessenten mit Kontakt, Quelle, Status und nächstem Schritt</caption>
             <thead className="bg-slate-50 text-xs font-medium text-slate-700">
               <tr>
-                <th scope="col" className="px-3 py-2.5">
-                  Kontakt und Unternehmen
-                </th>
-                {compact ? null : (
-                  <th scope="col" className="w-28 px-3 py-2.5">
-                    Quelle
-                  </th>
-                )}
-                <th scope="col" className="w-60 px-3 py-2.5">
-                  Status und nächster Schritt
-                </th>
+                <SortableTh label="Kontakt und Unternehmen" sortKey="contact" sort={sort} onSort={requestSort} className="px-3 py-2.5" />
+                {compact ? null : <SortableTh label="Quelle" sortKey="source" sort={sort} onSort={requestSort} className="w-28 px-3 py-2.5" />}
+                {compact ? null : <SortableTh label="Eingegangen" sortKey="createdAt" sort={sort} onSort={requestSort} className="w-40 px-3 py-2.5" />}
+                <SortableTh label="Status und nächster Schritt" sortKey="status" sort={sort} onSort={requestSort} className="w-60 px-3 py-2.5" />
                 {compact ? null : (
                   <th scope="col" className="w-52 px-3 py-2.5">
                     Vorgang und CRM
@@ -171,20 +172,21 @@ export default function LeadsPage() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={compact ? 2 : 4} className="px-4 py-8 text-slate-600">
+                  <td colSpan={compact ? 2 : 5} className="px-4 py-8 text-slate-600">
                     Wird geladen …
                   </td>
                 </tr>
-              ) : data && data.items.length > 0 ? (
-                data.items.map((lead) => (
+              ) : sorted && sorted.length > 0 ? (
+                sorted.map((lead) => (
                   <tr key={lead.id} className="hover:bg-slate-50">
                     <td className="px-3 py-3 align-top">
                       <Link href={lead.href} className="block truncate font-medium text-slate-900 hover:underline" title={lead.contactLabel}>
                         {lead.contactLabel}
                       </Link>
-                      <p className="truncate text-[13px] text-slate-700">{lead.companyLabel ?? 'Kein Unternehmen'}{compact ? ` · ${lead.sourceLabel}` : ''}</p>
+                      <p className="truncate text-[13px] text-slate-700">{lead.companyLabel ?? 'Kein Unternehmen'}{compact ? ` · ${lead.sourceLabel} · eingegangen ${formatListDateTime(lead.createdAt)}` : ''}</p>
                     </td>
                     {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{lead.sourceLabel}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{formatListDateTime(lead.createdAt)}</td>}
                     <td className="px-3 py-3 align-top">
                       <StatusBadge tone={lead.statusTone}>{lead.statusLabel}</StatusBadge>
                       <p className="mt-1 line-clamp-2 text-xs text-slate-700">
@@ -202,7 +204,7 @@ export default function LeadsPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={compact ? 2 : 4}>
+                  <td colSpan={compact ? 2 : 5}>
                     <EmptyState title={filtered ? 'Keine Interessenten für diese Auswahl' : 'Keine offenen Anfragen'}>{filtered ? 'Passen Sie den Filter an oder setzen Sie ihn zurück.' : 'Neue Kundenanfragen erscheinen hier, sobald sie eingehen.'}</EmptyState>
                   </td>
                 </tr>

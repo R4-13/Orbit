@@ -56,6 +56,9 @@ export const AUDIT_EVENT_TYPES = [
   'USER_DEACTIVATED',
   'INTEGRATION_CONNECTED',
   'INTEGRATION_DISCONNECTED',
+  /** Die Verbindung braucht eine neue Zustimmung der Person (Token endgültig abgelehnt) bzw. wurde automatisch wiederhergestellt. */
+  'INTEGRATION_AUTH_REQUIRED',
+  'INTEGRATION_RECOVERED',
   'INTEGRATION_TEST_FAILED',
   'WEBHOOK_RECEIVED',
   /** docs/CHANNEL_EVENT_RUNTIME_PLAN.md — WebhookIdempotencyService.recordIfNew() used for a polling-sourced (not push/webhook-delivered) event; keeps the audit trail honest about which delivery mechanism actually occurred. */

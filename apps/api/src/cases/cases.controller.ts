@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS, type CaseListFilter, type CaseListItem, type CaseListResponse } from '@orbit/shared';
+import { CASE_SORT_KEYS, PERMISSIONS, parseSortDirection, type CaseListFilter, type CaseListItem, type CaseListResponse, type CaseSortKey } from '@orbit/shared';
 import type { Case } from '@orbit/domain';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -32,10 +32,13 @@ export class CasesController {
     @Query('type') type: string | undefined,
     @Query('q', new DefaultValuePipe('')) q: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('sort') sort?: string,
+    @Query('dir') dir?: string,
   ): Promise<CaseListResponse> {
     if (!['OPEN', 'ATTENTION', 'DONE', 'ALL'].includes(filter)) throw new BadRequestException('Unbekannter Filter.');
     if (type !== undefined && type !== 'FINANCE' && type !== 'SALES') throw new BadRequestException('type muss FINANCE oder SALES sein.');
-    return this.overview.list(user.tenantId, { filter: filter as CaseListFilter, type: type as 'FINANCE' | 'SALES' | undefined, page, search: q });
+    if (sort !== undefined && !(CASE_SORT_KEYS as readonly string[]).includes(sort)) throw new BadRequestException(`sort muss einer von ${CASE_SORT_KEYS.join(', ')} sein.`);
+    return this.overview.list(user.tenantId, { filter: filter as CaseListFilter, type: type as 'FINANCE' | 'SALES' | undefined, page, search: q, sort: sort as CaseSortKey | undefined, dir: parseSortDirection(dir) });
   }
 
   @Post()

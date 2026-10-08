@@ -41,3 +41,6 @@ infra/data/
 # Misc
 *.tsbuildinfo
 .env.docker
+
+# Lokale Zugangsdaten des Betreibers (nie committen)
+.local/

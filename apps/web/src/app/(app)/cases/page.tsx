@@ -1,21 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { caseTabHref, type CaseListFilter } from '@orbit/shared';
-import { ErrorState } from '@orbit/ui';
+import { caseTabHref, type CaseListFilter, type CaseSortKey, type ListSortDirection } from '@orbit/shared';
+import { ErrorState, SortableTh } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, Pagination, SearchField, StatusBadge } from '../../../components/common/primitives';
 import { errorMessage } from '../../../lib/api-client';
 import { useMainWidth } from '../../../lib/hooks/use-element-size';
 import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
 import { useCaseList } from '../../../lib/hooks/use-ui-projections';
-import { formatListTime } from '../../../lib/home-format';
+import { formatListDateTime } from '../../../lib/home-format';
 
 interface CaseViewState {
   filter: CaseListFilter;
   type: 'ALL' | 'FINANCE' | 'SALES';
   q: string;
   page: number;
+  sort: CaseSortKey;
+  dir: ListSortDirection;
 }
 
 /**
@@ -23,11 +25,14 @@ interface CaseViewState {
  * Aktualität. Standard ist „Offene Vorgänge“; keine Liste technischer Agentlauf-IDs.
  */
 export default function CasesPage() {
-  const [view, setView, resetView] = usePersistentState<CaseViewState>('cases', { filter: 'OPEN', type: 'ALL', q: '', page: 1 });
-  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useCaseList({ filter: view.filter, type: view.type === 'ALL' ? undefined : view.type, page: view.page, q: view.q });
+  const [view, setView, resetView] = usePersistentState<CaseViewState>('cases', { filter: 'OPEN', type: 'ALL', q: '', page: 1, sort: 'updatedAt', dir: 'desc' });
+  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useCaseList({ filter: view.filter, type: view.type === 'ALL' ? undefined : view.type, page: view.page, q: view.q, sort: view.sort, dir: view.dir });
   const width = useMainWidth();
   const compact = width > 0 && width < 900;
   const counts = data?.counts;
+  // Serverseitig sortiert (die Liste ist seitenweise): ein Klick wechselt die Richtung, eine neue Spalte beginnt bei „neueste zuerst“ bzw. A–Z.
+  const sortState = { key: view.sort, direction: view.dir };
+  const requestSort = (key: CaseSortKey) => setView({ ...view, page: 1, sort: key, dir: key === view.sort ? (view.dir === 'asc' ? 'desc' : 'asc') : key === 'title' ? 'asc' : 'desc' });
   const filtered = view.filter !== 'OPEN' || view.type !== 'ALL' || view.q.trim() !== '';
 
   return (
@@ -77,9 +82,7 @@ export default function CasesPage() {
             <caption className="sr-only">Vorgänge mit Gegenüber, Status, nächstem Schritt und Aktualität</caption>
             <thead className="bg-slate-50 text-xs font-medium text-slate-700">
               <tr>
-                <th scope="col" className="px-3 py-2.5">
-                  Vorgang
-                </th>
+                <SortableTh label="Vorgang" sortKey="title" sort={sortState} onSort={requestSort} className="px-3 py-2.5" />
                 {compact ? null : (
                   <th scope="col" className="w-56 px-3 py-2.5">
                     Gegenüber
@@ -93,17 +96,14 @@ export default function CasesPage() {
                     Verantwortlich
                   </th>
                 )}
-                {compact ? null : (
-                  <th scope="col" className="w-24 px-3 py-2.5">
-                    Aktualisiert
-                  </th>
-                )}
+                {compact ? null : <SortableTh label="Eingegangen" sortKey="createdAt" sort={sortState} onSort={requestSort} className="w-40 px-3 py-2.5" />}
+                {compact ? null : <SortableTh label="Aktualisiert" sortKey="updatedAt" sort={sortState} onSort={requestSort} className="w-40 px-3 py-2.5" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={compact ? 2 : 5} className="px-4 py-8 text-slate-600">
+                  <td colSpan={compact ? 2 : 6} className="px-4 py-8 text-slate-600">
                     Wird geladen …
                   </td>
                 </tr>
@@ -117,7 +117,7 @@ export default function CasesPage() {
                       <p className="truncate text-xs text-slate-600">
                         {item.typeLabel}
                         {compact && item.counterparty ? ` · ${item.counterparty.label}` : ''}
-                        {compact ? ` · ${formatListTime(item.updatedAt)}` : ''}
+                        {compact ? ` · eingegangen ${formatListDateTime(item.createdAt)} · aktualisiert ${formatListDateTime(item.updatedAt)}` : ''}
                       </p>
                       {item.hasProcess ? (
                         <Link href={caseTabHref(item.id, 'orchestration')} className="text-xs font-medium text-brand hover:underline" aria-label={`Orchestrierung anzeigen: ${item.title}`}>
@@ -131,12 +131,13 @@ export default function CasesPage() {
                       <p className="mt-1 line-clamp-2 text-xs text-slate-700">{item.nextStep}</p>
                     </td>
                     {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{item.ownerLabel ?? <span className="text-slate-600">Nicht zugewiesen</span>}</td>}
-                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListTime(item.updatedAt)}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListDateTime(item.createdAt)}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListDateTime(item.updatedAt)}</td>}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={compact ? 2 : 5}>
+                  <td colSpan={compact ? 2 : 6}>
                     <EmptyState title={filtered ? 'Keine Vorgänge für diese Auswahl' : 'Keine offenen Vorgänge'}>{filtered ? 'Passen Sie den Filter an oder setzen Sie ihn zurück.' : 'Sobald eine Anfrage zu einem Vorgang wird, erscheint sie hier.'}</EmptyState>
                   </td>
                 </tr>

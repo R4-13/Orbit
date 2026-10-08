@@ -3,18 +3,25 @@
 import { useState, type FormEvent } from 'react';
 import type { Contact } from '@orbit/domain';
 import { Button, Card, ErrorState, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
+import { FocusNotice } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
+import { useFocusParam } from '../../../../lib/hooks/use-focus-param';
+import { formatListDateTime } from '../../../../lib/home-format';
 import { useContacts, useCreateContact } from '../../../../lib/hooks/use-contacts';
 
 const SORT_ACCESSORS = {
   name: (c: Contact) => `${c.firstName} ${c.lastName}`,
   email: (c: Contact) => c.email,
+  createdAt: (c: Contact) => new Date(c.createdAt).toISOString(),
 };
 
 export default function ContactsPage() {
   const { data: contacts, isLoading, isError, error: loadError, refetch } = useContacts();
   const { sorted, sort, requestSort } = useSortableList(contacts, SORT_ACCESSORS);
   const createContact = useCreateContact();
+  const focus = useFocusParam('focus');
+  const company = useFocusParam('company');
+  const visible = sorted?.filter((c) => (focus.value ? c.id === focus.value : company.value ? c.companyId === company.value : true));
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -66,6 +73,9 @@ export default function ContactsPage() {
         ) : null}
       </Card>
 
+      {focus.value ? <FocusNotice what="ein Kontakt" onClear={focus.clear} /> : null}
+      {company.value ? <FocusNotice what="die Kontakte eines Unternehmens" onClear={company.clear} /> : null}
+
       {isError ? (
         <ErrorState
           message={errorMessage(loadError, 'Die Kontakte konnten nicht geladen werden.')}
@@ -78,27 +88,29 @@ export default function ContactsPage() {
             <tr>
               <SortableTh label="Name" sortKey="name" sort={sort} onSort={requestSort} />
               <SortableTh label="E-Mail" sortKey="email" sort={sort} onSort={requestSort} />
+              <SortableTh label="Angelegt am" sortKey="createdAt" sort={sort} onSort={requestSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={2}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Wird geladen …
                 </td>
               </tr>
-            ) : sorted && sorted.length > 0 ? (
-              sorted.map((contact) => (
+            ) : visible && visible.length > 0 ? (
+              visible.map((contact) => (
                 <tr key={contact.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {contact.firstName} {contact.lastName}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{contact.email ?? '–'}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatListDateTime(contact.createdAt)}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="px-4 py-6 text-slate-600" colSpan={2}>
+                <td className="px-4 py-6 text-slate-600" colSpan={3}>
                   Keine Kontakte gefunden.
                 </td>
               </tr>

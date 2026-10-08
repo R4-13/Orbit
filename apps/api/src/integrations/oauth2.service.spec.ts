@@ -1,5 +1,5 @@
 import { ExternalSystemError } from '@orbit/shared';
-import { OAuth2Service, type OAuth2ProviderConfig } from './oauth2.service';
+import { OAuth2Service, OAuthGrantRejectedError, type OAuth2ProviderConfig } from './oauth2.service';
 
 describe('OAuth2Service', () => {
   let service: OAuth2Service;
@@ -90,6 +90,28 @@ describe('OAuth2Service', () => {
     it('throws ExternalSystemError on a non-2xx response', async () => {
       fetchMock.mockResolvedValue({ ok: false, status: 400, text: async () => 'invalid_grant' });
       await expect(service.refreshAccessToken(config, 'rt_bad')).rejects.toThrow(ExternalSystemError);
+    });
+
+    it('invalid_grant / invalid_client sind endgültig (OAuthGrantRejectedError mit Code), Netzwerkfehler, 5xx und 429 nur vorübergehend', async () => {
+      fetchMock.mockResolvedValue({ ok: false, status: 400, text: async () => JSON.stringify({ error: 'invalid_grant', error_description: 'Token has been expired or revoked.' }) });
+      await expect(service.refreshAccessToken(config, 'rt_bad')).rejects.toMatchObject({ name: 'OAuthGrantRejectedError', oauthError: 'invalid_grant' });
+      fetchMock.mockResolvedValue({ ok: false, status: 401, text: async () => JSON.stringify({ error: 'invalid_client' }) });
+      await expect(service.refreshAccessToken(config, 'rt_bad')).rejects.toBeInstanceOf(OAuthGrantRejectedError);
+
+      for (const status of [500, 503, 429]) {
+        fetchMock.mockResolvedValue({ ok: false, status, text: async () => 'busy' });
+        const error = await service.refreshAccessToken(config, 'rt').catch((e: unknown) => e);
+        expect(error).toBeInstanceOf(ExternalSystemError);
+        expect(error).not.toBeInstanceOf(OAuthGrantRejectedError);
+      }
+      // 400 mit einem anderen Fehlercode (z. B. temporarily_unavailable) ist kein Widerruf.
+      fetchMock.mockResolvedValue({ ok: false, status: 400, text: async () => JSON.stringify({ error: 'temporarily_unavailable' }) });
+      expect(await service.refreshAccessToken(config, 'rt').catch((e: unknown) => e)).not.toBeInstanceOf(OAuthGrantRejectedError);
+
+      fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+      const network = await service.refreshAccessToken(config, 'rt').catch((e: unknown) => e);
+      expect(network).toBeInstanceOf(ExternalSystemError);
+      expect(network).not.toBeInstanceOf(OAuthGrantRejectedError);
     });
   });
 

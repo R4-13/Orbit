@@ -10,6 +10,7 @@ import { ConnectorsModule } from '../connectors/connectors.module';
 import { ContactsModule } from '../contacts/contacts.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { ORBIT_ENV } from '../config/env.token';
+import { IntegrationsModule } from '../integrations/integrations.module';
 import { InvoicesModule } from '../invoices/invoices.module';
 import { LeadsModule } from '../leads/leads.module';
 import { MeetingsModule } from '../meetings/meetings.module';
@@ -43,6 +44,7 @@ import { SondeTools } from '../copilot/tools/sonde.tools';
 @Module({
   imports: [
     ConnectorsModule,
+    IntegrationsModule,
     InvoicesModule,
     ContactsModule,
     CompaniesModule,

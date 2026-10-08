@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { ToolRegistry } from '@orbit/agent-core';
+import { IntegrationUnavailableError } from '@orbit/shared';
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -158,13 +159,27 @@ describe('FollowUpResumeService', () => {
       });
       scoped.workflowStepRun.findFirst.mockResolvedValue({ workflowRunId: 'wfr_1', stepOrder: 2 });
 
-      await service.approve('tenant_1', 'user_1', 'approval_1');
+      // Die Entscheidung bleibt festgehalten, der Fehlschlag wird der Person aber gemeldet – nie still als Erfolg.
+      await expect(service.approve('tenant_1', 'user_1', 'approval_1')).rejects.toThrow(/Ausführung von „transfer_invoice_to_finance“ ist jedoch fehlgeschlagen: DATEV unavailable/);
 
       expect(agentRuns.recordToolCalls).toHaveBeenCalledWith('tenant_1', 'run_1', [expect.objectContaining({ error: 'DATEV unavailable' })]);
       expect(workflowRunner.resumeFromStep).not.toHaveBeenCalled();
       expect(scoped.workflowRun.update).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'wfr_1' }, data: expect.objectContaining({ status: 'FAILED' }) }),
       );
+    });
+
+    it('fehlende oder unterbrochene Verbindung: die Freigabe bleibt OFFEN, der blockierte Aufruf bleibt erhalten, die Person bekommt die Ursache', async () => {
+      execute.mockRejectedValue(new IntegrationUnavailableError('Die Verbindung zu Gmail ist unterbrochen. Die E-Mail wurde nicht gesendet.'));
+      scoped.toolInvocation.findFirst.mockResolvedValue({ toolCallId: 'tc_1', toolName: 'transfer_invoice_to_finance', agentRunId: 'run_1', input: { invoiceId: 'inv_1' } });
+      scoped.workflowStepRun.findFirst.mockResolvedValue({ workflowRunId: 'wfr_1', stepOrder: 2 });
+
+      await expect(service.approve('tenant_1', 'user_1', 'approval_1')).rejects.toThrow(/Die Freigabe wurde nicht ausgeführt: Die Verbindung zu Gmail ist unterbrochen.*bleibt offen/);
+
+      expect(approvals.markDecided).not.toHaveBeenCalled(); // nicht „genehmigt/erledigt“
+      expect(agentRuns.recordToolCalls).not.toHaveBeenCalled(); // blockierter Aufruf bleibt für die erneute Freigabe bestehen
+      expect(scoped.workflowRun.update).not.toHaveBeenCalled(); // der Ablauf wartet weiter
+      expect(workflowRunner.resumeFromStep).not.toHaveBeenCalled();
     });
   });
 

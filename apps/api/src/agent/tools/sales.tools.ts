@@ -2,9 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { POLICY_ACTIONS } from '@orbit/shared';
 import type { ToolDefinition, ToolExecutionContext, ToolRegistry } from '@orbit/agent-core';
-import type { CalendarConnector, CrmConnector, MailConnector } from '@orbit/integration-core';
+import type { CalendarConnector, CrmConnector } from '@orbit/integration-core';
 import { NotFoundError } from '@orbit/shared';
-import { CALENDAR_CONNECTOR, CRM_CONNECTOR, MAIL_CONNECTOR } from '../../connectors/connectors.tokens';
+import { CALENDAR_CONNECTOR, CRM_CONNECTOR } from '../../connectors/connectors.tokens';
+import { OUTBOUND_MAIL, type OutboundMailPort } from '../../integrations/outbound-mail.port';
 import { CompaniesService } from '../../companies/companies.service';
 import { ContactsService } from '../../contacts/contacts.service';
 import { LeadsService } from '../../leads/leads.service';
@@ -31,7 +32,7 @@ export class SalesAgentTools {
     private readonly prisma: PrismaService,
     @Inject(CRM_CONNECTOR) private readonly crmConnector: CrmConnector,
     @Inject(CALENDAR_CONNECTOR) private readonly calendarConnector: CalendarConnector,
-    @Inject(MAIL_CONNECTOR) private readonly mailConnector: MailConnector,
+    @Inject(OUTBOUND_MAIL) private readonly outboundMail: OutboundMailPort,
   ) {}
 
   register(registry: ToolRegistry): void {
@@ -267,6 +268,8 @@ export class SalesAgentTools {
             toAddresses: [input.toAddress],
             subject: input.subject,
             bodyPreview: input.bodyText.slice(0, 500),
+            // Der Versand nutzt den vollständigen Text, nie die auf 500 Zeichen gekürzte Vorschau.
+            bodyText: input.bodyText,
           },
         });
       },
@@ -289,15 +292,29 @@ export class SalesAgentTools {
           throw new NotFoundError('Draft email not found.', { id: input.draftEmailId });
         }
 
-        const result = await this.mailConnector.sendMessage({
-          to: draft.toAddresses,
+        // Bereits versendet: nie ein zweites Mal senden (eine erneute Freigabe oder Wiederholung darf keine Doppelmail auslösen).
+        if (draft.sentAt) return draft;
+
+        // Echter Versand über das verbundene Postfach des Mandanten. Ist es nicht verbunden oder unterbrochen, wirft der Versand mit einer
+        // verständlichen Meldung – dann bleibt `sentAt` leer, die Mail gilt nie als gesendet. Gesetzt wird `sentAt` erst mit der Bestätigung des Anbieters.
+        const result = await this.outboundMail.send(context.tenantId, {
+          to: draft.toAddresses.join(', '),
           subject: draft.subject ?? '',
-          bodyText: draft.bodyPreview ?? '',
+          bodyText: draft.bodyText ?? draft.bodyPreview ?? '',
+          ...(draft.threadId ? { threadId: draft.threadId } : {}),
+          ...(draft.inReplyTo ? { inReplyTo: draft.inReplyTo } : {}),
+          ...(draft.references.length > 0 ? { references: draft.references } : {}),
         });
 
         return this.prisma.forTenantId(context.tenantId).emailMessage.update({
           where: { id: draft.id },
-          data: { sentAt: new Date(), providerMessageId: result.providerMessageId },
+          data: {
+            sentAt: new Date(),
+            providerMessageId: result.providerMessageId,
+            threadId: result.threadId ?? draft.threadId,
+            rfcMessageId: result.rfcMessageId ?? draft.rfcMessageId,
+            fromAddress: result.executionMode === 'LIVE' ? result.from : draft.fromAddress,
+          },
         });
       },
     };

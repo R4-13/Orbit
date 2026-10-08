@@ -5,16 +5,40 @@ import Link from 'next/link';
 import type { TaskListItem, TaskSection } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
-import { EmptyState, EntityLink, FilterTabs, LastUpdated, Notice, PageHeader, StatusBadge } from '../../../components/common/primitives';
+import { EmptyState, EntityLink, FilterTabs, FocusNotice, LastUpdated, Notice, PageHeader, StatusBadge } from '../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../lib/api-client';
+import { useFocusParam } from '../../../lib/hooks/use-focus-param';
 import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
 import { useCompleteTask } from '../../../lib/hooks/use-tasks';
 import { useTaskList } from '../../../lib/hooks/use-ui-projections';
-import { formatDue } from '../../../lib/home-format';
+import { formatDue, formatListDateTime } from '../../../lib/home-format';
+
+type TaskSort = 'due' | 'newest' | 'oldest' | 'title';
 
 interface TaskViewState {
   scope: 'MINE' | 'TEAM';
   done: boolean;
+  sort: TaskSort;
+}
+
+const SORT_LABELS: Record<TaskSort, string> = { due: 'Fälligkeit', newest: 'Angelegt: neueste zuerst', oldest: 'Angelegt: älteste zuerst', title: 'Titel (A–Z)' };
+
+/** Sortiert innerhalb eines Abschnitts; Aufgaben ohne Frist stehen bei „Fälligkeit“ zuletzt. */
+function sortTasks(items: TaskListItem[], sort: TaskSort): TaskListItem[] {
+  const copy = [...items];
+  copy.sort((a, b) => {
+    switch (sort) {
+      case 'newest':
+        return b.createdAt.localeCompare(a.createdAt);
+      case 'oldest':
+        return a.createdAt.localeCompare(b.createdAt);
+      case 'title':
+        return a.title.localeCompare(b.title, 'de', { numeric: true });
+      default:
+        return (a.dueAt ?? '9').localeCompare(b.dueAt ?? '9');
+    }
+  });
+  return copy;
 }
 
 const SECTION_META: Record<TaskSection, { title: string; tone: 'danger' | 'warning' | 'info' | 'neutral' | 'success' }> = {
@@ -38,6 +62,7 @@ function TaskRow({ task, onComplete, busy }: { task: TaskListItem; onComplete: (
         {task.expectedResult ? <p className="line-clamp-2 text-[13px] text-slate-700">Benötigtes Ergebnis: {task.expectedResult}</p> : null}
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-slate-600">
           {task.dueAt ? <span className={task.section === 'OVERDUE' ? 'font-medium text-red-700' : ''}>{formatDue(task.dueAt)}</span> : null}
+          <span>angelegt {formatListDateTime(task.createdAt)}</span>
           {task.areaLabel ? <span>{task.areaLabel}</span> : null}
           {task.fromAssistant ? <span>Vom Assistenten angelegt</span> : null}
           {task.assigneeLabel ? <span>Zuständig: {task.assigneeLabel}</span> : <span>Nicht zugewiesen</span>}
@@ -66,8 +91,10 @@ function TaskRow({ task, onComplete, busy }: { task: TaskListItem; onComplete: (
  * ein Prozess-Vorgang wird im Vorgang bearbeitet, nicht durch ein loses „Erledigt“.
  */
 export default function TasksPage() {
-  const [view, setView, resetView] = usePersistentState<TaskViewState>('tasks', { scope: 'MINE', done: false });
-  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useTaskList(view);
+  const [view, setView, resetView] = usePersistentState<TaskViewState>('tasks', { scope: 'MINE', done: false, sort: 'due' });
+  // Absprung aus der Suche: genau diese Aufgabe, unabhängig davon, wem sie gehört und ob sie erledigt ist.
+  const focus = useFocusParam('focus');
+  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useTaskList(focus.value ? { scope: 'TEAM', done: true } : view);
   const completeTask = useCompleteTask();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -80,7 +107,8 @@ export default function TasksPage() {
     }
   }
 
-  const grouped = SECTION_ORDER.map((section) => ({ section, items: data?.items.filter((item) => item.section === section) ?? [] })).filter((group) => group.items.length > 0);
+  const visibleItems = data?.items.filter((item) => (focus.value ? item.id === focus.value : true)) ?? [];
+  const grouped = SECTION_ORDER.map((section) => ({ section, items: sortTasks(visibleItems.filter((item) => item.section === section), view.sort) })).filter((group) => group.items.length > 0);
   const counts = data?.counts;
 
   return (
@@ -102,6 +130,16 @@ export default function TasksPage() {
             ]}
           />
           <label className="flex items-center gap-2 text-sm text-slate-800">
+            Sortieren nach
+            <select value={view.sort} onChange={(event) => setView({ ...view, sort: event.target.value as TaskSort })} className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900">
+              {(Object.keys(SORT_LABELS) as TaskSort[]).map((key) => (
+                <option key={key} value={key}>
+                  {SORT_LABELS[key]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-800">
             <input type="checkbox" checked={view.done} onChange={(event) => setView({ ...view, done: event.target.checked })} className="h-4 w-4" />
             Erledigte anzeigen
           </label>
@@ -112,6 +150,7 @@ export default function TasksPage() {
         </div>
       </div>
 
+      {focus.value ? <FocusNotice what="eine Aufgabe" onClear={focus.clear} /> : null}
       {actionError ? <Notice tone="danger">{actionError}</Notice> : null}
 
       {isError ? (

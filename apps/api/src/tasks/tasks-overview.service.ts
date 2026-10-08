@@ -36,6 +36,7 @@ export class TasksOverviewService {
       expectedResult: row.description ? humanizeKnownKeys(row.description) : undefined,
       status: row.status,
       section: sectionOf(row),
+      createdAt: row.createdAt.toISOString(),
       dueAt: row.dueDate?.toISOString(),
       assigneeLabel: row.assignee ? `${row.assignee.firstName} ${row.assignee.lastName}`.trim() : undefined,
       assignedToMe: row.assigneeId === userId,

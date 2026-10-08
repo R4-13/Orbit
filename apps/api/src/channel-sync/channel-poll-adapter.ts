@@ -31,4 +31,6 @@ export interface ChannelPollResult {
 export interface ChannelPollAdapter {
   readonly connectorType: IntegrationConnectorType;
   poll(tenantId: string, connectionId: string, cursor: string | null): Promise<ChannelPollResult>;
+  /** Optional: stellt eine früher nur vermeintlich abgemeldete Verbindung selbst wieder her (ohne neue Zustimmung der Person); `true`, wenn sie wieder verbunden ist. */
+  recover?(tenantId: string): Promise<boolean>;
 }

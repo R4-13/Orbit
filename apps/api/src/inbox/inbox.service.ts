@@ -15,8 +15,7 @@ import {
   type InboxFilter,
   type InboxListItem,
   type InboxListResponse,
-  type InboxStage,
-} from '@orbit/shared';
+  type InboxStage, type InboxSortKey, type ListSortDirection } from '@orbit/shared';
 import { ORBIT_ENV } from '../config/env.token';
 import { showExcludedIntakeByDefault } from '../intake/intake-visibility';
 import { PrismaService } from '../prisma/prisma.service';
@@ -110,7 +109,7 @@ export class InboxService {
     return and.length > 0 ? { AND: and } : {};
   }
 
-  async list(tenantId: string, input: { filter: InboxFilter; page: number; search?: string; includeExcluded?: boolean }, now: Date = new Date()): Promise<InboxListResponse> {
+  async list(tenantId: string, input: { filter: InboxFilter; page: number; search?: string; includeExcluded?: boolean; sort?: InboxSortKey; dir?: ListSortDirection }, now: Date = new Date()): Promise<InboxListResponse> {
     const db = this.prisma.forTenantId(tenantId);
     const includeExcluded = input.includeExcluded ?? showExcludedIntakeByDefault(this.env);
     const page = Math.max(1, input.page);
@@ -118,7 +117,7 @@ export class InboxService {
 
     const filters: InboxFilter[] = ['ALL', 'ATTENTION', 'NEW', 'IN_PROGRESS', 'DONE', 'FINANCE', 'SALES'];
     const [rows, total, ...counts] = await Promise.all([
-      db.intakeEvent.findMany({ where, orderBy: [{ occurredAt: 'desc' }, { id: 'asc' }], skip: (page - 1) * INBOX_PAGE_SIZE, take: INBOX_PAGE_SIZE, include: { case: true, decision: true } }),
+      db.intakeEvent.findMany({ where, orderBy: [{ [input.sort ?? 'occurredAt']: input.dir ?? 'desc' }, { id: 'asc' }], skip: (page - 1) * INBOX_PAGE_SIZE, take: INBOX_PAGE_SIZE, include: { case: true, decision: true } }),
       db.intakeEvent.count({ where }),
       ...filters.map((filter) => db.intakeEvent.count({ where: this.whereFor(filter, includeExcluded, input.search) })),
     ]);

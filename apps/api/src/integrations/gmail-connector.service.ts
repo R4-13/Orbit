@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CredentialVaultService } from '../security/credential-vault.service';
 import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
 import { base64UrlToBase64, extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
-import { OAuth2Service, type OAuth2ProviderConfig } from './oauth2.service';
+import { OAuth2Service, OAuthGrantRejectedError, type OAuth2ProviderConfig } from './oauth2.service';
 import { buildRfc822Message, toBase64Url, type OutgoingMessage } from './rfc822';
 import { OAuthStateService } from './oauth-state.service';
 
@@ -41,6 +41,9 @@ interface StoredGmailSecret {
  */
 @Injectable()
 export class GmailConnectorService {
+  /** Gleichzeitige Aufrufe (Abgleich, Versand, Test) teilen sich eine Erneuerung je Mandant, statt das Refresh-Token mehrfach einzulösen. */
+  private readonly refreshing = new Map<string, Promise<string>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly vault: CredentialVaultService,
@@ -97,7 +100,7 @@ export class GmailConnectorService {
     const tokens = await this.oauth2.exchangeCodeForTokens(this.providerConfig, code);
     const profile = await this.fetchProfile(tokens.accessToken);
     // The capability list reflects what Google actually granted (the user can untick scopes), not what was requested.
-    const grantedScopes = (tokens.scope ?? GMAIL_READONLY_SCOPE).split(/s+/);
+    const grantedScopes = (tokens.scope ?? GMAIL_READONLY_SCOPE).split(/\s+/).filter(Boolean);
     const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : [])];
 
     const existing = await this.prisma
@@ -251,8 +254,14 @@ export class GmailConnectorService {
   async sendMessage(tenantId: string, message: Omit<OutgoingMessage, 'from'> & { threadId?: string }): Promise<{ providerMessageId: string; threadId?: string; rfcMessageId?: string; from: string }> {
     const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
     const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
-    if (!integration || integration.status !== 'CONNECTED' || !granted.includes('email.send') || !integration.externalAccountDisplayName) {
-      throw new IntegrationUnavailableError('Gmail ist nicht mit Sendeberechtigung verbunden. Bitte unter Integrationen erneut mit der Berechtigung zum Senden verbinden.');
+    if (!integration || !integration.externalAccountDisplayName) {
+      throw new IntegrationUnavailableError('Gmail ist nicht verbunden. Die E-Mail wurde nicht gesendet. Bitte unter „Systeme & Verbindungen“ Gmail verbinden.');
+    }
+    if (integration.status !== 'CONNECTED') {
+      throw new IntegrationUnavailableError('Die Verbindung zu Gmail ist unterbrochen (Anmeldung abgelaufen oder widerrufen). Die E-Mail wurde nicht gesendet. Bitte unter „Systeme & Verbindungen“ die Verbindung erneuern.');
+    }
+    if (!granted.includes('email.send')) {
+      throw new IntegrationUnavailableError('Gmail ist nicht mit Sendeberechtigung verbunden. Die E-Mail wurde nicht gesendet. Bitte unter „Systeme & Verbindungen“ erneut mit der Berechtigung zum Senden verbinden.');
     }
     const from = integration.externalAccountDisplayName;
     const accessToken = await this.getValidAccessToken(tenantId);
@@ -291,6 +300,14 @@ export class GmailConnectorService {
   }
 
   private async getValidAccessToken(tenantId: string): Promise<string> {
+    const inFlight = this.refreshing.get(tenantId);
+    if (inFlight) return inFlight;
+    const pending = this.resolveAccessToken(tenantId).finally(() => this.refreshing.delete(tenantId));
+    this.refreshing.set(tenantId, pending);
+    return pending;
+  }
+
+  private async resolveAccessToken(tenantId: string): Promise<string> {
     const integration = await this.prisma
       .forTenantId(tenantId)
       .integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
@@ -306,7 +323,7 @@ export class GmailConnectorService {
       return accessToken;
     }
     if (!refreshToken) {
-      await this.markAuthRequired(tenantId);
+      await this.markAuthRequired(tenantId, 'NO_REFRESH_TOKEN');
       throw new AuthenticationExpiredError('Gmail-Token abgelaufen und kein Refresh Token vorhanden — erneute Anmeldung nötig.');
     }
 
@@ -318,20 +335,65 @@ export class GmailConnectorService {
         expiresAt: refreshed.expiresAt.toISOString(),
       };
       await this.vault.updateSecret(tenantId, integration.credentialReference, { tenantId, value: refreshedSecret });
+      // Eine frühere Störung ist behoben: Status und Fehlerspur zurücksetzen (nur wenn tatsächlich etwas zurückzusetzen ist).
+      if (integration.status !== 'CONNECTED' || integration.lastErrorCode) {
+        await this.prisma
+          .forTenantId(tenantId)
+          .integration.update({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } }, data: { status: 'CONNECTED', lastErrorAt: null, lastErrorCode: null, lastSuccessAt: new Date() } });
+      }
       return refreshed.accessToken;
     } catch (error) {
-      await this.markAuthRequired(tenantId);
+      if (error instanceof OAuthGrantRejectedError) {
+        // Endgültig: nur eine neue Zustimmung hilft. Erst jetzt gilt die Verbindung als unterbrochen.
+        await this.markAuthRequired(tenantId, error.oauthError === 'invalid_grant' ? 'GRANT_REVOKED_OR_EXPIRED' : 'CLIENT_REJECTED');
+      } else {
+        // Vorübergehend (Netzwerk, 5xx, 429): die Verbindung bleibt bestehen, der nächste Abgleich versucht es erneut.
+        await this.prisma
+          .forTenantId(tenantId)
+          .integration.update({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } }, data: { lastErrorAt: new Date(), lastErrorCode: 'TOKEN_REFRESH_TRANSIENT' } })
+          .catch(() => undefined);
+      }
       throw error;
     }
   }
 
-  private async markAuthRequired(tenantId: string): Promise<void> {
+  /**
+   * Selbstheilung für Verbindungen, die früher wegen eines nur vorübergehenden Fehlers als „abgemeldet“ markiert wurden (Code `TOKEN_REFRESH_FAILED`):
+   * ein einmaliger Erneuerungsversuch stellt sie wieder her, ohne dass die Person neu zustimmen muss. Endgültig widerrufene Verbindungen bleiben
+   * unterbrochen (Code `GRANT_REVOKED_OR_EXPIRED`) – dort versucht nichts erneut, bis die Person sie erneuert.
+   */
+  async attemptRecovery(tenantId: string): Promise<boolean> {
+    const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    if (!integration || integration.status !== 'AUTH_REQUIRED' || integration.lastErrorCode !== 'TOKEN_REFRESH_FAILED' || !integration.credentialReference) return false;
+    // Höchstens ein Versuch je 30 Minuten.
+    if (integration.lastTestedAt && Date.now() - integration.lastTestedAt.getTime() < 30 * 60_000) return false;
+    await this.prisma.forTenantId(tenantId).integration.update({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } }, data: { lastTestedAt: new Date() } });
+    try {
+      // Zeitpunkt der Gültigkeit überspringen: bewusst echte Erneuerung erzwingen.
+      const secret = await this.vault.readSecret(tenantId, integration.credentialReference);
+      const { refreshToken } = secret.value as unknown as StoredGmailSecret;
+      if (!refreshToken) return false;
+      const refreshed = await this.oauth2.refreshAccessToken(this.providerConfig, refreshToken);
+      await this.vault.updateSecret(tenantId, integration.credentialReference, { tenantId, value: { accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken, expiresAt: refreshed.expiresAt.toISOString() } });
+      await this.prisma.forTenantId(tenantId).integration.update({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } }, data: { status: 'CONNECTED', lastErrorAt: null, lastErrorCode: null, lastSuccessAt: new Date() } });
+      await this.audit.record({ tenantId, eventType: 'INTEGRATION_RECOVERED', actorType: 'SYSTEM', entityType: 'Integration', entityId: 'GMAIL', payload: { connectorType: 'GMAIL', via: 'AUTOMATIC_TOKEN_REFRESH' } });
+      return true;
+    } catch (error) {
+      if (error instanceof OAuthGrantRejectedError) {
+        await this.prisma.forTenantId(tenantId).integration.update({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } }, data: { lastErrorCode: error.oauthError === 'invalid_grant' ? 'GRANT_REVOKED_OR_EXPIRED' : 'CLIENT_REJECTED' } });
+      }
+      return false;
+    }
+  }
+
+  private async markAuthRequired(tenantId: string, code: string): Promise<void> {
     await this.prisma
       .forTenantId(tenantId)
       .integration.update({
         where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } },
-        data: { status: 'AUTH_REQUIRED', lastErrorAt: new Date(), lastErrorCode: 'TOKEN_REFRESH_FAILED' },
+        data: { status: 'AUTH_REQUIRED', lastErrorAt: new Date(), lastErrorCode: code },
       });
+    await this.audit.record({ tenantId, eventType: 'INTEGRATION_AUTH_REQUIRED', actorType: 'SYSTEM', entityType: 'Integration', entityId: 'GMAIL', payload: { connectorType: 'GMAIL', reason: code } }).catch(() => undefined);
   }
 
   private async fetchProfile(accessToken: string): Promise<{ emailAddress: string }> {

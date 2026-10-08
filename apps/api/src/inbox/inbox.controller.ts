@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, DefaultValuePipe, Get, Param, ParseIntPipe, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS, type InboxDetail, type InboxFilter, type InboxListResponse } from '@orbit/shared';
+import { PERMISSIONS, type InboxDetail, type InboxFilter, type InboxListResponse, INBOX_SORT_KEYS, parseSortDirection, type InboxSortKey } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -26,12 +26,15 @@ export class InboxController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('q', new DefaultValuePipe('')) q: string,
     @Query('excluded') excluded?: string,
+    @Query('sort') sort?: string,
+    @Query('dir') dir?: string,
   ): Promise<InboxListResponse> {
     if (!FILTERS.includes(filter as InboxFilter)) throw new BadRequestException('Unbekannter Filter.');
     // Ausgefilterte Eingänge einzublenden ist eine Reviewer-/Admin-Sicht (§11.2).
     const canSeeExcluded = user.permissions.includes(PERMISSIONS.CASE_READ);
     const includeExcluded = excluded === 'true' ? canSeeExcluded : excluded === 'false' ? false : undefined;
-    return this.inbox.list(user.tenantId, { filter: filter as InboxFilter, page, search: q, includeExcluded });
+    if (sort !== undefined && !(INBOX_SORT_KEYS as readonly string[]).includes(sort)) throw new BadRequestException(`sort muss einer von ${INBOX_SORT_KEYS.join(', ')} sein.`);
+    return this.inbox.list(user.tenantId, { filter: filter as InboxFilter, page, search: q, includeExcluded, sort: sort as InboxSortKey | undefined, dir: parseSortDirection(dir) });
   }
 
   @Get('items/:id')

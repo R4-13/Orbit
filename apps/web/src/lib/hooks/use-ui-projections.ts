@@ -29,11 +29,11 @@ function qs(params: Record<string, string | number | boolean | undefined>): stri
   return text ? `?${text}` : '';
 }
 
-export function useInboxItems(params: { filter: InboxFilter; page: number; q: string; excluded?: boolean }) {
+export function useInboxItems(params: { filter: InboxFilter; page: number; q: string; excluded?: boolean; sort?: string; dir?: string }) {
   const { enabled, scope } = useScope();
   return useQuery({
     queryKey: ['inbox', ...scope, params],
-    queryFn: () => apiFetch<InboxListResponse>(`/v1/inbox/items${qs({ filter: params.filter, page: params.page, q: params.q, excluded: params.excluded })}`),
+    queryFn: () => apiFetch<InboxListResponse>(`/v1/inbox/items${qs({ filter: params.filter, page: params.page, q: params.q, excluded: params.excluded, sort: params.sort, dir: params.dir })}`),
     enabled,
     placeholderData: (previous) => previous,
     refetchInterval: 60_000,
@@ -70,11 +70,11 @@ export function useActivityFeed(params: { area: 'ALL' | 'FINANCE' | 'SALES'; day
   });
 }
 
-export function useCaseList(params: { filter: CaseListFilter; type?: 'FINANCE' | 'SALES'; page: number; q: string }) {
+export function useCaseList(params: { filter: CaseListFilter; type?: 'FINANCE' | 'SALES'; page: number; q: string; sort?: string; dir?: string }) {
   const { enabled, scope } = useScope();
   return useQuery({
     queryKey: ['cases', ...scope, 'overview', params],
-    queryFn: () => apiFetch<CaseListResponse>(`/v1/cases/overview${qs({ filter: params.filter, type: params.type, page: params.page, q: params.q })}`),
+    queryFn: () => apiFetch<CaseListResponse>(`/v1/cases/overview${qs({ filter: params.filter, type: params.type, page: params.page, q: params.q, sort: params.sort, dir: params.dir })}`),
     enabled,
     placeholderData: (previous) => previous,
     refetchInterval: 60_000,

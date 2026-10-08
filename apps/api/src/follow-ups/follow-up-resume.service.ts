@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ToolCallOutcome, ToolRegistry } from '@orbit/agent-core';
 import type { Approval, Prisma } from '@orbit/domain';
-import { NotFoundError, PolicyViolationError } from '@orbit/shared';
+import { AuthenticationExpiredError, ExternalSystemError, IntegrationUnavailableError, NotFoundError, PolicyViolationError } from '@orbit/shared';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -78,6 +78,12 @@ export class FollowUpResumeService {
       });
       outcome = { toolCallId: approval.entityId, toolName: tool.name, decision: 'ALLOW', input, output };
     } catch (error) {
+      // Die Aktion wurde nachweislich nicht ausgeführt, weil eine Verbindung fehlt oder unterbrochen ist: die Freigabe bleibt OFFEN. Weder wird sie als
+      // „genehmigt/erledigt“ geführt noch der blockierte Aufruf verbraucht – nach dem Erneuern der Verbindung genügt eine erneute Freigabe. Die Person
+      // erhält die Ursache in verständlicher Form statt eines stillen Erfolgs.
+      if (error instanceof IntegrationUnavailableError || error instanceof AuthenticationExpiredError) {
+        throw new IntegrationUnavailableError(`Die Freigabe wurde nicht ausgeführt: ${error.message} Die Freigabe bleibt offen und kann nach dem Beheben erneut erteilt werden.`);
+      }
       outcome = {
         toolCallId: approval.entityId,
         toolName: tool.name,
@@ -116,6 +122,11 @@ export class FollowUpResumeService {
           await this.workflowRunner.resumeFromStep(tenantId, actorUserId, stepRun.workflowRunId, stepRun.stepOrder + 1, context);
         }
       }
+    }
+
+    // Die Entscheidung der Person ist festgehalten, die Ausführung aber gescheitert (oder bei einem Versand ungewiss): das wird nie still als Erfolg geführt.
+    if (outcome.error) {
+      throw new ExternalSystemError(`Die Freigabe wurde erfasst, die Ausführung von „${tool.name}“ ist jedoch fehlgeschlagen: ${outcome.error}`, { approvalId, toolName: tool.name });
     }
 
     return this.approvals.findOne(tenantId, approvalId);

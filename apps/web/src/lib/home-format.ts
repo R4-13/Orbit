@@ -84,6 +84,14 @@ export function formatListTime(value: string | Date, now: Date = new Date()): st
   return sameDay ? formatClock(date) : new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' }).format(date);
 }
 
+/** Eindeutige Zeitangabe für Listen: „Heute, 11:25“ bzw. „04.10.2026, 17:56“ – mit Jahr, damit nie unklar ist, wann etwas eingegangen ist. */
+export function formatListDateTime(value: string | Date, now: Date = new Date()): string {
+  const date = new Date(value);
+  const sameDay = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  if (sameDay) return `Heute, ${formatClock(date)}`;
+  return `${new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)}, ${formatClock(date)}`;
+}
+
 /** Fristtext: „überfällig seit 03.10.“, „heute 14:00“, „bis 08.10.“. */
 export function formatDue(value: string | Date, now: Date = new Date()): string {
   const date = new Date(value);

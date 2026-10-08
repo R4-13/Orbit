@@ -4,8 +4,8 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { FlaskConical, Mail } from 'lucide-react';
 import type { IntakeEventStatus } from '@orbit/domain';
-import { SIMULATED_TRIAGE_SCENARIOS, SIMULATED_TRIAGE_SCENARIO_LABELS, caseTabHref, categoryLabel, type InboxFilter, type SimulatedTriageScenario } from '@orbit/shared';
-import { Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label } from '@orbit/ui';
+import { SIMULATED_TRIAGE_SCENARIOS, SIMULATED_TRIAGE_SCENARIO_LABELS, caseTabHref, categoryLabel, type InboxFilter, type InboxSortKey, type ListSortDirection, type SimulatedTriageScenario } from '@orbit/shared';
+import { Button, Card, CardContent, CardHeader, CardTitle, ErrorState, Input, Label, SortableTh } from '@orbit/ui';
 import { EmptyState, FilterTabs, LastUpdated, PageHeader, Pagination, SearchField, StatusBadge } from '../../../components/common/primitives';
 import { SavedViewsMenu } from '../../../components/common/saved-views-menu';
 import { ExcludedIntakeSection } from '../../../components/excluded-intake-section';
@@ -15,7 +15,7 @@ import { useIntakeVisibility } from '../../../lib/hooks/use-intake-decisions';
 import { useSimulateIncomingEmail } from '../../../lib/hooks/use-email-messages';
 import { usePersistentState } from '../../../lib/hooks/use-persistent-state';
 import { useInboxItems } from '../../../lib/hooks/use-ui-projections';
-import { formatListTime } from '../../../lib/home-format';
+import { formatListDateTime } from '../../../lib/home-format';
 
 /** Says what actually happened to the simulated message — never just a label. */
 function describeIntakeOutcome(status: IntakeEventStatus | undefined, category: string, hasCase: boolean): string {
@@ -41,6 +41,8 @@ interface ListState {
   filter: InboxFilter;
   q: string;
   page: number;
+  sort: InboxSortKey;
+  dir: ListSortDirection;
 }
 
 /**
@@ -49,11 +51,14 @@ interface ListState {
  * Seite überstehen den Weg ins Detail und zurück.
  */
 export default function InboxPage() {
-  const [state, setState, resetState] = usePersistentState<ListState>('inbox', { filter: 'ALL', q: '', page: 1 });
-  const { data, isLoading, isError, error, refetch, isFetching } = useInboxItems({ filter: state.filter, page: state.page, q: state.q });
+  const [state, setState, resetState] = usePersistentState<ListState>('inbox', { filter: 'ALL', q: '', page: 1, sort: 'occurredAt', dir: 'desc' });
+  const { data, isLoading, isError, error, refetch, isFetching } = useInboxItems({ filter: state.filter, page: state.page, q: state.q, sort: state.sort, dir: state.dir });
   const visibility = useIntakeVisibility();
   const width = useMainWidth();
   const compact = width > 0 && width < 900;
+  // Serverseitig sortiert (die Liste ist seitenweise): ein Klick wechselt die Richtung, eine neue Spalte beginnt bei „neueste zuerst“ bzw. A–Z.
+  const sortState = { key: state.sort, direction: state.dir };
+  const requestSort = (key: InboxSortKey) => setState({ ...state, page: 1, sort: key, dir: key === state.sort ? (state.dir === 'asc' ? 'desc' : 'asc') : key === 'subject' ? 'asc' : 'desc' });
   const simulate = useSimulateIncomingEmail();
   const [simulating, setSimulating] = useState(false);
 
@@ -197,9 +202,7 @@ export default function InboxPage() {
                 <th scope="col" className="w-10 px-3 py-2.5">
                   <span className="sr-only">Quelle</span>
                 </th>
-                <th scope="col" className="px-3 py-2.5">
-                  Absender und Betreff
-                </th>
+                <SortableTh label="Betreff und Absender" sortKey="subject" sort={sortState} onSort={requestSort} className="px-3 py-2.5" />
                 {compact ? null : (
                   <th scope="col" className="w-36 px-3 py-2.5">
                     Typ
@@ -208,11 +211,7 @@ export default function InboxPage() {
                 <th scope="col" className="w-44 px-3 py-2.5">
                   Stand und nächster Schritt
                 </th>
-                {compact ? null : (
-                  <th scope="col" className="w-20 px-3 py-2.5">
-                    Zeit
-                  </th>
-                )}
+                {compact ? null : <SortableTh label="Eingegangen" sortKey="occurredAt" sort={sortState} onSort={requestSort} className="w-40 px-3 py-2.5" />}
                 <th scope="col" className="w-44 px-3 py-2.5">
                   Orchestrierung
                 </th>
@@ -238,7 +237,7 @@ export default function InboxPage() {
                         </span>
                         <span className="block truncate text-[13px] text-slate-700" title={item.senderAddress ?? item.senderLabel}>
                           {item.senderLabel}
-                          {compact ? ` · ${item.typeLabel} · ${formatListTime(item.occurredAt)}` : ''}
+                          {compact ? ` · ${item.typeLabel} · ${formatListDateTime(item.occurredAt)}` : ''}
                         </span>
                       </Link>
                     </td>
@@ -247,7 +246,7 @@ export default function InboxPage() {
                       <StatusBadge tone={STAGE_TONE[item.stage]}>{item.statusLabel}</StatusBadge>
                       <p className="mt-1 truncate text-xs text-slate-700">{item.nextActionLabel}</p>
                     </td>
-                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListTime(item.occurredAt)}</td>}
+                    {compact ? null : <td className="px-3 py-3 align-top text-slate-700">{formatListDateTime(item.occurredAt)}</td>}
                     <td className="px-3 py-3 align-top">
                       {item.caseRef ? (
                         <Link href={item.hasProcess ? caseTabHref(item.caseRef.id, 'orchestration') : (item.caseRef.href ?? `/cases/${item.caseRef.id}`)} className="font-medium text-brand hover:underline" aria-label={`${item.hasProcess ? 'Orchestrierung anzeigen' : 'Vorgang ansehen'}: ${item.subject}`}>

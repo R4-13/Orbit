@@ -3,11 +3,12 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import type { Invoice } from '@orbit/domain';
-import { ErrorState } from '@orbit/ui';
+import { ErrorState, SortableTh, useSortableList } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { errorMessage } from '../../../../lib/api-client';
 import { formatAmount } from '../../../../lib/format';
+import { formatListDateTime } from '../../../../lib/home-format';
 import { useMainWidth } from '../../../../lib/hooks/use-element-size';
 import { useInvoices } from '../../../../lib/hooks/use-invoices';
 import { usePersistentState } from '../../../../lib/hooks/use-persistent-state';
@@ -20,6 +21,14 @@ interface InvoiceViewState {
   filter: InvoiceFilter;
   q: string;
 }
+
+const SORT_ACCESSORS = {
+  invoice: (i: InvoiceRow) => `${i.supplier?.name ?? ''} ${i.invoiceNumber ?? ''}`.trim(),
+  amount: (i: InvoiceRow) => (i.amountGross === null || i.amountGross === undefined ? null : Number(i.amountGross)),
+  received: (i: InvoiceRow) => new Date(i.createdAt).toISOString(),
+  due: (i: InvoiceRow) => (i.dueDate ? new Date(i.dueDate).toISOString() : null),
+  status: (i: InvoiceRow) => statusLabel(i.status).label,
+};
 
 const dueText = (value: Date | string | null | undefined) => (value ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' }).format(new Date(value)) : '–');
 
@@ -44,6 +53,7 @@ export default function InvoicesPage() {
     (invoice) => matchesInvoiceFilter(invoice.status, view.filter) && (q === '' || `${invoice.supplier?.name ?? ''} ${invoice.invoiceNumber ?? ''}`.toLowerCase().includes(q)),
   );
   const filtered = view.filter !== 'TODO' || q !== '';
+  const { sorted, sort, requestSort } = useSortableList(rows, SORT_ACCESSORS);
 
   return (
     <div className="space-y-4">
@@ -79,31 +89,22 @@ export default function InvoicesPage() {
             <caption className="sr-only">Rechnungen mit Lieferant, Betrag, Fälligkeit, Status und nächster Aktion</caption>
             <thead className="bg-slate-50 text-xs font-medium text-slate-700">
               <tr>
-                <th scope="col" className="px-3 py-2.5">
-                  Lieferant und Rechnungsnummer
-                </th>
-                <th scope="col" className="w-32 px-3 py-2.5 text-right">
-                  Betrag
-                </th>
-                {compact ? null : (
-                  <th scope="col" className="w-32 px-3 py-2.5">
-                    Fällig am
-                  </th>
-                )}
-                <th scope="col" className="w-56 px-3 py-2.5">
-                  Status und nächste Aktion
-                </th>
+                <SortableTh label="Lieferant und Rechnungsnummer" sortKey="invoice" sort={sort} onSort={requestSort} className="px-3 py-2.5" />
+                <SortableTh label="Betrag" sortKey="amount" sort={sort} onSort={requestSort} className="w-32 px-3 py-2.5 text-right" />
+                {compact ? null : <SortableTh label="Eingegangen" sortKey="received" sort={sort} onSort={requestSort} className="w-40 px-3 py-2.5" />}
+                {compact ? null : <SortableTh label="Fällig am" sortKey="due" sort={sort} onSort={requestSort} className="w-32 px-3 py-2.5" />}
+                <SortableTh label="Status und nächste Aktion" sortKey="status" sort={sort} onSort={requestSort} className="w-56 px-3 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={compact ? 3 : 4} className="px-4 py-8 text-slate-600">
+                  <td colSpan={compact ? 3 : 5} className="px-4 py-8 text-slate-600">
                     Wird geladen …
                   </td>
                 </tr>
-              ) : rows.length > 0 ? (
-                rows.map((invoice) => {
+              ) : sorted && sorted.length > 0 ? (
+                sorted.map((invoice) => {
                   const status = statusLabel(invoice.status);
                   return (
                     <tr key={invoice.id} className="hover:bg-slate-50">
@@ -113,10 +114,11 @@ export default function InvoicesPage() {
                         </Link>
                         <div className="truncate text-[13px] text-slate-700">
                           {invoice.supplier ? <EntityLink entity={{ type: 'SUPPLIER', id: invoice.supplier.id, label: invoice.supplier.name, href: '/finance/suppliers' }} withPreview={false} /> : <span className="text-slate-600">Lieferant noch nicht zugeordnet</span>}
-                          {compact ? ` · fällig ${dueText(invoice.dueDate)}` : ''}
+                          {compact ? ` · eingegangen ${formatListDateTime(invoice.createdAt)} · fällig ${dueText(invoice.dueDate)}` : ''}
                         </div>
                       </td>
                       <td className="px-3 py-3 text-right align-top tabular-nums text-slate-900">{formatAmount(invoice.amountGross, invoice.currency)}</td>
+                      {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{formatListDateTime(invoice.createdAt)}</td>}
                       {compact ? null : <td className="px-3 py-3 align-top text-slate-800">{dueText(invoice.dueDate)}</td>}
                       <td className="px-3 py-3 align-top">
                         <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
@@ -127,7 +129,7 @@ export default function InvoicesPage() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={compact ? 3 : 4}>
+                  <td colSpan={compact ? 3 : 5}>
                     <EmptyState title={filtered ? 'Keine Rechnungen für diese Auswahl' : 'Keine Rechnungen zu bearbeiten'}>{filtered ? 'Passen Sie den Filter an oder setzen Sie ihn zurück.' : 'Alles erledigt – neue Rechnungen erscheinen hier, sobald sie eingehen.'}</EmptyState>
                   </td>
                 </tr>

@@ -60,10 +60,10 @@ export class SearchService {
       });
     }
     for (const contact of contacts) {
-      results.push({ type: 'CONTACT', id: contact.id, title: `${contact.firstName} ${contact.lastName}`.trim(), subtitle: contact.email ?? undefined, href: '/sales/contacts' });
+      results.push({ type: 'CONTACT', id: contact.id, title: `${contact.firstName} ${contact.lastName}`.trim(), subtitle: contact.email ?? undefined, href: `/sales/contacts?focus=${encodeURIComponent(contact.id)}` });
     }
     for (const company of companies) {
-      results.push({ type: 'COMPANY', id: company.id, title: company.name, href: '/sales/contacts' });
+      results.push({ type: 'COMPANY', id: company.id, title: company.name, subtitle: 'Kontakte des Unternehmens', href: `/sales/contacts?company=${encodeURIComponent(company.id)}` });
     }
     for (const task of tasks) {
       results.push({ type: 'TASK', id: task.id, title: task.title, statusLabel: task.status, href: internalHref('TASK', task.id) as string });
