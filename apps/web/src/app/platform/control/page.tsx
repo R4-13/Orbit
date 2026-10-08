@@ -97,7 +97,9 @@ function ConnectorRowItem({ item }: { item: ConnectorRow }) {
           <span className="font-medium text-slate-900">{item.name}</span>
           <span className="ml-2 text-xs text-slate-500">{item.provider} · {item.category}</span>
           <div className="text-xs text-slate-500">
-            {item.activeConnections} aktive Verbindungen bei {item.tenantsAffected} Mandanten{item.reason ? ` · ${item.reason}` : ''}
+            {item.activeConnections} aktive Verbindungen bei {item.tenantsAffected} Mandanten
+            {item.connectionHealth.problems > 0 ? <span className="ml-1 font-medium text-amber-800"> · {item.connectionHealth.problems} {item.connectionHealth.problems === 1 ? 'Verbindung braucht' : 'Verbindungen brauchen'} Aufmerksamkeit</span> : null}
+            {item.reason ? ` · ${item.reason}` : ''}
           </div>
         </div>
         <div className="flex items-center gap-2">

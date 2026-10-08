@@ -113,6 +113,31 @@ describe('Platform control: connectors, features, kill switches, tenant lifecycl
       expect(impact.effect).toContain('Keine neuen Verbindungen');
     });
 
+    it('Zustand der Verbindungen je Connector über alle Mandanten: nur Zähler; verbundene und problematische (Anmeldung nötig, Fehler, eingeschränkt) werden getrennt gezählt', async () => {
+      type Health = { total: number; connected: number; problems: number };
+      const healthOf = async () => Object.fromEntries(((await platform('get', '/connectors', tokens.operator).expect(200)).body as Array<{ connectorKey: string; connectionHealth: Health }>).map((c) => [c.connectorKey, c.connectionHealth]));
+      const before = await healthOf();
+      // Je Mandant und Connector gibt es höchstens eine Verbindung: ein Zustand je Connector.
+      const cases = [
+        { connectorType: 'HUBSPOT', status: 'AUTH_REQUIRED' },
+        { connectorType: 'TWILIO', status: 'ERROR' },
+        { connectorType: 'DATEV', status: 'DEGRADED' },
+        { connectorType: 'LEXWARE', status: 'DISCONNECTED' },
+        { connectorType: 'GOOGLE_CALENDAR', status: 'CONNECTED' },
+      ] as const;
+      for (const c of cases) await prisma.forTenantId(tenantA.id).integration.create({ data: { tenantId: tenantA.id, connectorType: c.connectorType, status: c.status, externalAccountDisplayName: `${c.connectorType.toLowerCase()}@e2e.example`, grantedCapabilities: [] } });
+      const after = await healthOf();
+      const delta = (key: string) => ({ total: after[key]!.total - before[key]!.total, connected: after[key]!.connected - before[key]!.connected, problems: after[key]!.problems - before[key]!.problems });
+      expect(delta('HUBSPOT')).toEqual({ total: 1, connected: 0, problems: 1 }); // Anmeldung nötig = Problem
+      expect(delta('TWILIO')).toEqual({ total: 1, connected: 0, problems: 1 });
+      expect(delta('DATEV')).toEqual({ total: 1, connected: 0, problems: 1 });
+      expect(delta('LEXWARE')).toEqual({ total: 1, connected: 0, problems: 0 }); // getrennt ist kein Problem
+      expect(delta('GOOGLE_CALENDAR')).toEqual({ total: 1, connected: 1, problems: 0 });
+      expect(JSON.stringify(after)).not.toContain('@e2e.example'); // keine Konten- oder Mandantendaten
+      const overview = (await platform('get', '/overview', tokens.operator).expect(200)).body as { notYetAvailable: string[] };
+      expect(overview.notYetAvailable.join(' ')).not.toContain('Connector-Gesundheit');
+    });
+
     it('OCF-01: Security sperrt GMAIL global – keine neuen Verbindungen, Capability nicht ausführbar mit verständlichem Grund, Katalog zeigt den Status; Aufheben nur mit connectors.write', async () => {
       const v0 = ((await platform('get', '/connectors', tokens.operator).expect(200)).body as Array<{ connectorKey: string; version: number }>).find((c) => c.connectorKey === 'GMAIL')!.version;
       const suspended = await platform('post', '/connectors/GMAIL/lifecycle', tokens.security).send({ to: 'SUSPENDED', expectedVersion: v0, reason: 'Sicherheitsvorfall beim Anbieter (Test)' }).expect(200);

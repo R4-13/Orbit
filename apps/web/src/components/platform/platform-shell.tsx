@@ -7,6 +7,7 @@ import { PLATFORM_SCOPES } from '@orbit/shared';
 import { Badge, Button } from '@orbit/ui';
 import { usePlatformAuth } from '../../lib/platform/platform-auth';
 import { platformRoleLabel } from '../../lib/platform/role-labels';
+import { useRuntimeHealth } from '../../lib/platform/use-platform-data';
 
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT';
 
@@ -25,6 +26,29 @@ const NAV: Array<{ href: string; label: string; scope: string }> = [
 function EnvironmentBadge({ environment }: { environment: string }) {
   const tone = environment === 'production' ? 'danger' : environment === 'staging' ? 'warning' : 'info';
   return <Badge tone={tone}>Umgebung: {environment}</Badge>;
+}
+
+/**
+ * Sobald die Hintergrundverarbeitung nicht in Ordnung ist, steht das auf **jeder** Plattformseite – nicht erst auf der Übersicht. Ein Stillstand bedeutet:
+ * Vorgänge und Postfach-Abgleich werden nicht bearbeitet. Wer die Laufzeit nicht lesen darf, sieht kein Banner (der Server verweigert die Messung ohnehin).
+ */
+function RuntimeBanner() {
+  const { hasScope } = usePlatformAuth();
+  const allowed = hasScope(PLATFORM_SCOPES.RUNTIME_READ);
+  const runtime = useRuntimeHealth(allowed);
+  if (!allowed || !runtime.data || runtime.data.status === 'OK') return null;
+  const down = runtime.data.status === 'DOWN';
+  const affected = runtime.data.queues.filter((q) => q.status !== 'OK');
+  return (
+    <div role={down ? 'alert' : 'status'} className={`border-b px-4 py-2 text-sm ${down ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
+        <span>
+          <strong>{down ? 'Hintergrundverarbeitung steht still.' : 'Hintergrundverarbeitung ist eingeschränkt.'}</strong> {affected.map((q) => q.note).filter(Boolean).join(' ')}
+        </span>
+        <Link href="/platform" className="underline">Zur Übersicht</Link>
+      </div>
+    </div>
+  );
 }
 
 export function PlatformShell({ children }: { children: ReactNode }) {
@@ -83,6 +107,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
           })}
         </nav>
       </header>
+      <RuntimeBanner />
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">{children}</main>
     </div>
   );

@@ -101,6 +101,10 @@ export const envSchema = z.object({
   PLATFORM_STEP_UP_MINUTES: z.coerce.number().positive().max(60).default(5),
   /** Plattformrichtlinie: längste Dauer einer Support-Session in Minuten (Amendment 03 §18.4) – kein Frontend-Standard. */
   PLATFORM_SUPPORT_SESSION_MAX_MINUTES: z.coerce.number().int().min(5).max(1440).default(120),
+  /** Takt der Überwachung der Hintergrundverarbeitung in Sekunden (0 = aus). Zustandswechsel stehen im Plattform-Audit. */
+  PLATFORM_RUNTIME_MONITOR_SECONDS: z.coerce.number().int().min(0).max(3600).default(30),
+  /** Optional: URL, an die jeder Zustandswechsel als JSON gesendet wird (http/https, nur Zahlen und Namen, keine Mandantendaten). Leer = kein Webhook. */
+  PLATFORM_ALERT_WEBHOOK_URL: z.preprocess((value) => (value === '' ? undefined : value), z.string().url().optional()),
   /** Betriebsumgebung der Control Plane (Amendment 03 §21). Unbekannte Werte gelten nie als production. */
   ORBIT_ENVIRONMENT: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   /** Datenraum, der für die Modellauswahl (Amendment 03 §22) gilt, solange der Mandant keine eigene Region trägt. */

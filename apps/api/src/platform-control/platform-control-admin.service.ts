@@ -205,6 +205,7 @@ export class PlatformControlAdminService {
   async listConnectors() {
     const rows = await this.prisma.withPlatformScope((tx) => tx.platformConnectorDefinition.findMany());
     const usage = await this.connectionUsage();
+    const health = await this.connectionHealth();
     return CONNECTOR_REGISTRY.map((meta) => {
       const row = rows.find((r) => r.connectorKey === meta.id);
       return {
@@ -221,6 +222,8 @@ export class PlatformControlAdminService {
         version: row?.version ?? 0,
         activeConnections: usage.get(meta.id)?.connections ?? 0,
         tenantsAffected: usage.get(meta.id)?.tenants ?? 0,
+        /** Zustand aller Verbindungen dieses Connectors über alle Mandanten (nur Zähler). */
+        connectionHealth: health.get(meta.id) ?? { total: 0, connected: 0, problems: 0 },
       };
     });
   }
@@ -250,6 +253,20 @@ export class PlatformControlAdminService {
     });
     this.control.invalidate();
     return { connectorKey, lifecycle: result.lifecycle, reason: result.reason, version: result.version };
+  }
+
+  /** Verbindungen je Connector nach Zustand. „Probleme“ = eingeschränkt, Anmeldung nötig oder Fehler – Verbindungen, die nicht (mehr) nutzbar sind, aber hergestellt waren. */
+  private async connectionHealth(): Promise<Map<string, { total: number; connected: number; problems: number }>> {
+    const rows = await this.prisma.withRlsBypass((tx) => tx.integration.groupBy({ by: ['connectorType', 'status'], _count: { _all: true } }));
+    const map = new Map<string, { total: number; connected: number; problems: number }>();
+    for (const row of rows) {
+      const entry = map.get(row.connectorType) ?? { total: 0, connected: 0, problems: 0 };
+      entry.total += row._count._all;
+      if (row.status === 'CONNECTED') entry.connected += row._count._all;
+      if (['DEGRADED', 'AUTH_REQUIRED', 'ERROR'].includes(row.status)) entry.problems += row._count._all;
+      map.set(row.connectorType, entry);
+    }
+    return map;
   }
 
   private async connectionUsage(): Promise<Map<string, { connections: number; tenants: number }>> {

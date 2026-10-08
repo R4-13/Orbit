@@ -11,6 +11,7 @@ import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.s
 import { PlatformIdentityService } from './identity/platform-identity.service';
 import { PlatformAuthController, PlatformController, PlatformIdentityController } from './platform.controllers';
 import { QueueModule } from '../queue/queue.module';
+import { PlatformRuntimeMonitorService } from './runtime/platform-runtime-monitor.service';
 import { PlatformRuntimeService } from './runtime/platform-runtime.service';
 import { PlatformSupportController } from './support/platform-support.controller';
 import { PlatformSupportService } from './support/platform-support.service';
@@ -24,7 +25,7 @@ import { PlatformTenantsService } from './tenants/platform-tenants.service';
 @Module({
   imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule, ProcessModule, QueueModule],
   controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController, PlatformFeaturesController, PlatformKillSwitchController, PlatformConnectorsController, PlatformTenantLifecycleController, PlatformSupportController],
-  providers: [PlatformAuthService, PlatformRuntimeService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
+  providers: [PlatformAuthService, PlatformRuntimeService, PlatformRuntimeMonitorService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
   exports: [PlatformAuditModule, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],
 })
 export class PlatformModule {}

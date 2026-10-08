@@ -239,6 +239,30 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(page.getByText('Queue/Worker-Gesundheit')).toHaveCount(0); // steht nicht mehr unter „Noch nicht verfügbar“
   });
 
+  test('Banner: bei laufendem Worker nicht sichtbar; bei Stillstand (simulierte Antwort) auf jeder Plattformseite mit dem Grund, bei Stau als Hinweis', async ({ page }) => {
+    await loginViaApiSession(page);
+    await page.goto('/platform/audit');
+    await expect(page.getByRole('heading', { name: 'Plattform-Audit' })).toBeVisible();
+    await expect(page.getByText(/Hintergrundverarbeitung (steht still|ist eingeschränkt)/)).toHaveCount(0); // echter Stack: Worker läuft
+
+    // Die Darstellung bei Ausfall und Stau wird mit vorgegebenen Antworten geprüft (der echte Ausfall ist per API-E2E und live belegt).
+    const queue = (over: Record<string, unknown>) => ({ name: 'workflow-runs', waiting: 0, active: 0, delayed: 0, failed: 0, workers: 1, oldestWaitingAgeSec: null, status: 'OK', note: '', ...over });
+    let health: Record<string, unknown> = { status: 'DOWN', checkedAt: new Date().toISOString(), queues: [queue({ workers: 0, status: 'DOWN', note: 'Kein Worker verbunden: Aufträge dieser Warteschlange werden nicht bearbeitet.' })] };
+    await page.route('**/api/v1/platform/runtime', (route) => route.fulfill({ json: health }));
+    await page.goto('/platform/tenants');
+    const down = page.getByRole('alert').filter({ hasText: 'Hintergrundverarbeitung steht still.' });
+    await expect(down).toBeVisible();
+    await expect(down).toContainText('Kein Worker verbunden');
+    await page.goto('/platform/support');
+    await expect(page.getByRole('alert').filter({ hasText: 'Hintergrundverarbeitung steht still.' })).toBeVisible(); // auf jeder Seite
+
+    health = { status: 'DEGRADED', checkedAt: new Date().toISOString(), queues: [queue({ waiting: 5, oldestWaitingAgeSec: 900, status: 'DEGRADED', note: 'Der älteste wartende Auftrag wartet seit 15 Minuten; die Verarbeitung kommt nicht hinterher.' })] };
+    await page.goto('/platform/features');
+    const degraded = page.getByRole('status').filter({ hasText: 'Hintergrundverarbeitung ist eingeschränkt.' });
+    await expect(degraded).toBeVisible();
+    await expect(degraded).toContainText('15 Minuten');
+  });
+
   test('keine Verbindung zwischen den Domänen: die Mandanten-Oberfläche verlinkt den Plattformbereich nicht, ein Mandantenzugang öffnet ihn nicht', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await expect(page.locator('a[href^="/platform"]')).toHaveCount(0);

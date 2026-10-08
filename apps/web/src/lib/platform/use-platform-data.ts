@@ -68,6 +68,7 @@ export interface ConnectorRow {
   version: number;
   activeConnections: number;
   tenantsAffected: number;
+  connectionHealth: { total: number; connected: number; problems: number };
 }
 
 export interface ConnectorImpact {
