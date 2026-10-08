@@ -32,4 +32,4 @@ der Business-Projektion (Eingaben, Fakten, Meldungen) und der Diagnose.
 
 ## Offen
 
-Laufsuche nach Support-ID/Correlation-ID über alle Objekte (`/platform/diagnostics/{correlationId}`), Diagnose-Export (`PLATFORM_DIAGNOSTIC_EXPORTED`) und Plattform-UI (Phase OPS-4).
+Laufsuche nach Support-ID/Correlation-ID über alle Objekte (`/platform/diagnostics/{correlationId}`), Plattform-UI (Phase OPS-4).

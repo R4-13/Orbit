@@ -145,6 +145,23 @@ export class PlatformController {
     return this.diagnostics.caseDiagnostics(principal, { tenantId: query.tenantId, caseId, reason: query.reason });
   }
 
+  /** Diagnose-Export als Datei (OAS-05): Step-up, Begründung, Audit mit Prüfsumme. */
+  @Get('diagnostics/cases/:caseId/export')
+  @RequirePlatformScope(PLATFORM_SCOPES.DIAGNOSTICS_READ)
+  @RequireStepUp()
+  async exportCaseDiagnostics(
+    @CurrentPlatformPrincipal() principal: PlatformPrincipal,
+    @Param('caseId') caseId: string,
+    @Query() query: DiagnosticsQueryDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<string> {
+    const file = await this.diagnostics.exportCase(principal, { tenantId: query.tenantId, caseId, reason: query.reason });
+    response.setHeader('Content-Type', 'application/json; charset=utf-8');
+    response.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    response.setHeader('Cache-Control', 'no-store');
+    return file.content;
+  }
+
   /**
    * Plattform-Audit (Amendment 03 §19). Der Detailgrad hängt von der Rolle ab: volle Sicht (`audit.read`), Fachbereichssicht (`audit.read.scoped`)
    * oder nur eigene Handlungen (`audit.read.own`). Es gibt keinen Schreib-/Änderungs-/Löschpfad (OAS-03).

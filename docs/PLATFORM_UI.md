@@ -23,6 +23,7 @@ Stand 07.10.2026 · Amendment 03 · Status: **TESTED LOCALLY** (Playwright gegen
 | `/platform/control` | Notschalter (auslösen/lösen), Anbindungskatalog mit Zustandswechsel und Wirkungsvorschau; je Connector, wie viele Verbindungen über alle Mandanten verbunden sind und wie viele **Aufmerksamkeit brauchen** (Anmeldung nötig, Fehler, eingeschränkt) – nur Zähler | ja (Step-up, Begründung) |
 | `/platform/features` | Feature-Flags: Liste mit Standardwert, Zustand, Ausnahmen-Zahlen; **anlegen** (startet als Entwurf), **ändern** (Standardwert, Lebenszyklus, Mandantensichtbarkeit) mit aktueller Verteilung über alle Mandanten, Pflichtbegründung, Versionsprüfung, Step-up | ja |
 | `/platform/support` | Support-Sitzungen: anfordern (begründet, befristet, ausdrückliche Zugriffsarten), **Vier-Augen-Freigabe** durch eine andere Person (Step-up), beenden, widerrufen; lesender Mandantenkontext nur für die **anfordernde** Person der aktiven Sitzung | ja |
+| `/platform/diagnostics` | Diagnose eines Vorgangs (Mandant, Vorgangs-ID, Begründung): Plan, Schritte mit Zustand/Versuchen/geschwärztem Fehler, Aktionen mit Belegen; **Export als JSON-Datei** (Step-up, Kopfdaten, zweite Schwärzung, Prüfsumme und Umfang im Audit `PLATFORM_DIAGNOSTIC_EXPORTED`); nie Mailtexte oder Nutzdaten | ja (Export) |
 | `/platform/audit` | unveränderliches Plattform-Audit, Filter Ereignistyp/Mandant, seitenweise | – |
 
 ## Bewusste Lücken

@@ -263,6 +263,49 @@ test.describe('Plattformbetrieb (UI)', () => {
     await expect(degraded).toContainText('15 Minuten');
   });
 
+  test('Diagnose: Vorgang laden (begründet, nur Metadaten) und als Datei exportieren (Step-up, Prüfsumme im Audit)', async ({ page }) => {
+    // Ein echter Vorgang des Demo-Mandanten (von den vorherigen Specs angelegt).
+    const tenantLogin = (await (await fetch(`${API_BASE_URL}/api/v1/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: DEMO_USERS.admin, password: DEMO_PASSWORD }) })).json()) as { accessToken: string; user: { tenantId: string } };
+    const cases = (await (await fetch(`${API_BASE_URL}/api/v1/cases/overview?filter=ALL`, { headers: { Authorization: `Bearer ${tenantLogin.accessToken}` } })).json()) as { items: Array<{ id: string }> };
+    expect(cases.items.length, 'ein Vorgang des Demo-Mandanten').toBeGreaterThan(0);
+    const caseId = cases.items[0]!.id;
+    const tenants = (await (await fetch(`${API_BASE_URL}/api/v1/platform/tenants`, { headers: { Authorization: `Bearer ${(await platformApiLogin(EMAIL as string, PASSWORD as string)).accessToken}` } })).json()) as Array<{ tenantId: string; slug: string; displayName: string }>;
+    const demo = tenants.find((t) => t.tenantId === tenantLogin.user.tenantId)!;
+
+    await loginViaApiSession(page);
+    await page.goto('/platform/diagnostics');
+    const form = page.getByRole('form', { name: 'Diagnose abrufen' });
+    await expect(form.getByRole('button', { name: 'Diagnose laden' })).toBeDisabled();
+    await form.getByLabel('Mandant').selectOption(demo.tenantId);
+    await form.getByLabel('Vorgangs-ID').fill(caseId);
+    await form.getByLabel(/Begründung/).fill('UI-Test: Diagnose prüfen');
+    await form.getByRole('button', { name: 'Diagnose laden' }).click();
+    await expect(page.getByRole('heading', { name: /^Vorgang / })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Schritt' })).toBeVisible();
+
+    // Export: Datei mit Kopfdaten, ohne Secrets; die Seite zeigt den Hinweis auf das Audit.
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Als Datei exportieren (JSON)' }).click();
+    const stepUp = page.getByRole('dialog', { name: 'Aktion bestätigen' });
+    if (await stepUp.waitFor({ state: 'visible', timeout: 4000 }).then(() => true, () => false)) {
+      await stepUp.getByLabel('Passwort').fill(PASSWORD as string);
+      await stepUp.getByRole('button', { name: 'Bestätigen' }).click();
+    }
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe(`diagnose-${caseId}.json`);
+    const stream = await download.createReadStream();
+    let text = '';
+    for await (const chunk of stream) text += chunk;
+    const file = JSON.parse(text) as { exportVersion: number; reason: string; projection: { caseId: string } };
+    expect(file).toMatchObject({ exportVersion: 1, reason: 'UI-Test: Diagnose prüfen', projection: { caseId } });
+    expect(text).not.toMatch(/Bearer\s+[A-Za-z0-9._-]{10,}|sk-[A-Za-z0-9]{10,}/);
+    await expect(page.getByRole('status').filter({ hasText: 'Exportiert als' })).toBeVisible();
+
+    await page.goto('/platform/audit');
+    await page.getByLabel('Ereignistyp').fill('PLATFORM_DIAGNOSTIC_EXPORTED');
+    await expect(page.getByText('PLATFORM_DIAGNOSTIC_EXPORTED').first()).toBeVisible();
+  });
+
   test('keine Verbindung zwischen den Domänen: die Mandanten-Oberfläche verlinkt den Plattformbereich nicht, ein Mandantenzugang öffnet ihn nicht', async ({ page }) => {
     await loginViaUi(page, DEMO_USERS.admin);
     await expect(page.locator('a[href^="/platform"]')).toHaveCount(0);

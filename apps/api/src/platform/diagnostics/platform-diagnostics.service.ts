@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { NotFoundError, redactString, type OrchestrationDiagnosticProjection, type PlatformPrincipal } from '@orbit/shared';
+import { createHash } from 'node:crypto';
+import { Inject, Injectable } from '@nestjs/common';
+import type { OrbitEnv } from '@orbit/config';
+import { NotFoundError, redactString, redactValue, type OrchestrationDiagnosticProjection, type PlatformPrincipal } from '@orbit/shared';
+import { ORBIT_ENV } from '../../config/env.token';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PlatformAuditService } from '../audit/platform-audit.service';
 
@@ -21,7 +24,36 @@ export class PlatformDiagnosticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: PlatformAuditService,
+    @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
+
+  /**
+   * Diagnose-Export (OAS-05): dieselbe Projektion wie die Ansicht, als Datei – mit Kopfdaten (Version, Zeitpunkt, Umgebung, Rollen des Exportierenden, Begründung),
+   * nochmals geschwärzt (zweite Stufe zusätzlich zur Projektion). Der Export verlässt das System, deshalb verlangt die Route ein Step-up; das Audit hält Umfang,
+   * Größe und Prüfsumme des exportierten Inhalts fest – nie den Inhalt selbst.
+   */
+  async exportCase(principal: PlatformPrincipal, input: { tenantId: string; caseId: string; reason: string }): Promise<{ filename: string; content: string }> {
+    const projection = await this.caseDiagnostics(principal, input);
+    const envelope = {
+      exportVersion: 1,
+      exportedAt: new Date().toISOString(),
+      environment: this.env.ORBIT_ENVIRONMENT,
+      exportedByRoles: principal.platformRoles,
+      reason: redactString(input.reason),
+      projection,
+    };
+    const content = JSON.stringify(redactValue(envelope), null, 2);
+    await this.audit.record({
+      eventType: 'PLATFORM_DIAGNOSTIC_EXPORTED',
+      actor: { userId: principal.userId, roles: principal.platformRoles },
+      targetType: 'Case',
+      targetId: input.caseId,
+      targetTenantId: input.tenantId,
+      reason: input.reason,
+      extra: { format: 'json', exportVersion: 1, bytes: Buffer.byteLength(content, 'utf8'), sha256: createHash('sha256').update(content).digest('hex'), nodes: projection.nodes.length, actions: projection.actions.length },
+    });
+    return { filename: `diagnose-${input.caseId}.json`, content };
+  }
 
   async caseDiagnostics(principal: PlatformPrincipal, input: { tenantId: string; caseId: string; reason: string; supportSessionId?: string }): Promise<OrchestrationDiagnosticProjection> {
     const db = this.prisma.forTenantId(input.tenantId);

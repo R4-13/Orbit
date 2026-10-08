@@ -531,7 +531,9 @@ export class OrchestratorService {
     if (!(await this.events.markProcessed(tenantId, event.id))) return;
     if (event.type !== CASE_EVENT_TYPES.COMMUNICATION_RECEIVED) return;
 
-    const subscription = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', eventType: 'communication.received' }, orderBy: { createdAt: 'asc' } });
+    // Maßgeblich ist nur die Erwartung des aktiven Plans; Erwartungen eines abgelösten Plans werden mit ihm beendet und nie als Empfänger gewählt.
+    const activePlan = await this.store.getActive(tenantId, caseRow.id);
+    const subscription = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', eventType: 'communication.received', ...(activePlan ? { planId: activePlan.plan.id } : {}) }, orderBy: { createdAt: 'asc' } });
     if (!subscription || !subscription.planId || !subscription.nodeKey) {
       if (!TERMINAL_CASE_STATUSES.has(caseRow.orchestrationStatus)) {
         await this.lifecycle.transition(tenantId, caseRow.id, { to: caseRow.orchestrationStatus === 'RECEIVED' ? 'RECEIVED' : 'MANUAL_REVIEW', attentionReasons: [...caseRow.attentionReasons, 'Eine neue Nachricht ist eingegangen, auf die kein Schritt wartet.'].slice(-5) });

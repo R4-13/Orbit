@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import * as http from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -315,6 +315,40 @@ describe('Case orchestration view (e2e)', () => {
       expect(rows.length).toBeGreaterThan(0);
       expect(rows[0]).toMatchObject({ targetTenantId: tenantId, tenantId: null });
       expect(JSON.stringify(rows[0].payload)).toContain('Ticket 4711');
+    });
+
+    it('OAS-05 Export: Datei mit Kopfdaten, nur nach Step-up, ohne Fachinhalte und ohne Secrets (auch nicht aus Fehlermeldungen); das Audit hält Prüfsumme und Umfang fest, nie den Inhalt', async () => {
+      const exportOf = (bearer: string, id = caseId, query = `tenantId=${tenantId}&reason=Kundenanfrage+Ticket+4712`) => request(app.getHttpServer()).get(`/api/v1/platform/diagnostics/cases/${id}/export?${query}`).set(auth(bearer));
+      // Ein Secret in einer Fehlermeldung eines Knotens: der Export darf es nie enthalten.
+      const secret = 'sk-live-ABCDEF1234567890SECRET';
+      await prisma.withRlsBypass((tx) => tx.processPlanNode.updateMany({ where: { tenantId, plan: { caseId } }, data: { errorMessage: `Aufruf fehlgeschlagen: Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2ln key ${secret}` } }));
+
+      await exportOf(supportToken).expect(403); // ohne Step-up
+      const platformAuth = app.get(PlatformAuthService);
+      await platformAuth.stepUp(await platformAuth.authenticate(supportToken), pw);
+      await exportOf(financeOnlyToken).expect(403); // ohne Diagnose-Scope
+      await exportOf(supportToken, caseId, `tenantId=${tenantId}`).expect(400); // Begründung ist Pflicht
+      await exportOf(supportToken, randomUUID()).expect(404);
+
+      const response = await exportOf(supportToken).expect(200);
+      expect(response.headers['content-disposition']).toBe(`attachment; filename="diagnose-${caseId}.json"`);
+      expect(response.headers['content-type']).toContain('application/json');
+      expect(response.headers['cache-control']).toBe('no-store');
+      const text = response.text;
+      const file = JSON.parse(text) as { exportVersion: number; environment: string; exportedByRoles: string[]; reason: string; projection: OrchestrationDiagnosticProjection };
+      expect(file).toMatchObject({ exportVersion: 1, exportedByRoles: ['PLATFORM_SUPPORT'], reason: 'Kundenanfrage Ticket 4712' });
+      expect(file.projection.caseId).toBe(caseId);
+      expect(file.projection.nodes.length).toBeGreaterThan(0);
+      for (const forbidden of [secret, 'eyJhbGciOiJIUzI1NiJ9', 'Welche Menge benötigen Sie?', SENDER, 'Wir hätten gern ein Angebot']) expect(text).not.toContain(forbidden);
+      expect(Object.keys(file)).not.toContain('email'); // keine Person des Exportierenden, nur Rollen
+
+      const rows = await prisma.withPlatformScope((tx) => tx.auditLog.findMany({ where: { domain: 'PLATFORM', eventType: 'PLATFORM_DIAGNOSTIC_EXPORTED', entityId: caseId } }));
+      expect(rows).toHaveLength(1);
+      const extra = (rows[0]!.payload as { extra: { sha256: string; bytes: number; format: string } }).extra;
+      expect(extra).toMatchObject({ format: 'json', bytes: Buffer.byteLength(text, 'utf8') });
+      expect(extra.sha256).toBe(createHash('sha256').update(text).digest('hex')); // die Prüfsumme ist die der ausgelieferten Datei
+      expect(JSON.stringify(rows[0]!.payload)).not.toContain('"projection"'); // nie der Inhalt
+      expect(rows[0]).toMatchObject({ targetTenantId: tenantId, tenantId: null });
     });
 
     it('Begründung ist Pflicht; ohne Diagnose-Scope (FinOps) ist der Zugriff verboten', async () => {

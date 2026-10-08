@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { MockLLMProvider, ToolFailedError, type ToolRegistry } from '@orbit/agent-core';
-import { PERMISSIONS, triageFixtureForScenario } from '@orbit/shared';
+import { PERMISSIONS, PLATFORM_ROLES, triageFixtureForScenario, type PlatformPrincipal } from '@orbit/shared';
 import { LLM_PROVIDER, TOOL_REGISTRY } from '../src/agent/agent.tokens';
 import { IntakeService } from '../src/intake/intake.service';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
@@ -13,6 +13,10 @@ import { BlueprintRegistryService } from '../src/process/blueprint-registry.serv
 import { CaseFactsService } from '../src/process/case-facts.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { ProcessSweepService } from '../src/process/process-sweep.service';
+import { CaseCommandsService, type CommandActor } from '../src/process/case-commands.service';
+import { PlatformControlAdminService } from '../src/platform-control/platform-control-admin.service';
+import { PlatformAuthService } from '../src/platform/auth/platform-auth.service';
+import { PlatformIdentityService } from '../src/platform/identity/platform-identity.service';
 import { ReferenceProcessService } from '../src/process/reference/reference-process.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -40,6 +44,7 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
   let llm: MockLLMProvider;
   let sent: Array<{ to: string; subject: string; bodyText: string; threadId?: string; inReplyTo?: string }>;
   const tenants: string[] = [];
+  const platformUsers: string[] = [];
   const connectionByTenant = new Map<string, string>();
 
   async function newTenant(options: { autonomousClarification: boolean; limits?: Record<string, number>; mutateBlueprint?: (blueprint: TestBlueprint) => void }): Promise<string> {
@@ -78,6 +83,32 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     return { tenantId, channel: 'SIMULATED', provider: 'simulated', externalEventId: randomUUID(), occurredAt: new Date(), sender: { address: SENDER, displayName: 'Petra Adaptiv' }, recipients: [{ address: 'info@musterwerk.example' }], direction: 'INBOUND', connectionId: connectionByTenant.get(tenantId), ...overrides };
   }
 
+
+  /** Eine Betreiberidentität (Owner) für Plattformänderungen mitten im Ablauf eines Vorgangs. */
+  async function platformOwner(): Promise<PlatformPrincipal> {
+    const password = `Pf-${randomUUID().slice(0, 12)}-9!`;
+    const email = `ad-${randomUUID().slice(0, 8)}@platform-test.example`;
+    platformUsers.push((await app.get(PlatformIdentityService).create(null, { email, displayName: 'AD Owner', password, roles: [PLATFORM_ROLES.PLATFORM_OWNER] })).id);
+    const auth = app.get(PlatformAuthService);
+    return auth.authenticate((await auth.login(email, password)).accessToken);
+  }
+  const approver = (tenantId: string): CommandActor => ({ id: randomUUID(), tenantId, permissions: [PERMISSIONS.CASE_READ, PERMISSIONS.CASE_MANAGE, PERMISSIONS.APPROVAL_DECIDE] });
+  const command = (type: string, revision: number, payload: Record<string, unknown>) => ({ commandId: randomUUID(), type, expectedCaseRevision: revision, payload });
+
+  /** Erste Nachricht (Rückfrage geht autonom raus) und Antwort mit allen Angaben: der Vorgang steht danach bei der Freigabe der Angebotszustellung. */
+  async function reachDelivery(tenantId: string, tag: string): Promise<string> {
+    seedTriage();
+    seedExtraction([{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'Fenster' }]);
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Angebot Fenster', content: 'Wir möchten ein Angebot für Fenster.', threadId: `thr-${tag}`, rfcMessageId: `<${tag}-1@kunde.example>` }));
+    const caseId = first.case!.id;
+    seedExtraction([
+      { key: 'request.quantity', value: 12, evidence: '12 Fenster' },
+      { key: 'request.delivery_address', value: 'Hauptstr. 5, 12345 Berlin', evidence: 'Hauptstr. 5, 12345 Berlin' },
+    ]);
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Angebot Fenster', content: '12 Fenster, Hauptstr. 5, 12345 Berlin.', threadId: `thr-${tag}`, inReplyTo: '<sent-1@mail.example>', rfcMessageId: `<${tag}-2@kunde.example>` }));
+    return caseId;
+  }
+
   beforeAll(async () => {
     app = await bootstrapE2eApp();
     prisma = app.get(PrismaService);
@@ -96,6 +127,7 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.withPlatformScope((tx) => tx.platformUser.deleteMany({ where: { id: { in: platformUsers } } }));
     for (const id of tenants) await prisma.withRlsBypass((tx) => tx.tenant.delete({ where: { id } }));
     await app.close();
   });
@@ -235,6 +267,90 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('§29.5 Notschalter KI-Planer und Neuplanung: die Neuplanung fällt auf den festen Referenzgraphen zurück, nichts wird erneut versendet, es gibt genau einen aktiven Plan – und der Fall setzt bei der Antwort fort', async () => {
+    const actor = await platformOwner();
+    const admin = app.get(PlatformControlAdminService);
+    const tenantId = await newTenant({ autonomousClarification: true });
+    seedTriage();
+    seedExtraction([{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'Fenster' }]);
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Angebot Fenster', content: 'Wir möchten ein Angebot für Fenster.', threadId: 'thr-ks', rfcMessageId: '<ks1@kunde.example>' }));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1);
+    const intentsBefore = await prisma.forTenantId(tenantId).actionIntent.count({ where: { caseId } });
+    const revisionsBefore = await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId } });
+
+    await admin.setKillSwitch(actor, 'planner.adaptive', { engaged: true, reason: 'Test: KI-Planer gestoppt während der Neuplanung' });
+    try {
+      // Der echte Weg: der Befehl „Neu planen“ einer Person, danach läuft der Vorgang weiter.
+      await app.get(CaseCommandsService).execute(approver(tenantId), caseId, command('REPLAN', (await caseOf(tenantId, caseId)).revision, {}));
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).not.toBe('MANUAL_REVIEW'); // der Referenzgraph ist der sichere Rückfall, keine Prüfung nötig
+
+      const plans = await prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId } });
+      expect(plans.length).toBe(revisionsBefore + 1);
+      expect(plans.filter((p) => p.status === 'ACTIVE')).toHaveLength(1); // nie zwei aktive Pläne
+      expect(plans.filter((p) => p.source === 'LLM_PLANNER')).toHaveLength(0); // der Planer war aus: kein Modellplan
+      expect(sent).toHaveLength(1); // die bereits bestätigte Rückfrage wurde nicht wiederholt
+      expect(await prisma.forTenantId(tenantId).actionIntent.count({ where: { caseId } })).toBe(intentsBefore);
+      const nodes = (await store.getActive(tenantId, caseId))!.nodes;
+      expect(nodes.filter((n) => n.state === 'RUNNING')).toHaveLength(0);
+      // Genau eine Erwartung wartet, und zwar die des aktiven Plans; die des abgelösten ist beendet – sonst verbrauchte eine Antwort die falsche und der Vorgang bliebe stehen.
+      const waits = await prisma.forTenantId(tenantId).waitSubscription.findMany({ where: { caseId } });
+      expect(waits.filter((w) => w.status === 'WAITING')).toHaveLength(1);
+      expect(waits.filter((w) => w.status === 'WAITING')[0]!.planId).toBe(plans.find((p) => p.status === 'ACTIVE')!.id);
+      expect(waits.filter((w) => w.planId !== plans.find((p) => p.status === 'ACTIVE')!.id).every((w) => w.status === 'CANCELLED')).toBe(true); // die Erwartung des abgelösten Plans ist beendet, keine veraltete wartet
+      expect(['FAILED', 'CANCELLED']).not.toContain((await caseOf(tenantId, caseId)).orchestrationStatus);
+
+      // Feste Referenzgraphen laufen mit abgeschaltetem KI-Planer weiter: die Antwort setzt denselben Fall fort.
+      seedExtraction([
+        { key: 'request.quantity', value: 12, evidence: '12 Fenster' },
+        { key: 'request.delivery_address', value: 'Hauptstr. 5, 12345 Berlin', evidence: 'Hauptstr. 5, 12345 Berlin' },
+      ]);
+      await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Angebot Fenster', content: '12 Fenster, Hauptstr. 5, 12345 Berlin.', threadId: 'thr-ks', inReplyTo: '<sent-1@mail.example>', rfcMessageId: '<ks2@kunde.example>' }));
+      expect(await prisma.forTenantId(tenantId).quote.count({ where: { caseId } })).toBe(1);
+      expect(sent).toHaveLength(1); // die Zustellung wartet weiter auf Freigabe
+    } finally {
+      await admin.setKillSwitch(actor, 'planner.adaptive', { engaged: false, reason: 'Test beendet' });
+    }
+  });
+
+  it('§29.5 Connector-Sperre während einer offenen Freigabe: die Freigabe führt nichts aus, der Vorgang wartet mit verständlichem Grund; nach Aufhebung wird genau einmal gesendet', async () => {
+    const actor = await platformOwner();
+    const admin = app.get(PlatformControlAdminService);
+    const commands = app.get(CaseCommandsService);
+    const tenantId = await newTenant({ autonomousClarification: true });
+    const caseId = await reachDelivery(tenantId, 'cs');
+    expect(await nodeState(tenantId, caseId, 'deliver')).toBe('AWAITING_APPROVAL');
+    expect(sent).toHaveLength(1);
+    const delivery = await prisma.forTenantId(tenantId).actionIntent.findFirstOrThrow({ where: { caseId, purpose: 'QUOTE_DELIVERY', capabilityKey: 'email.send' } });
+
+    const versionOf = async () => (await admin.listConnectors()).find((c) => c.connectorKey === 'GMAIL')!.version;
+    await admin.setConnectorLifecycle(actor, 'GMAIL', { to: 'SUSPENDED', reason: 'Test: Anbieterstörung', expectedVersion: await versionOf() });
+    try {
+      // Eine Person gibt frei, während der Connector gesperrt ist: es wird nichts versendet.
+      await commands.execute(approver(tenantId), caseId, command('APPROVE_ACTION', (await caseOf(tenantId, caseId)).revision, { intentId: delivery.id }));
+      expect(sent).toHaveLength(1);
+      const blocked = (await store.getActive(tenantId, caseId))!.nodes.find((n) => n.nodeKey === 'deliver')!;
+      expect(blocked).toMatchObject({ state: 'BLOCKED', errorCode: 'CAPABILITY_NOT_EXECUTABLE' });
+      const row = await caseOf(tenantId, caseId);
+      expect(row.orchestrationStatus).toBe('WAITING_FOR_EXTERNAL_SYSTEM');
+      expect(row.attentionReasons.join(' ')).toMatch(/gesperrt|nicht ausführbar|Anbieter/i); // verständlicher Grund, kein Technikcode
+      expect(row.completedAt).toBeNull();
+      expect((await prisma.forTenantId(tenantId).actionIntent.findUniqueOrThrow({ where: { id: delivery.id } })).status).not.toBe('CONFIRMED'); // nichts als erledigt vermerkt
+    } finally {
+      await admin.setConnectorLifecycle(actor, 'GMAIL', { to: 'ACTIVE', reason: 'Test: Störung behoben', expectedVersion: await versionOf() });
+    }
+
+    // Sperre aufgehoben: der Schritt wird wiederholt und sendet genau einmal; der Vorgang schließt ab.
+    // Der echte Weg: der Befehl „Schritt wiederholen“; die frühere Freigabe gilt weiter (sie wurde nicht entwertet), eine neue ist nicht nötig.
+    expect((await prisma.forTenantId(tenantId).actionIntent.findUniqueOrThrow({ where: { id: delivery.id } })).status).toBe('APPROVED');
+    await commands.execute(approver(tenantId), caseId, command('RETRY_STEP', (await caseOf(tenantId, caseId)).revision, { stepRunId: 'deliver' }));
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.subject).toMatch(/^Ihr Angebot /);
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
+    await app.get(ProcessSweepService).sweep();
+    expect(sent).toHaveLength(2); // auch ein weiterer Durchlauf versendet nichts doppelt
   });
 
   it('AD-06: widersprüchliche Antwort → Konflikt sichtbar, keine automatische riskante Fortsetzung, kein Angebot', async () => {

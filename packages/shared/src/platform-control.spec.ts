@@ -104,6 +104,21 @@ describe('evaluateFlag (OCF-03/04)', () => {
     expect(evaluateFlag(f, ctx('tenant-7', ['all'])).value).toBe(evaluateFlag(f, ctx('tenant-7', ['all'])).value);
   });
 
+  it('Änderung während des Rollouts (§29.5): wer bei 30 % aktiv war, bleibt es bei 60 % und 100 %; ein Rollout wächst nur, nichts flackert', () => {
+    const tenantIds = Array.from({ length: 400 }, (_, i) => `tenant-${i}`);
+    const activeAt = (percent: number) => new Set(tenantIds.filter((id) => evaluateFlag(flag({ cohortOverrides: [{ cohort: 'all', value: true, percent }] }), ctx(id, ['all'])).value === true));
+    const [a30, a60, a100] = [activeAt(30), activeAt(60), activeAt(100)];
+    for (const id of a30) expect(a60.has(id)).toBe(true);
+    for (const id of a60) expect(a100.has(id)).toBe(true);
+    expect(a30.size).toBeLessThan(a60.size);
+    expect(a100.size).toBe(tenantIds.length);
+    // Eine Änderung an anderer Stelle (Tenant-Override für einen einzigen Mandanten, neuer Standardwert) verändert niemand anderen.
+    const changed = flag({ cohortOverrides: [{ cohort: 'all', value: true, percent: 30 }], tenantOverrides: [{ tenantId: 'tenant-1', value: true }] });
+    for (const id of tenantIds.filter((t) => t !== 'tenant-1')) expect(evaluateFlag(changed, ctx(id, ['all'])).value).toBe(a30.has(id));
+    // Ein Rückbau (60 % → 30 %) nimmt nur die zuletzt hinzugekommenen weg, die ursprünglichen 30 % bleiben unverändert.
+    expect([...a30].every((id) => activeAt(30).has(id))).toBe(true);
+  });
+
   it('abgelaufene, zurückgezogene und Entwurfs-Flags wirken nie weiter', () => {
     const overrides = { tenantOverrides: [{ tenantId: 't1', value: true }] };
     expect(evaluateFlag(flag({ ...overrides, expiresAt: new Date(Date.now() - 1000) }), ctx('t1'))).toEqual({ value: false, source: 'EXPIRED' });

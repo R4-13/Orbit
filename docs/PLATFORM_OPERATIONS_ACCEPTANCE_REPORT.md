@@ -48,7 +48,7 @@ Behobener Fehler am Rand: `WorkerModule` brach beim Start ab (fehlende Abhängig
 
 ## 5. Verifikation
 
-**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 39 Suiten / 310 Tests grün, Playwright 110 bestanden / 1 übersprungen (inkl. 16 Plattform-UI-Tests mit Betreiber-Zugang).
+**Automatisiert (07.10.2026, TESTED LOCALLY):** `pnpm lint` 14/14 Tasks, Typecheck sauber, Unit (API 442, shared 145, agent-core 51, integration-core 32, ui 16, config 13, domain 10, web 40), API-E2E 39 Suiten / 315 Tests grün, Playwright 112 bestanden / 1 übersprungen (inkl. 19 Plattform-UI-Tests mit Betreiber-Zugang).
 Befehle: `pnpm lint`, `pnpm -r exec tsc --noEmit`, `pnpm test`, API-E2E mit `set -a && source ../../.env && set +a`, `npx jest --config test/jest-e2e.json --runInBand` (Worker vorher stoppen; die Anmelde-Drosselung wird nur im Testprozess angehoben, `apps/api/test/utils/e2e-env.ts` — sonst summierte sie sich über Suiten und führte ab der Mitte zu 429).
 
 **Live im Docker-Stack (LIVE TESTED, lokale Entwicklungsumgebung, Build nach Commit `52f8b81` plus Folgefixes):**

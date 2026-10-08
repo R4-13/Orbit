@@ -96,6 +96,19 @@ export interface AiUsageRow {
   avgLatencyMs: number | null;
 }
 
+export interface DiagnosticProjectionView {
+  caseId: string;
+  tenantId: string;
+  caseStatus: string;
+  caseRevision: number;
+  generatedAt: string;
+  planRevisions: Array<{ planId: string; revision: number; status: string; source: string; blueprintKey?: string; blueprintVersion?: string; createdAt: string }>;
+  nodes: Array<{ planRevision: number; nodeKey: string; type: string; state: string; attempts: number; executionMode?: string; errorCode?: string; errorMessage?: string; retryAt?: string }>;
+  actions: Array<{ intentId: string; nodeKey: string; capabilityKey: string; purpose?: string; status: string; errorCode?: string; receipts: Array<{ status: string; executionMode: string }> }>;
+  agentRuns: Array<{ id: string; agentType: string; status: string }>;
+  correlations: Array<{ emailMessageId: string; status: string; rule: string }>;
+}
+
 export interface RuntimeQueueRow {
   name: string;
   status: 'OK' | 'DEGRADED' | 'DOWN';

@@ -37,6 +37,8 @@ async function bootstrap() {
   app.enableCors({
     origin: env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
     credentials: true,
+    // Der Browser darf den Dateinamen eines Downloads (z. B. Diagnose-Export) über Origins hinweg nur lesen, wenn der Server den Header freigibt.
+    exposedHeaders: ['Content-Disposition'],
   });
 
   app.enableVersioning({

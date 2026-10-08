@@ -96,6 +96,20 @@ export async function platformFetch<T>(path: string, options: RequestInit = {}):
   return response.json() as Promise<T>;
 }
 
+/** Datei-Abruf (z. B. Diagnose-Export): wie `platformFetch`, liefert aber den Rohtext und den vom Server vorgegebenen Dateinamen. */
+export async function platformDownload(path: string): Promise<{ filename: string; text: string }> {
+  const auth = getStoredPlatformAuth();
+  let response = await rawFetch(path, {}, auth?.accessToken);
+  if (response.status === 401 && auth) {
+    const token = await refreshAccessToken();
+    if (token) response = await rawFetch(path, {}, token);
+  }
+  if (!response.ok) throw await toError(response);
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'diagnose.json';
+  return { filename, text: await response.text() };
+}
+
 export async function platformLogin(email: string, password: string): Promise<void> {
   const response = await rawFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
   if (!response.ok) throw await toError(response);

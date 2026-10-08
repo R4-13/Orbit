@@ -136,6 +136,14 @@ export class PlanStoreService {
       for (const old of previous) {
         await tx.processPlan.update({ where: { id: old.id }, data: { status: 'SUPERSEDED' } });
         await tx.processPlanNode.updateMany({ where: { tenantId, planId: old.id, state: { notIn: [...TERMINAL_STATES] } }, data: { state: 'SUPERSEDED' } });
+        // Erwartungen des abgelösten Plans: wurde der Wartepunkt in den neuen Plan übernommen (Knoten steht dort weiter auf WAITING), zieht die Erwartung mit um – sonst würde
+        // eine spätere Antwort von der veralteten Erwartung verbraucht und die Wartestelle des neuen Plans bliebe für immer offen. Alle übrigen Erwartungen enden mit dem alten Plan.
+        const carried = new Set((await tx.processPlanNode.findMany({ where: { tenantId, planId, state: 'WAITING' }, select: { nodeKey: true } })).map((n) => n.nodeKey));
+        const waiting = await tx.waitSubscription.findMany({ where: { tenantId, planId: old.id, status: 'WAITING' } });
+        for (const subscription of waiting) {
+          if (subscription.nodeKey && carried.has(subscription.nodeKey)) await tx.waitSubscription.update({ where: { id: subscription.id }, data: { planId } });
+          else await tx.waitSubscription.update({ where: { id: subscription.id }, data: { status: 'CANCELLED', resolvedAt: new Date() } });
+        }
         await this.events.appendInTx(tx, tenantId, plan.caseId, { type: CASE_EVENT_TYPES.PLAN_SUPERSEDED, payload: { planId: old.id, revision: old.revision, by: plan.revision } });
       }
       await tx.processPlan.update({ where: { id: planId }, data: { status: 'ACTIVE', activatedAt: new Date() } });

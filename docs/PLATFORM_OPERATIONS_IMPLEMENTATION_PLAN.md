@@ -144,7 +144,7 @@ echte Guards); wo ein externer Anbieter beteiligt wäre, ist es **TESTED WITH MO
 | OPS-28 | COMPLETE | `expectedVersion` überall, Konkurrenztests (Route, Flag, Modell, Verbindung, Session) | – |
 | OPS-29 | COMPLETE | Mandanten-UI unverändert bis auf entfallene technische Felder im Knotenpanel | – |
 | OPS-30 | COMPLETE | Governance-Index | – |
-| OPS-31 | PARTIAL | OPR-01…08, OAI-01…10, OCF-01…06, OAS-01…04 automatisiert | OAS-05 (Diagnose-Export) und Teile von §29.5 (Flag-Änderung während Rollout, Connector-Sperre während laufender Aktion, Worker-Neustart, Kill Switch + Replan gleichzeitig) nicht abgedeckt |
+| OPS-31 | COMPLETE (bis auf Prozess-Neustart) | OPR-01…08, OAI-01…10, OCF-01…06, OAS-01…05 (Diagnose-Export: Datei, Step-up, ohne Secrets, Prüfsumme im Audit) automatisiert; §29.5: Flag-Änderung während Rollout (Unit, wachsender Rollout ohne Flackern), Connector-Sperre während offener Freigabe (E2E), Notschalter + Neuplanung (E2E, fand und behob einen echten Fehler, Annahme 535) | echter Neustart des Worker-Prozesses mitten im Vorgang nicht automatisiert (nur Sweep-Wiederaufnahme AD-13 und Live-Test mit gestopptem Worker) |
 | OPS-32 | COMPLETE | Diagnose/Support mandantenscharf, gleiche 404-Antwort | – |
 | OPS-33 | COMPLETE | begründete, auditierte, minimierte Zugriffe | – |
 | OPS-34 | COMPLETE | `PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md` | – |
