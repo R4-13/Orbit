@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CaseEventsService } from './case-events.service';
+import { LiveReconciliationService } from './live-reconciliation.service';
 import { OrchestratorService } from './orchestrator.service';
 
 const BATCH = 50;
@@ -26,6 +27,7 @@ export class ProcessSweepService {
     private readonly prisma: PrismaService,
     private readonly events: CaseEventsService,
     private readonly orchestrator: OrchestratorService,
+    private readonly live: LiveReconciliationService,
   ) {}
 
   async sweep(now = new Date()): Promise<SweepResult> {
@@ -53,6 +55,16 @@ export class ProcessSweepService {
     for (const w of overdueWaits) add(w.tenantId, w.caseId);
     for (const c of stale) add(c.tenantId, c.id);
     for (const n of retries) add(n.tenantId, n.plan.caseId);
+
+    // Live-Abgleich: blockierte Schritte wieder aufnehmen, simulierte live wiederholen – danach werden die betroffenen Fälle ohnehin vorangebracht.
+    try {
+      for (const c of await this.live.candidates(now)) {
+        const result = await this.live.reconcile(c.tenantId, c.caseId);
+        if (result.resumed.length > 0 || result.redone.length > 0) add(c.tenantId, c.caseId);
+      }
+    } catch (error) {
+      this.logger.warn(`sweep: live reconciliation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     let advanced = 0;
     let failed = 0;

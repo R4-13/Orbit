@@ -110,6 +110,24 @@ export class ActionLedgerService {
     return { intent, created: true };
   }
 
+  /**
+   * Wird ein simulierter Schritt live wiederholt, gilt die Freigabe, die eine Person für genau diesen Inhalt erteilt hat, weiter: die freigegebene Nachricht
+   * soll ja hinausgehen. Nur bei gleichem Inhalt (Nutzlast-Hash) und nur, wenn die frühere Freigabe tatsächlich erteilt wurde.
+   */
+  async carryOverApproval(tenantId: string, intent: ActionIntent): Promise<boolean> {
+    if (intent.status !== 'PREPARED') return false;
+    const scoped = this.prisma.forTenantId(tenantId);
+    const predecessor = await scoped.actionIntent.findFirst({
+      where: { caseId: intent.caseId, nodeKey: intent.nodeKey, payloadHash: intent.payloadHash, status: 'CANCELLED', errorCode: 'SIMULATION_SUPERSEDED', approvalId: { not: null }, NOT: { id: intent.id } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!predecessor?.approvalId) return false;
+    const approval = await scoped.approval.findFirst({ where: { id: predecessor.approvalId } });
+    if (approval?.status !== 'APPROVED') return false;
+    const result = await scoped.actionIntent.updateMany({ where: { id: intent.id, status: 'PREPARED' }, data: { status: 'APPROVED', approvalId: approval.id } });
+    return result.count === 1;
+  }
+
   async get(tenantId: string, intentId: string): Promise<ActionIntent> {
     const found = await this.prisma.forTenantId(tenantId).actionIntent.findFirst({ where: { id: intentId } });
     if (!found) throw new NotFoundError('Action intent not found.', { intentId });

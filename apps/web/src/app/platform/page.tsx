@@ -81,11 +81,13 @@ function WorkBacklogCard() {
         {work.data ? (
           <>
             {attention.length > 0 ? (
-              <ul role="alert" className="mb-3 space-y-1 text-sm text-amber-900">
-                {attention.map((a) => (
-                  <li key={a.code}>{a.message}</li>
-                ))}
-              </ul>
+              <div role="alert" className="mb-3 text-sm text-amber-900">
+                <ul className="space-y-1">
+                  {attention.map((a) => (
+                    <li key={a.code}>{a.message}</li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
             <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
               {rows.map(([label, value, hint]) => (

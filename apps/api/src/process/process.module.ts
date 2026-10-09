@@ -16,6 +16,7 @@ import { CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
 import { HumanInteractionService } from './human-interaction.service';
+import { LiveReconciliationService } from './live-reconciliation.service';
 import { OrchestratorService } from './orchestrator.service';
 import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
@@ -57,6 +58,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     AppointmentSlotsService,
     DraftEditingService,
     ProcessSweepService,
+    LiveReconciliationService,
     CaseOrchestrationService,
     HumanInteractionService,
   ],

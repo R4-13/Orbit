@@ -29,6 +29,7 @@ import { CaseFactsService } from './case-facts.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
 import { PlannerService } from './planner.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
+import { LiveReconciliationService } from './live-reconciliation.service';
 
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
@@ -96,6 +97,7 @@ export class OrchestratorService {
     private readonly policy: PolicyEnforcementService,
     private readonly approvals: ApprovalsService,
     private readonly audit: AuditService,
+    private readonly live: LiveReconciliationService,
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
   ) {}
 
@@ -330,8 +332,10 @@ export class OrchestratorService {
         if (error instanceof ActionLimitReachedError) return this.blockNode(tenantId, caseRow, graph, node, def, error.code, error.message, 'MANUAL_REVIEW');
         throw error;
       }
-      const { intent } = prepared;
+      let { intent } = prepared;
       intentId = intent.id;
+      // Eine live wiederholte, bereits von einer Person freigegebene Nachricht (gleicher Inhalt) braucht keine zweite Freigabe.
+      if (prepared.created && decision === 'REQUIRE_APPROVAL' && (await this.ledger.carryOverApproval(tenantId, intent))) intent = await this.ledger.get(tenantId, intent.id);
 
       if (intent.status === 'CONFIRMED') {
         // Already done (e.g. replan, lease takeover, duplicate delivery): reuse the receipt, never execute again.
@@ -498,6 +502,8 @@ export class OrchestratorService {
   }
 
   private async completeCase(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, ctx: EvalContext): Promise<void> {
+    // Ein Vorgang wird nicht mit einem simulierten Schritt abgeschlossen, solange der echte Weg offen ist: erst wird live wiederholt.
+    if ((await this.live.reconcile(tenantId, caseRow.id, { runningCompleteKey: node.nodeKey })).redone.length > 0) return;
     const blueprint = await this.blueprintFor(tenantId, caseRow);
     const evidence = (await this.ledger.confirmedEffects(tenantId, caseRow.id)).map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
     let met: boolean;

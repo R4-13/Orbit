@@ -137,6 +137,8 @@ export interface CaseNodeDetail {
   capability?: { key: string; description: string; sideEffect: string };
   /** Business explanation of the current state, derived from facts — never raw model output. */
   stateExplanation: string;
+  /** Hinweis zum Live-Abgleich: warum ein Schritt (noch) simuliert ist bzw. auf eine Verbindung wartet und ob ORBIT ihn automatisch live wiederholt. */
+  liveHint?: string;
   /** Das Ergebnis des Schritts in Worten (was erkannt wurde, was fehlt, welcher nächste Schritt gewählt wurde) – nie der Roh-Output. */
   resultLines?: string[];
   /** Der Schritt wurde mindestens einmal wiederholt (ohne Zähler). */

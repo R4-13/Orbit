@@ -60,6 +60,8 @@ export const AUDIT_EVENT_TYPES = [
   'INTEGRATION_AUTH_REQUIRED',
   /** Einstellungen einer Verbindung geändert (z. B. welche Kalender für Terminvorschläge gelesen werden). */
   'INTEGRATION_CONFIG_UPDATED',
+  /** Ein Schritt eines Vorgangs wurde automatisch wieder aufgenommen oder live wiederholt (Live-Abgleich). */
+  'PROCESS_LIVE_UPGRADE',
   'INTEGRATION_RECOVERED',
   'INTEGRATION_TEST_FAILED',
   'WEBHOOK_RECEIVED',

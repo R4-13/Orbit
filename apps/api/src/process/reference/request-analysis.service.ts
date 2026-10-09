@@ -68,7 +68,8 @@ export class RequestAnalysisService {
 
     const scoped = this.prisma.forTenantId(ctx.tenantId);
     // Nach einer gesendeten Rückfrage wird nicht mehr neu analysiert: die Antwort gehört zur ursprünglichen Fragestellung.
-    const alreadyAsked = await scoped.emailMessage.count({ where: { caseId: ctx.caseId, direction: 'OUTBOUND' } });
+    // Eine nur simulierte Sendung (Beleg „sim-…“) hat die Kundschaft nie erreicht und zählt nicht.
+    const alreadyAsked = await scoped.emailMessage.count({ where: { caseId: ctx.caseId, direction: 'OUTBOUND', OR: [{ providerMessageId: null }, { NOT: { providerMessageId: { startsWith: 'sim-' } } }] } });
     if (alreadyAsked > 0) return { mode: 'LIVE', skipped: 'ALREADY_ASKED' };
 
     const message = await scoped.emailMessage.findFirst({ where: { caseId: ctx.caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' } });

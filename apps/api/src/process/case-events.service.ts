@@ -28,6 +28,8 @@ export const CASE_EVENT_TYPES = {
   CONTEXT_RESOLUTION_ATTEMPTED: 'context.resolution_attempted',
   /** Die KI hat die Anfrage analysiert (Art, vorhandene/fehlende Angaben, Terminbedarf, nächster Schritt). */
   REQUIREMENTS_ANALYZED: 'requirements.analyzed',
+  /** Ein Schritt wurde wieder aufgenommen bzw. live wiederholt, weil der echte Weg (Verbindung, KI-Dienst, Versand) verfügbar wurde. */
+  LIVE_UPGRADE: 'live.upgrade',
   /** Der Kundschaft wurde ein Vor-Ort- oder Telefontermin vorgeschlagen (mit den Zeiten bzw. dem Grund, warum keine genannt wurden). */
   APPOINTMENT_PROPOSED: 'appointment.proposed',
   COMPLETION_EVALUATED: 'completion.evaluated',

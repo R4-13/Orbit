@@ -89,12 +89,13 @@ test.describe('Vorgangsansicht: Ergebnis der Anfrageprüfung', () => {
       const body = (await response.json()) as Record<string, unknown>;
       await route.fulfill({
         response,
-        json: { ...body, state: 'SUCCEEDED', resultLines: ['Anfrage erkannt als: Heizungstausch im Einfamilienhaus.', 'Gewählter nächster Schritt: Einen Vor-Ort-Termin vorschlagen. Grund: Aufstellfläche muss geprüft werden.', 'Wird erfragt (1): Wie ist das Gebäude gedämmt?'] },
+        json: { ...body, state: 'SUCCEEDED', liveHint: 'Dieser Schritt lief simuliert. ORBIT wiederholt ihn automatisch live, sobald ein echter KI-Dienst verfügbar ist.', resultLines: ['Anfrage erkannt als: Heizungstausch im Einfamilienhaus.', 'Gewählter nächster Schritt: Einen Vor-Ort-Termin vorschlagen. Grund: Aufstellfläche muss geprüft werden.', 'Wird erfragt (1): Wie ist das Gebäude gedämmt?'] },
       });
     });
     await page.goto(`/cases/${processCase!.id}?tab=orchestration`);
     await page.getByRole('button', { name: 'Liste' }).click();
     await page.getByRole('list', { name: 'Schritte des Vorgangs in Reihenfolge' }).getByRole('listitem').first().getByRole('button').click();
+    await expect(page.getByTestId('live-hint')).toContainText('ORBIT wiederholt ihn automatisch live');
     const result = page.getByTestId('node-result');
     await expect(result).toContainText('Anfrage erkannt als: Heizungstausch im Einfamilienhaus.');
     await expect(result).toContainText('Gewählter nächster Schritt: Einen Vor-Ort-Termin vorschlagen.');

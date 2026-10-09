@@ -55,6 +55,11 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
         {detail.retried ? <span className="text-xs text-slate-600">Wiederholt</span> : null}
       </div>
       <p className="text-slate-700">{detail.stateExplanation}</p>
+      {detail.liveHint ? (
+        <p data-testid="live-hint" className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[13px] text-blue-900">
+          {detail.liveHint}
+        </p>
+      ) : null}
       {detail.resultLines && detail.resultLines.length > 0 ? (
         <Section title="Ergebnis">
           <ul className="list-disc space-y-1 pl-4 text-slate-800" data-testid="node-result">
