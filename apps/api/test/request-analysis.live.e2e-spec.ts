@@ -17,6 +17,7 @@ import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 
 const FIXTURES = join(__dirname, '../../../fixtures/process');
 const LIVE = process.env.LIVE_AI === '1';
+const NL = String.fromCharCode(10);
 
 /**
  * LIVE-Nachweis mit dem echten Modell (nur mit `LIVE_AI=1`, sonst übersprungen): eine realistische Anfrage läuft durch Triage, Extraktion und die
@@ -71,7 +72,11 @@ const LIVE = process.env.LIVE_AI === '1';
       threadId: randomUUID(),
       rfcMessageId: `<${randomUUID()}@kunde.example>`,
     } as NormalizedIntakeEvent);
-    return result.case!.id;
+    if (!result.case) {
+      const decision = await prisma.forTenantId(tenantId).intakeDecision.findFirst({ where: { intakeEventId: result.intakeEventId } });
+      throw new Error(`Kein Vorgang entstanden: ${JSON.stringify(result).slice(0, 300)} ENTSCHEIDUNG ${JSON.stringify(decision).slice(0, 900)}`);
+    }
+    return result.case.id;
   };
 
   it('Fenstertausch im Altbau: erkennt die Angaben, fragt gezielt Weiteres und schlägt einen Vor-Ort-Termin vor', async () => {
@@ -96,6 +101,25 @@ const LIVE = process.env.LIVE_AI === '1';
     const numbered = (draft!.bodyText.match(/^\d+\./gm) ?? []).length;
     expect(numbered + (draft!.bodyText.includes('Termin') ? 1 : 0)).toBeGreaterThanOrEqual(2);
     expect(draft!.bodyText.toLowerCase()).not.toContain('welche menge');
+    expect(sent).toHaveLength(0);
+  }, 180_000);
+
+  it('Küche renovieren (keine Katalogleistung): keine Rückfrage nach dem Produkt, keine falsche Menge, gezielte Fragen', async () => {
+    const caseId = await request(
+      'Angebot für Küchenrenovierung',
+      'Hallo, ich muss meine Küche erneuern und benötige ein Angebot zum Abbau der Geräte, Streichen der 4 Wände und Aufbau der Geräte. Wann könnte das passieren? Danke, Anna Beispiel',
+    );
+    const facts = await app.get(CaseFactsService).getCurrent(tenantId, caseId);
+    const reqs = (await app.get(PlanStoreService).getActive(tenantId, caseId))!.nodes.find((n) => n.nodeKey === 'reqs')!;
+    const draft = await prisma.forTenantId(tenantId).communicationDraft.findFirst({ where: { caseId, purpose: 'CLARIFICATION' } });
+    console.log(`--- FAKTEN (Küche) ---${NL}${facts.map((f) => `${f.key} = ${JSON.stringify(f.value)} [${f.status}]`).join(NL)}`);
+    console.log(`--- AUSGABE reqs ---${NL}${JSON.stringify(reqs.output, null, 1).slice(0, 1800)}`);
+    console.log(`--- ENTWURF (Küche) ---${NL}${draft?.bodyText ?? '(kein Entwurf)'}`);
+    expect(facts.find((f) => f.key === 'request.quantity')).toBeUndefined(); // „4 Wände“ ist keine Menge
+    if (draft) {
+      expect(draft.bodyText).not.toContain('Für welche Leistung');
+      expect(draft.bodyText).not.toContain('Welche Menge');
+    }
     expect(sent).toHaveLength(0);
   }, 180_000);
 });

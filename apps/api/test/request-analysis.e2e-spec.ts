@@ -83,11 +83,11 @@ describe('Request analysis in the reference process (e2e)', () => {
   });
   const mail = (overrides: Partial<NormalizedIntakeEvent> = {}): NormalizedIntakeEvent => ({ tenantId: '', channel: 'SIMULATED', provider: 'simulated', externalEventId: randomUUID(), occurredAt: new Date(), sender: { address: SENDER, displayName: 'Thomas Meier' }, recipients: [{ address: 'info@musterwerk.example' }], direction: 'INBOUND', ...overrides });
 
-  async function submitRequest(tenantId: string, over: Record<string, unknown> = {}) {
+  async function submitRequest(tenantId: string, over: Record<string, unknown> = {}, input: { content?: string; extraction?: Array<{ key: string; value: string | number; evidence: string }> } = {}) {
     seedTriage();
-    seedExtraction([{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'neue Fenster' }]);
+    seedExtraction(input.extraction ?? [{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'neue Fenster' }]);
     script('submit_request_analysis', analysis(over));
-    const result = await intake.handleIntakeEvent(tenantId, undefined, mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Heizung und Fenster', content: REQUEST_TEXT, threadId: 'thr-a', rfcMessageId: '<a1@firma-meier.example>' }));
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Heizung und Fenster', content: input.content ?? REQUEST_TEXT, threadId: 'thr-a', rfcMessageId: '<a1@firma-meier.example>' }));
     return result.case!.id;
   }
 
@@ -194,6 +194,35 @@ describe('Request analysis in the reference process (e2e)', () => {
     const proposed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED } });
     expect(proposed.payload).toMatchObject({ source: 'NONE', reason: 'Der Kalender hat nicht geantwortet.' });
     busy.mockRestore();
+  });
+
+  it('Leistung nicht im Katalog (z. B. Küche streichen): die Kundschaft wird nicht nach dem Produkt gefragt, das sie längst genannt hat – Zuordnung und Preis sind Sache eines Mitarbeiters', async () => {
+    const tenantId = await newTenant();
+    const caseId = await submitRequest(
+      tenantId,
+      {
+        requestType: 'Küchenrenovierung (Malerarbeiten, Bodenbelag)',
+        summary: 'Abbau der Küchenmöbel, Streichen von Wänden und Decke, neuer Bodenbelag.',
+        knownDetails: [],
+        missingInformation: [{ key: 'flaeche', label: 'Fläche', question: 'Wie groß ist die zu streichende Fläche insgesamt (in m²)?' }],
+        siteVisit: { recommended: true, reason: 'Aufmaß der Räume und Zustand des Bodens müssen vor Ort beurteilt werden.' },
+        nextStep: 'PROPOSE_SITE_VISIT',
+      },
+      { content: 'Hallo, ich muss meine Küche erneuern und benötige ein Angebot zum Abbau der Geräte, Streichen der 4 Wände und Aufbau der Geräte. Wann könnte das passieren? Danke, Tom', extraction: [] },
+    );
+
+    const reqs = (await store.getActive(tenantId, caseId))!.nodes.find((n) => n.nodeKey === 'reqs')!;
+    const output = reqs.output as { missing: Array<{ key: string }>; internalMissing: Array<{ key: string }>; complete: boolean };
+    expect(output.missing.map((m) => m.key)).not.toContain('request.product_sku');
+    expect(output.missing.map((m) => m.key)).not.toContain('request.quantity');
+    expect(output.internalMissing.map((m) => m.key)).toEqual(expect.arrayContaining(['request.product_sku', 'request.quantity']));
+    expect(output.complete).toBe(false);
+
+    const draft = await prisma.forTenantId(tenantId).communicationDraft.findFirstOrThrow({ where: { caseId, purpose: 'CLARIFICATION' } });
+    expect(draft.bodyText).not.toContain('Für welche Leistung');
+    expect(draft.bodyText).not.toContain('Welche Menge');
+    expect(draft.bodyText).toContain('Wie groß ist die zu streichende Fläche insgesamt (in m²)?');
+    expect(draft.bodyText).toContain('vor Ort an');
   });
 
   it('eingeschleuste Rückfragen (Link, Zahlungsaufforderung) werden nicht an die Kundschaft gesendet', async () => {
