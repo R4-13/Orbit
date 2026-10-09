@@ -14,7 +14,10 @@ import { BlueprintRegistryService } from '../blueprint-registry.service';
 import { hashOf } from '../canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
+import { AppointmentSlotsService } from './appointment-slots.service';
 import { clarificationBody, quoteDeliveryBody, replySubject } from './communication-templates';
+import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isSafeCustomerText } from './request-analysis';
+import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
 import { renderSimplePdf, type PdfLine } from './simple-pdf';
@@ -70,12 +73,15 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly policy: PolicyEnforcementService,
     private readonly blueprints: BlueprintRegistryService,
     private readonly caseEvents: CaseEventsService,
+    private readonly analysis: RequestAnalysisService,
+    private readonly appointments: AppointmentSlotsService,
   ) {}
 
   onModuleInit(): void {
     for (const tool of [
       this.resolveContext(),
       this.submitExtractedFacts(),
+      this.analysis.submitTool(),
       this.extractMessageFacts(),
       this.resolveRequirements(),
       this.draftCommunication(),
@@ -174,6 +180,10 @@ export class ReferenceProcessTools implements OnModuleInit {
         const allowed = new Map<string, { type: string; description: string }>();
         for (const f of blueprint?.requiredFacts ?? []) if (f.key !== 'contact.email') allowed.set(f.key, { type: f.type, description: f.question ?? f.key });
         for (const r of rules) if (!allowed.has(r.factKey)) allowed.set(r.factKey, { type: r.valueType, description: r.question });
+        // Vom Anfrage-Analysator ermittelte Angaben dieses Vorgangs (und die Terminwahl): die Antwort auf die Rückfrage wird ihnen zugeordnet.
+        const analysed = await this.analysis.latest(ctx.tenantId, caseId);
+        for (const r of analysed?.requirements ?? []) if (!allowed.has(r.key)) allowed.set(r.key, { type: r.type, description: r.question });
+        if (analysed && appointmentKindOf(analysed.nextStep)) allowed.set(APPOINTMENT_AGREED_KEY, { type: 'string', description: 'Der von der Person gewählte Termin bzw. Terminwunsch (Datum, Uhrzeit) oder ihre Erreichbarkeit.' });
 
         const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
           if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
@@ -235,20 +245,37 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
   private resolveRequirements(): ToolDefinition {
     return {
       name: 'resolve_requirements',
-      description: 'Ermittelt aus Blueprint und freigegebenen Regeln, welche Angaben für die Leistung noch fehlen.',
+      description: 'Ermittelt aus Blueprint, freigegebenen Regeln und einer KI-Analyse der Anfrage, welche Angaben für die Leistung noch fehlen und ob ein Termin nötig ist.',
       inputSchema: z.object({ purpose: z.string().optional() }),
       policyAction: 'requirements.resolve',
       execute: async (_input, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
         const blueprint = await this.blueprintOfCase(ctx.tenantId, caseId);
-        const current = await this.facts.getCurrent(ctx.tenantId, caseId);
-        const sku = current.find((f) => f.key === 'request.product_sku' && f.status === 'CONFIRMED')?.value;
+        const sku = (await this.facts.getCurrent(ctx.tenantId, caseId)).find((f) => f.key === 'request.product_sku' && f.status === 'CONFIRMED')?.value;
         const item = typeof sku === 'string' ? await this.reference.findItem(ctx.tenantId, sku) : undefined;
         const rules = item ? await this.reference.rulesForCategory(ctx.tenantId, item.category) : [];
 
-        const needed = new Map<string, { question: string; valueType?: string }>();
+        const needed = new Map<string, { question: string; valueType?: string; internal?: boolean }>();
         for (const f of blueprint?.requiredFacts ?? []) needed.set(f.key, { question: f.question ?? `Bitte geben Sie ${f.key} an.`, valueType: f.type });
         for (const r of rules) needed.set(r.factKey, { question: r.question, valueType: r.valueType });
+
+        // KI-Analyse der Anfrage (einmal je Vorgang): Art der Anfrage, vorhandene und gezielt fehlende Angaben, Terminbedarf, nächster Schritt.
+        // Nach der Analyse sind ihre Angaben als Fakten festgehalten – die folgende Auswertung sieht sie wie jede andere Angabe.
+        const outcome = await this.analysis.analyzeOnce(
+          { tenantId: ctx.tenantId, caseId, agentRunId: ctx.agentRunId },
+          { keys: new Set(needed.keys()), description: [...needed].map(([key, def]) => `${key} (${def.question})`).join('; ') },
+        );
+        const analysis = outcome.result;
+        const appointmentKind = analysis ? appointmentKindOf(analysis.nextStep) : undefined;
+        if (analysis) {
+          for (const r of analysis.requirements) if (!needed.has(r.key)) needed.set(r.key, { question: r.question, valueType: r.type });
+          if (appointmentKind) {
+            needed.set(APPOINTMENT_AGREED_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Welcher der vorgeschlagenen Termine für den Vor-Ort-Termin passt Ihnen?' : 'Zu welchen Zeiten erreichen wir Sie telefonisch?', valueType: 'string' });
+            // Ohne das Ergebnis des Termins (Aufmaß, Befund, Gesprächsergebnis) gibt es kein verlässliches Angebot: eine Person trägt es nach (wird nicht erfragt).
+            needed.set(APPOINTMENT_OUTCOME_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Ergebnis des Vor-Ort-Termins (Aufmaß, Befund)' : 'Ergebnis des Telefonats', valueType: 'string', internal: true });
+          }
+        }
+        const current = await this.facts.getCurrent(ctx.tenantId, caseId);
 
         // Auflösungsleiter (Amendment 02 v1.2 §30): bevor ein Mensch ins Spiel kommt, ist die externe Sachrückfrage nur zulässig, wenn die Policy sie nicht sperrt.
         const clarificationMode = await this.policy.resolveMode(ctx.tenantId, 'email.send.clarification');
@@ -256,18 +283,28 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
 
         const requirements: Record<string, string> = {};
         const missing: Array<{ key: string; question: string }> = [];
+        const internalMissing: Array<{ key: string; question: string }> = [];
         for (const [key, def] of needed) {
           const forKey = current.filter((f) => f.key === key);
           const state = forKey.some((f) => f.status === 'CONFLICTED') ? 'CONFLICTED' : forKey.some((f) => f.status === 'CONFIRMED') ? 'SATISFIED' : forKey.some((f) => f.status === 'CANDIDATE') ? 'INVALID' : 'MISSING';
           requirements[key] = state;
-          if (state !== 'SATISFIED' && key !== 'contact.email') missing.push({ key, question: def.question });
+          if (state !== 'SATISFIED' && key !== 'contact.email') (def.internal ? internalMissing : missing).push({ key, question: def.question });
           const attempt = resolutionAttemptFor(key, state, forKey.map((f) => ({ id: f.id, status: f.status, sourceType: f.sourceType })), { externalClarificationAvailable });
           // Protokollierung darf die Anforderungsermittlung nie verhindern; derselbe Faktenstand wird nur einmal festgehalten.
           await this.caseEvents
             .append(ctx.tenantId, caseId, { type: CASE_EVENT_TYPES.CONTEXT_RESOLUTION_ATTEMPTED, payload: { ...attempt }, dedupeKey: resolutionDedupeKey(caseId, attempt) })
             .catch(() => undefined);
         }
-        return { requirements, missing, complete: missing.length === 0 && requirements['contact.email'] === 'SATISFIED', category: item?.category ?? null, executionMode: 'SIMULATED' };
+        return {
+          requirements,
+          missing,
+          internalMissing,
+          complete: missing.length === 0 && internalMissing.length === 0 && requirements['contact.email'] === 'SATISFIED',
+          category: item?.category ?? null,
+          analysis: analysis ? { requestType: analysis.requestType, summary: analysis.summary, nextStep: analysis.nextStep, siteVisit: analysis.siteVisit } : null,
+          // LIVE nur, wenn eine echte KI die Anfrage analysiert hat; sonst wertet nur das feste Regelwerk aus.
+          executionMode: analysis ? 'LIVE' : 'SIMULATED',
+        };
       },
     };
   }
@@ -299,9 +336,27 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         let subject = replySubject(inbound?.subject);
         let bodyText: string;
         const attachmentDocumentIds: string[] = [];
+        let appointmentInfo: { kind: string; source: string; slotCount: number } | undefined;
         if (input.purpose === 'CLARIFICATION') {
           if (!input.missing || input.missing.length === 0) throw new ToolFailedError('Es gibt keine offenen Fragen für die Rückfrage.', { errorCode: 'NOTHING_TO_ASK' });
-          bodyText = clarificationBody({ originalSubject: inbound?.subject, questions: input.missing, companyName });
+          const analysed = await this.analysis.latest(ctx.tenantId, caseId);
+          const kind = analysed ? appointmentKindOf(analysed.nextStep) : undefined;
+          // Terminvorschläge nur aus der echten Verfügbarkeit; ohne verbundenen Kalender bittet die Nachricht um Terminwünsche – es werden keine Zeiten erfunden.
+          const proposal = kind ? await this.appointments.propose(ctx.tenantId, kind) : undefined;
+          const questions = input.missing.filter((q) => q.key !== APPOINTMENT_AGREED_KEY);
+          bodyText = clarificationBody({
+            originalSubject: inbound?.subject,
+            questions,
+            companyName,
+            summary: analysed?.summary && isSafeCustomerText(analysed.summary).safe ? analysed.summary : undefined,
+            appointment: kind && proposal ? { kind, slots: proposal.slots.map((slot) => slot.label) } : undefined,
+          });
+          if (kind && proposal) {
+            await this.caseEvents
+              .append(ctx.tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED, payload: { kind, source: proposal.source, slots: proposal.slots.map((s) => ({ start: s.start.toISOString(), end: s.end.toISOString() })), reason: proposal.reason ?? null } })
+              .catch(() => undefined);
+            appointmentInfo = { kind, source: proposal.source, slotCount: proposal.slots.length };
+          }
         } else {
           if (!input.quoteId || !input.documentId) throw new ToolFailedError('Für den Angebotsversand fehlen Angebot oder Dokument.', { errorCode: 'MISSING_QUOTE_DOCUMENT' });
           const quote = await this.prisma.forTenantId(ctx.tenantId).quote.findFirst({ where: { id: input.quoteId, caseId } });
@@ -320,7 +375,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           threadId: inbound?.threadId ?? undefined,
           inReplyTo: inbound?.rfcMessageId ?? undefined,
         });
-        return { draftId: draft.id, version: draft.version, contentHash: draft.contentHash, to: draft.toAddress, subject: draft.subject, executionMode: 'LIVE' };
+        return { draftId: draft.id, version: draft.version, contentHash: draft.contentHash, to: draft.toAddress, subject: draft.subject, appointment: appointmentInfo ?? null, executionMode: 'LIVE' };
       },
     };
   }

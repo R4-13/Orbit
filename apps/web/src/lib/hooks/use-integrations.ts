@@ -26,9 +26,10 @@ export function useConnectors() {
 export function useStartConnect() {
   return useMutation({
     // `send: true` additionally asks for the Gmail send permission (an explicit, separate consent).
-    mutationFn: (input: IntegrationConnectorType | { connectorType: IntegrationConnectorType; send?: boolean }) => {
-      const { connectorType, send } = typeof input === 'string' ? { connectorType: input, send: false } : input;
-      return apiFetch<{ authorizationUrl: string }>(`/v1/integrations/${connectorType}/connect${send ? '?send=true' : ''}`, { method: 'POST' });
+    mutationFn: (input: IntegrationConnectorType | { connectorType: IntegrationConnectorType; send?: boolean; calendar?: boolean }) => {
+      const { connectorType, send, calendar } = typeof input === 'string' ? { connectorType: input, send: false, calendar: false } : { calendar: false, ...input };
+      const params = [send ? 'send=true' : '', calendar ? 'calendar=true' : ''].filter(Boolean).join('&');
+      return apiFetch<{ authorizationUrl: string }>(`/v1/integrations/${connectorType}/connect${params ? `?${params}` : ''}`, { method: 'POST' });
     },
   });
 }
@@ -86,5 +87,14 @@ export function useDisconnectIntegration() {
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
       queryClient.invalidateQueries({ queryKey: ['integration-operational-status'] });
     },
+  });
+}
+
+/** Welche Kalender für Terminvorschläge gelesen werden (z. B. die der Monteure). */
+export function useUpdateCalendars() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (calendarIds: string[]) => apiFetch<IntegrationSummary>('/v1/integrations/GMAIL/calendars', { method: 'PUT', body: JSON.stringify({ calendarIds }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['integrations'] }),
   });
 }

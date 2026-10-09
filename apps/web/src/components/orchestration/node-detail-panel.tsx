@@ -55,6 +55,15 @@ function Body({ detail, caseId }: { detail: CaseNodeDetail; caseId: string }) {
         {detail.retried ? <span className="text-xs text-slate-600">Wiederholt</span> : null}
       </div>
       <p className="text-slate-700">{detail.stateExplanation}</p>
+      {detail.resultLines && detail.resultLines.length > 0 ? (
+        <Section title="Ergebnis">
+          <ul className="list-disc space-y-1 pl-4 text-slate-800" data-testid="node-result">
+            {detail.resultLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
       {detail.purpose ? <p className="text-slate-600">{detail.purpose}</p> : null}
 
       <ActionButtons caseId={caseId} actions={detail.availableActions} preview={detail.preview} />

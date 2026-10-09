@@ -23,7 +23,9 @@ import { ProcessBlueprintsController } from './process-blueprints.controller';
 import { ProcessSweepService } from './process-sweep.service';
 import { DraftEditingService } from './reference/draft-editing.service';
 import { ReferenceProcessService } from './reference/reference-process.service';
+import { AppointmentSlotsService } from './reference/appointment-slots.service';
 import { ReferenceProcessTools } from './reference/reference-process.tools';
+import { RequestAnalysisService } from './reference/request-analysis.service';
 
 /**
  * Business Process Framework (Amendment 02). Everything here builds on the
@@ -51,6 +53,8 @@ import { ReferenceProcessTools } from './reference/reference-process.tools';
     CaseCommandsService,
     ReferenceProcessService,
     ReferenceProcessTools,
+    RequestAnalysisService,
+    AppointmentSlotsService,
     DraftEditingService,
     ProcessSweepService,
     CaseOrchestrationService,

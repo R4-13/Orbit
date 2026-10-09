@@ -13,6 +13,7 @@ import { PlatformControlService } from '../platform-control/platform-control.ser
 import { TasksService } from '../tasks/tasks.service';
 import { ConnectorRequestDto } from './dto/connector-request.dto';
 import { ConnectorStatusService } from './connector-status.service';
+import { UpdateCalendarConfigDto } from './dto/update-calendar-config.dto';
 import { UpsertIntegrationCredentialsDto } from './dto/upsert-integration-credentials.dto';
 import { GmailConnectorService } from './gmail-connector.service';
 import { IntegrationsService } from './integrations.service';
@@ -88,11 +89,19 @@ export class IntegrationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
     @Query('send') send?: string,
+    @Query('calendar') calendar?: string,
   ) {
     this.assertOAuthCapable(connectorType, 'OAuth-Connect');
     await this.assertConnectorOpen(connectorType);
     // `?send=true` additionally requests the gmail.send scope (explicit, minimal-permission opt-in).
-    return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true' });
+    // `?calendar=true` fordert zusätzlich „Verfügbarkeit lesen“ (calendar.freebusy) für Terminvorschläge an.
+    return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true', includeCalendar: calendar === 'true' });
+  }
+
+  /** Welche Kalender für Terminvorschläge gelesen werden (z. B. die der Monteure). */
+  @Put('GMAIL/calendars')
+  async updateCalendars(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateCalendarConfigDto) {
+    return this.integrationsService.updateCalendarIds(user.tenantId, user.id, dto.calendarIds);
   }
 
   @Post(':connectorType/test')

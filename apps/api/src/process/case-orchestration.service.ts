@@ -26,6 +26,7 @@ import { CaseFactsService } from './case-facts.service';
 import { OrchestratorService } from './orchestrator.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { formatEuro } from './reference/money';
+import { summarizeNodeResult } from './node-result-summary';
 
 export type OrchestrationMode = 'COMBINED' | 'ACTUAL' | 'DEFINITION';
 
@@ -198,6 +199,7 @@ export class CaseOrchestrationService {
       purpose: def.purpose,
       capability: capability ? { key: capability.key, description: capability.description, sideEffect: capability.sideEffect } : undefined,
       stateExplanation: node.errorMessage && ['FAILED', 'BLOCKED', 'OUTCOME_UNKNOWN'].includes(node.state) ? `${STATE_EXPLANATIONS[node.state]} ${businessMessage(node.errorMessage)}` : STATE_EXPLANATIONS[node.state],
+      resultLines: node.state === 'SUCCEEDED' ? summarizeNodeResult(def.capability?.key, node.output) : undefined,
       retried: node.attempts > 1 ? true : undefined,
       startedAt: iso(node.startedAt),
       completedAt: iso(node.completedAt),

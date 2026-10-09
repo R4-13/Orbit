@@ -48,6 +48,19 @@ Eine Verbindung wird **einmal** hergestellt und erneuert sich danach selbst: ORB
 * **Freigabe bei unterbrochener Verbindung.** Scheitert die Ausführung wegen einer fehlenden oder unterbrochenen Verbindung, bleibt die **Freigabe offen** und die Person
   erhält die Ursache; nach dem Erneuern genügt eine erneute Freigabe. Eine E-Mail gilt erst als gesendet, wenn Gmail den Versand bestätigt hat.
 
+## Kalender-Verfügbarkeit für Terminvorschläge
+
+ORBIT kann bei Anfragen, für die ein verlässliches Angebot einen Termin braucht (Aufmaß, Besichtigung, Beratung), Vor-Ort- oder Telefontermine zu **freien Zeiten** vorschlagen.
+Dafür liest es nur **frei/belegt** der Kalender (Scope `calendar.freebusy`, Schnittstelle `freebusy.query`, siehe
+[Google: Freebusy query](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query)) – keine Termininhalte, kein Schreibzugriff.
+
+* **Einrichten:** Integrationen → Gmail → „Kalender-Verfügbarkeit erlauben“ (neue Zustimmung; bereits erteilte Berechtigungen wie Senden bleiben erhalten). Voraussetzung: die
+  **Google Calendar API** ist im selben Google-Cloud-Projekt aktiviert und der Scope im Zustimmungsbildschirm eingetragen.
+* **Welche Kalender:** standardmäßig der Hauptkalender (`primary`). Für die Monteure/Installateure deren Kalender-IDs (meist die E-Mail-Adresse) angeben; die Kalender müssen
+  für das verbundene Konto freigegeben sein. Mehrere Kalender gelten als Pool: ein Termin wird vorgeschlagen, sobald mindestens einer frei ist.
+* **Ohne Kalender** (nicht verbunden, nicht lesbar, Fehler): ORBIT erfindet keine Zeiten; die Nachricht bittet um Terminwünsche bzw. eine Rufnummer und passende Zeiten.
+* **Status:** implementiert und mit Doubles getestet; **nicht live gegen einen echten Google-Kalender geprüft** (braucht Ihre Zustimmung und die aktivierte Calendar API).
+
 ## Was hier ergänzt wird, sobald der Zugang vorliegt
 
 - Konkrete Endpunkte/Scopes für `MailConnector.listNewMessages()`

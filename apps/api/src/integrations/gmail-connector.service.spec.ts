@@ -44,23 +44,35 @@ describe('GmailConnectorService', () => {
   });
 
   describe('startConnection', () => {
-    it('signs a state token and builds the authorization URL with the readonly scope and offline+consent params', () => {
-      const result = service.startConnection('tenant_1', 'user_1');
+    beforeEach(() => scopedIntegration.findUnique.mockResolvedValue(null));
+    const READ = 'https://www.googleapis.com/auth/gmail.readonly';
+    const SEND = 'https://www.googleapis.com/auth/gmail.send';
+    const CAL = 'https://www.googleapis.com/auth/calendar.freebusy';
+    const scopeOf = () => (oauth2.buildAuthorizationUrl.mock.calls[0] as [unknown, { scope: string }])[1].scope;
+
+    it('signs a state token and builds the authorization URL with the readonly scope and offline+consent params', async () => {
+      const result = await service.startConnection('tenant_1', 'user_1');
 
       expect(state.sign).toHaveBeenCalledWith({ tenantId: 'tenant_1', userId: 'user_1', connectorType: 'GMAIL' });
       expect(oauth2.buildAuthorizationUrl).toHaveBeenCalledWith(
         expect.objectContaining({ clientId: 'client_123' }),
-        expect.objectContaining({
-          scope: 'https://www.googleapis.com/auth/gmail.readonly',
-          state: 'signed_state_token',
-          accessType: 'offline',
-          prompt: 'consent',
-        }),
+        expect.objectContaining({ scope: READ, state: 'signed_state_token', accessType: 'offline', prompt: 'consent' }),
       );
       expect(result).toEqual({ authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?mocked=1' });
     });
 
-    it('throws IntegrationUnavailableError when platform Google credentials are not configured', () => {
+    it('fordert Senden und Kalender-Verfügbarkeit nur auf ausdrücklichen Wunsch an', async () => {
+      await service.startConnection('tenant_1', 'user_1', { includeSend: true, includeCalendar: true });
+      expect(scopeOf().split(' ')).toEqual([READ, SEND, CAL]);
+    });
+
+    it('eine Erneuerung behält bereits erteilte Berechtigungen – wer nichts anhakt, verliert Senden und Kalender nicht', async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ grantedCapabilities: ['email.read', 'email.send', 'calendar.freebusy'] });
+      await service.startConnection('tenant_1', 'user_1');
+      expect(scopeOf().split(' ')).toEqual([READ, SEND, CAL]);
+    });
+
+    it('throws IntegrationUnavailableError when platform Google credentials are not configured', async () => {
       const unconfigured = new GmailConnectorService(
         prisma as unknown as PrismaService,
         vault as unknown as CredentialVaultService,
@@ -69,7 +81,7 @@ describe('GmailConnectorService', () => {
         state as unknown as OAuthStateService,
         { GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', GOOGLE_REDIRECT_URI: '' } as never,
       );
-      expect(() => unconfigured.startConnection('tenant_1', 'user_1')).toThrow(IntegrationUnavailableError);
+      await expect(unconfigured.startConnection('tenant_1', 'user_1')).rejects.toThrow(IntegrationUnavailableError);
     });
   });
 
@@ -121,6 +133,23 @@ describe('GmailConnectorService', () => {
       await service.completeConnection('code', 'state');
 
       expect(scopedIntegration.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ grantedCapabilities: ['email.read', 'email.send'] }) }));
+    });
+
+    it('erkennt die Kalender-Berechtigung (Verfügbarkeit lesen) als Fähigkeit', async () => {
+      state.verify.mockReturnValue({ tenantId: 'tenant_1', userId: 'user_1' });
+      oauth2.exchangeCodeForTokens.mockResolvedValue({
+        accessToken: 'at_1',
+        refreshToken: 'rt_1',
+        expiresAt: new Date('2099-01-01T00:00:00Z'),
+        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.freebusy',
+      });
+      scopedIntegration.findUnique.mockResolvedValue(null);
+      vault.storeSecret.mockResolvedValue('secret_1');
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ emailAddress: 'me@example.com' }) });
+
+      await service.completeConnection('code', 'state');
+
+      expect(scopedIntegration.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ grantedCapabilities: ['email.read', 'calendar.freebusy'] }) }));
     });
 
     it('updates the existing vault secret in place on a reconnect, instead of creating a second one', async () => {
@@ -284,6 +313,46 @@ describe('GmailConnectorService', () => {
       scopedIntegration.findUnique.mockResolvedValue({ ...stuck, lastTestedAt: new Date() });
       expect(await service.attemptRecovery('tenant_1')).toBe(false);
       expect(oauth2.refreshAccessToken).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('queryFreeBusy (Kalender-Verfügbarkeit)', () => {
+    const from = new Date('2026-10-12T00:00:00Z');
+    const to = new Date('2026-10-26T00:00:00Z');
+    beforeEach(() => {
+      scopedIntegration.findUnique.mockResolvedValue({ credentialReference: 'secret_1', status: 'CONNECTED', grantedCapabilities: ['email.read', 'calendar.freebusy'], lastErrorCode: null });
+      vault.readSecret.mockResolvedValue({ value: { accessToken: 'at_1', refreshToken: 'rt_1', expiresAt: '2099-01-01T00:00:00.000Z' } });
+    });
+
+    it('fragt die offizielle freeBusy-Schnittstelle ab und liefert die belegten Zeiten je Kalender', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ calendars: { primary: { busy: [{ start: '2026-10-13T08:00:00Z', end: '2026-10-13T09:00:00Z' }] }, 'monteur@example.com': { busy: [] } } }) });
+
+      const busy = await service.queryFreeBusy('tenant_1', ['primary', 'monteur@example.com'], from, to, 'Europe/Berlin');
+
+      expect(busy).toEqual([
+        { calendarId: 'primary', busy: [{ start: new Date('2026-10-13T08:00:00Z'), end: new Date('2026-10-13T09:00:00Z') }] },
+        { calendarId: 'monteur@example.com', busy: [] },
+      ]);
+      const [url, init] = fetchMock.mock.calls[0] as [string, { method: string; body: string; headers: Record<string, string> }];
+      expect(url).toBe('https://www.googleapis.com/calendar/v3/freeBusy');
+      expect(init.method).toBe('POST');
+      expect(init.headers.Authorization).toBe('Bearer at_1');
+      expect(JSON.parse(init.body)).toEqual({ timeMin: from.toISOString(), timeMax: to.toISOString(), timeZone: 'Europe/Berlin', items: [{ id: 'primary' }, { id: 'monteur@example.com' }] });
+    });
+
+    it('ohne Berechtigung Verfügbarkeit lesen wird nichts abgefragt', async () => {
+      scopedIntegration.findUnique.mockResolvedValue({ credentialReference: 'secret_1', status: 'CONNECTED', grantedCapabilities: ['email.read'] });
+      await expect(service.queryFreeBusy('tenant_1', ['primary'], from, to, 'Europe/Berlin')).rejects.toThrow(IntegrationUnavailableError);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('ein nicht lesbarer Kalender oder ein Fehler ergibt nie eine halbe Antwort, aus der man freie Zeiten ableiten würde', async () => {
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ calendars: { primary: { busy: [] }, 'monteur@example.com': { errors: [{ reason: 'notFound' }] } } }) });
+      await expect(service.queryFreeBusy('tenant_1', ['primary', 'monteur@example.com'], from, to, 'Europe/Berlin')).rejects.toThrow(/monteur@example.com.*notFound/);
+      fetchMock.mockResolvedValue({ ok: false, status: 403 });
+      await expect(service.queryFreeBusy('tenant_1', ['primary'], from, to, 'Europe/Berlin')).rejects.toThrow(ExternalSystemError);
+      fetchMock.mockRejectedValue(new TypeError('fetch failed'));
+      await expect(service.queryFreeBusy('tenant_1', ['primary'], from, to, 'Europe/Berlin')).rejects.toThrow(ExternalSystemError);
     });
   });
 

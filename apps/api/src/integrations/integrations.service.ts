@@ -37,6 +37,25 @@ export class IntegrationsService {
       .then((rows) => rows.map(toSummary));
   }
 
+  /** Die Kalender, aus denen Terminvorschläge entstehen (nur mit der Berechtigung „Verfügbarkeit lesen“ sinnvoll); Duplikate werden entfernt. */
+  async updateCalendarIds(tenantId: string, actorUserId: string, calendarIds: string[]): Promise<IntegrationSummary> {
+    const existing = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    if (!existing) throw new NotFoundError('Gmail ist nicht verbunden.', { connectorType: 'GMAIL' });
+    const ids = [...new Set(calendarIds.map((id) => id.trim()).filter(Boolean))];
+    const config = { ...((existing.config ?? {}) as Record<string, unknown>), calendarIds: ids };
+    const updated = await this.prisma.forTenantId(tenantId).integration.update({ where: { id: existing.id }, data: { config: config as Prisma.InputJsonValue } });
+    await this.audit.record({
+      tenantId,
+      eventType: 'INTEGRATION_CONFIG_UPDATED',
+      actorType: 'USER',
+      actorUserId,
+      entityType: 'Integration',
+      entityId: 'GMAIL',
+      payload: { connectorType: 'GMAIL', calendarCount: ids.length },
+    });
+    return toSummary(updated);
+  }
+
   async upsertCredentials(
     tenantId: string,
     actorUserId: string,

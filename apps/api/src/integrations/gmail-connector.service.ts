@@ -6,7 +6,7 @@ import { ORBIT_ENV } from '../config/env.token';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialVaultService } from '../security/credential-vault.service';
-import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
+import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_CALENDAR_API_BASE, GOOGLE_CALENDAR_FREEBUSY_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
 import { base64UrlToBase64, extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
 import { OAuth2Service, OAuthGrantRejectedError, type OAuth2ProviderConfig } from './oauth2.service';
 import { buildRfc822Message, toBase64Url, type OutgoingMessage } from './rfc822';
@@ -79,11 +79,20 @@ export class GmailConnectorService {
     }
   }
 
-  startConnection(tenantId: string, userId: string, options: { includeSend?: boolean } = {}): { authorizationUrl: string } {
+  /**
+   * Startet die Zustimmung. Bereits erteilte Berechtigungen bleiben bei einer Erneuerung erhalten: wer die Verbindung nach einem Ablauf erneuert, ohne
+   * Senden oder Kalender erneut anzuhaken, verliert sie sonst unbemerkt (die Fähigkeiten werden aus dem tatsächlich gewährten Umfang abgeleitet).
+   */
+  async startConnection(tenantId: string, userId: string, options: { includeSend?: boolean; includeCalendar?: boolean } = {}): Promise<{ authorizationUrl: string }> {
     this.assertPlatformConfigured();
+    const existing = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    const had = Array.isArray(existing?.grantedCapabilities) ? (existing?.grantedCapabilities as unknown[]) : [];
+    const scopes = [GMAIL_READONLY_SCOPE];
+    if (options.includeSend || had.includes('email.send')) scopes.push(GMAIL_SEND_SCOPE);
+    if (options.includeCalendar || had.includes('calendar.freebusy')) scopes.push(GOOGLE_CALENDAR_FREEBUSY_SCOPE);
     const state = this.state.sign({ tenantId, userId, connectorType: 'GMAIL' });
     const authorizationUrl = this.oauth2.buildAuthorizationUrl(this.providerConfig, {
-      scope: options.includeSend ? `${GMAIL_READONLY_SCOPE} ${GMAIL_SEND_SCOPE}` : GMAIL_READONLY_SCOPE,
+      scope: scopes.join(' '),
       state,
       accessType: 'offline',
       // Forces Google to reissue a refresh_token even on a reconnect — without this, a second
@@ -101,7 +110,7 @@ export class GmailConnectorService {
     const profile = await this.fetchProfile(tokens.accessToken);
     // The capability list reflects what Google actually granted (the user can untick scopes), not what was requested.
     const grantedScopes = (tokens.scope ?? GMAIL_READONLY_SCOPE).split(/\s+/).filter(Boolean);
-    const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : [])];
+    const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : []), ...(grantedScopes.includes(GOOGLE_CALENDAR_FREEBUSY_SCOPE) ? ['calendar.freebusy'] : [])];
 
     const existing = await this.prisma
       .forTenantId(tenantId)
@@ -297,6 +306,39 @@ export class GmailConnectorService {
       rfcMessageId = undefined;
     }
     return { providerMessageId: sent.id, threadId: sent.threadId, rfcMessageId, from };
+  }
+
+  /**
+   * Belegte Zeiten je Kalender im angegebenen Zeitraum (Google `freebusy.query`; nur Frei/Belegt). Wirft, wenn die Berechtigung fehlt, ein Kalender nicht
+   * lesbar ist oder Google nicht antwortet – nie eine „halbe“ Antwort, aus der man freie Zeiten ableiten würde.
+   */
+  async queryFreeBusy(tenantId: string, calendarIds: string[], from: Date, to: Date, timeZone: string): Promise<Array<{ calendarId: string; busy: Array<{ start: Date; end: Date }> }>> {
+    const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
+    if (!integration || integration.status !== 'CONNECTED' || !granted.includes('calendar.freebusy')) {
+      throw new IntegrationUnavailableError('Der Kalender ist nicht verbunden (Berechtigung „Verfügbarkeit lesen“ fehlt).');
+    }
+    const accessToken = await this.getValidAccessToken(tenantId);
+    let response: Response;
+    try {
+      response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/freeBusy`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeMin: from.toISOString(), timeMax: to.toISOString(), timeZone, items: calendarIds.map((id) => ({ id })) }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new ExternalSystemError('Der Kalender hat nicht geantwortet.', { transient: true });
+    }
+    if (!response.ok) throw new ExternalSystemError(`Der Kalender hat die Anfrage abgelehnt (${response.status}).`, { status: response.status });
+    const body = (await response.json()) as { calendars?: Record<string, { busy?: Array<{ start: string; end: string }>; errors?: Array<{ reason?: string }> }> };
+    const perCalendar: Array<{ calendarId: string; busy: Array<{ start: Date; end: Date }> }> = [];
+    for (const id of calendarIds) {
+      const entry = body.calendars?.[id];
+      if (!entry || (entry.errors && entry.errors.length > 0)) throw new ExternalSystemError(`Der Kalender „${id}“ ist nicht lesbar (${entry?.errors?.[0]?.reason ?? 'unbekannt'}).`, { calendarId: id });
+      perCalendar.push({ calendarId: id, busy: (entry.busy ?? []).map((interval) => ({ start: new Date(interval.start), end: new Date(interval.end) })) });
+    }
+    return perCalendar;
   }
 
   private async getValidAccessToken(tenantId: string): Promise<string> {

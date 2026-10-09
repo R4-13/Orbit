@@ -29,3 +29,11 @@ export const GMAIL_READONLY_SCOPE = 'https://www.googleapis.com/auth/gmail.reado
 export const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
 
 export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1';
+
+/**
+ * Verfügbarkeit lesen (Terminvorschläge für Vor-Ort- und Telefontermine): nur Frei/Belegt, keine Termininhalte. Scope und Endpunkt `freebusy.query`
+ * (POST https://www.googleapis.com/calendar/v3/freeBusy) laut offizieller Dokumentation:
+ * https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query
+ */
+export const GOOGLE_CALENDAR_FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';
+export const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';

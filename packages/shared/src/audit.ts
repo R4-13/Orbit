@@ -58,6 +58,8 @@ export const AUDIT_EVENT_TYPES = [
   'INTEGRATION_DISCONNECTED',
   /** Die Verbindung braucht eine neue Zustimmung der Person (Token endgültig abgelehnt) bzw. wurde automatisch wiederhergestellt. */
   'INTEGRATION_AUTH_REQUIRED',
+  /** Einstellungen einer Verbindung geändert (z. B. welche Kalender für Terminvorschläge gelesen werden). */
+  'INTEGRATION_CONFIG_UPDATED',
   'INTEGRATION_RECOVERED',
   'INTEGRATION_TEST_FAILED',
   'WEBHOOK_RECEIVED',

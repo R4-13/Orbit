@@ -26,6 +26,10 @@ export const CASE_EVENT_TYPES = {
   NODE_STATE_CHANGED: 'node.state_changed',
   FACT_RECORDED: 'fact.recorded',
   CONTEXT_RESOLUTION_ATTEMPTED: 'context.resolution_attempted',
+  /** Die KI hat die Anfrage analysiert (Art, vorhandene/fehlende Angaben, Terminbedarf, nächster Schritt). */
+  REQUIREMENTS_ANALYZED: 'requirements.analyzed',
+  /** Der Kundschaft wurde ein Vor-Ort- oder Telefontermin vorgeschlagen (mit den Zeiten bzw. dem Grund, warum keine genannt wurden). */
+  APPOINTMENT_PROPOSED: 'appointment.proposed',
   COMPLETION_EVALUATED: 'completion.evaluated',
   ACTION_PREPARED: 'action.prepared',
   ACTION_CONFIRMED: 'action.confirmed',

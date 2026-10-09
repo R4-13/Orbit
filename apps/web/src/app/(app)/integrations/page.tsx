@@ -18,6 +18,7 @@ import {
   useDisconnectIntegration,
   useIntegrations,
   useStartConnect,
+  useUpdateCalendars,
   useTestConnection,
   useUpsertIntegrationCredentials,
   type IntegrationSummary,
@@ -47,7 +48,8 @@ const STATUS_VIEW: Record<string, { label: string; tone: StatusTone; next: strin
 /** Die Fähigkeiten eines Systems in Worten, die Nicht-Techniker verstehen (Zweck und Folge, §18.2). */
 const CAPABILITY_TEXT: Record<string, string> = {
   'email.read': 'Eingehende Nachrichten lesen – damit ORBIT Anfragen und Rechnungen erkennt.',
-  'email.send': 'Freigegebene Nachrichten in Ihrem Namen versenden – nur nach Ihrer Freigabe.',
+  'email.send': 'Nachrichten in Ihrem Namen versenden – je nach Ihren Regeln mit oder ohne vorherige Freigabe.',
+  'calendar.freebusy': 'Verfügbarkeit lesen (nur frei/belegt, keine Termininhalte) – damit ORBIT Vor-Ort- und Telefontermine zu Ihren freien Zeiten vorschlagen kann.',
   'calendar.read': 'Termine lesen – damit Terminvorschläge zu Ihrer Verfügbarkeit passen.',
   'calendar.write': 'Termine anlegen – nur nach Ihrer Freigabe.',
 };
@@ -277,6 +279,46 @@ function DisconnectDialog({ connector, onClose }: { connector: ConnectorMetadata
   );
 }
 
+/** Aus welchen Kalendern Terminvorschläge entstehen: der Hauptkalender oder die freigegebenen Kalender der Monteure/Installateure. */
+function CalendarChoice({ integration }: { integration: IntegrationSummary }) {
+  const update = useUpdateCalendars();
+  const configured = ((integration.config ?? {}) as { calendarIds?: unknown }).calendarIds;
+  const saved = Array.isArray(configured) && configured.length > 0 ? (configured as string[]) : ['primary'];
+  const [text, setText] = useState(saved.join(', '));
+  const [message, setMessage] = useState<{ tone: 'info' | 'danger'; text: string } | null>(null);
+
+  async function save() {
+    setMessage(null);
+    const ids = text.split(/[\s,;]+/).map((id) => id.trim()).filter(Boolean);
+    if (ids.length === 0) {
+      setMessage({ tone: 'danger', text: 'Bitte mindestens einen Kalender angeben („primary“ ist Ihr Hauptkalender).' });
+      return;
+    }
+    try {
+      await update.mutateAsync(ids);
+      setMessage({ tone: 'info', text: `Gespeichert: Terminvorschläge berücksichtigen ${ids.length === 1 ? 'diesen Kalender' : `diese ${ids.length} Kalender`}.` });
+    } catch (err) {
+      setMessage({ tone: 'danger', text: err instanceof ApiError ? err.message : 'Die Kalender konnten nicht gespeichert werden.' });
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3" data-testid="calendar-choice">
+      <label htmlFor="calendar-ids" className="text-sm font-medium text-slate-900">
+        Kalender für Terminvorschläge
+      </label>
+      <p className="text-xs text-slate-700">„primary“ ist Ihr Hauptkalender. Für die Monteure geben Sie deren Kalender-IDs an (meist deren E-Mail-Adresse); die Kalender müssen für dieses Konto freigegeben sein. Ein Termin wird vorgeschlagen, sobald mindestens einer der genannten Kalender frei ist.</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input id="calendar-ids" value={text} onChange={(event) => setText(event.target.value)} className="h-9 min-w-0 flex-1 basis-64 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900" />
+        <Button variant="secondary" disabled={update.isPending} onClick={() => void save()}>
+          Speichern
+        </Button>
+      </div>
+      {message ? <div className="mt-2"><Notice tone={message.tone}>{message.text}</Notice></div> : null}
+    </div>
+  );
+}
+
 function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { connector: ConnectorMetadata; integration: IntegrationSummary; onDisconnect: () => void; onRenew: () => void }) {
   const test = useTestConnection();
   const startConnect = useStartConnect();
@@ -284,6 +326,7 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
   const Icon = CONNECTOR_ICONS[connector.icon] ?? Plug;
   const view = STATUS_VIEW[integration.status] ?? STATUS_VIEW.CONNECTED!;
   const grantedSend = Array.isArray(integration.grantedCapabilities) && (integration.grantedCapabilities as unknown[]).includes('email.send');
+  const grantedCalendar = Array.isArray(integration.grantedCapabilities) && (integration.grantedCapabilities as unknown[]).includes('calendar.freebusy');
   const lastOk = integration.lastSuccessAt ?? integration.lastTestedAt;
 
   async function handleTest() {
@@ -296,10 +339,11 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
     }
   }
 
-  async function grantSend() {
+  async function grant(what: 'send' | 'calendar') {
     setMessage(null);
     try {
-      const { authorizationUrl } = await startConnect.mutateAsync({ connectorType: connector.id, send: true });
+      // Bereits erteilte Berechtigungen bleiben erhalten (das Backend übernimmt sie bei jeder Zustimmung).
+      const { authorizationUrl } = await startConnect.mutateAsync({ connectorType: connector.id, send: what === 'send', calendar: what === 'calendar' });
       window.location.href = authorizationUrl;
     } catch (err) {
       setMessage({ tone: 'danger', text: err instanceof ApiError ? err.message : 'Der Vorgang konnte nicht gestartet werden.' });
@@ -331,8 +375,13 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
           <div className="flex flex-wrap justify-end gap-2">
             {integration.status === 'AUTH_REQUIRED' ? <Button onClick={onRenew}>Verbindung erneuern</Button> : null}
             {connector.id === 'GMAIL' && !grantedSend ? (
-              <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void grantSend()} title="Erlaubt ORBIT, freigegebene Nachrichten über dieses Postfach zu senden. Ohne diese Berechtigung wird nie etwas gesendet.">
+              <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void grant('send')} title="Erlaubt ORBIT, freigegebene Nachrichten über dieses Postfach zu senden. Ohne diese Berechtigung wird nie etwas gesendet.">
                 Sendeberechtigung erteilen
+              </Button>
+            ) : null}
+            {connector.id === 'GMAIL' && !grantedCalendar ? (
+              <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void grant('calendar')} title="Erlaubt ORBIT zu sehen, wann Sie frei oder belegt sind – nur frei/belegt, keine Termininhalte. Damit schlägt ORBIT Vor-Ort- und Telefontermine zu Ihren freien Zeiten vor.">
+                Kalender-Verfügbarkeit erlauben
               </Button>
             ) : null}
             <Button variant="secondary" disabled={test.isPending} onClick={() => void handleTest()}>
@@ -345,6 +394,7 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
         </div>
       </div>
       {message ? <div className="mt-3"><Notice tone={message.tone}>{message.text}</Notice></div> : null}
+      {connector.id === 'GMAIL' && grantedCalendar ? <CalendarChoice integration={integration} /> : null}
     </li>
   );
 }

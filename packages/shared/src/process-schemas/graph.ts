@@ -137,6 +137,8 @@ export interface CaseNodeDetail {
   capability?: { key: string; description: string; sideEffect: string };
   /** Business explanation of the current state, derived from facts — never raw model output. */
   stateExplanation: string;
+  /** Das Ergebnis des Schritts in Worten (was erkannt wurde, was fehlt, welcher nächste Schritt gewählt wurde) – nie der Roh-Output. */
+  resultLines?: string[];
   /** Der Schritt wurde mindestens einmal wiederholt (ohne Zähler). */
   retried?: boolean;
   startedAt?: string;
