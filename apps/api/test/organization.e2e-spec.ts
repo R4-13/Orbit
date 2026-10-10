@@ -170,6 +170,19 @@ describe('Organization: profile and staff directory (e2e)', () => {
       await api().get(`/api/v1/staff/${randomUUID()}`).set(auth()).expect(404);
     });
 
+    it('Vorgesetzte lassen sich über die interne Kennung setzen und mit einem leeren Wert wieder entfernen', async () => {
+      const rows = await list();
+      const vera = byExternal(rows, 'M-2');
+      const bea = byExternal(rows, 'M-3');
+      const set = (await api().patch(`/api/v1/staff/${bea.id}`).set(auth()).send({ deputyRef: '' , supervisorRef: vera.id }).expect(200)).body as StaffRow;
+      expect(set).toMatchObject({ supervisorName: 'Vera Vertretung', deputyName: null });
+      const cleared = (await api().patch(`/api/v1/staff/${bea.id}`).set(auth()).send({ supervisorRef: '' }).expect(200)).body as StaffRow;
+      expect(cleared.supervisorId).toBeNull();
+      // Andere Angaben bleiben unberührt, wenn sie nicht im Patch stehen.
+      expect(cleared.email).toBe('bea@betrieb.example');
+      await api().patch(`/api/v1/staff/${bea.id}`).set(auth()).send({ supervisorRef: 'clara@betrieb.example', deputyRef: 'M-2' }).expect(200);
+    });
+
     it('jeder Mandant sieht nur sein Verzeichnis', async () => {
       const others = (await api().get('/api/v1/staff?includeInactive=true').set({ Authorization: `Bearer ${otherToken}` }).expect(200)).body as StaffRow[];
       expect(others).toEqual([]);

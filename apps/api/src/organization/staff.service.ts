@@ -60,11 +60,11 @@ const SCALAR_FIELDS = ['externalId', 'firstName', 'lastName', 'roleKind', 'roleT
 const nameOf = (s: { firstName: string; lastName: string }) => `${s.firstName} ${s.lastName}`.trim();
 const same = (a: string, b: string | null | undefined) => (b ?? '').trim().toLowerCase() === a.trim().toLowerCase();
 
-/** Verweis „Personalnummer oder E-Mail“ auf eine Person im Verzeichnis. */
+/** Verweis „Personalnummer, E-Mail oder interne Kennung“ auf eine Person im Verzeichnis. */
 function findRef(rows: readonly StaffMember[], ref: string): StaffMember | undefined {
   const wanted = ref.trim();
   if (!wanted) return undefined;
-  return rows.find((r) => r.externalId && same(wanted, r.externalId)) ?? rows.find((r) => r.email && same(wanted, r.email));
+  return rows.find((r) => r.id === wanted) ?? rows.find((r) => r.externalId && same(wanted, r.externalId)) ?? rows.find((r) => r.email && same(wanted, r.email));
 }
 
 /** Würde die Person als Vorgesetzte(r) eine Schleife in der Berichtskette erzeugen? */

@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { PERMISSIONS } from '@orbit/shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@orbit/ui';
+import { OnboardingChecklist } from '../../../components/common/onboarding-checklist';
 import { useAuth } from '../../../lib/auth-context';
+import { useTenantProfile } from '../../../lib/hooks/use-organization';
 
 interface AdminLink {
   href: string;
@@ -25,6 +27,14 @@ const GROUPS: AdminGroup[] = [
     links: [
       { href: '/admin/settings', label: 'Unternehmen & Einstellungen', permission: PERMISSIONS.TENANT_MANAGE },
       { href: '/admin/branding', label: 'Erscheinungsbild', permission: PERMISSIONS.TENANT_BRANDING_CONFIGURE },
+    ],
+  },
+  {
+    title: 'Betrieb & Mitarbeiter',
+    purpose: 'Branche, Leistungen, Erreichbarkeit – und wen ORBIT wofür und wie erreicht, auch bei Krankheit und Eskalation.',
+    links: [
+      { href: '/admin/company', label: 'Unternehmensprofil', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
+      { href: '/admin/staff', label: 'Mitarbeiter', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
     ],
   },
   {
@@ -63,6 +73,8 @@ const GROUPS: AdminGroup[] = [
 
 export default function AdministrationPage() {
   const { hasPermission } = useAuth();
+  const canSeeProfile = hasPermission(PERMISSIONS.TENANT_PROFILE_MANAGE);
+  const { data: profileState } = useTenantProfile(canSeeProfile);
   const visible = GROUPS.map((group) => ({ ...group, links: group.links.filter((link) => hasPermission(link.permission)) })).filter((group) => group.links.length > 0);
 
   return (
@@ -71,6 +83,7 @@ export default function AdministrationPage() {
         <h1 className="text-2xl font-semibold text-slate-900">Administration</h1>
         <p className="mt-1 text-sm text-slate-600">Hier richten Sie ORBIT für Ihr Unternehmen ein. Wählen Sie einen Bereich.</p>
       </div>
+      {canSeeProfile && profileState && !profileState.onboarding.complete ? <OnboardingChecklist state={profileState} compact /> : null}
       {visible.length === 0 ? (
         <p className="text-sm text-slate-600">Für Ihr Konto sind keine Verwaltungsbereiche freigeschaltet.</p>
       ) : (

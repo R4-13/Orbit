@@ -117,6 +117,9 @@ export function recipientsForPhase(chain: readonly EscalationStep[], phase: Esca
 
 export type DeliveryChannel = 'EMAIL' | 'TEAMS' | 'WHATSAPP' | 'SMS' | 'PHONE';
 
+/** Kanäle, über die ORBIT heute tatsächlich zustellt (angebundener Anbieter). Die übrigen sind erfassbar, werden aber per E-Mail zugestellt, bis ein Anbieter angebunden ist. */
+export const LIVE_DELIVERY_CHANNELS: readonly DeliveryChannel[] = ['EMAIL'];
+
 export interface DeliveryPlan {
   /** Der Kanal, über den tatsächlich zugestellt wird. */
   via: DeliveryChannel;
