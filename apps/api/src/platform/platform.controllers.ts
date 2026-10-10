@@ -19,13 +19,14 @@ import {
   PlatformLoginDto,
   PlatformRefreshDto,
   PlatformStepUpDto,
+  ProvisionTenantDto,
   ResetPlatformPasswordDto,
   SetPlatformRolesDto,
 } from './dto/platform.dto';
 import { PlatformRuntimeService } from './runtime/platform-runtime.service';
 import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
 import { PlatformIdentityService, type PlatformIdentityView } from './identity/platform-identity.service';
-import { PlatformTenantsService, type PlatformOverview, type PlatformTenantSummary } from './tenants/platform-tenants.service';
+import { PlatformTenantsService, type PlatformOverview, type PlatformTenantSummary, type ProvisionedTenant } from './tenants/platform-tenants.service';
 
 /** Anmeldung der Plattformdomäne – strenger gedrosselt als die Mandantenanmeldung (Betreiberzugang ist das lohnendere Ziel). */
 const PLATFORM_AUTH_THROTTLE = { default: { limit: Number(process.env.PLATFORM_AUTH_RATE_LIMIT_MAX ?? 20), ttl: Number(process.env.PLATFORM_AUTH_RATE_LIMIT_WINDOW_MS ?? 300_000) } };
@@ -135,6 +136,14 @@ export class PlatformController {
   @RequirePlatformScope(PLATFORM_SCOPES.TENANTS_READ)
   listTenants(): Promise<PlatformTenantSummary[]> {
     return this.tenants.list();
+  }
+
+  /** Neukunde anlegen – kritische Operation: Step-up, Begründung und Audit. Das Startpasswort steht nur in dieser Antwort. */
+  @Post('tenants')
+  @RequirePlatformScope(PLATFORM_SCOPES.TENANTS_LIFECYCLE_WRITE)
+  @RequireStepUp()
+  provisionTenant(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: ProvisionTenantDto): Promise<ProvisionedTenant> {
+    return this.tenants.provision(principal, dto);
   }
 
   @Get('tenants/:id')

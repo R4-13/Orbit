@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { PLATFORM_SCOPES } from '@orbit/shared';
 import { Badge, Button, Card, CardContent, ErrorState, Input, Label } from '@orbit/ui';
+import { ProvisionTenantPanel } from '../../../components/platform/provision-tenant-panel';
 import { TenantLifecyclePanel } from '../../../components/platform/tenant-lifecycle-panel';
 import { formatDateTime } from '../../../lib/format';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
@@ -15,6 +16,7 @@ export default function PlatformTenantsPage() {
   const { data, isLoading, isError, error, refetch } = usePlatformTenants();
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const { hasScope } = usePlatformAuth();
   const canChange = hasScope(PLATFORM_SCOPES.TENANTS_LIFECYCLE_WRITE);
 
@@ -35,11 +37,15 @@ export default function PlatformTenantsPage() {
             {rows.length} von {data.length} Mandanten · nur Stammdaten und Zustand, keine Geschäftsdaten
           </p>
         </div>
-        <div className="w-full sm:w-72">
-          <Label htmlFor="tenant-search">Suche</Label>
-          <Input id="tenant-search" type="search" placeholder="Name oder Kennung" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
+          <div className="w-full sm:w-72">
+            <Label htmlFor="tenant-search">Suche</Label>
+            <Input id="tenant-search" type="search" placeholder="Name oder Kennung" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
+          {canChange && !creating ? <Button onClick={() => setCreating(true)}>Neukunde anlegen</Button> : null}
         </div>
       </div>
+      {creating ? <ProvisionTenantPanel onClose={() => setCreating(false)} /> : null}
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="w-full text-left text-sm">

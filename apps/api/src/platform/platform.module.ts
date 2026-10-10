@@ -11,6 +11,7 @@ import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.s
 import { PlatformIdentityService } from './identity/platform-identity.service';
 import { PlatformAuthController, PlatformController, PlatformIdentityController } from './platform.controllers';
 import { QueueModule } from '../queue/queue.module';
+import { TenantsModule } from '../tenants/tenants.module';
 import { PlatformRuntimeMonitorService } from './runtime/platform-runtime-monitor.service';
 import { PlatformRuntimeService } from './runtime/platform-runtime.service';
 import { PlatformSupportController } from './support/platform-support.controller';
@@ -23,7 +24,7 @@ import { PlatformTenantsService } from './tenants/platform-tenants.service';
  * Phase OPS-1: Identität, Rollen/Scopes, Sitzungen, Step-up, Audit, Mandantenregister (nur lesend). Weitere Funktionsbereiche folgen je Phase.
  */
 @Module({
-  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule, ProcessModule, QueueModule],
+  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule, ProcessModule, QueueModule, TenantsModule],
   controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController, PlatformFeaturesController, PlatformKillSwitchController, PlatformConnectorsController, PlatformTenantLifecycleController, PlatformSupportController],
   providers: [PlatformAuthService, PlatformRuntimeService, PlatformRuntimeMonitorService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
   exports: [PlatformAuditModule, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],

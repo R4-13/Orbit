@@ -1,5 +1,6 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
+import { AUTOMATION_PRESET_KEYS } from '@orbit/shared';
 
 export class PlatformLoginDto {
   @IsEmail()
@@ -138,6 +139,47 @@ export class DiagnosticsQueryDto {
   tenantId!: string;
 
   /** Begründung des Zugriffs (Amendment 03 §17.4, OPS-33): wird mit dem Zugriff auditiert. */
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  reason!: string;
+}
+
+/** Neuen Betrieb anlegen: Stammdaten, Branche, Automatisierungsgrad und der erste Administrator (Amendment 03 §6). */
+export class ProvisionTenantDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  name!: string;
+
+  /** Kleinbuchstaben, Ziffern und Bindestriche; fehlt sie, wird sie aus dem Namen abgeleitet. */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, { message: 'slug darf nur Kleinbuchstaben, Ziffern und einzelne Bindestriche enthalten' })
+  @MaxLength(60)
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  industry?: string;
+
+  @IsIn([...AUTOMATION_PRESET_KEYS])
+  automationPreset!: string;
+
+  @IsEmail()
+  adminEmail!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  adminFirstName!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  adminLastName!: string;
+
   @IsString()
   @MinLength(5)
   @MaxLength(500)
