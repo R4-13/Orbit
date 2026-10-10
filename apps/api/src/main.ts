@@ -5,6 +5,7 @@ startTracing('orbit-api');
 import 'reflect-metadata';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
@@ -20,9 +21,11 @@ async function bootstrap() {
   const branding = loadBrandingConfig();
   const pino = createPinoLogger(env);
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
+  // Mitarbeiterlisten (CSV-Text, Abgleich über die Schnittstelle) übersteigen die 100 kB der Voreinstellung; 2 MB reichen für die 2000 Zeilen, die ein Abgleich höchstens umfasst.
+  app.useBodyParser('json', { limit: '2mb' });
   // As early as possible — `bufferLogs: true` holds every Nest bootstrap
   // log (module init, route mapping) until this call, so they render
   // through pino too instead of Nest's default console Logger. See

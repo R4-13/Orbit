@@ -49,6 +49,8 @@ export const PERMISSIONS = {
   AGENT_MANAGE: 'agent.manage',
   /** §27 der UI/UX-Spezifikation — Logo/CI-Farben des eigenen Tenants konfigurieren. TENANT_ADMIN-Sensitivität, nicht SYSTEM_ADMIN-exklusiv wie TENANT_MANAGE. */
   TENANT_BRANDING_CONFIGURE: 'tenant.branding.configure',
+  /** Betriebsprofil und Mitarbeiterverzeichnis pflegen (Branche, Leistungen, Zeiten, Notdienst; Rollen, Zuständigkeiten, Erreichbarkeit). TENANT_ADMIN. */
+  TENANT_PROFILE_MANAGE: 'tenant.profile.manage',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

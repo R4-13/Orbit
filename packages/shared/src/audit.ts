@@ -62,6 +62,12 @@ export const AUDIT_EVENT_TYPES = [
   'INTEGRATION_CONFIG_UPDATED',
   /** Ein Schritt eines Vorgangs wurde automatisch wieder aufgenommen oder live wiederholt (Live-Abgleich). */
   'PROCESS_LIVE_UPGRADE',
+  'TENANT_PROFILE_UPDATED',
+  'STAFF_CREATED',
+  'STAFF_UPDATED',
+  'STAFF_DEACTIVATED',
+  /** Mitarbeiter per CSV oder Schnittstelle abgeglichen (Anzahl neu/geändert/unverändert, nie die Daten selbst). */
+  'STAFF_IMPORTED',
   'INTEGRATION_RECOVERED',
   'INTEGRATION_TEST_FAILED',
   'WEBHOOK_RECEIVED',

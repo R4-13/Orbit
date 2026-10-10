@@ -54,6 +54,8 @@ export const TENANT_SCOPED_MODELS = [
   'RetentionPolicy',
   'AIProviderConnection',
   'TenantBranding',
+  'TenantProfile',
+  'StaffMember',
   'Conversation',
   'ConversationMessage',
   'IntegrationCredentialSecret',

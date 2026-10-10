@@ -9,6 +9,9 @@ import {
   NotFoundError,
   PolicyViolationError,
   ROLES,
+  presetModeFor,
+  type AutomationPresetKey,
+  type PolicyActionKey,
 } from '@orbit/shared';
 import type {
   AgentRun,
@@ -88,6 +91,10 @@ export interface BootstrapTenantInput {
   adminPassword: string;
   adminFirstName: string;
   adminLastName: string;
+  /** Branche bzw. Gewerk in Worten – wird im Betriebsprofil abgelegt und fließt in die Auswertung von Anfragen ein. */
+  industry?: string;
+  /** Automatisierungsgrad von Anfang an; ohne Angabe „Vorsichtig“ (alles Wichtige braucht Freigabe). */
+  automationPreset?: AutomationPresetKey;
 }
 
 export interface BootstrapTenantResult {
@@ -162,10 +169,17 @@ export class TenantsService {
         data: Object.entries(DEFAULT_POLICY_CONFIG).map(([action, config]) => ({
           tenantId: tenant.id,
           action,
-          mode: config.mode,
+          mode: presetModeFor(input.automationPreset ?? 'CAUTIOUS', action as PolicyActionKey),
           locked: config.locked ?? false,
         })),
       });
+
+      // Betriebsprofil von Anfang an: Branche und bewusst gewählter Automatisierungsgrad (die Einrichtungs-Checkliste hakt beides ab).
+      if (input.industry || input.automationPreset) {
+        await tx.tenantProfile.create({
+          data: { tenantId: tenant.id, industry: input.industry?.trim() || null, automationConfirmedAt: input.automationPreset ? new Date() : null },
+        });
+      }
 
       // Agenten-Konfiguration (docs/AGENT_STUDIO_CONCEPT.md Abschnitt 1):
       // seeds the three built-in agents as ACTIVE, editable rows —

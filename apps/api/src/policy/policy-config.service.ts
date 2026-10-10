@@ -52,6 +52,12 @@ export class PolicyConfigService {
       await this.updateMode(tenantId, actorUserId, row.action as PolicyActionKey, target);
       changed += 1;
     }
+    // Die Stufe ist bewusst gewählt (auch wenn sie sich nicht geändert hat): die Einrichtungs-Checkliste hakt den Schritt ab.
+    await this.prisma.forTenantId(tenantId).tenantProfile.upsert({
+      where: { tenantId },
+      create: { tenantId, automationConfirmedAt: new Date(), updatedByUserId: actorUserId },
+      update: { automationConfirmedAt: new Date() },
+    });
     const after = await this.automation(tenantId);
     return { current: after.current, changed };
   }

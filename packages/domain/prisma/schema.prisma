@@ -327,6 +327,8 @@ model Tenant {
   integrationCredentialSecrets IntegrationCredentialSecret[]
   aiProviderConnection         AIProviderConnection?
   branding                     TenantBranding?
+  profile                      TenantProfile?
+  staffMembers                 StaffMember[]
   conversations                Conversation[]
   conversationMessages         ConversationMessage[]
   agentRuns                    AgentRun[]
@@ -2651,4 +2653,104 @@ model PlatformSupportSession {
   @@index([targetTenantId, status])
   @@index([operatorUserId, status])
   @@map("platform_support_sessions")
+}
+
+
+// ============================================================================
+// Betriebsprofil und Mitarbeiterverzeichnis (Rückmeldung: „ORBIT muss wissen, wie der Betrieb arbeitet und wen es wie erreicht“)
+// ============================================================================
+
+/// Wie sich ein Mitarbeiter am besten erreichen lässt. Zustellung: E-Mail ist angebunden; Teams/WhatsApp/SMS/Telefon sind erfasst und werden – solange kein
+/// Anbieter verbunden ist – ehrlich über E-Mail zugestellt (siehe docs/ASSUMPTIONS.md).
+enum StaffContactChannel {
+  EMAIL
+  TEAMS
+  WHATSAPP
+  SMS
+  PHONE
+}
+
+/// Rolle im Unternehmen (grob, für Zuständigkeiten und Eskalation); die genaue Funktion steht in `roleTitle`.
+enum StaffRoleKind {
+  OWNER
+  MANAGER
+  DISPATCHER
+  TECHNICIAN
+  OFFICE
+  ACCOUNTING
+  SALES
+  OTHER
+}
+
+/// „Wie dieser Betrieb arbeitet“: Branche, Leistungen, Einsatzgebiet, Zeiten, Notdienst, Tonalität, häufige Fragen. Grundlage für die KI-Entscheidungen im Sinne des Unternehmens.
+model TenantProfile {
+  id                    String    @id @default(uuid())
+  tenantId              String    @unique @map("tenant_id")
+  /// Branche bzw. Gewerk in Worten (z. B. „Heizung und Sanitär“, „Dachdecker“, „KFZ-Werkstatt“).
+  industry              String?
+  /// Was der Betrieb macht, in wenigen Sätzen.
+  description           String?
+  services              String[]  @default([])
+  /// Was der Betrieb ausdrücklich nicht anbietet.
+  exclusions            String[]  @default([])
+  serviceArea           String?   @map("service_area")
+  /// [{ days: ['MON'..'SUN'], from: 'HH:mm', to: 'HH:mm' }]
+  openingHours          Json?     @map("opening_hours")
+  emergencyService      Boolean   @default(false) @map("emergency_service")
+  emergencyNote         String?   @map("emergency_note")
+  /// FORMAL | FRIENDLY
+  tone                  String    @default("FORMAL")
+  /// Sprachen, in denen der Betrieb antworten kann (ISO-639-1); die Antwort richtet sich nach der Sprache der Kundschaft, sonst nach der ersten Sprache.
+  languages             String[]  @default(["de"])
+  /// [{ question, answer }]
+  faqs                  Json?
+  /// Wann ORBIT erinnert und eskaliert: { reminderAfterMinutes, escalateAfterMinutes, emergencyReminderMinutes, emergencyEscalateMinutes } (Standard im Code).
+  escalationPolicy      Json?     @map("escalation_policy")
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+  /// Wann der Automatisierungsgrad bewusst gewählt (oder bei der Anlage des Betriebs festgelegt) wurde.
+  automationConfirmedAt DateTime? @map("automation_confirmed_at")
+  updatedByUserId       String?   @map("updated_by_user_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_profiles")
+}
+
+/// Eine Person des Betriebs mit Rolle, Zuständigkeiten und Erreichbarkeit. Nicht jede Person nutzt ORBIT (z. B. Monteure): `userId` verknüpft optional.
+model StaffMember {
+  id                 String              @id @default(uuid())
+  tenantId           String              @map("tenant_id")
+  /// Kennung im führenden System (Personalnummer, ID aus dem Verzeichnis) – Schlüssel für den Abgleich (CSV/API).
+  externalId         String?             @map("external_id")
+  firstName          String              @map("first_name")
+  lastName           String              @map("last_name")
+  roleKind           StaffRoleKind       @default(OTHER) @map("role_kind")
+  roleTitle          String?             @map("role_title")
+  email              String?
+  /// Mobilnummer für Anruf/SMS/WhatsApp.
+  phone              String?
+  teamsAddress       String?             @map("teams_address")
+  whatsappNumber     String?             @map("whatsapp_number")
+  preferredChannel   StaffContactChannel @default(EMAIL) @map("preferred_channel")
+  /// EMERGENCY, QUOTES, INVOICES, APPLICATIONS, COMPLAINTS, APPOINTMENTS, GENERAL – wen ORBIT wofür informiert.
+  responsibilities   String[]            @default([])
+  /// Google-Kalender-ID für die Verfügbarkeit bei Terminvorschlägen (z. B. Monteure).
+  calendarId         String?             @map("calendar_id")
+  availabilityNote   String?             @map("availability_note")
+  userId             String?             @map("user_id")
+  /// Vorgesetzte Person: wird informiert, wenn die zuständige Person nicht reagiert (Eskalation).
+  supervisorId       String?             @map("supervisor_id")
+  /// Vertretung bei Krankheit/Urlaub: wird zuerst informiert, wenn die zuständige Person nicht reagiert.
+  deputyId           String?             @map("deputy_id")
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, externalId])
+  @@index([tenantId, active])
+  @@map("staff_members")
 }
