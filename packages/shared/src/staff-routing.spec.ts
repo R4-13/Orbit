@@ -123,3 +123,10 @@ describe('Text der Meldungen', () => {
     expect([formatWaiting(0), formatWaiting(45), formatWaiting(180), formatWaiting(3 * 1440)]).toEqual(['1 Minuten', '45 Minuten', '3 Stunden', '3 Tagen']);
   });
 });
+
+describe('Betreff bei Notfällen', () => {
+  it('doppelt das Präfix des Vorgangstitels nicht', () => {
+    const { subject } = composeStaffNotice({ phase: 'INITIAL', kind: 'EMERGENCY', role: 'RESPONSIBLE', recipientFirstName: 'Ben', caseTitle: 'Notfall: Rohrbruch', waitingMinutes: 1, link: 'x', appName: 'ORBIT' });
+    expect(subject).toBe('NOTFALL: Rohrbruch');
+  });
+});

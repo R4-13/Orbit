@@ -205,7 +205,9 @@ export function composeStaffNotice(input: StaffNoticeInput): { subject: string; 
   const emergency = input.kind === 'EMERGENCY';
   const waited = formatWaiting(input.waitingMinutes);
   const prefix = emergency ? 'NOTFALL' : input.phase === 'ESCALATED' ? 'Eskalation' : input.phase === 'REMINDER' ? 'Erinnerung' : 'Neu';
-  const subject = `${prefix}: ${input.caseTitle}`.slice(0, 150);
+  // Der Vorgangstitel eines Notfalls beginnt selbst mit „Notfall:“ – im Betreff nicht doppeln.
+  const title = emergency ? input.caseTitle.replace(/^notfall:\s*/i, '') : input.caseTitle;
+  const subject = `${prefix}: ${title}`.slice(0, 150);
   const why =
     input.phase === 'INITIAL'
       ? ''

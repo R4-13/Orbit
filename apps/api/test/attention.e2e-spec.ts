@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import { MockLLMProvider } from '@orbit/agent-core';
+import { buildTriageFixture } from '@orbit/shared';
 import request from 'supertest';
+import { LLM_PROVIDER } from '../src/agent/agent.tokens';
+import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
 import { AttentionService } from '../src/organization/attention.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -178,6 +182,46 @@ describe('Attention: notify, remind, escalate (e2e)', () => {
       await attention.syncTenant(tenantId, new Date(now.getTime() + 46 * MIN));
       // Eskalation nach 45 Minuten: Bens Vorgesetzte (Chefin) und die Leitung kommen dazu.
       expect(recipients()).toEqual(['ben@betrieb.test', 'chef@betrieb.test', 'leiter@betrieb.test']);
+    });
+
+    it('Ende zu Ende: eine Notfall-Nachricht ohne hinterlegten Prozess wird ein Vorgang und erreicht die Notfallzuständige', async () => {
+      const llm = app.get<MockLLMProvider>(LLM_PROVIDER);
+      llm.seedResponse({
+        toolCalls: [
+          {
+            toolCallId: randomUUID(),
+            toolName: 'submit_triage_result',
+            input: buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'COMPLAINT_OR_SERVICE', urgency: 'CRITICAL', conciseReason: 'Akuter Rohrbruch, Wasser läuft.', confidence: { relevance: 0.97, intent: 0.95 } }) as unknown as Record<string, unknown>,
+          },
+        ],
+        stopReason: 'tool_use',
+      });
+      const integration = await prisma.forTenantId(tenantId).integration.create({ data: { tenantId, connectorType: 'GMAIL', status: 'CONNECTED', lastSuccessAt: new Date(), externalAccountId: 'konto@betrieb.test' } });
+      const result = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, {
+        tenantId,
+        connectionId: integration.id,
+        channel: 'EMAIL',
+        provider: 'gmail',
+        externalEventId: `gmail-${randomUUID()}`,
+        occurredAt: new Date(),
+        sender: { address: 'kunde@privat.example' },
+        recipients: [{ address: 'konto@betrieb.test' }],
+        subject: 'Rohrbruch im Keller!',
+        content: 'Das Wasser läuft, bitte sofort kommen.',
+        direction: 'INBOUND',
+      });
+      expect(result.case).toMatchObject({ type: 'GENERAL' });
+      expect(result.case!.title).toBe('Notfall: Rohrbruch im Keller!');
+
+      sent = [];
+      await attention.syncTenant(tenantId, new Date());
+      const item = await itemFor(result.case!.id);
+      expect(item).toMatchObject({ kind: 'EMERGENCY', responsibility: 'EMERGENCY', state: 'OPEN' });
+      expect(recipients()).toEqual(['ben@betrieb.test']);
+      expect(sent[0]!.subject).toBe('NOTFALL: Rohrbruch im Keller!');
+      expect(sent[0]!.text).toContain('hat einen Notfall erkannt');
+      await prisma.forTenantId(tenantId).case.update({ where: { id: result.case!.id }, data: { orchestrationStatus: 'COMPLETED' } });
+      await attention.syncTenant(tenantId, new Date());
     });
 
     it('einstellbare Zeiten im Profil gelten: Erinnerung nach 60 Minuten statt 4 Stunden', async () => {

@@ -4,7 +4,7 @@ import type { LLMCompletionRequest, LLMProvider } from '@orbit/agent-core';
 import { MockLLMProvider } from '@orbit/agent-core';
 import type { OrbitEnv } from '@orbit/config';
 import type { Case, IntakeEventStatus, IntakeRelevance, Prisma } from '@orbit/domain';
-import { NotFoundError, ValidationFailedError, triageFixtureForScenario, type SimulatedTriageScenario, type TriageResult } from '@orbit/shared';
+import { NotFoundError, categoryLabel, ValidationFailedError, triageFixtureForScenario, type SimulatedTriageScenario, type TriageResult } from '@orbit/shared';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 import { AuditService } from '../audit/audit.service';
@@ -404,15 +404,38 @@ export class IntakeService {
     // A relevant business input with no configured process is NOT filtered out (Amendment 02 §6.1, E11-E14/E24).
     if (!route) {
       await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
-      await this.sendToReview(
+      // Jede geschäftlich relevante Nachricht wird ein Vorgang – auch ohne hinterlegten Prozess (Beschwerde, Notfall, Bewerbung …). Ein Vorgang ist die Grundlage dafür,
+      // dass die zuständige Person informiert, erinnert und notfalls eskaliert wird (AttentionService) und dass der Eingang nachverfolgbar bleibt.
+      const reason = `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`;
+      const reviewCase = await this.cases.create(tenantId, actorUserId ?? '', {
+        type: 'GENERAL',
+        title: `${triage.urgency === 'CRITICAL' ? 'Notfall' : categoryLabel(triage.category)}: ${event.subject ?? '(ohne Betreff)'}`,
+        description: event.content?.slice(0, 1000),
+      });
+      await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: reviewCase.id } });
+      if (documentIds.length > 0) await scoped.document.updateMany({ where: { id: { in: documentIds } }, data: { caseId: reviewCase.id } });
+      await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: reviewCase.id } });
+      await this.lifecycle.setGoals(tenantId, reviewCase.id, { businessGoals: triage.proposedBusinessGoals, currentIntent: triage.intents[0]?.key });
+      await this.facts.propose(
         tenantId,
-        actorUserId,
-        event,
-        intakeEventId,
-        `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`,
-        'BUSINESS_ACTIONABLE',
+        reviewCase.id,
+        triage.extractedFactCandidates.map(
+          (candidate): FactInput => ({
+            key: candidate.key,
+            value: candidate.value,
+            valueSchemaRef: candidate.valueSchemaRef,
+            unit: candidate.unit,
+            currency: candidate.currency,
+            confidence: candidate.confidence,
+            evidenceRefs: candidate.evidenceRefs,
+            sourceType: 'EMAIL',
+            sourceRef: inboundEmailId,
+          }),
+        ),
       );
-      return { category: 'OTHER', agentRunIds: [], intakeEventId };
+      await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [triage.conciseReason] }, { type: 'AGENT' });
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, reason, 'BUSINESS_ACTIONABLE');
+      return { case: reviewCase, category: 'OTHER', agentRunIds: [], intakeEventId };
     }
 
     await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });

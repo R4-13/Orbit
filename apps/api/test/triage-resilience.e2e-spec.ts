@@ -191,7 +191,13 @@ describe('Semantic triage resilience and safety gates (e2e)', () => {
 
     const s = await state(tenantId, result.intakeEventId);
     expect(s.intakeEvent.status).toBe('NEEDS_REVIEW');
-    expect(s.cases).toBe(0); // no sales process was started for a supplier's offer
+    // Kein Fachprozess (kein Vertriebsvorgang) für ein Lieferantenangebot – aber ein neutraler Prüfvorgang, damit jemand zuständig informiert und der Eingang nachverfolgbar ist.
+    expect(s.cases).toBe(1);
+    const reviewCase = await prisma.forTenantId(tenantId).case.findFirstOrThrow({ where: { tenantId } });
+    expect(reviewCase).toMatchObject({ type: 'GENERAL', orchestrationStatus: 'MANUAL_REVIEW', blueprintKey: null });
+    expect(reviewCase.attentionReasons.length).toBeGreaterThan(0);
+    expect(s.intakeEvent.caseId).toBe(reviewCase.id);
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId: reviewCase.id } })).toBe(0);
     expect(s.tasks).toBe(1);
   });
 

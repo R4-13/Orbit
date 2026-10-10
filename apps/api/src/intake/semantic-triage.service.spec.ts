@@ -2,7 +2,7 @@ import { ExternalSystemError } from '@orbit/shared';
 import { MockLLMProvider, ToolRegistry, type LLMCompletionRequest, type LLMCompletionResult, type LLMProvider } from '@orbit/agent-core';
 import { buildTriageFixture, triageFixtureForScenario, type TriageResult } from '@orbit/shared';
 import { TriageAgentTools } from '../agent/tools/triage.tools';
-import { SemanticTriageService, SUBMIT_TRIAGE_TOOL } from './semantic-triage.service';
+import { SemanticTriageService, SUBMIT_TRIAGE_TOOL, buildTriageTaskPrompt } from './semantic-triage.service';
 import type { NormalizedIntakeEvent } from './channel-event.types';
 
 /** A scripted stand-in for a REAL provider (non-"mock" providerName) so the LIVE-mode branches are exercised. */
@@ -37,7 +37,7 @@ const EVENT: NormalizedIntakeEvent = {
 };
 
 describe('SemanticTriageService (Amendment 02 §5)', () => {
-  function build(provider: LLMProvider, policyMode: 'AUTONOMOUS' | 'REQUIRE_APPROVAL' | 'DISABLED' = 'AUTONOMOUS') {
+  function build(provider: LLMProvider, policyMode: 'AUTONOMOUS' | 'REQUIRE_APPROVAL' | 'DISABLED' = 'AUTONOMOUS', profile: string | Error = '') {
     const registry = new ToolRegistry();
     new TriageAgentTools().register(registry);
     const runs = {
@@ -51,6 +51,7 @@ describe('SemanticTriageService (Amendment 02 §5)', () => {
       { resolveMode: jest.fn().mockResolvedValue(policyMode) } as never,
       runs as never,
       registry,
+      { promptFor: profile instanceof Error ? jest.fn().mockRejectedValue(profile) : jest.fn().mockResolvedValue(profile) } as never,
     );
     return { service, runs };
   }
@@ -175,5 +176,29 @@ describe('SemanticTriageService (Amendment 02 §5)', () => {
     const outcome = await service.triage('t1', undefined, EVENT);
 
     expect(outcome).toMatchObject({ status: 'REVIEW_REQUIRED', failureReason: 'POLICY_BLOCKED' });
+  });
+
+  describe('Betriebsprofil in der Anweisung', () => {
+    it('ohne Profil bleibt die Anweisung allgemein; mit Profil enthält sie es und die Dringlichkeits-Kriterien sind immer da', () => {
+      const general = buildTriageTaskPrompt();
+      expect(general).toContain('urgency: CRITICAL nur, wenn akute Gefahr');
+      expect(general).not.toContain('Betriebsprofil');
+      const withProfile = buildTriageTaskPrompt('Betriebsprofil (vom Betrieb gepflegt):\nBranche: Dachdecker.');
+      expect(withProfile).toContain('Branche: Dachdecker.');
+      expect(withProfile).toContain('Berücksichtige das Profil');
+    });
+
+    it('das Profil gelangt tatsächlich in die Systemanweisung an das Modell', async () => {
+      const provider = new ScriptedLiveProvider([submit(valid())]);
+      const { service } = build(provider, 'AUTONOMOUS', 'Betriebsprofil (vom Betrieb gepflegt):\nBranche: Dachdecker.');
+      await service.triage('t1', undefined, EVENT);
+      expect(JSON.stringify(provider.requests[0])).toContain('Branche: Dachdecker.');
+    });
+
+    it('ein Fehler beim Lesen des Profils verhindert die Triage nicht', async () => {
+      const provider = new ScriptedLiveProvider([submit(valid())]);
+      const { service } = build(provider, 'AUTONOMOUS', new Error('db down'));
+      expect((await service.triage('t1', undefined, EVENT)).status).toBe('DECIDED');
+    });
   });
 });

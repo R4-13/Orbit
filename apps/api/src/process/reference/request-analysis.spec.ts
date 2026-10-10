@@ -1,4 +1,4 @@
-import { AI_FACT_PREFIX, RequestAnalysisSchema, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysis } from './request-analysis';
+import { AI_FACT_PREFIX, RequestAnalysisSchema, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysis } from './request-analysis';
 import { clarificationBody } from './communication-templates';
 
 const MESSAGE = 'Guten Tag, wir möchten unsere alte Ölheizung im Einfamilienhaus (Baujahr 1985, ca. 140 m²) gegen eine Wärmepumpe tauschen. Bitte um ein Angebot. Viele Grüße, Thomas Meier';
@@ -113,5 +113,15 @@ describe('Rückfrage-Nachricht', () => {
     expect(site).not.toContain('Damit wir Ihnen ein passendes Angebot erstellen können');
     const phone = clarificationBody({ questions, companyName: 'M', appointment: { kind: 'PHONE_CALL', slots: [] } });
     expect(phone).toContain('Unter welcher Telefonnummer und zu welchen Zeiten erreichen wir Sie am besten?');
+  });
+});
+
+describe('Betriebsprofil in der Analyse-Anweisung', () => {
+  it('ohne Profil bleibt die Anweisung unverändert; mit Profil richtet sie Fragen nach dem Betrieb aus', () => {
+    const base = { catalog: 'Fenstertausch (Fenster)', reservedRequirements: '', companyName: 'Muster GmbH' };
+    expect(analysisPrompt(base)).not.toContain('Betriebsprofil');
+    const text = analysisPrompt({ ...base, profile: 'Betriebsprofil (vom Betrieb gepflegt):\nBranche: Fensterbau.\nEinsatzgebiet: Köln.' });
+    expect(text).toContain('Branche: Fensterbau.');
+    expect(text).toContain('Richte Fragen und Wortwahl nach diesem Betrieb');
   });
 });

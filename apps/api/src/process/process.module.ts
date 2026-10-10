@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ProfileContextModule } from '../organization/profile-context.module';
 import { AgentModule } from '../agent/agent.module';
 import { AiProvidersModule } from '../ai-providers/ai-providers.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
@@ -38,7 +39,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
  *    the generic orchestrator and the command surface.
  */
 @Module({
-  imports: [AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
+  imports: [ProfileContextModule, AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
   controllers: [ProcessBlueprintsController, CaseCommandsController, CaseOrchestrationController],
   providers: [
     CaseFactsService,

@@ -9,6 +9,7 @@ import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, analysisPrompt, evaluateAnalysis, type AnalysisResult, type RequestAnalysis } from './request-analysis';
 import { ReferenceProcessService } from './reference-process.service';
+import { ProfileContextService } from '../../organization/profile-context.service';
 
 const MAX_BODY_CHARS = 12_000;
 
@@ -42,6 +43,7 @@ export class RequestAnalysisService {
     private readonly facts: CaseFactsService,
     private readonly caseEvents: CaseEventsService,
     private readonly reference: ReferenceProcessService,
+    private readonly profileContext: ProfileContextService,
   ) {}
 
   /** Das Einreichungswerkzeug: führt nichts aus, die Prüfung geschieht in `evaluateAnalysis`. */
@@ -87,7 +89,7 @@ export class RequestAnalysisService {
     const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}`;
     const runtime = new AgentRuntime(llm, this.registry.subset([REQUEST_ANALYSIS_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));
     const system = buildLayeredSystemPrompt(
-      analysisPrompt({ catalog: catalog.map((c) => `${c.name} (${c.category})`).join('; '), reservedRequirements: reserved.description, companyName: tenant?.name ?? 'dem Betrieb' }),
+      analysisPrompt({ catalog: catalog.map((c) => `${c.name} (${c.category})`).join('; '), reservedRequirements: reserved.description, companyName: tenant?.name ?? 'dem Betrieb', profile: await this.profileContext.promptFor(ctx.tenantId).catch(() => '') }),
     );
     const turn = await runtime
       .runTurn({ tenantId: ctx.tenantId, agentRunId: ctx.agentRunId }, { systemPrompt: system, messages: [{ role: 'user', content: wrapUntrustedContent(text) }], maxToolIterations: 2 })
