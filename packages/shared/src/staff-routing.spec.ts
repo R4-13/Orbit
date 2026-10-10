@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ESCALATION_POLICY, escalationChain, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
+import { DEFAULT_ESCALATION_POLICY, composeStaffNotice, escalationChain, formatWaiting, responsibilityForCase, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
 
 const person = (id: string, over: Partial<RoutableStaff> = {}): RoutableStaff => ({
   id,
@@ -80,5 +80,46 @@ describe('Zustellung', () => {
   });
   it('ohne erreichbaren Kanal gibt es keinen Plan – eine Lücke, die gemeldet wird', () => {
     expect(planDelivery(person('c', { email: null, preferredChannel: 'PHONE', phone: '+49 30 1234567' }), emailOnly)).toBeUndefined();
+  });
+});
+
+
+describe('Zuständigkeit für einen Vorgang', () => {
+  it('Notfälle gehen an die Notfallzuständigen, sonst entscheidet die Kategorie, ersatzweise die Art des Vorgangs', () => {
+    expect(responsibilityForCase({ category: 'REQUEST_FOR_QUOTE', emergency: true })).toBe('EMERGENCY');
+    expect(responsibilityForCase({ category: 'INVOICE_RECEIVED' })).toBe('INVOICES');
+    expect(responsibilityForCase({ category: 'COMPLAINT_OR_SERVICE' })).toBe('COMPLAINTS');
+    expect(responsibilityForCase({ category: 'UNKNOWN', caseType: 'FINANCE' })).toBe('INVOICES');
+    expect(responsibilityForCase({ caseType: 'SALES' })).toBe('QUOTES');
+    expect(responsibilityForCase({})).toBe('GENERAL');
+  });
+});
+
+describe('Text der Meldungen', () => {
+  const base = { kind: 'WAITING_FOR_APPROVAL' as const, recipientFirstName: 'Bea', caseTitle: 'Neue Anfrage: Dach', reason: 'Eine Freigabe ist offen.', waitingMinutes: 300, link: 'https://orbit.example/cases/1', appName: 'ORBIT' };
+  it('erste Meldung: Grund, Link und der Hinweis, dass ORBIT nicht untätig wartet', () => {
+    const { subject, text } = composeStaffNotice({ ...base, phase: 'INITIAL', role: 'RESPONSIBLE' });
+    expect(subject).toBe('Neu: Neue Anfrage: Dach');
+    expect(text).toContain('wartet auf eine Freigabe');
+    expect(text).toContain('Grund: Eine Freigabe ist offen.');
+    expect(text).toContain('https://orbit.example/cases/1');
+    expect(text).toContain('wartet nicht untätig');
+  });
+  it('Erinnerung an die Vertretung nennt, für wen sie einspringt; die Eskalation nennt, wer nicht reagiert hat', () => {
+    const deputy = composeStaffNotice({ ...base, phase: 'REMINDER', role: 'DEPUTY', responsibleName: 'Anna Beispiel' });
+    expect(deputy.subject).toBe('Erinnerung: Neue Anfrage: Dach');
+    expect(deputy.text).toContain('Vertretung eingetragen für Anna Beispiel');
+    expect(deputy.text).toContain('seit 5 Stunden');
+    const boss = composeStaffNotice({ ...base, phase: 'ESCALATED', role: 'SUPERVISOR', responsibleName: 'Anna Beispiel', waitingMinutes: 1500 });
+    expect(boss.subject.startsWith('Eskalation:')).toBe(true);
+    expect(boss.text).toContain('Anna Beispiel hat seit 25 Stunden nicht reagiert');
+  });
+  it('Notfälle sind schon im Betreff unübersehbar', () => {
+    const { subject, text } = composeStaffNotice({ ...base, kind: 'EMERGENCY', phase: 'INITIAL', role: 'RESPONSIBLE' });
+    expect(subject.startsWith('NOTFALL:')).toBe(true);
+    expect(text).toContain('einen Notfall erkannt');
+  });
+  it('Wartezeiten werden lesbar angegeben', () => {
+    expect([formatWaiting(0), formatWaiting(45), formatWaiting(180), formatWaiting(3 * 1440)]).toEqual(['1 Minuten', '45 Minuten', '3 Stunden', '3 Tagen']);
   });
 });

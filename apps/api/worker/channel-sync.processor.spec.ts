@@ -6,6 +6,7 @@ import type { ChannelPollAdapter } from '../src/channel-sync/channel-poll-adapte
 import { CHANNEL_POLL_ADAPTERS } from '../src/channel-sync/channel-sync.tokens';
 import { ORBIT_ENV } from '../src/config/env.token';
 import { IntakeService } from '../src/intake/intake.service';
+import { AttentionService } from '../src/organization/attention.service';
 import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CHANNEL_SYNC_QUEUE } from '../src/queue/queue.tokens';
@@ -52,6 +53,7 @@ describe('ChannelSyncProcessor', () => {
         { provide: WebhookIdempotencyService, useValue: idempotency },
         { provide: IntakeService, useValue: intake },
         { provide: ProcessSweepService, useValue: { sweep: jest.fn().mockResolvedValue({ advanced: 0, failed: 0 }) } },
+        { provide: AttentionService, useValue: { sweep: jest.fn().mockResolvedValue({ tenants: 0, opened: 0, resolved: 0, notified: 0, failed: 0 }) } },
         { provide: CHANNEL_POLL_ADAPTERS, useValue: [adapter] as unknown as ChannelPollAdapter[] },
         { provide: getQueueToken(CHANNEL_SYNC_QUEUE), useValue: queue },
         {

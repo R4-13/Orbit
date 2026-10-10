@@ -7,6 +7,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { AttentionService } from './attention.service';
 import { StaffService } from './staff.service';
 import { TenantProfileService } from './tenant-profile.service';
 
@@ -98,5 +99,30 @@ export class StaffController {
   @Delete(':id')
   deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.staff.deactivate(user.tenantId, user.id, id);
+  }
+}
+
+/**
+ * Was zu einem Vorgang gemeldet wurde und die Quittierung „Ich kümmere mich“. Jeder, der Vorgänge sehen darf, sieht den Stand der Meldungen; quittieren darf,
+ * wer Vorgänge bearbeiten darf.
+ */
+@ApiTags('organization')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Controller({ path: 'attention' })
+export class AttentionController {
+  constructor(private readonly attention: AttentionService) {}
+
+  @Get('cases/:caseId')
+  @RequirePermissions(PERMISSIONS.CASE_READ)
+  async forCase(@CurrentUser() user: AuthenticatedUser, @Param('caseId', new ParseUUIDPipe()) caseId: string) {
+    // Als Objekt, nie `null` direkt: ein leerer Antwortkörper würde clientseitig als Fehler gelesen.
+    return { attention: await this.attention.forCase(user.tenantId, caseId) };
+  }
+
+  @Post(':id/acknowledge')
+  @RequirePermissions(PERMISSIONS.CASE_MANAGE)
+  acknowledge(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) id: string) {
+    return this.attention.acknowledge(user.tenantId, user.id, id);
   }
 }

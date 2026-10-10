@@ -56,6 +56,8 @@ export const TENANT_SCOPED_MODELS = [
   'TenantBranding',
   'TenantProfile',
   'StaffMember',
+  'AttentionItem',
+  'StaffNotification',
   'Conversation',
   'ConversationMessage',
   'IntegrationCredentialSecret',

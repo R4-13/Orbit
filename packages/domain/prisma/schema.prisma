@@ -329,6 +329,8 @@ model Tenant {
   branding                     TenantBranding?
   profile                      TenantProfile?
   staffMembers                 StaffMember[]
+  attentionItems               AttentionItem[]
+  staffNotifications           StaffNotification[]
   conversations                Conversation[]
   conversationMessages         ConversationMessage[]
   agentRuns                    AgentRun[]
@@ -564,6 +566,7 @@ model Case {
   caseCommands        CaseCommand[]
   communicationDrafts CommunicationDraft[]
   quotes              Quote[]
+  attentionItems      AttentionItem[]
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -2655,7 +2658,6 @@ model PlatformSupportSession {
   @@map("platform_support_sessions")
 }
 
-
 // ============================================================================
 // Betriebsprofil und Mitarbeiterverzeichnis (Rückmeldung: „ORBIT muss wissen, wie der Betrieb arbeitet und wen es wie erreicht“)
 // ============================================================================
@@ -2720,37 +2722,103 @@ model TenantProfile {
 
 /// Eine Person des Betriebs mit Rolle, Zuständigkeiten und Erreichbarkeit. Nicht jede Person nutzt ORBIT (z. B. Monteure): `userId` verknüpft optional.
 model StaffMember {
-  id                 String              @id @default(uuid())
-  tenantId           String              @map("tenant_id")
+  id               String              @id @default(uuid())
+  tenantId         String              @map("tenant_id")
   /// Kennung im führenden System (Personalnummer, ID aus dem Verzeichnis) – Schlüssel für den Abgleich (CSV/API).
-  externalId         String?             @map("external_id")
-  firstName          String              @map("first_name")
-  lastName           String              @map("last_name")
-  roleKind           StaffRoleKind       @default(OTHER) @map("role_kind")
-  roleTitle          String?             @map("role_title")
-  email              String?
+  externalId       String?             @map("external_id")
+  firstName        String              @map("first_name")
+  lastName         String              @map("last_name")
+  roleKind         StaffRoleKind       @default(OTHER) @map("role_kind")
+  roleTitle        String?             @map("role_title")
+  email            String?
   /// Mobilnummer für Anruf/SMS/WhatsApp.
-  phone              String?
-  teamsAddress       String?             @map("teams_address")
-  whatsappNumber     String?             @map("whatsapp_number")
-  preferredChannel   StaffContactChannel @default(EMAIL) @map("preferred_channel")
+  phone            String?
+  teamsAddress     String?             @map("teams_address")
+  whatsappNumber   String?             @map("whatsapp_number")
+  preferredChannel StaffContactChannel @default(EMAIL) @map("preferred_channel")
   /// EMERGENCY, QUOTES, INVOICES, APPLICATIONS, COMPLAINTS, APPOINTMENTS, GENERAL – wen ORBIT wofür informiert.
-  responsibilities   String[]            @default([])
+  responsibilities String[]            @default([])
   /// Google-Kalender-ID für die Verfügbarkeit bei Terminvorschlägen (z. B. Monteure).
-  calendarId         String?             @map("calendar_id")
-  availabilityNote   String?             @map("availability_note")
-  userId             String?             @map("user_id")
+  calendarId       String?             @map("calendar_id")
+  availabilityNote String?             @map("availability_note")
+  userId           String?             @map("user_id")
   /// Vorgesetzte Person: wird informiert, wenn die zuständige Person nicht reagiert (Eskalation).
-  supervisorId       String?             @map("supervisor_id")
+  supervisorId     String?             @map("supervisor_id")
   /// Vertretung bei Krankheit/Urlaub: wird zuerst informiert, wenn die zuständige Person nicht reagiert.
-  deputyId           String?             @map("deputy_id")
-  active             Boolean             @default(true)
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+  deputyId         String?             @map("deputy_id")
+  active           Boolean             @default(true)
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  notifications StaffNotification[]
 
   @@unique([tenantId, externalId])
   @@index([tenantId, active])
   @@map("staff_members")
+}
+
+/// Ein Vorgang, der auf einen Menschen wartet (Prüfung, Freigabe, Fehler, Notfall) – und wie weit die Benachrichtigung und Eskalation gediehen ist.
+/// Zustandsbasiert: der Abgleich legt den Eintrag an, solange der Vorgang im wartenden Zustand ist, und löst ihn, sobald er ihn verlässt.
+model AttentionItem {
+  id                   String    @id @default(uuid())
+  tenantId             String    @map("tenant_id")
+  caseId               String    @map("case_id")
+  /// MANUAL_REVIEW | WAITING_FOR_APPROVAL | FAILED | EMERGENCY
+  kind                 String
+  /// Zuständigkeit (StaffResponsibility), nach der die Adressaten bestimmt wurden.
+  responsibility       String
+  emergency            Boolean   @default(false)
+  reason               String?
+  /// OPEN | ACKNOWLEDGED (jemand hat übernommen: keine Erinnerungen mehr) | SUPPRESSED (Altbestand beim Einschalten, es wird niemand benachrichtigt) | RESOLVED
+  state                String    @default("OPEN")
+  /// Zuletzt erreichte Phase: INITIAL | REMINDER | ESCALATED
+  phase                String    @default("INITIAL")
+  firstSeenAt          DateTime  @default(now()) @map("first_seen_at")
+  lastNotifiedAt       DateTime? @map("last_notified_at")
+  resolvedAt           DateTime? @map("resolved_at")
+  acknowledgedAt       DateTime? @map("acknowledged_at")
+  acknowledgedByUserId String?   @map("acknowledged_by_user_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case          Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  notifications StaffNotification[]
+
+  @@index([tenantId, state])
+  @@index([caseId])
+  @@map("attention_items")
+}
+
+/// Eine Meldung an eine Person des Betriebs – mit dem gewünschten und dem tatsächlich genutzten Kanal (kein stilles Umlenken).
+model StaffNotification {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  attentionItemId String   @map("attention_item_id")
+  staffMemberId   String   @map("staff_member_id")
+  phase           String
+  /// RESPONSIBLE | DEPUTY | SUPERVISOR | LEADERSHIP
+  role            String
+  subject         String
+  wantedChannel   String   @map("wanted_channel")
+  deliveredVia    String?  @map("delivered_via")
+  /// SENT | FAILED | SKIPPED
+  status          String
+  /// LIVE | SIMULATED
+  executionMode   String?  @map("execution_mode")
+  note            String?
+  error           String?
+  /// Bei fehlgeschlagener Zustellung: wie oft versucht wurde (Wiederholung im Abstand, begrenzt).
+  attempts        Int      @default(1)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attentionItem AttentionItem @relation(fields: [attentionItemId], references: [id], onDelete: Cascade)
+  staffMember   StaffMember   @relation(fields: [staffMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([attentionItemId, staffMemberId, phase])
+  @@index([tenantId, createdAt])
+  @@map("staff_notifications")
 }

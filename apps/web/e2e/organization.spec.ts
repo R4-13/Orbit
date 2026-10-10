@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
-import { DEMO_USERS, loginViaStorage } from './utils/login';
+import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaStorage } from './utils/login';
 
 /**
  * Unternehmensprofil und Mitarbeiterverzeichnis. Beides sind Daten des Demo-Mandanten (und der Anwender testet in derselben Umgebung): die Schnittstelle wird deshalb mit
@@ -290,5 +290,57 @@ test.describe('Unternehmensprofil und Mitarbeiter', () => {
     backend.staff.push({ ...baseStaff('x2'), firstName: 'Ben', lastName: 'Büro', email: 'ben@betrieb.example' });
     await page.goto('/admin/staff');
     await expect(page.getByTestId('directory-gaps')).toContainText('Inhaber oder Leitung');
+  });
+});
+
+test.describe('Meldungen am Vorgang', () => {
+  test('ein auf Menschen wartender Vorgang zeigt, wer informiert wurde und wie weit die Eskalation ist; „Ich kümmere mich“ beendet die Erinnerungen', async ({ page }) => {
+    // Ein echter Vorgang des Demo-Mandanten dient nur als Seite; die Meldungen kommen aus vorgegebenen Antworten (nichts wird gespeichert oder gesendet).
+    const token = await loginViaApi(DEMO_USERS.admin);
+    const cases = (await (await fetch(`${API_BASE_URL}/api/v1/cases/overview?filter=ALL`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { items: Array<{ id: string }> };
+    expect(cases.items.length, 'ein Vorgang des Demo-Mandanten').toBeGreaterThan(0);
+    const caseId = cases.items[0]!.id;
+
+    const base = { id: 'a1', kind: 'WAITING_FOR_APPROVAL', state: 'OPEN', phase: 'ESCALATED', emergency: false, since: '2026-10-09T08:00:00.000Z', acknowledgedAt: null };
+    const notifications = [
+      { person: 'Bea Buchhaltung', role: 'RESPONSIBLE', phase: 'INITIAL', wantedChannel: 'EMAIL', deliveredVia: 'EMAIL', status: 'SENT', executionMode: 'LIVE', note: null, at: '2026-10-09T08:01:00.000Z' },
+      { person: 'Vera Vertretung', role: 'DEPUTY', phase: 'REMINDER', wantedChannel: 'EMAIL', deliveredVia: 'EMAIL', status: 'SENT', executionMode: 'LIVE', note: null, at: '2026-10-09T12:01:00.000Z' },
+      { person: 'Ben Notdienst', role: 'SUPERVISOR', phase: 'ESCALATED', wantedChannel: 'WHATSAPP', deliveredVia: 'EMAIL', status: 'SENT', executionMode: 'LIVE', note: 'Gewünscht ist WHATSAPP; dieser Kanal ist noch nicht angebunden, deshalb per E-Mail.', at: '2026-10-10T08:01:00.000Z' },
+    ];
+    let acknowledged = false;
+    const acks: string[] = [];
+    await page.route(`**/api/v1/attention/cases/${caseId}`, (route) => route.fulfill({ json: { attention: { ...base, state: acknowledged ? 'ACKNOWLEDGED' : 'OPEN', acknowledgedAt: acknowledged ? '2026-10-10T09:00:00.000Z' : null, notifications } } }));
+    await page.route('**/api/v1/attention/a1/acknowledge', (route) => {
+      acks.push(route.request().method());
+      acknowledged = true;
+      return route.fulfill({ status: 201, json: {} });
+    });
+
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await page.goto(`/cases/${caseId}`);
+    const notice = page.getByTestId('case-attention');
+    await expect(notice).toContainText('Dieser Vorgang wartet auf einen Menschen.');
+    await expect(notice).toContainText('Eskalation läuft');
+    await expect(notice).toContainText('Bea Buchhaltung (zuständig)');
+    await expect(notice).toContainText('Vera Vertretung (Vertretung)');
+    await expect(notice).toContainText('Ben Notdienst (Vorgesetzte/r)');
+    await expect(notice).toContainText('per E-Mail (gewünscht: WhatsApp)');
+
+    await notice.getByRole('button', { name: 'Ich kümmere mich darum' }).click();
+    await expect(notice).toContainText('Ein Mensch hat den Vorgang übernommen.');
+    await expect(notice.getByRole('button', { name: 'Ich kümmere mich darum' })).toHaveCount(0);
+    expect(acks).toEqual(['POST']);
+  });
+
+  test('ohne offene Meldung erscheint kein Hinweis', async ({ page }) => {
+    const token = await loginViaApi(DEMO_USERS.admin);
+    const cases = (await (await fetch(`${API_BASE_URL}/api/v1/cases/overview?filter=ALL`, { headers: { Authorization: `Bearer ${token}` } })).json()) as { items: Array<{ id: string }> };
+    const caseId = cases.items[0]!.id;
+    await page.route(`**/api/v1/attention/cases/${caseId}`, (route) => route.fulfill({ json: { attention: null } }));
+    await loginViaStorage(page, DEMO_USERS.admin);
+    await page.goto(`/cases/${caseId}`);
+    await expect(page.getByRole('tablist', { name: 'Bereiche des Vorgangs' })).toBeVisible();
+    await expect(page.getByTestId('case-attention')).toHaveCount(0);
   });
 });

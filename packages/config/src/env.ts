@@ -127,6 +127,8 @@ export const envSchema = z.object({
   UI_SHOW_EXCLUDED_INTAKE: z.enum(['true', 'false']).optional(),
   /** Live-Abgleich: simuliert abgeschlossene oder an einer fehlenden Verbindung blockierte Schritte werden automatisch live wiederholt, sobald der echte Weg verfügbar ist. */
   LIVE_UPGRADE_ENABLED: z.enum(['true', 'false']).default('true'),
+  /** Meldungen an Mitarbeiter bei Vorgängen, die auf Menschen warten (mit Erinnerung, Vertretung und Eskalation). `false` schaltet nur das Auslösen ab, nicht die Verwaltung. */
+  ESCALATION_ENABLED: z.enum(['true', 'false']).default('true'),
   /** Nur Vorgänge, die in den letzten N Tagen bearbeitet wurden, werden live wiederholt (alte Vorgänge nie). */
   LIVE_UPGRADE_MAX_AGE_DAYS: z.coerce.number().int().min(1).max(90).default(7),
   /** Optional. Reasoning models (e.g. gpt-6-luna) only accept function tools on Chat Completions with 'none'. Unset = send nothing. */

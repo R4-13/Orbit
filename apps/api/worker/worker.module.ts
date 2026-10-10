@@ -6,6 +6,7 @@ import { ChannelSyncModule } from '../src/channel-sync/channel-sync.module';
 import { EnvModule } from '../src/config/env.module';
 import { IntakeModule } from '../src/intake/intake.module';
 import { MetricsModule } from '../src/metrics/metrics.module';
+import { OrganizationModule } from '../src/organization/organization.module';
 import { PlatformControlModule } from '../src/platform-control/platform-control.module';
 import { PolicyModule } from '../src/policy/policy.module';
 import { ProcessModule } from '../src/process/process.module';
@@ -54,6 +55,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     WorkflowsModule,
     IntakeModule,
     ProcessModule,
+    OrganizationModule,
     ChannelSyncModule,
     WebhooksModule,
   ],

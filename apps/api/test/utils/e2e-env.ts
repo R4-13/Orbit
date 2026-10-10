@@ -36,3 +36,5 @@ globalThis.fetch = ((input: Parameters<typeof fetch>[0], init?: Parameters<typeo
 
 // Der Live-Abgleich wiederholt Schritte fremder Vorgänge, die im Hintergrund laufen; im Test nur dort, wo er ausdrücklich geprüft wird.
 process.env.LIVE_UPGRADE_ENABLED ??= 'false';
+// Meldungen an Mitarbeiter laufen im Test nur dort, wo sie ausdrücklich geprüft werden (sie würden sonst über den globalen Sweep an echte Adressen gehen).
+process.env.ESCALATION_ENABLED ??= 'false';

@@ -63,6 +63,10 @@ export const AUDIT_EVENT_TYPES = [
   /** Ein Schritt eines Vorgangs wurde automatisch wieder aufgenommen oder live wiederholt (Live-Abgleich). */
   'PROCESS_LIVE_UPGRADE',
   'TENANT_PROFILE_UPDATED',
+  /** Eine Person wurde über einen auf Menschen wartenden Vorgang informiert (Rolle, Phase, Kanal – nie Adresse oder Text). */
+  'ATTENTION_NOTIFIED',
+  'ATTENTION_ESCALATED',
+  'ATTENTION_ACKNOWLEDGED',
   'STAFF_CREATED',
   'STAFF_UPDATED',
   'STAFF_DEACTIVATED',

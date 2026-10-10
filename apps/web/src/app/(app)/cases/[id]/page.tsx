@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Download } from 'lucide-react';
 import { PERMISSIONS, categoryLabel, internalHref, type CaseTab } from '@orbit/shared';
 import { ErrorState } from '@orbit/ui';
+import { CaseAttentionNotice } from '../../../../components/common/case-attention';
 import { CaseHistory } from '../../../../components/orchestration/case-history';
 import { OrchestrationPanel } from '../../../../components/orchestration/orchestration-panel';
 import { EmptyState, ExecutionModeBadge, LastUpdated, Notice, PageHeader, RelatedObjects, StatusBadge } from '../../../../components/common/primitives';
@@ -290,6 +291,8 @@ function CaseDetail() {
           ) : null}
         </div>
       </PageHeader>
+
+      <CaseAttentionNotice caseId={id} />
 
       <div role="tablist" aria-label="Bereiche des Vorgangs" className="flex flex-wrap gap-1 border-b border-slate-200">
         {tabs.map((tab) => (

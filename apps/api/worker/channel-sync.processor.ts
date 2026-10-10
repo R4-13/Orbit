@@ -10,6 +10,7 @@ import { TenantConcurrencyService } from '../src/queue/tenant-concurrency.servic
 import { PrismaService } from '../src/prisma/prisma.service';
 import { WebhookIdempotencyService } from '../src/webhooks/webhook-idempotency.service';
 import { IntakeService } from '../src/intake/intake.service';
+import { AttentionService } from '../src/organization/attention.service';
 import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { CHANNEL_POLL_ADAPTERS } from '../src/channel-sync/channel-sync.tokens';
 import type { ChannelPollAdapter } from '../src/channel-sync/channel-poll-adapter';
@@ -66,6 +67,7 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     private readonly idempotency: WebhookIdempotencyService,
     private readonly intake: IntakeService,
     private readonly processSweep: ProcessSweepService,
+    private readonly attention: AttentionService,
     @Inject(CHANNEL_POLL_ADAPTERS) private readonly adapters: ChannelPollAdapter[],
     @InjectQueue(CHANNEL_SYNC_QUEUE) private readonly queue: Queue<PollJobData | Record<string, never>>,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
@@ -105,6 +107,12 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     }
     if (job.name === 'process-sweep') {
       await this.processSweep.sweep();
+      // Vorgänge, die auf Menschen warten: informieren, erinnern, eskalieren. Ein Fehler hier darf den Prozess-Sweep nicht beeinträchtigen.
+      try {
+        await this.attention.sweep();
+      } catch (error) {
+        this.logger.warn(`Attention sweep failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 

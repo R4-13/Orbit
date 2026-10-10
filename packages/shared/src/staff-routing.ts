@@ -145,3 +145,85 @@ export function planDelivery(staff: RoutableStaff, connected: ReadonlySet<Delive
 }
 
 export const describeStep = (step: EscalationStep): string => `${nameOf(step.staff)} (${{ RESPONSIBLE: 'zuständig', DEPUTY: 'Vertretung', SUPERVISOR: 'Vorgesetzte/r', LEADERSHIP: 'Leitung' }[step.role]})`;
+
+// ---------------------------------------------------------------- Wer ist für diesen Vorgang zuständig, und was steht in der Meldung?
+
+export const ATTENTION_KINDS = ['MANUAL_REVIEW', 'WAITING_FOR_APPROVAL', 'FAILED', 'EMERGENCY'] as const;
+export type AttentionKind = (typeof ATTENTION_KINDS)[number];
+
+/**
+ * Zuständigkeit für einen Vorgang: Notfälle gehen an die Notfallzuständigen, sonst richtet sich die Zuständigkeit nach der erkannten Kategorie, ersatzweise nach der Art des
+ * Vorgangs. Was nirgends passt, geht an „Allgemein“ (und weiter an die Leitung, siehe `responsiblesFor`).
+ */
+export function responsibilityForCase(input: { category?: string | null; caseType?: string | null; emergency?: boolean }): StaffResponsibility {
+  if (input.emergency) return 'EMERGENCY';
+  switch (input.category) {
+    case 'INVOICE_RECEIVED':
+    case 'SUPPLIER_OFFER':
+      return 'INVOICES';
+    case 'REQUEST_FOR_QUOTE':
+    case 'SALES_INQUIRY':
+      return 'QUOTES';
+    case 'APPLICATION':
+      return 'APPLICATIONS';
+    case 'COMPLAINT_OR_SERVICE':
+      return 'COMPLAINTS';
+    default:
+      return input.caseType === 'FINANCE' ? 'INVOICES' : input.caseType === 'SALES' ? 'QUOTES' : 'GENERAL';
+  }
+}
+
+export interface StaffNoticeInput {
+  phase: EscalationPhase;
+  kind: AttentionKind;
+  role: EscalationStep['role'];
+  recipientFirstName: string;
+  caseTitle: string;
+  reason?: string | null;
+  waitingMinutes: number;
+  /** Wer zuerst zuständig war – bei Vertretung und Eskalation wichtig („Anna Beispiel hat nicht reagiert“). */
+  responsibleName?: string;
+  link: string;
+  appName: string;
+}
+
+const KIND_TEXT: Record<AttentionKind, string> = {
+  MANUAL_REVIEW: 'braucht Ihre Prüfung',
+  WAITING_FOR_APPROVAL: 'wartet auf eine Freigabe',
+  FAILED: 'ist fehlgeschlagen und braucht eine Entscheidung',
+  EMERGENCY: 'ist ein Notfall',
+};
+
+export function formatWaiting(minutes: number): string {
+  if (minutes < 90) return `${Math.max(1, Math.round(minutes))} Minuten`;
+  if (minutes < 48 * 60) return `${Math.round(minutes / 60)} Stunden`;
+  return `${Math.round(minutes / 1440)} Tagen`;
+}
+
+/** Text einer Meldung an eine Person (E-Mail): kurz, mit Grund, Wartezeit und Link – und bei Vertretung/Eskalation mit dem Hinweis, warum gerade diese Person angesprochen wird. */
+export function composeStaffNotice(input: StaffNoticeInput): { subject: string; text: string } {
+  const emergency = input.kind === 'EMERGENCY';
+  const waited = formatWaiting(input.waitingMinutes);
+  const prefix = emergency ? 'NOTFALL' : input.phase === 'ESCALATED' ? 'Eskalation' : input.phase === 'REMINDER' ? 'Erinnerung' : 'Neu';
+  const subject = `${prefix}: ${input.caseTitle}`.slice(0, 150);
+  const why =
+    input.phase === 'INITIAL'
+      ? ''
+      : input.role === 'RESPONSIBLE'
+        ? `Dieser Vorgang wartet seit ${waited} auf Sie.`
+        : input.role === 'DEPUTY'
+          ? `Sie sind als Vertretung eingetragen${input.responsibleName ? ` für ${input.responsibleName}` : ''}. Der Vorgang wartet seit ${waited}, bisher gab es keine Reaktion.`
+          : `${input.responsibleName ? `${input.responsibleName} hat` : 'Die zuständige Person hat'} seit ${waited} nicht reagiert (auch die Vertretung nicht), deshalb melden wir uns bei Ihnen.`;
+  const lines = [
+    `Guten Tag ${input.recipientFirstName},`,
+    '',
+    emergency ? `${input.appName} hat einen Notfall erkannt: „${input.caseTitle}“.` : `Der Vorgang „${input.caseTitle}“ ${KIND_TEXT[input.kind]}.`,
+    ...(input.reason ? [`Grund: ${input.reason}`] : []),
+    ...(why ? ['', why] : []),
+    '',
+    `Vorgang öffnen: ${input.link}`,
+    '',
+    input.phase === 'INITIAL' ? `${input.appName} wartet nicht untätig: Es prüft laufend, ob sich der Stand ändert, und meldet sich bei ausbleibender Reaktion erneut.` : `${input.appName} meldet sich weiter, bis der Vorgang übernommen ist.`,
+  ];
+  return { subject, text: lines.join('\n') };
+}
