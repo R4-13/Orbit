@@ -23,6 +23,10 @@ import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
 import { ProcessBlueprintsController } from './process-blueprints.controller';
 import { ProcessSweepService } from './process-sweep.service';
+import { CUSTOMER_DIRECTORIES, OrbitContactsDirectory } from './customer/customer-directory';
+import { CustomerRecordService } from './customer/customer-record.service';
+import { ContactsModule } from '../contacts/contacts.module';
+import { TasksModule } from '../tasks/tasks.module';
 import { DraftEditingService } from './reference/draft-editing.service';
 import { ReferenceProcessService } from './reference/reference-process.service';
 import { AppointmentSlotsService } from './reference/appointment-slots.service';
@@ -39,7 +43,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
  *    the generic orchestrator and the command surface.
  */
 @Module({
-  imports: [ProfileContextModule, AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
+  imports: [ProfileContextModule, ContactsModule, TasksModule, AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
   controllers: [ProcessBlueprintsController, CaseCommandsController, CaseOrchestrationController],
   providers: [
     CaseFactsService,
@@ -62,6 +66,10 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     LiveReconciliationService,
     CaseOrchestrationService,
     HumanInteractionService,
+    OrbitContactsDirectory,
+    // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.
+    { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory) => [orbit], inject: [OrbitContactsDirectory] },
+    CustomerRecordService,
   ],
   exports: [
     CaseFactsService,
@@ -79,6 +87,8 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     ProcessSweepService,
     CaseOrchestrationService,
     HumanInteractionService,
+    CustomerRecordService,
+    CUSTOMER_DIRECTORIES,
   ],
 })
 export class ProcessModule {}

@@ -21,6 +21,7 @@ import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
 import { renderSimplePdf, type PdfLine } from './simple-pdf';
+import { CustomerRecordService } from '../customer/customer-record.service';
 
 const SUBMIT_FACTS_TOOL = 'submit_extracted_facts';
 const MAX_BODY_CHARS = 12_000;
@@ -75,6 +76,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly caseEvents: CaseEventsService,
     private readonly analysis: RequestAnalysisService,
     private readonly appointments: AppointmentSlotsService,
+    private readonly customers: CustomerRecordService,
   ) {}
 
   onModuleInit(): void {
@@ -138,11 +140,16 @@ export class ReferenceProcessTools implements OnModuleInit {
         ]);
         for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmReplyTargetFromHeader(ctx.tenantId, fact.id);
 
+        // Kundenstamm prüfen (gefunden / nicht gefunden / System nicht erreichbar): fehlt der Eintrag, legt ORBIT ihn an oder bittet einen Menschen – und prüft später erneut.
+        const sender = await scoped.intakeEvent.findFirst({ where: { caseId }, orderBy: { createdAt: 'asc' }, select: { senderRef: true } });
+        const displayName = (sender?.senderRef as { displayName?: string } | null | undefined)?.displayName;
+        const customerRecord = await this.customers.observe(ctx.tenantId, caseId, { email: inbound.fromAddress, displayName });
         const contact = await scoped.contact.findFirst({ where: { email: inbound.fromAddress } });
         const priorMessages = await scoped.emailMessage.findMany({ where: { fromAddress: inbound.fromAddress, caseId: { not: caseId }, NOT: { caseId: null } }, select: { caseId: true }, distinct: ['caseId'] });
         return {
           replyTarget: inbound.fromAddress,
           contactKnown: Boolean(contact),
+          customerRecord,
           contactId: contact?.id ?? null,
           priorCaseCount: priorMessages.length,
           executionMode: 'LIVE',

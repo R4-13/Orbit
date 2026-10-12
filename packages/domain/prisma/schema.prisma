@@ -330,6 +330,7 @@ model Tenant {
   profile                      TenantProfile?
   staffMembers                 StaffMember[]
   attentionItems               AttentionItem[]
+  customerRecordWatches        CustomerRecordWatch[]
   staffNotifications           StaffNotification[]
   conversations                Conversation[]
   conversationMessages         ConversationMessage[]
@@ -567,6 +568,7 @@ model Case {
   communicationDrafts CommunicationDraft[]
   quotes              Quote[]
   attentionItems      AttentionItem[]
+  customerRecordWatch CustomerRecordWatch?
 
   @@index([tenantId, status])
   @@index([tenantId, type])
@@ -2821,4 +2823,36 @@ model StaffNotification {
   @@unique([attentionItemId, staffMemberId, phase])
   @@index([tenantId, createdAt])
   @@map("staff_notifications")
+}
+
+/// Ist die Absenderin bzw. der Absender im Kundenstamm bekannt? Das Ergebnis jeder Prüfung ist dreiwertig und deutbar: FOUND, NOT_FOUND oder UNAVAILABLE (das System
+/// war nicht erreichbar – das ist ausdrücklich nicht „unbekannt“). Solange der Eintrag fehlt, prüft ORBIT in Abständen erneut, statt auf eine Antwort zu warten.
+model CustomerRecordWatch {
+  id            String    @id @default(uuid())
+  tenantId      String    @map("tenant_id")
+  caseId        String    @unique @map("case_id")
+  email         String
+  displayName   String?   @map("display_name")
+  /// FOUND | NOT_FOUND | UNAVAILABLE
+  status        String
+  /// Welches System geantwortet hat (Schlüssel des Kundenverzeichnisses).
+  system        String?
+  externalId    String?   @map("external_id")
+  /// EXISTING (war schon bekannt) | CREATED_BY_ORBIT | CREATED_BY_HUMAN (von einem Menschen oder dem führenden System angelegt, später gefunden)
+  origin        String?
+  /// Warum nicht geprüft/angelegt werden konnte (für Anzeige und Meldung).
+  reason        String?
+  checks        Int       @default(1)
+  lastCheckedAt DateTime  @default(now()) @map("last_checked_at")
+  nextCheckAt   DateTime? @map("next_check_at")
+  resolvedAt    DateTime? @map("resolved_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([status, nextCheckAt])
+  @@map("customer_record_watches")
 }

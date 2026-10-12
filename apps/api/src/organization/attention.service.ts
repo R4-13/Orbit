@@ -128,6 +128,22 @@ export class AttentionService {
       desired.set(`${c.id}:${c.orchestrationStatus}`, { caseId: c.id, kind: c.orchestrationStatus as AttentionKind, title: c.title, type: c.type, reason: c.attentionReasons[0] ?? STATUS_REASON[c.orchestrationStatus] ?? '', updatedAt: c.updatedAt });
     }
 
+    // Ein Kundeneintrag fehlt (oder das System war nicht erreichbar): ein Mensch soll ihn anlegen. Gilt unabhängig vom Prozesszustand des Vorgangs.
+    const missing = await db.customerRecordWatch.findMany({
+      where: { tenantId, status: { not: 'FOUND' }, case: { orchestrationStatus: { notIn: [...FINAL_STATUSES] } } },
+      select: { caseId: true, status: true, reason: true, displayName: true, email: true, case: { select: { title: true, type: true, updatedAt: true } } },
+    });
+    for (const m of missing) {
+      desired.set(`${m.caseId}:CUSTOMER_RECORD_MISSING`, {
+        caseId: m.caseId,
+        kind: 'CUSTOMER_RECORD_MISSING',
+        title: m.case.title,
+        type: m.case.type,
+        reason: m.status === 'UNAVAILABLE' ? `Der Kundenstamm war nicht erreichbar${m.reason ? ` (${m.reason})` : ''}.` : `${m.displayName?.trim() || m.email} ist im Kundenstamm nicht vorhanden. ${m.reason ?? ''}`.trim(),
+        updatedAt: m.case.updatedAt,
+      });
+    }
+
     // 2. Einträge anlegen bzw. auflösen.
     const open = await db.attentionItem.findMany({ where: { tenantId, state: { not: 'RESOLVED' } } });
     for (const item of open) {

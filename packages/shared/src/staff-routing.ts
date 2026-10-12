@@ -148,7 +148,7 @@ export const describeStep = (step: EscalationStep): string => `${nameOf(step.sta
 
 // ---------------------------------------------------------------- Wer ist für diesen Vorgang zuständig, und was steht in der Meldung?
 
-export const ATTENTION_KINDS = ['MANUAL_REVIEW', 'WAITING_FOR_APPROVAL', 'FAILED', 'EMERGENCY'] as const;
+export const ATTENTION_KINDS = ['MANUAL_REVIEW', 'WAITING_FOR_APPROVAL', 'FAILED', 'EMERGENCY', 'CUSTOMER_RECORD_MISSING'] as const;
 export type AttentionKind = (typeof ATTENTION_KINDS)[number];
 
 /**
@@ -192,6 +192,7 @@ const KIND_TEXT: Record<AttentionKind, string> = {
   WAITING_FOR_APPROVAL: 'wartet auf eine Freigabe',
   FAILED: 'ist fehlgeschlagen und braucht eine Entscheidung',
   EMERGENCY: 'ist ein Notfall',
+  CUSTOMER_RECORD_MISSING: 'braucht einen Kundeneintrag (die Absenderin bzw. der Absender ist im Kundenstamm nicht vorhanden)',
 };
 
 export function formatWaiting(minutes: number): string {

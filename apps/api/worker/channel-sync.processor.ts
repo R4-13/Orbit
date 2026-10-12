@@ -11,6 +11,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { WebhookIdempotencyService } from '../src/webhooks/webhook-idempotency.service';
 import { IntakeService } from '../src/intake/intake.service';
 import { AttentionService } from '../src/organization/attention.service';
+import { CustomerRecordService } from '../src/process/customer/customer-record.service';
 import { ProcessSweepService } from '../src/process/process-sweep.service';
 import { CHANNEL_POLL_ADAPTERS } from '../src/channel-sync/channel-sync.tokens';
 import type { ChannelPollAdapter } from '../src/channel-sync/channel-poll-adapter';
@@ -68,6 +69,7 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     private readonly intake: IntakeService,
     private readonly processSweep: ProcessSweepService,
     private readonly attention: AttentionService,
+    private readonly customerRecords: CustomerRecordService,
     @Inject(CHANNEL_POLL_ADAPTERS) private readonly adapters: ChannelPollAdapter[],
     @InjectQueue(CHANNEL_SYNC_QUEUE) private readonly queue: Queue<PollJobData | Record<string, never>>,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
@@ -107,6 +109,12 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     }
     if (job.name === 'process-sweep') {
       await this.processSweep.sweep();
+      // Fehlende Kundeneinträge: ORBIT wartet nicht auf eine Antwort, sondern prüft den Kundenstamm in Abständen erneut.
+      try {
+        await this.customerRecords.sweep();
+      } catch (error) {
+        this.logger.warn(`Customer record sweep failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
       // Vorgänge, die auf Menschen warten: informieren, erinnern, eskalieren. Ein Fehler hier darf den Prozess-Sweep nicht beeinträchtigen.
       try {
         await this.attention.sweep();

@@ -9,6 +9,7 @@ export * from './mail/types';
 export * from './mail/mock-mail-connector';
 export * from './calendar/types';
 export * from './calendar/mock-calendar-connector';
+export * from './customer-directory/types';
 export * from './crm/types';
 export * from './crm/mock-crm-connector';
 export * from './telephony/types';
