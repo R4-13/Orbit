@@ -1,6 +1,6 @@
 # Spezifikations-Statusübersicht
 
-Stand: 2026-10-05, Commit `2cb74e4` (plus diese Doku-Änderung). Diese Datei ist die Gesamtsicht über alle Spezifikationen
+Stand: 2026-10-13 (aktualisiert; vorheriger Stand 2026-10-05). Funktionsumfang: [`FUNCTIONAL_OVERVIEW.md`](FUNCTIONAL_OVERVIEW.md), offene Punkte: [`OPEN_DEVELOPMENT_ITEMS.md`](OPEN_DEVELOPMENT_ITEMS.md), Codebasis-Prüfung: [`CODEBASE_REVIEW_2026-10.md`](CODEBASE_REVIEW_2026-10.md). Diese Datei ist die Gesamtsicht über alle Spezifikationen
 und Pläne. Sie ersetzt keine Detaildokumente, sondern verweist auf sie. Die Statuslegende ist die aus
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md): `IMPLEMENTED` / `TESTED LOCALLY` / `TESTED WITH MOCK` /
 `LIVE TESTED` / `REQUIRES PROVIDER CREDENTIALS`. „Live“ heißt: im laufenden Docker-Stack gegen echte Infrastruktur
@@ -21,6 +21,7 @@ nachgewiesen. Steht dabei „simuliert“, war der Mailversand nicht echt.
 | **Amendment 02 Rev 1.1 (Prozess-Orchestrierung, Case-Graph)** | `BUSINESS_PROCESS_FRAMEWORK_IMPLEMENTATION_PLAN.md`, `BUSINESS_PROCESS_FRAMEWORK.md`, `PROCESS_BLUEPRINT_SCHEMA.md`, `CASE_ORCHESTRATION_UI.md`, `CASE_CORRELATION_AND_RESUME.md` | Alle 30 Kriterien implementiert und automatisiert getestet. Drei Referenzpfade live mit `gpt-6-luna`, **Versand simuliert**. Playwright-Abnahme der Oberfläche 5/5 | **Echter Gmail-Versand** (braucht die `gmail.send`-Zustimmung des Nutzers), Preisquelle ist ein Test-Datenbestand, kein unabhängiger Triage-Holdout, Anhangsinhalte nicht in der Triage |
 | **Amendment 02 v1.2 (adaptive Orchestrierung)** | `BUSINESS_PROCESS_FRAMEWORK_IMPLEMENTATION_PLAN.md` (Gap-Matrix + Stand Rev 1.2), `SPEC_GOVERNANCE_INDEX.md` | BP-32…45 umgesetzt (außer Kostenlimit je Vorgang) (Auflösungsleiter als Fallereignis, autonome Sachrückfrage, Fortsetzung durch Antwort, `HumanInteractionRequest` als Projektion), 5 AD-E2E-Tests; TESTED LOCALLY, Versand SIMULATED | Kostenlimit (BP-39); Live mit echtem Modell/Gmail offen |
 | **Amendment 03 (Plattformbetrieb, Administration, Diagnose)** | `PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`, `PLATFORM_OPERATIONS_IMPLEMENTATION_PLAN.md`, `PLATFORM_OPERATIONS_ARCHITECTURE.md`, `PLATFORM_RBAC.md`, `PLATFORM_AUDIT.md`, `AI_PROVIDER_GOVERNANCE.md`, `AI_MODEL_PROFILES.md`, `PLATFORM_CONNECTOR_REGISTRY.md`, `FEATURE_FLAGS_AND_ROLLOUTS.md`, `PLATFORM_DIAGNOSTICS.md`, `SUPPORT_SESSIONS.md` | OPS-01…35 überwiegend COMPLETE (API), einige PARTIAL (siehe Plan §8); TESTED LOCALLY / TESTED WITH MOCK | Plattform-UI nur teilweise (lesend + Notschalter/Anbindungen), MFA, Queue-Gesundheit, Diagnose-Export; kein zweiter echter KI-Anbieter (REQUIRES PROVIDER CREDENTIALS) |
+| **Autonomie-Ausbau (Nutzervorgabe Oktober 2026)** | `AUTONOMY_ASSESSMENT.md`, `ASSUMPTIONS.md` #552–561 | Betriebsprofil und Mitarbeiterverzeichnis (manuell/CSV/Schnittstelle), Neukunde anlegen (Plattform), Meldung → Erinnerung mit Vertretung → Eskalation, Notfall-Einstufung (live mit Modell), jede relevante Nachricht wird ein Vorgang, Kundenstamm-Prüfung mit Nachprüfung; TESTED LOCALLY / TESTED WITH MOCK | Autonomer Vorgangs-Agent (P1b), weitere Fähigkeiten (P1c), Zuordnung zu offenen Vorgängen (P1d), echte CRM/ERP-Adapter, Teams/WhatsApp/SMS, Eingangsbestätigung bei Notfällen |
 | **Governance & Architecture Consistency v1** | `SPEC_GOVERNANCE_INDEX.md` | Index, Besitzer je Verantwortung, Neu-Entitäten begründet; eingehalten (keine zweite Policy-/Audit-/Connector-Quelle) | – |
 
 ## Amendment 02 nach Kriterien
@@ -53,13 +54,13 @@ Die vollständige Tabelle mit den drei Spalten „implementiert / automatisiert 
 - **Demo-Mandant:** `musterwerk` hat den Referenz-Blueprint aktiv. Die Legacy-Intake-Suite pausiert das selbst.
 - **Nicht ausführen:** `pnpm prisma:seed` auf der geteilten Datenbank.
 
-## Teststand (2026-10-05)
+## Teststand (2026-10-13)
 
 | Ebene | Ergebnis |
 |---|---|
-| Unit | API 409, `@orbit/shared` 60, `@orbit/agent-core` 51, `@orbit/config` 11, `@orbit/domain` 10, Web 5 |
-| API-E2E | 30 Suiten / 194 Tests (Worker gestoppt) |
-| Playwright Orchestrierung | 5/5 |
+| Unit | API 504, `@orbit/shared` 198, `@orbit/agent-core` 51, Web 40, `@orbit/integration-core` 32, `@orbit/ui` 16, `@orbit/config` 13, `@orbit/domain` 10 |
+| API-E2E | **vollständiger Lauf am 2026-10-13: 49 Suiten grün, 3 Live-Suiten (echtes Modell, nur mit `LIVE_AI=1`) übersprungen; 405 Tests bestanden, 21 übersprungen** – seriell gegen echte Postgres, Worker gestoppt |
+| Playwright | Teilmenge 92 bestanden / 1 übersprungen (Organisation, UX v2 inkl. Barrierefreiheit, Module, Anmeldung); Gesamtlauf nach den letzten Änderungen steht aus |
 | Lint / Typecheck / Docker-Build | grün |
 
 ## Pflege

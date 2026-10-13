@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 const PASSWORD = 'Test#Password2026!';
 
@@ -55,6 +56,8 @@ describe('Tenant branding (e2e)', () => {
   });
 
   afterAll(async () => {
+    // Die in diesem Lauf angelegten Mandanten wieder entfernen (frühere Läufe haben sie in der gemeinsamen Datenbank hinterlassen).
+    await app.get(PrismaService).withRlsBypass((tx) => tx.tenant.deleteMany({ where: { slug: { startsWith: 'e2e-branding-' } } }));
     await app.close();
   });
 

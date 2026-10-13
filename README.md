@@ -94,6 +94,9 @@ pnpm test:e2e
 
 Das Projekt wird in 17 Phasen gemäß dem Master-Entwicklungsplan umgesetzt.
 Aktueller Stand je Komponente: [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md).
+Funktionsumfang (Plattform und Mandantenlösung): [`docs/FUNCTIONAL_OVERVIEW.md`](docs/FUNCTIONAL_OVERVIEW.md).
+Offene Entwicklungspunkte nach Spezifikation: [`docs/OPEN_DEVELOPMENT_ITEMS.md`](docs/OPEN_DEVELOPMENT_ITEMS.md).
+Codebasis-Prüfung (Performance, Aufräumen): [`docs/CODEBASE_REVIEW_2026-10.md`](docs/CODEBASE_REVIEW_2026-10.md).
 Getroffene Architekturannahmen: [`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md).
 Bekannte Einschränkungen: [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 Abschlussbericht: [`docs/MVP_COMPLETION_REPORT.md`](docs/MVP_COMPLETION_REPORT.md).

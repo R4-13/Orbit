@@ -34,35 +34,13 @@ Eine falsch konfigurierte Provider-Auswahl scheitert beim Boot laut
 Implementierungsrückstand, ein echter Zugangsdaten-Blocker (§62 des
 Master-Spec).
 
-## Agent-Runtime: live verdrahtet, aber ohne echten Trigger
+## Agent-Runtime und Eingang
 
-Seit Phase 18 gibt es ein `AgentModule` + einen echten Endpunkt (`POST
-/api/v1/intake/emails`), der die volle Kette LLM → Tool Registry →
-Policy Engine → Tool Gateway → Connector live gegen echte Postgres
-ausführt (Communication/Intake-, Finance/AP- und Sales/CRM-Agent). Seit
-Phase 19a lässt sich das Ergebnis auch tatsächlich im Frontend
-nachvollziehen: `/activity` zeigt jeden `AgentRun` samt seinen
-`ToolInvocation`s, `/cases/[id]` zeigt dieselben Läufe im Kontext des
-jeweiligen Vorgangs. Was weiterhin fehlt: ein **echter Trigger** — der
-Endpunkt *simuliert* eine eingehende E-Mail, es gibt keinen echten
-Mail-Connector-Webhook, der ihn automatisch aufruft (kein Microsoft
-Graph-/Gmail-Zugang), keine Unified-Inbox-UI, die ihn bedient (siehe
-unten), und keinen vierten Agenten-Typ (Orchestrator) als eigenen
-LLM-Lauf (das Routing ist deterministischer Code). Details:
-[`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md).
-
-Direkt daraus folgt weiterhin: **echte OCR** (Tesseract) ist nicht
-implementiert (`OCR_PROVIDER=tesseract` scheitert beim Boot wie jeder
-andere nicht-mock-Connector) — die Finance-Demo nutzt ausschließlich
-`MockOcrProvider` mit vorgegebenen Ergebnissen, jetzt auch über den
-Agent-Intake-Pfad.
-
-## E-Mail-Eingang (Inbox)
-
-Kein Mail-Connector-Workflow existiert, deshalb wurde auch keine
-Inbox-/E-Mail-Ansicht im Frontend gebaut — der Finance-/Sales-Einstieg
-"eingehende E-Mail wird erkannt" (§7) ist konzeptionell vorgesehen, aber
-mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
+Die Agent-Runtime (LLM → Werkzeug-Register → Policy-Engine → Connector) ist live verdrahtet. Der Eingang läuft über den **echten Gmail-Abruf** (Poll-Adapter, Sync-Queue), eine
+semantische Triage mit echtem Modell und die Prozess-Engine; `POST /api/v1/intake/emails` bleibt als simulierter Eingang für Tests und Demos. `/inbox` und `/activity` zeigen
+Eingänge, Entscheidungen und Läufe. Was fehlt: Mail-Anbieter außer Gmail (Microsoft 365 braucht Zugangsdaten), ein Eingang über Webhooks mit Signaturprüfung und
+**echte OCR** (`OCR_PROVIDER=tesseract` scheitert beim Boot wie jeder nicht implementierte Connector) – die Rechnungsauslesung nutzt den `MockOcrProvider`. Details:
+[`docs/AGENT_ARCHITECTURE.md`](AGENT_ARCHITECTURE.md), offene Punkte: [`OPEN_DEVELOPMENT_ITEMS.md`](OPEN_DEVELOPMENT_ITEMS.md).
 
 ## Sicherheit
 
@@ -93,15 +71,10 @@ mangels Agent-Verdrahtung (siehe oben) noch nicht auslösbar.
 - **`next build` (Windows)**: schlägt lokal ohne aktivierten
   Windows-Entwicklermodus mit `EPERM: symlink` fehl (Docker-Build
   unbetroffen) — `docs/ASSUMPTIONS.md` #17.
-- **Worker-Prozess** (`apps/api/worker`) verarbeitet seit Phase 22
-  tatsächlich Jobs (`WorkflowRunProcessor`, siehe
-  `docs/SCALABILITY_CONCEPT.md`) — bisher aber nur für den einen neuen,
-  additiven `POST .../trigger-async`-Pfad; `POST /intake/emails` läuft
-  weiterhin synchron, keine Pro-Tenant-Concurrency-Begrenzung (BullMQs
-  Job-Gruppen sind eine kostenpflichtige Pro-Funktion, siehe
-  `docs/ASSUMPTIONS.md` #176).
-- **OpenTelemetry** ist als Env-Flag (`OTEL_ENABLED`) vorgesehen, aber
-  nicht verdrahtet.
+- **Worker-Prozess** (`apps/api/worker`): Workflow-Läufe, Postfach-Abruf, Prozess-Sweep, Kundenstamm-Nachprüfung und Mitarbeitermeldungen laufen als Jobs. Die
+  Mandanten-Fairness ist eine eigene Umsetzung (BullMQs Job-Gruppen sind eine kostenpflichtige Pro-Funktion, `docs/ASSUMPTIONS.md` #176). Ein **Lasttest** mit Latenzbudgets
+  fehlt (`OPEN_DEVELOPMENT_ITEMS.md` UNI-01); für E2E-Läufe muss der Docker-Worker gestoppt werden (TEC-06).
+- **OpenTelemetry**-Tracing (`OTEL_ENABLED`) ist verdrahtet (Jaeger); Alarmregeln auf den Prometheus-Metriken sind nicht ausgeliefert (TEC-09).
 - **Dokument-Upload**: keine Antiviren-/Malware-Prüfung hochgeladener
   Dateien; Validierung beschränkt sich auf MIME-Type/Dateigröße im
   Presigned-URL-Request.

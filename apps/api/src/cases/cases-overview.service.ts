@@ -80,11 +80,12 @@ export class CasesOverviewService {
     const where = whereFor(input.filter, input.type, input.search);
     const filters: CaseListFilter[] = ['OPEN', 'ATTENTION', 'DONE', 'ALL'];
 
-    const [rows, total, ...counts] = await Promise.all([
+    const [rows, ...counts] = await Promise.all([
       db.case.findMany({ where, orderBy: [{ [input.sort ?? 'updatedAt']: input.dir ?? 'desc' }, { id: 'asc' }], skip: (page - 1) * CASE_PAGE_SIZE, take: CASE_PAGE_SIZE, include: { assignee: { select: { firstName: true, lastName: true } } } }),
-      db.case.count({ where }),
       ...filters.map((filter) => db.case.count({ where: whereFor(filter, input.type, input.search) })),
     ]);
+    // Die Gesamtzahl der gewählten Ansicht ist genau der Zähler dieses Filters – keine fünfte Abfrage mit identischer Bedingung.
+    const total = counts[filters.indexOf(input.filter)] ?? 0;
 
     const items = await this.present(tenantId, rows);
 

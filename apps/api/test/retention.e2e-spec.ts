@@ -49,6 +49,8 @@ describe('Retention policies (e2e)', () => {
   });
 
   afterAll(async () => {
+    // Die in diesem Lauf angelegten Mandanten wieder entfernen (frühere Läufe haben sie in der gemeinsamen Datenbank hinterlassen).
+    await app.get(PrismaService).withRlsBypass((tx) => tx.tenant.deleteMany({ where: { slug: { startsWith: 'e2e-retention-' } } }));
     await app.close();
   });
 
