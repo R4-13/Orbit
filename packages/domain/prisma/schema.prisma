@@ -790,6 +790,8 @@ model Approval {
   requestedByUserId String?            @map("requested_by_user_id")
   decidedByUserId   String?            @map("decided_by_user_id")
   reason            String?
+  /// Begründung der Person, die die Freigabe abgelehnt hat (Freitext, optional).
+  decisionReason    String?            @map("decision_reason")
   requestedAt       DateTime           @default(now()) @map("requested_at")
   decidedAt         DateTime?          @map("decided_at")
 

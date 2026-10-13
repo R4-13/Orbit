@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../auth/types';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { QuerySuppliersDto } from './dto/query-suppliers.dto';
 import { SuppliersService } from './suppliers.service';
+import { RejectDecisionDto } from '../approvals/dto/reject-decision.dto';
 
 @ApiTags('suppliers')
 @ApiBearerAuth()
@@ -44,7 +45,7 @@ export class SuppliersController {
 
   @Patch(':id/reject')
   @RequirePermissions(PERMISSIONS.SUPPLIER_MANAGE)
-  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.suppliersService.reject(user.tenantId, id, user.id);
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: RejectDecisionDto) {
+    return this.suppliersService.reject(user.tenantId, id, user.id, dto?.reason);
   }
 }

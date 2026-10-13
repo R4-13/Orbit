@@ -97,6 +97,7 @@ export class ApprovalPresenterService {
       processAction: presented.processAction,
       stale: presented.stale,
       cannotDecideReason: presented.cannotDecideReason,
+      decisionReason: approval.decisionReason ?? undefined,
     };
   }
 

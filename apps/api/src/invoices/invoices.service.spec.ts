@@ -240,7 +240,7 @@ describe('InvoicesService', () => {
         data: { status: 'REJECTED' },
       });
       expect(result.status).toBe('REJECTED');
-      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'REJECTED');
+      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'INVOICE', 'inv_1', 'user_1', 'REJECTED', undefined);
     });
 
     it('also accepts a BANK_CHANGE_SUSPECTED invoice', async () => {

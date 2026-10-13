@@ -132,9 +132,9 @@ export class FollowUpResumeService {
     return this.approvals.findOne(tenantId, approvalId);
   }
 
-  async reject(tenantId: string, actorUserId: string, approvalId: string): Promise<Approval> {
+  async reject(tenantId: string, actorUserId: string, approvalId: string, reason?: string): Promise<Approval> {
     const approval = await this.requirePendingFollowUp(tenantId, approvalId);
-    await this.approvals.markDecided(tenantId, 'FOLLOW_UP', approval.entityId, actorUserId, 'REJECTED');
+    await this.approvals.markDecided(tenantId, 'FOLLOW_UP', approval.entityId, actorUserId, 'REJECTED', reason);
 
     const toolInvocation = await this.prisma.forTenantId(tenantId).toolInvocation.findFirst({
       where: { toolCallId: approval.entityId },

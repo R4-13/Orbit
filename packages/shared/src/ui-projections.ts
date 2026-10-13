@@ -342,6 +342,8 @@ export interface ApprovalDetail extends ApprovalQueueItem {
   stale: boolean;
   /** Grund, warum (noch) nicht entschieden werden kann, in Klartext. */
   cannotDecideReason?: string;
+  /** Begründung der Person, die abgelehnt hat (falls angegeben). */
+  decisionReason?: string;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

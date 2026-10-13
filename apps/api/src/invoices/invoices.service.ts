@@ -298,7 +298,7 @@ export class InvoicesService {
     return updated;
   }
 
-  async reject(tenantId: string, actorUserId: string, invoiceId: string): Promise<Invoice> {
+  async reject(tenantId: string, actorUserId: string, invoiceId: string, reason?: string): Promise<Invoice> {
     const invoice = await this.findOne(tenantId, invoiceId);
     if (invoice.status !== 'PENDING_APPROVAL' && invoice.status !== 'BANK_CHANGE_SUSPECTED') {
       throw new PolicyViolationError('Invoice is not awaiting approval.', {
@@ -312,7 +312,7 @@ export class InvoicesService {
       data: { status: 'REJECTED' },
     });
 
-    await this.approvals.markDecided(tenantId, 'INVOICE', invoiceId, actorUserId, 'REJECTED');
+    await this.approvals.markDecided(tenantId, 'INVOICE', invoiceId, actorUserId, 'REJECTED', reason);
     await this.audit.record({
       tenantId,
       eventType: 'APPROVAL_REJECTED',
@@ -320,7 +320,7 @@ export class InvoicesService {
       actorUserId,
       entityType: 'Invoice',
       entityId: invoiceId,
-      payload: { policyAction: invoice.status === 'BANK_CHANGE_SUSPECTED' ? 'invoice.bank_change_review' : 'invoice.approve' },
+      payload: { policyAction: invoice.status === 'BANK_CHANGE_SUSPECTED' ? 'invoice.bank_change_review' : 'invoice.approve', ...(reason?.trim() ? { reason: reason.trim().slice(0, 500) } : {}) },
     });
 
     return updated;

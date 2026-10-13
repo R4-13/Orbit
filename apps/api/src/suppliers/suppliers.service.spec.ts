@@ -143,7 +143,7 @@ describe('SuppliersService', () => {
 
     expect(financeConnector.createSupplier).not.toHaveBeenCalled();
     expect(result.status).toBe('BLOCKED');
-    expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'SUPPLIER', 'sup_1', 'user_1', 'REJECTED');
+    expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'SUPPLIER', 'sup_1', 'user_1', 'REJECTED', undefined);
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'APPROVAL_REJECTED' }));
   });
 });

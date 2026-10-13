@@ -11,6 +11,7 @@ import { AddBookingProposalDto } from './dto/add-booking-proposal.dto';
 import { CreateInvoiceFromDocumentDto } from './dto/create-invoice-from-document.dto';
 import { QueryInvoicesDto } from './dto/query-invoices.dto';
 import { InvoicesService } from './invoices.service';
+import { RejectDecisionDto } from '../approvals/dto/reject-decision.dto';
 
 @ApiTags('invoices')
 @ApiBearerAuth()
@@ -61,8 +62,8 @@ export class InvoicesController {
 
   @Patch(':id/reject')
   @RequirePermissions(PERMISSIONS.INVOICE_APPROVE)
-  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Invoice> {
-    return this.invoicesService.reject(user.tenantId, user.id, id);
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: RejectDecisionDto): Promise<Invoice> {
+    return this.invoicesService.reject(user.tenantId, user.id, id, dto?.reason);
   }
 
   @Patch(':id/confirm-bank-change')

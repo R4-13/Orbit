@@ -81,6 +81,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Abhängigkeits-Prüfung (MST-11): kritische Lücken in Produktionsabhängigkeiten brechen den Lauf ab; hohe werden gemeldet, ohne ihn zu brechen
+      # (der Rest verlangt Hauptversions-Sprünge von NestJS/Prisma, siehe docs/SECURITY.md §9).
+      - name: Dependency audit (critical blocks)
+        run: pnpm audit --prod --audit-level critical
+      - name: Dependency audit (high, report only)
+        run: pnpm audit --prod --audit-level high
+        continue-on-error: true
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 

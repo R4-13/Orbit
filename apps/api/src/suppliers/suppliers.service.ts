@@ -190,7 +190,7 @@ export class SuppliersService {
     return updated;
   }
 
-  async reject(tenantId: string, id: string, actorUserId: string): Promise<Supplier> {
+  async reject(tenantId: string, id: string, actorUserId: string, reason?: string): Promise<Supplier> {
     await this.requirePendingSupplier(tenantId, id);
 
     const updated = await this.prisma.forTenantId(tenantId).supplier.update({
@@ -198,7 +198,7 @@ export class SuppliersService {
       data: { status: 'BLOCKED' },
     });
 
-    await this.approvals.markDecided(tenantId, 'SUPPLIER', id, actorUserId, 'REJECTED');
+    await this.approvals.markDecided(tenantId, 'SUPPLIER', id, actorUserId, 'REJECTED', reason);
     await this.audit.record({
       tenantId,
       eventType: 'APPROVAL_REJECTED',
@@ -206,7 +206,7 @@ export class SuppliersService {
       actorUserId,
       entityType: 'Supplier',
       entityId: id,
-      payload: { policyAction: POLICY_ACTIONS.SUPPLIER_CREATE },
+      payload: { policyAction: POLICY_ACTIONS.SUPPLIER_CREATE, ...(reason?.trim() ? { reason: reason.trim().slice(0, 500) } : {}) },
     });
 
     return updated;

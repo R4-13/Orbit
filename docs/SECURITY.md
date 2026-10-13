@@ -185,6 +185,20 @@ die ausführliche Begründung):
   Stacktraces/Interna in der Response. Unbekannte (nicht-`OrbitError`)
   Exceptions fallen auf NestJS' Standard-500 zurück.
 
+## 6a. CSRF-Konzept
+
+Ein Angriff „Cross-Site Request Forgery“ nutzt aus, dass der Browser **Cookies automatisch mitsendet**. ORBIT trennt deshalb strikt, was über Cookies und was über Header läuft:
+
+| Weg | Träger | CSRF-Risiko und Schutz |
+|---|---|---|
+| Alle fachlichen Anfragen (Lesen und Schreiben) | `Authorization: Bearer <Zugangstoken>`; das Token liegt nur im Arbeitsspeicher des Tabs | **kein CSRF möglich**: eine fremde Seite kann den Header weder setzen noch das Token lesen (kein Cookie, kein `localStorage`) |
+| Erneuerung der Sitzung (`/auth/refresh`) und Abmeldung | httpOnly-Cookie mit dem Refresh-Token, **`SameSite=Strict`**, auf den Pfad der Anmelderoute begrenzt (`/api/v1/auth`, Betreiber `/api/v1/platform/auth`), `Secure` außerhalb von Entwicklung/Test | (1) `SameSite=Strict`: das Cookie wird bei Anfragen, die von einer fremden Seite ausgehen, nicht mitgesendet. (2) **Eigener Header** (`X-Orbit-Cookie: 1` bzw. `X-Orbit-Platform-Cookie: 1`) ist Voraussetzung für den Cookie-Weg: ein nicht einfacher Header löst eine CORS-Vorabprüfung aus, die nur für `CORS_ALLOWED_ORIGINS` besteht; ein fremdes Formular kann ihn nicht setzen. (3) Die Antwort enthält nur ein neues Zugangstoken, das die fremde Seite wegen CORS nicht lesen kann |
+| Kritische Betreiberaktionen | zusätzlich **Step-up** (erneute Passwortprüfung, zeitlich begrenzt) und Begründung | selbst bei einem missbrauchten Refresh keine stillen Änderungen |
+| Anmeldung | Passwort im Körper, gedrosselt | kein Cookie beteiligt |
+
+**Restrisiko:** ein Skript auf der Seite (XSS) kann den Refresh im Namen des Browsers auslösen, solange die Seite offen ist – es kann Tokens aber nicht mitnehmen. Dagegen helfen `helmet`, die Eingabevalidierung und die Injection-Grenze für Fremdtext (Abschnitt 5/6 und `AGENT_ARCHITECTURE.md`); eine Content-Security-Policy mit Nonces ist ein offener Härtungspunkt.
+**Prüfregel für neue Endpunkte:** nie eine Zustandsänderung über `GET`, nie Cookies als alleinigen Träger fachlicher Anfragen, neue Cookies nur mit `httpOnly`, `SameSite=Strict`, engem Pfad und eigenem Modus-Header.
+
 ## 7. Audit-Trail
 
 `AuditLog` (append-only, `AuditService.record()`) — jede sicherheits-
@@ -217,10 +231,10 @@ echten Nebenläufigkeits-Tests (5 parallele Aufrufe desselben Ereignisses
 
 | Punkt | Status | Verweis |
 |---|---|---|
-| httpOnly-Cookie statt `localStorage`-JWT | Bewusst zurückgestellt | `ASSUMPTIONS.md` #68, #92 |
+| httpOnly-Cookie statt `localStorage`-JWT | **Umgesetzt** (Refresh-Token im Cookie, Zugangstoken im Arbeitsspeicher); CSRF-Konzept in Abschnitt 6a | `ASSUMPTIONS.md` #530, #539 |
 | Datei-Upload: tatsächliche Bytes nicht gegen deklariertes Größe/MIME-Type geprüft | Nur die Deklaration wird serverseitig durchgesetzt (seit Phase 19g), nicht die real hochgeladenen Bytes | Abschnitt 5 |
 | Antiviren-/Malware-Scan für Uploads | Nicht implementiert | Abschnitt 5 |
-| Dependency-Vulnerability-Scanning (`pnpm audit` o. Ä.) in CI | Nicht Teil der Pipeline | `KNOWN_LIMITATIONS.md` |
+| Dependency-Vulnerability-Scanning | **Seit Oktober 2026 in der CI** (`pnpm audit --prod`: kritisch bricht ab, hoch wird gemeldet) und wöchentlich per Dependabot. Von 33 Funden (16 hoch) im Oktober 2026 blieben nach Patch-Updates und `pnpm.overrides` 4 (1 hoch: `deepmerge-ts` im Prisma-CLI, 3 mittel: `file-type`, `@nestjs/core`); sie verlangen Hauptversions-Sprünge (NestJS 11, Prisma) | `OPEN_DEVELOPMENT_ITEMS.md` MST-11 |
 | `role_permissions`/`user_roles`/`refresh_tokens` ohne direkte RLS-Policy | Indirekt über Elterntabelle abgesichert, akzeptierter MVP-Tradeoff | `ASSUMPTIONS.md` #87 |
 | Rechteänderungen wirken erst nach Token-Ablauf | Architektur-Tradeoff (zustandsloses JWT) | Abschnitt 2 |
 | Webhook-Endpunkt selbst | `WebhookIdempotencyService` ist einsatzbereit, aber es gibt noch keinen echten Webhook-Empfänger, der ihn aufruft (kein realer Connector) | Abschnitt 8 |

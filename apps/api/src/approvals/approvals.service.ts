@@ -72,6 +72,7 @@ export class ApprovalsService {
     entityId: string,
     actorUserId: string,
     status: 'APPROVED' | 'REJECTED',
+    decisionReason?: string,
   ): Promise<void> {
     const scoped = this.prisma.forTenantId(tenantId);
     // `updateMany()` doesn't return the affected rows' prior state, and
@@ -83,7 +84,7 @@ export class ApprovalsService {
 
     await scoped.approval.updateMany({
       where: { entityType, entityId, status: 'PENDING' },
-      data: { status, decidedByUserId: actorUserId, decidedAt: new Date() },
+      data: { status, decidedByUserId: actorUserId, decidedAt: new Date(), ...(decisionReason?.trim() ? { decisionReason: decisionReason.trim().slice(0, 500) } : {}) },
     });
 
     const decidedAt = Date.now();

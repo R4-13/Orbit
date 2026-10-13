@@ -1,4 +1,4 @@
-import { Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { Controller, Param, Patch, UseGuards, Body } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { FollowUpResumeService } from './follow-up-resume.service';
+import { RejectDecisionDto } from '../approvals/dto/reject-decision.dto';
 
 /**
  * The "owning entity" endpoint for `entityType: 'FOLLOW_UP'` approvals
@@ -30,7 +31,7 @@ export class FollowUpsController {
   }
 
   @Patch(':approvalId/reject')
-  reject(@CurrentUser() user: AuthenticatedUser, @Param('approvalId') approvalId: string) {
-    return this.resumeService.reject(user.tenantId, user.id, approvalId);
+  reject(@CurrentUser() user: AuthenticatedUser, @Param('approvalId') approvalId: string, @Body() dto: RejectDecisionDto) {
+    return this.resumeService.reject(user.tenantId, user.id, approvalId, dto?.reason);
   }
 }

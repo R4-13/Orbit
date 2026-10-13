@@ -187,7 +187,7 @@ describe('FollowUpResumeService', () => {
     it('marks the approval REJECTED without executing anything', async () => {
       await service.reject('tenant_1', 'user_1', 'approval_1');
 
-      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'FOLLOW_UP', 'tc_1', 'user_1', 'REJECTED');
+      expect(approvals.markDecided).toHaveBeenCalledWith('tenant_1', 'FOLLOW_UP', 'tc_1', 'user_1', 'REJECTED', undefined);
       expect(execute).not.toHaveBeenCalled();
     });
 

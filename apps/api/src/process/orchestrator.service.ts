@@ -654,7 +654,7 @@ export class OrchestratorService {
     const intent = await this.ledger.get(tenantId, intentId);
     const result = await this.ledger.decide(tenantId, intentId, decision, intent.payloadHash);
     if (!result.applied) return result;
-    await this.approvals.markDecided(tenantId, 'PROCESS_ACTION', intentId, userId, decision);
+    await this.approvals.markDecided(tenantId, 'PROCESS_ACTION', intentId, userId, decision, decision === 'REJECTED' ? reason : undefined);
     await this.audit.record({ tenantId, eventType: 'CASE_COMMAND_EXECUTED', actorType: 'USER', actorUserId: userId, entityType: 'ActionIntent', entityId: intentId, payload: { decision, reason: reason ?? null, payloadHash: intent.payloadHash } });
     return { applied: true };
   }

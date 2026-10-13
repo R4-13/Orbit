@@ -33,17 +33,20 @@ export default function ApprovalDetailPage() {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useApprovalDetail(id);
   const [confirmingReject, setConfirmingReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
   const [result, setResult] = useState<{ tone: 'info' | 'warning' | 'danger'; text: string } | null>(null);
 
   const decide = useMutation({
     mutationFn: async (decision: 'approve' | 'reject') => {
       const path = data?.decision.endpoints?.[decision];
       if (!path) throw new Error('Für diese Freigabe ist keine Entscheidung in dieser Ansicht vorgesehen.');
-      await apiFetch(path, { method: 'PATCH' });
+      // Beim Ablehnen geht die Begründung mit (optional, höchstens 500 Zeichen); Genehmigen braucht keinen Körper.
+      await apiFetch(path, { method: 'PATCH', ...(decision === 'reject' ? { body: JSON.stringify({ reason: rejectReason.trim() || undefined }) } : {}) });
       return decision;
     },
     onSuccess: async (decision) => {
       setConfirmingReject(false);
+      setRejectReason('');
       await Promise.all([queryClient.invalidateQueries({ queryKey: ['approvals'] }), queryClient.invalidateQueries({ queryKey: ['invoices'] }), queryClient.invalidateQueries({ queryKey: ['suppliers'] }), queryClient.invalidateQueries({ queryKey: ['dashboard'] })]);
       setResult({ tone: 'info', text: decision === 'approve' ? 'Genehmigt. Die Ausführung folgt; den Nachweis sehen Sie am Objekt.' : 'Abgelehnt. Es wurde nichts ausgeführt.' });
     },
@@ -85,6 +88,7 @@ export default function ApprovalDetailPage() {
       </PageHeader>
 
       {data.risk === 'CRITICAL' && pending ? <Notice tone="danger">{data.reason}</Notice> : null}
+      {!pending && data.decisionReason ? <Notice tone="info">Begründung der Ablehnung: {data.decisionReason}</Notice> : null}
       {data.stale || data.cannotDecideReason ? <Notice tone="warning">{data.cannotDecideReason ?? 'Diese Freigabe wurde durch eine Änderung ersetzt. Bitte aktuelle Version prüfen.'}</Notice> : null}
       {result ? <Notice tone={result.tone}>{result.text}</Notice> : null}
 
@@ -125,14 +129,32 @@ export default function ApprovalDetailPage() {
       {pending && entityDecision ? (
         <div className="sticky bottom-0 -mx-1 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
           {confirmingReject ? (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="space-y-2">
               <p className="text-sm text-slate-800">Wirklich ablehnen? Es wird nichts ausgeführt.</p>
-              <button type="button" onClick={() => decide.mutate('reject')} disabled={decide.isPending} className="h-10 rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
-                Ja, ablehnen
-              </button>
-              <button type="button" onClick={() => setConfirmingReject(false)} className="h-10 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-800 hover:bg-slate-50">
-                Abbrechen
-              </button>
+              <label className="block text-sm text-slate-800">
+                Begründung{data.decision.rejectNeedsReason ? '' : ' (optional)'}
+                <textarea
+                  value={rejectReason}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  maxLength={500}
+                  rows={2}
+                  placeholder="Warum wird abgelehnt? Das sehen Kolleginnen und Kollegen im Verlauf."
+                  className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => decide.mutate('reject')}
+                  disabled={decide.isPending || (data.decision.rejectNeedsReason && rejectReason.trim().length < 3)}
+                  className="h-10 rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  Ja, ablehnen
+                </button>
+                <button type="button" onClick={() => { setConfirmingReject(false); setRejectReason(''); }} className="h-10 rounded-md border border-slate-300 px-4 text-sm font-medium text-slate-800 hover:bg-slate-50">
+                  Abbrechen
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-3">
