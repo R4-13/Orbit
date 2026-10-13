@@ -5,6 +5,7 @@ import type { CrmConnector } from '@orbit/integration-core';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface UpsertContactInput {
   email?: string;
@@ -69,7 +70,7 @@ export class ContactsService {
   }
 
   findAll(tenantId: string): Promise<Contact[]> {
-    return this.prisma.forTenantId(tenantId).contact.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.forTenantId(tenantId).contact.findMany({ orderBy: { createdAt: 'desc' }, take: LIST_HARD_LIMIT });
   }
 
   /** Read-only lookup — used by the Communication/Intake Agent's `find_contact` tool. */

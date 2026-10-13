@@ -7,6 +7,7 @@ import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { FINANCE_CONNECTOR } from '../connectors/connectors.tokens';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface FindOrCreateSupplierInput {
   name: string;
@@ -146,6 +147,7 @@ export class SuppliersService {
     return this.prisma.forTenantId(tenantId).supplier.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

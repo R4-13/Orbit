@@ -26,7 +26,11 @@ export class OrbitContactsDirectory implements CustomerDirectory {
 
   async lookup(query: CustomerLookupQuery): Promise<CustomerLookupResult> {
     try {
-      const found = await this.prisma.forTenantId(query.tenantId).contact.findMany({ where: { tenantId: query.tenantId, email: { equals: query.email, mode: 'insensitive' } }, take: 5 });
+      const db = this.prisma.forTenantId(query.tenantId);
+      const email = query.email.trim();
+      // Erst der Treffer über den Index (Adresse wie angegeben bzw. klein geschrieben); nur wenn nichts gefunden wird, die groß/klein-unabhängige Suche.
+      let found = await db.contact.findMany({ where: { tenantId: query.tenantId, email: { in: [...new Set([email, email.toLowerCase()])] } }, take: 5 });
+      if (found.length === 0) found = await db.contact.findMany({ where: { tenantId: query.tenantId, email: { equals: email, mode: 'insensitive' } }, take: 5 });
       return {
         outcome: found.length > 0 ? 'FOUND' : 'NOT_FOUND',
         matches: found.map((c): CustomerMatch => ({ externalId: c.id, displayName: `${c.firstName} ${c.lastName}`.trim(), email: c.email ?? undefined })),

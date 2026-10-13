@@ -573,6 +573,8 @@ model Case {
   @@index([tenantId, status])
   @@index([tenantId, type])
   @@index([tenantId, orchestrationStatus])
+  @@index([tenantId, updatedAt])
+  @@index([orchestrationStatus, updatedAt])
   @@map("cases")
 }
 
@@ -656,6 +658,8 @@ model EmailMessage {
   @@index([tenantId, threadId])
   @@index([tenantId, rfcMessageId])
   @@index([caseId])
+  @@index([tenantId, fromAddress])
+  @@index([tenantId, createdAt])
   @@map("email_messages")
 }
 
@@ -726,6 +730,8 @@ model Invoice {
 
   @@index([tenantId, status])
   @@index([supplierId])
+  @@index([caseId])
+  @@index([tenantId, createdAt])
   @@map("invoices")
 }
 
@@ -839,6 +845,7 @@ model Contact {
 
   @@index([tenantId])
   @@index([companyId])
+  @@index([tenantId, email])
   @@map("contacts")
 }
 
@@ -862,6 +869,7 @@ model Lead {
   opportunities Opportunity[]
 
   @@index([tenantId, status])
+  @@index([caseId])
   @@map("leads")
 }
 
@@ -1115,6 +1123,7 @@ model IntakeEvent {
   @@unique([tenantId, provider, externalEventId])
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  @@index([caseId])
   @@map("intake_events")
 }
 
@@ -1285,6 +1294,8 @@ model AgentRun {
   conversationMessages ConversationMessage[]
 
   @@index([tenantId, status])
+  @@index([tenantId, caseId])
+  @@index([tenantId, startedAt])
   @@map("agent_runs")
 }
 

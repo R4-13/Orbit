@@ -3,7 +3,6 @@ import type {
   AgentRun,
   Case,
   CaseStatus,
-  CaseType,
   Document,
   EmailMessage,
   Invoice,
@@ -21,18 +20,6 @@ export type CaseDetail = Case & {
   leads: Lead[];
   agentRuns: Array<AgentRun & { toolInvocations: ToolInvocation[] }>;
 };
-
-export function useCases(query?: { type?: CaseType; status?: CaseStatus }) {
-  const params = new URLSearchParams();
-  if (query?.type) params.set('type', query.type);
-  if (query?.status) params.set('status', query.status);
-  const qs = params.toString();
-
-  return useQuery({
-    queryKey: ['cases', query?.type ?? 'all', query?.status ?? 'all'],
-    queryFn: () => apiFetch<Case[]>(`/v1/cases${qs ? `?${qs}` : ''}`),
-  });
-}
 
 export function useCase(id: string) {
   return useQuery({

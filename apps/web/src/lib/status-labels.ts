@@ -47,16 +47,6 @@ const STATUS_LABELS: Record<string, { label: string; tone: BadgeTone }> = {
   CONFIRMED: { label: 'Bestätigt', tone: 'success' },
 };
 
-/** German labels for CaseType — kept separate since it's not a "status". */
-const CASE_TYPE_LABELS: Record<string, string> = {
-  FINANCE: 'Finance',
-  SALES: 'Sales',
-};
-
-export function caseTypeLabel(type: string): string {
-  return CASE_TYPE_LABELS[type] ?? type;
-}
-
 export function statusLabel(status: string): { label: string; tone: BadgeTone } {
   return STATUS_LABELS[status] ?? { label: status, tone: 'neutral' };
 }

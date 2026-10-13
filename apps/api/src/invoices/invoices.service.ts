@@ -8,6 +8,7 @@ import { FINANCE_CONNECTOR, OCR_PROVIDER } from '../connectors/connectors.tokens
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateInvoiceFromDocumentInput {
   documentId: string;
@@ -188,6 +189,7 @@ export class InvoicesService {
     return this.prisma.forTenantId(tenantId).invoice.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
       include: { supplier: { select: { id: true, name: true } } },
     });
   }

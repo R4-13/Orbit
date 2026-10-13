@@ -3,6 +3,7 @@ import { NotFoundError, ORCHESTRATION_STATUS_FOR_SIMPLE } from '@orbit/shared';
 import type { Case, CaseStatus, CaseType } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateCaseInput {
   type: CaseType;
@@ -49,6 +50,7 @@ export class CasesService {
     return this.prisma.forTenantId(tenantId).case.findMany({
       where: { type: query.type, status: query.status },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

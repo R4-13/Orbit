@@ -26,15 +26,6 @@ export function useInvoice(id: string) {
   });
 }
 
-export function useCreateInvoiceFromDocument() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { documentId: string; caseId?: string }) =>
-      apiFetch<Invoice>('/v1/invoices', { method: 'POST', body: JSON.stringify(input) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] }),
-  });
-}
-
 export function useAddBookingProposal(invoiceId: string) {
   const queryClient = useQueryClient();
   return useMutation({

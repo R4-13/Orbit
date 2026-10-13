@@ -6,6 +6,7 @@ import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateLeadInput {
   contactId: string;
@@ -91,6 +92,7 @@ export class LeadsService {
     return this.prisma.forTenantId(tenantId).lead.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

@@ -221,8 +221,10 @@ export class AttentionService {
     const appName = loadBrandingConfig().appName;
     let sent = 0;
     let failed = 0;
+    // Alle bisherigen Meldungen dieses Eintrags in der Phase mit einer Abfrage (statt eine je Person).
+    const already = new Map((await db.staffNotification.findMany({ where: { attentionItemId: item.id, phase } })).map((n) => [n.staffMemberId, n]));
     for (const [staffId, { step, responsibleName }] of targets) {
-      const existing = await db.staffNotification.findUnique({ where: { attentionItemId_staffMemberId_phase: { attentionItemId: item.id, staffMemberId: staffId, phase } } });
+      const existing = already.get(staffId);
       if (existing && (existing.status !== 'FAILED' || existing.attempts >= MAX_ATTEMPTS || now.getTime() - existing.updatedAt.getTime() < RETRY_AFTER_MS)) continue;
 
       const plan = planDelivery(step.staff, connected);

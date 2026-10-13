@@ -6,6 +6,7 @@ import { AuditService } from '../audit/audit.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateUploadUrlInput {
   caseId?: string;
@@ -106,6 +107,7 @@ export class DocumentsService {
     return this.prisma.forTenantId(tenantId).document.findMany({
       where: { caseId },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

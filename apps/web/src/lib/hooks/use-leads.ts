@@ -4,13 +4,6 @@ import { apiFetch } from '../api-client';
 
 export type LeadDetail = Lead & { contact: Contact; company: Company | null; opportunities: Opportunity[] };
 
-export function useLeads() {
-  return useQuery({
-    queryKey: ['leads'],
-    queryFn: () => apiFetch<Lead[]>('/v1/leads'),
-  });
-}
-
 export function useLead(id: string) {
   return useQuery({
     queryKey: ['leads', id],

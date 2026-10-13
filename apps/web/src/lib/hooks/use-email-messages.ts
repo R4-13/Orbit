@@ -1,14 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EmailMessage, IntakeEventStatus } from '@orbit/domain';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { IntakeEventStatus } from '@orbit/domain';
 import type { SimulatedTriageScenario } from '@orbit/shared';
 import { apiFetch } from '../api-client';
-
-export function useEmailMessages() {
-  return useQuery({
-    queryKey: ['email-messages'],
-    queryFn: () => apiFetch<EmailMessage[]>('/v1/email-messages'),
-  });
-}
 
 export interface SimulateIncomingEmailInput {
   fromAddress: string;

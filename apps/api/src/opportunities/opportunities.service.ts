@@ -3,6 +3,7 @@ import { NotFoundError } from '@orbit/shared';
 import type { Opportunity, OpportunityStage } from '@orbit/domain';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateOpportunityInput {
   leadId?: string;
@@ -55,6 +56,7 @@ export class OpportunitiesService {
     return this.prisma.forTenantId(tenantId).opportunity.findMany({
       where: { stage },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

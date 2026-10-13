@@ -5,6 +5,7 @@ import type { CalendarConnector } from '@orbit/integration-core';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CALENDAR_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface ProposeMeetingSlotsInput {
   contactId?: string;
@@ -65,7 +66,7 @@ export class MeetingsService {
   }
 
   findAll(tenantId: string): Promise<Meeting[]> {
-    return this.prisma.forTenantId(tenantId).meeting.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.forTenantId(tenantId).meeting.findMany({ orderBy: { createdAt: 'desc' }, take: LIST_HARD_LIMIT });
   }
 
   async findOne(tenantId: string, id: string): Promise<Meeting> {

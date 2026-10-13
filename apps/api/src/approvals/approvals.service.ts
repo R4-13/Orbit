@@ -3,6 +3,7 @@ import { NotFoundError } from '@orbit/shared';
 import type { Approval, ApprovalEntityType, ApprovalStatus } from '@orbit/domain';
 import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateApprovalInput {
   entityType: ApprovalEntityType;
@@ -52,6 +53,7 @@ export class ApprovalsService {
     return this.prisma.forTenantId(tenantId).approval.findMany({
       where: { status: query.status, entityType: query.entityType },
       orderBy: { requestedAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 

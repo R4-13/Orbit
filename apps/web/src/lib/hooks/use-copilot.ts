@@ -73,29 +73,6 @@ export function useDeleteConversation() {
   });
 }
 
-/**
- * Optimistically appends the user's own message before the request
- * completes (perceived latency of a real ASK-mode turn is roughly the
- * LLM round-trip, ~1-3s) — the server response (both persisted messages,
- * incl. the real assistant reply) replaces it via a refetch on success.
- */
-export function useSendMessage(conversationId: string | null) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (content: string) => {
-      if (!conversationId) throw new Error('No conversation selected');
-      return apiFetch<ConversationMessage>(`/v1/copilot/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ content }),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: copilotMessagesKey(conversationId) });
-      queryClient.invalidateQueries({ queryKey: COPILOT_CONVERSATION_LIST_KEY });
-    },
-  });
-}
-
 export interface CopilotStreamHandlers {
   onToolStarted?: (toolName: string) => void;
   onToolCompleted?: (toolName: string, decision: string, error?: string) => void;

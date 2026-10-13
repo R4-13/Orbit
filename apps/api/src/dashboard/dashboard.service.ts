@@ -335,43 +335,42 @@ export class DashboardService {
     const canInbox = viewer.permissions.includes(PERMISSIONS.EMAIL_READ) || canCases;
 
     // DATA-03: gesichtet / ausgefiltert / Case gestartet / Prozess abgeschlossen bleiben getrennte Kategorien.
-    const processed = canInbox
-      ? await db.intakeEvent.count({
-          where: {
-            createdAt: { gte: periodStart, lte: now },
-            relevance: { in: [...RELEVANT] },
-            status: { in: ['ROUTED', 'PROCESSING', 'COMPLETED', 'NEEDS_REVIEW'] },
-          },
-        })
-      : null;
-
-    let automated: number | null = null;
-    if (canCases) {
+    // Die drei Kennzahlen sind voneinander unabhängig und laufen gleichzeitig (die „automatisiert“-Kette ist die längste).
+    const automatedOf = async (): Promise<number> => {
       const completedCases = await db.case.findMany({
         where: { orchestrationStatus: 'COMPLETED', completedAt: { gte: periodStart, lte: now } },
         select: { id: true },
       });
-      if (completedCases.length === 0) {
-        automated = 0;
-      } else {
-        const ids = completedCases.map((c) => c.id);
-        const intents = await db.actionIntent.findMany({ where: { caseId: { in: ids } }, select: { id: true, caseId: true } });
-        const [humanTasks, humanApprovals] = await Promise.all([
-          db.task.findMany({ where: { caseId: { in: ids } }, select: { caseId: true } }),
-          intents.length > 0 ? db.approval.findMany({ where: { entityType: 'PROCESS_ACTION', entityId: { in: intents.map((i) => i.id) } }, select: { entityId: true } }) : [],
-        ]);
-        const touched = new Set<string>(humanTasks.map((t) => t.caseId).filter((id): id is string => Boolean(id)));
-        const intentCase = new Map(intents.map((i) => [i.id, i.caseId]));
-        for (const approval of humanApprovals) {
-          const caseId = intentCase.get(approval.entityId);
-          if (caseId) touched.add(caseId);
-        }
-        automated = ids.filter((id) => !touched.has(id)).length;
+      if (completedCases.length === 0) return 0;
+      const ids = completedCases.map((c) => c.id);
+      const intents = await db.actionIntent.findMany({ where: { caseId: { in: ids } }, select: { id: true, caseId: true } });
+      const [humanTasks, humanApprovals] = await Promise.all([
+        db.task.findMany({ where: { caseId: { in: ids } }, select: { caseId: true } }),
+        intents.length > 0 ? db.approval.findMany({ where: { entityType: 'PROCESS_ACTION', entityId: { in: intents.map((i) => i.id) } }, select: { entityId: true } }) : [],
+      ]);
+      const touched = new Set<string>(humanTasks.map((t) => t.caseId).filter((id): id is string => Boolean(id)));
+      const intentCase = new Map(intents.map((i) => [i.id, i.caseId]));
+      for (const approval of humanApprovals) {
+        const caseId = intentCase.get(approval.entityId);
+        if (caseId) touched.add(caseId);
       }
-    }
+      return ids.filter((id) => !touched.has(id)).length;
+    };
+    const [processed, automated, orphanFailures] = await Promise.all([
+      canInbox
+        ? db.intakeEvent.count({
+            where: {
+              createdAt: { gte: periodStart, lte: now },
+              relevance: { in: [...RELEVANT] },
+              status: { in: ['ROUTED', 'PROCESSING', 'COMPLETED', 'NEEDS_REVIEW'] },
+            },
+          })
+        : null,
+      canCases ? automatedOf() : null,
+      canInbox ? db.intakeEvent.count({ where: { status: 'FAILED', caseId: null } }) : 0,
+    ]);
 
     const problemCaseIds = new Set<string>([...failedCases.filter((c) => c.orchestrationStatus === 'FAILED').map((c) => c.id), ...unknownIntents.map((i) => i.caseId)]);
-    const orphanFailures = canInbox ? await db.intakeEvent.count({ where: { status: 'FAILED', caseId: null } }) : 0;
     const problems = canCases ? problemCaseIds.size + orphanFailures : null;
 
     const values: Record<(typeof DASHBOARD_METRIC_KEYS)[number], DashboardMetric> = {

@@ -80,11 +80,12 @@ export class PlanStoreService {
         },
       });
 
-      for (const node of input.proposal.nodes) {
-        const previous = parentNodes.get(node.id);
-        const carry = previous && CARRIED_STATES.has(previous.state) && hashOf(previous.definition) === hashOf(node);
-        await tx.processPlanNode.create({
-          data: {
+      // Knoten und Kanten in je einer Abfrage statt einer je Element (ein Plan hat leicht 15+ Knoten).
+      await tx.processPlanNode.createMany({
+        data: input.proposal.nodes.map((node) => {
+          const previous = parentNodes.get(node.id);
+          const carry = previous && CARRIED_STATES.has(previous.state) && hashOf(previous.definition) === hashOf(node);
+          return {
             tenantId,
             planId: plan.id,
             nodeKey: node.id,
@@ -102,22 +103,20 @@ export class PlanStoreService {
                   completedAt: previous.completedAt,
                 }
               : { state: 'PLANNED' as const }),
-          },
-        });
-      }
-      for (const edge of input.proposal.edges) {
-        await tx.processPlanEdge.create({
-          data: {
-            tenantId,
-            planId: plan.id,
-            edgeKey: edge.id,
-            sourceKey: edge.source,
-            targetKey: edge.target,
-            label: edge.label,
-            condition: edge.condition ? (edge.condition as unknown as Prisma.InputJsonValue) : undefined,
-          },
-        });
-      }
+          };
+        }),
+      });
+      await tx.processPlanEdge.createMany({
+        data: input.proposal.edges.map((edge) => ({
+          tenantId,
+          planId: plan.id,
+          edgeKey: edge.id,
+          sourceKey: edge.source,
+          targetKey: edge.target,
+          label: edge.label,
+          condition: edge.condition ? (edge.condition as unknown as Prisma.InputJsonValue) : undefined,
+        })),
+      });
 
       await this.events.appendInTx(tx, tenantId, caseId, {
         type: CASE_EVENT_TYPES.PLAN_CREATED,

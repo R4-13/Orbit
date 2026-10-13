@@ -5,6 +5,7 @@ import type { CrmConnector } from '@orbit/integration-core';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { CRM_CONNECTOR } from '../connectors/connectors.tokens';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface UpsertCompanyInput {
   name: string;
@@ -66,7 +67,7 @@ export class CompaniesService {
   }
 
   findAll(tenantId: string): Promise<Company[]> {
-    return this.prisma.forTenantId(tenantId).company.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.forTenantId(tenantId).company.findMany({ orderBy: { createdAt: 'desc' }, take: LIST_HARD_LIMIT });
   }
 
   async findOne(tenantId: string, id: string): Promise<Company> {

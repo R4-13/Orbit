@@ -16,10 +16,3 @@ export function useAgentRuns(query?: { agentType?: AgentType; caseId?: string })
   });
 }
 
-export function useAgentRun(id: string) {
-  return useQuery({
-    queryKey: ['agent-runs', id],
-    queryFn: () => apiFetch<AgentRunDetail>(`/v1/agent-runs/${id}`),
-    enabled: Boolean(id),
-  });
-}

@@ -3,6 +3,7 @@ import { NotFoundError } from '@orbit/shared';
 import type { Task, TaskSource, TaskStatus } from '@orbit/domain';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LIST_HARD_LIMIT } from '../common/list-limit';
 
 export interface CreateTaskInput {
   caseId?: string;
@@ -58,6 +59,7 @@ export class TasksService {
     return this.prisma.forTenantId(tenantId).task.findMany({
       where: { status: query.status, caseId: query.caseId },
       orderBy: { createdAt: 'desc' },
+      take: LIST_HARD_LIMIT,
     });
   }
 
