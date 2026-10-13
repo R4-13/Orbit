@@ -30,7 +30,7 @@ export function isKillSwitchKey(value: string): value is KillSwitchKey {
 }
 
 /** Policy-Aktionen mit externer Wirkung nach außen (Versand), die der Kill Switch `external.autonomous_send` betrifft. */
-export const EXTERNAL_SEND_POLICY_ACTIONS: readonly string[] = ['followup.send', 'email.send.clarification', 'email.send.quote_delivery'];
+export const EXTERNAL_SEND_POLICY_ACTIONS: readonly string[] = ['followup.send', 'email.send.clarification', 'email.send.quote_delivery', 'email.send.acknowledgement', 'email.send.information'];
 
 /**
  * Reine Lese-/Analyseaktionen ohne Wirkung. Eine Sperre der Automatisierung (AUTOMATION/BILLING/Quarantäne) nimmt Autonomie nur dort zurück, wo etwas

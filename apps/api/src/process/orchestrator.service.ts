@@ -116,6 +116,14 @@ export class OrchestratorService {
     return this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, blueprint, intentSummary: options.intentSummary });
   }
 
+  /**
+   * Startet einen vom Betrieb fest vorgegebenen Ablauf (Verfahren) statt eines von der KI geplanten: derselbe Prüfpfad, keine Bestätigung des ganzen Plans.
+   * Scheitert die Prüfung (z. B. eine Fähigkeit ist nicht ausführbar), kommt der Vorgang zur Prüfung – das Verfahren wird nie verkürzt oder umgangen.
+   */
+  async startProcedure(tenantId: string, caseId: string, procedure: Parameters<PlannerService['plan']>[2]['procedure'], options: { userId?: string; intentSummary?: string } = {}): Promise<StartCaseResult> {
+    return this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, intentSummary: options.intentSummary, procedure });
+  }
+
   private async planAndActivate(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2]): Promise<StartCaseResult> {
     const outcome = await this.planner.plan(tenantId, caseId, request);
     const blueprintRef = request.blueprint ? { key: request.blueprint.key, version: request.blueprint.version } : undefined;

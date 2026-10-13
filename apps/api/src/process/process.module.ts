@@ -23,6 +23,10 @@ import { PlannerService } from './planner.service';
 import { PlanStoreService } from './plan-store.service';
 import { ProcessBlueprintsController } from './process-blueprints.controller';
 import { ProcessSweepService } from './process-sweep.service';
+import { AdHocIntakeService } from './ad-hoc-intake.service';
+import { AssistProcessTools } from './reference/assist.tools';
+import { LeadsModule } from '../leads/leads.module';
+import { OrganizationModule } from '../organization/organization.module';
 import { CUSTOMER_DIRECTORIES, OrbitContactsDirectory } from './customer/customer-directory';
 import { CustomerRecordService } from './customer/customer-record.service';
 import { ContactsModule } from '../contacts/contacts.module';
@@ -43,7 +47,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
  *    the generic orchestrator and the command surface.
  */
 @Module({
-  imports: [ProfileContextModule, ContactsModule, TasksModule, AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
+  imports: [ProfileContextModule, OrganizationModule, LeadsModule, ContactsModule, TasksModule, AgentModule, AiProvidersModule, ApprovalsModule, IntegrationsModule, StorageModule],
   controllers: [ProcessBlueprintsController, CaseCommandsController, CaseOrchestrationController],
   providers: [
     CaseFactsService,
@@ -59,6 +63,8 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     CaseCommandsService,
     ReferenceProcessService,
     ReferenceProcessTools,
+    AssistProcessTools,
+    AdHocIntakeService,
     RequestAnalysisService,
     AppointmentSlotsService,
     DraftEditingService,
@@ -72,6 +78,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     CustomerRecordService,
   ],
   exports: [
+    AdHocIntakeService,
     CaseFactsService,
     CaseCorrelationService,
     CaseEventsService,

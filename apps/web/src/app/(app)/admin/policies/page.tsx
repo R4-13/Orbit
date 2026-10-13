@@ -41,6 +41,11 @@ const ACTION_LABELS: Record<string, string> = {
   'email.send.clarification': 'Rückfrage an den Absender senden',
   'email.send.quote_delivery': 'Angebot an den Kunden senden',
   'process.plan': 'Prozessplan durch die KI vorschlagen',
+  'process.plan.activate': 'Frei geplanten Ablauf ohne Bestätigung starten',
+  'email.send.acknowledgement': 'Bestätigung/Statusauskunft an die Kundschaft senden',
+  'email.send.information': 'Auskunft aus dem Betriebswissen senden',
+  'staff.notify': 'Mitarbeiter benachrichtigen',
+  'knowledge.answer': 'Antwort aus dem Betriebswissen ermitteln',
 };
 
 function AutomationLevelCard({ onError }: { onError: (message: string | null) => void }) {

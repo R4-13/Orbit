@@ -15,7 +15,8 @@ import { hashOf } from '../canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { AppointmentSlotsService } from './appointment-slots.service';
-import { clarificationBody, quoteDeliveryBody, replySubject } from './communication-templates';
+import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
+import { formatSlotLabel } from './appointment-slots';
 import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
@@ -24,6 +25,8 @@ import { renderSimplePdf, type PdfLine } from './simple-pdf';
 import { CustomerRecordService } from '../customer/customer-record.service';
 
 const SUBMIT_FACTS_TOOL = 'submit_extracted_facts';
+/** Zwecke einer vorbereiteten Mitteilung; der Zweck bestimmt die Regel (Policy), die vor dem Senden gilt (siehe `email.send` im Fähigkeitenverzeichnis). */
+const DRAFT_PURPOSES = ['CLARIFICATION', 'QUOTE_DELIVERY', 'ACKNOWLEDGEMENT', 'STATUS_UPDATE', 'ATTACHMENT_REQUEST', 'INFORMATION', 'APPOINTMENT_CONFIRMATION'] as const;
 const MAX_BODY_CHARS = 12_000;
 
 const ExtractedFactsSchema = z
@@ -119,6 +122,31 @@ export class ReferenceProcessTools implements OnModuleInit {
   private async tenantName(tenantId: string): Promise<string> {
     const tenant = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }));
     return tenant?.name ?? 'Ihr Ansprechpartner';
+  }
+
+  /** Wurde der Eingang als Notfall eingestuft (kritische Dringlichkeit in der Triage)? */
+  private async isEmergency(tenantId: string, caseId: string): Promise<boolean> {
+    const events = await this.prisma.forTenantId(tenantId).intakeEvent.findMany({ where: { caseId }, select: { decision: { select: { result: true } } } });
+    return events.some((e) => (e.decision?.result as { urgency?: string } | null | undefined)?.urgency === 'CRITICAL');
+  }
+
+  /**
+   * Stand für die Statusauskunft: der Vorgang selbst oder der Vorgang, auf den sich die Nachfrage bezieht (Fakt `case.reference`). Der Bezug gilt nur, wenn die
+   * absendende Adresse an jenem Vorgang beteiligt ist – sonst würde die Auskunft Angaben eines fremden Vorgangs preisgeben.
+   */
+  private async statusFor(tenantId: string, caseId: string, replyTarget: string): Promise<{ title: string | null; status: string; lastStep?: string }> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const ref = await this.confirmedFact(tenantId, caseId, 'case.reference');
+    const targetId = typeof ref === 'string' && ref !== caseId ? ref : caseId;
+    const target = await scoped.case.findUnique({ where: { id: targetId } });
+    if (!target) throw new ToolFailedError('Der Vorgang, auf den sich die Nachfrage bezieht, existiert nicht mehr.', { errorCode: 'REFERENCE_CASE_MISSING' });
+    if (targetId !== caseId) {
+      const participates = await scoped.emailMessage.count({ where: { caseId: targetId, OR: [{ fromAddress: { equals: replyTarget, mode: 'insensitive' } }, { toAddresses: { has: replyTarget } }] } });
+      if (participates === 0) throw new ToolFailedError('Die absendende Adresse ist an dem Vorgang, auf den sich die Nachfrage bezieht, nicht beteiligt; es wird keine Auskunft erteilt.', { errorCode: 'REFERENCE_NOT_PARTICIPANT' });
+    }
+    const last = await scoped.actionIntent.findFirst({ where: { caseId: targetId, status: 'CONFIRMED', capabilityKey: 'email.send', purpose: { in: ['CLARIFICATION', 'QUOTE_DELIVERY'] } }, orderBy: { updatedAt: 'desc' } });
+    const lastStep = last ? `${last.purpose === 'QUOTE_DELIVERY' ? 'Wir haben Ihnen unser Angebot zugesendet' : 'Wir haben Ihnen Rückfragen gesendet'} (${last.updatedAt.toLocaleDateString('de-DE')}).` : undefined;
+    return { title: target.title, status: target.orchestrationStatus, lastStep };
   }
 
   // ── 1. context ─────────────────────────────────────────────────────────────
@@ -330,10 +358,18 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
   private draftCommunication(): ToolDefinition {
     const schema = z.object({
       to: z.string().min(3),
-      purpose: z.enum(['CLARIFICATION', 'QUOTE_DELIVERY']),
+      purpose: z.enum(DRAFT_PURPOSES),
       missing: z.array(z.object({ key: z.string(), question: z.string() })).optional(),
       quoteId: z.string().optional(),
       documentId: z.string().optional(),
+      /** INFORMATION: die Antwort aus dem Betriebswissen (Ergebnis von `answer_from_knowledge`). */
+      answer: z.string().max(1500).optional(),
+      /** ATTACHMENT_REQUEST: was fehlt, in einem Satzteil („der Anhang mit der Rechnung“). */
+      what: z.string().max(200).optional(),
+      /** APPOINTMENT_CONFIRMATION: der gebuchte Termin (Ergebnis von `book_appointment`). */
+      start: z.string().optional(),
+      end: z.string().optional(),
+      kind: z.enum(['SITE_VISIT', 'PHONE_CALL']).optional(),
     });
     return {
       name: 'draft_communication',
@@ -345,6 +381,10 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const replyTarget = await this.confirmedFact(ctx.tenantId, caseId, 'contact.email');
         if (typeof replyTarget !== 'string' || replyTarget.toLowerCase() !== input.to.toLowerCase()) {
           throw new ToolFailedError('Der Empfänger ist nicht die bestätigte Antwortadresse des Vorgangs.', { errorCode: 'RECIPIENT_NOT_VERIFIED' });
+        }
+        // Automatische Absender (keine Antwort möglich oder gewünscht) bekommen nie eine Nachricht – das verhindert Mailschleifen und Rückläufer.
+        if (/^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmaster|bounces?)([+._-]|@)/i.test(replyTarget)) {
+          throw new ToolFailedError('Die absendende Adresse ist ein automatischer Absender; es wird keine Nachricht vorbereitet.', { errorCode: 'AUTOMATED_SENDER' });
         }
         const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
         const companyName = await this.tenantName(ctx.tenantId);
@@ -373,13 +413,36 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
               .catch(() => undefined);
             appointmentInfo = { kind, source: proposal.source, slotCount: proposal.slots.length };
           }
-        } else {
+        } else if (input.purpose === 'QUOTE_DELIVERY') {
           if (!input.quoteId || !input.documentId) throw new ToolFailedError('Für den Angebotsversand fehlen Angebot oder Dokument.', { errorCode: 'MISSING_QUOTE_DOCUMENT' });
           const quote = await this.prisma.forTenantId(ctx.tenantId).quote.findFirst({ where: { id: input.quoteId, caseId } });
           if (!quote || quote.documentId !== input.documentId) throw new ToolFailedError('Das Dokument gehört nicht zu diesem Angebot.', { errorCode: 'QUOTE_DOCUMENT_MISMATCH' });
           subject = `Ihr Angebot ${quote.number}`;
           bodyText = quoteDeliveryBody({ quoteNumber: quote.number, grossCents: ReferenceProcessService.cents(quote.grossAmount), validUntil: quote.validUntil, companyName });
           attachmentDocumentIds.push(input.documentId);
+        } else if (input.purpose === 'ACKNOWLEDGEMENT') {
+          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId) });
+        } else if (input.purpose === 'STATUS_UPDATE') {
+          const status = await this.statusFor(ctx.tenantId, caseId, replyTarget);
+          bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: status.lastStep, companyName });
+        } else if (input.purpose === 'ATTACHMENT_REQUEST') {
+          const what = (input.what ?? 'der Anhang').trim();
+          const safe = isSafeCustomerText(what);
+          if (!safe.safe) throw new ToolFailedError(`Die Angabe, was fehlt, ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
+          bodyText = attachmentRequestBody({ originalSubject: inbound?.subject, what, companyName });
+        } else if (input.purpose === 'INFORMATION') {
+          const answer = (input.answer ?? '').trim();
+          if (!answer) throw new ToolFailedError('Es liegt keine Antwort aus dem Betriebswissen vor.', { errorCode: 'NO_ANSWER' });
+          const safe = isSafeCustomerText(answer);
+          if (!safe.safe) throw new ToolFailedError(`Die Antwort ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
+          bodyText = informationBody({ answer, companyName });
+        } else {
+          if (!input.start || !input.end || !input.kind) throw new ToolFailedError('Für die Terminbestätigung fehlt der gebuchte Termin.', { errorCode: 'MISSING_APPOINTMENT' });
+          const start = new Date(input.start);
+          const end = new Date(input.end);
+          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new ToolFailedError('Der gebuchte Termin hat kein gültiges Datum.', { errorCode: 'MISSING_APPOINTMENT' });
+          const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }));
+          bodyText = appointmentConfirmationBody({ kind: input.kind, label: formatSlotLabel(start, end, tenantRow?.timezone || 'Europe/Berlin'), companyName });
         }
         const { draft } = await this.reference.saveDraftVersion(ctx.tenantId, {
           caseId,
@@ -397,7 +460,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
   }
 
   private sendCommunication(): ToolDefinition {
-    const schema = z.object({ draftId: z.string().min(1), purpose: z.enum(['CLARIFICATION', 'QUOTE_DELIVERY']) });
+    const schema = z.object({ draftId: z.string().min(1), purpose: z.enum(DRAFT_PURPOSES) });
     return {
       name: 'send_communication',
       description: 'Versendet einen freigegebenen Entwurf über das verbundene Postfach und speichert den Versandnachweis.',

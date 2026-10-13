@@ -21,10 +21,10 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| AUT-01 | **Autonomer Vorgangs-Agent (P1b):** der Planer wird für alle Eingänge eingesetzt (nicht nur drei feste Kategorien); Freigabe **nach Risiko der Schritte** statt der pauschalen Sperre für Ad-hoc-Pläne (Amendment 02 §11.4 anpassen); bewährte Pläne als Prozess vorschlagen | ENG | L | **P1** | größter Hebel; baut auf Profil, Fähigkeiten und Meldungen auf |
-| AUT-02 | **Fähigkeiten (P1c):** Eingang bestätigen/antworten ohne Angebotsbezug, Termin vorschlagen **und buchen** (Kalender-Schreibzugriff + Regel „Termin anlegen“), intern benachrichtigen als Fähigkeit, Auskunft aus dem Betriebsprofil, Kontakt/Lead anlegen, Statusauskunft, fehlenden Anhang anfordern | ENG | L | **P1** | heute 9 Fähigkeiten |
-| AUT-03 | **Zuordnung Absender → offene Vorgänge (P1d):** „Wann kommt mein Angebot?“, „Termin verschieben“, Reklamation zu einem Auftrag finden ihren Vorgang statt einen neuen anzulegen | ENG | M | **P1** | heute nur Mail-Verweise (Thread, In-Reply-To) |
-| AUT-04 | **Eingangsbestätigung bei Notfällen** an die absendende Person (in deren Sprache, über die Regeln & Freigaben steuerbar) | PROD → ENG | S–M | **P1** | offene Produktfrage „Was darf ORBIT ohne Freigabe zusagen?“ |
+| AUT-01 | ~~Autonomer Vorgangs-Agent~~ **umgesetzt (TESTED LOCALLY)**: Planer für alle Eingänge ohne Prozess, Freigabe nach Risiko über die Regel `process.plan.activate` (`ASSUMPTIONS.md` #564/#570). **Offen:** Nachweis mit echtem Modell (`autonomy-assessment` erweitern), bewährte Pläne als Prozess vorschlagen | ENG | M | P1 → P2 | Rest: Live-Nachweis + Vorschlag |
+| AUT-02 | ~~Fähigkeiten~~ **umgesetzt (TESTED LOCALLY, Doubles für Mail/Kalender)**: Eingang bestätigen, Statusauskunft, fehlenden Anhang anfordern, Auskunft aus dem Betriebswissen, intern benachrichtigen, Interessent anlegen, Termin **buchen** + bestätigen (`ASSUMPTIONS.md` #567/#568); jetzt 13 Fähigkeiten. **Offen:** Live gegen Google (Zustimmung `calendar.events` nötig), Monteur-Zuordnung (BPF-08), Umbuchen/Absagen | ENG / EXT | M | P1 → P2 | |
+| AUT-03 | ~~Zuordnung Absender → offene Vorgänge~~ **umgesetzt als Bezug (TESTED LOCALLY)**: genau ein Kandidat ⇒ `case.reference`, mehrere ⇒ Hinweis im Verlauf, nie Verschmelzung (`ASSUMPTIONS.md` #569). **Offen:** Oberfläche zum Setzen/Ändern des Bezugs, Abgleich über Name/Firma | ENG | S–M | P2 | |
+| AUT-04 | ~~Eingangsbestätigung bei Notfällen~~ **umgesetzt (TESTED LOCALLY)** als festes Notfallverfahren; Vorsichtig ⇒ mit Freigabe, ab Ausgewogen ⇒ autonom (`ASSUMPTIONS.md` #566). **Offen:** Sprache der Kundschaft (AUT-07), Live-Versand | ENG | S | P2 | Standard ist meine Annahme – bitte bei Bedarf unter „Regeln & Freigaben“ ändern |
 | AUT-05 | Meldungen bündeln (Zusammenfassung statt einer E-Mail je Vorgang/Phase), **Abwesenheits-/Urlaubskalender** für die Vertretung, Meldungen auch beim Warten auf Systeme und Kundschaft (Fristen der `WaitSubscription` → Eskalation) | ENG | M | P2 | |
 | AUT-06 | Zustellkanäle **Teams, WhatsApp, SMS, Anruf** für Mitarbeitermeldungen | EXT | L je Kanal | P2 | als Wunsch bereits erfasst; Zustellung heute ehrlich per E-Mail |
 | AUT-07 | Antworten in der **Sprache der Kundschaft** (Rahmentexte der Vorlagen, nicht nur Fragen) | ENG | S–M | P2 | `communication-templates.ts` |
@@ -47,11 +47,11 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-04 | Finanzsysteme **DATEV, Lexware** (Lieferantenstamm, Buchungsübertragung) | EXT | L je System | P2 | Partner-/OAuth-Registrierung (`DATEV_INTEGRATION.md`) |
 | MST-05 | **Microsoft 365** (Mail, Kalender) und **Google Calendar Schreiben** | EXT | L / M | P2 | Client-IDs und Zustimmung |
 | MST-06 | **HubSpot** als CRM-Anbindung | EXT | L | P2 | siehe AUT-09 |
-| MST-07 | **CSRF-Konzept** dokumentieren (seit Cookie-Sitzungen: Header `X-Orbit-Cookie`, SameSite, Origin-Prüfung) | ENG | S | P1 | war in der Lückenanalyse „nicht dokumentiert“ |
+| MST-07 | ~~CSRF-Konzept~~ **dokumentiert** (`SECURITY.md` §6a) | ENG | S | erledigt | |
 | MST-08 | **Allgemeine API-Idempotenzschlüssel** für Schreiboperationen (nicht nur Webhooks) | ENG | M | P2 | |
 | MST-09 | **Upload-Prüfung auf Bytes** (Magic Bytes, Virenscan) statt nur deklarierter Metadaten | ENG | M | P2 | `SECURITY.md` §5 |
 | MST-10 | Webhook-Endpunkt mit **Signaturprüfung** (sobald ein Anbieter Webhooks sendet) | EXT | M | P3 | Idempotenz-Infrastruktur steht |
-| MST-11 | **Dependency-Scanning** (`pnpm audit`/Dependabot) in der CI | ENG | S | **P1** | |
+| MST-11 | ~~Dependency-Scanning~~ **in der CI** (`pnpm audit`, Dependabot); 33 → 4 Funde (`SECURITY.md`) | ENG | S | erledigt | 4 verbleibende Funde: Entwicklungswerkzeuge, begründet |
 | MST-12 | CI-Pipeline auf einem **echten GitHub-Runner** verifizieren | EXT | S | P2 | Erweiterungen nur gegen lokales Docker geprüft |
 | MST-13 | **RLS für Tabellen ohne `tenant_id`** (`role_permissions`, `user_roles`, `refresh_tokens`) – heute nur über die Elterntabelle abgesichert | ENG | M | P2 | `ASSUMPTIONS.md` #87 |
 | MST-14 | Rechtevergabe nach `pnpm db:reset` auf wiederverwendetem Container automatisieren | ENG | S | P3 | `LOCAL_DEVELOPMENT.md` |
@@ -92,7 +92,7 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 | BPF-05 | **Qualitätsmessung der KI**: Evaluationskatalog, unabhängiger Triage-Holdout, systematische Bewertung statt Stichproben | ENG | M | P2 | |
 | BPF-06 | **Preisquelle** aus echtem Warenwirtschafts-/ERP-System statt Testbestand (`pricing.resolve` bleibt) | EXT | L | P2 | |
 | BPF-07 | Plan-Editor/Drag-and-drop und besseres Graph-Layout (Kantenkreuzungen) | ENG | L | P3 | Aktionen laufen bewusst nur über Commands |
-| BPF-08 | Kalendereintrag **automatisch anlegen** und bestimmten Monteur zuordnen | ENG | M | P1 | gehört zu AUT-02 (Termin buchen) |
+| BPF-08 | Kalendereintrag **automatisch anlegen** ~~umgesetzt~~ (siehe AUT-02); offen: bestimmten Monteur zuordnen | ENG | M | P2 | |
 | BPF-09 | Auflösungsleiter: Stufen „Fachsystem“ und „weitere Quelle“ über vorhandene Tools hinaus | ENG | M | P3 | |
 
 ## 6. Amendment 03 – Plattformbetrieb
@@ -119,7 +119,7 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 |---|---|---|---|---|---|
 | UX-01 | AC-18: automatisierter **Mandantenwechsel A/B im Browser** | ENG | S | P2 | |
 | UX-02 | AC-19: **manuelle Screenreader- und Mobile-Tastaturprüfung** | MAN | S | P2 | nur automatisiert (axe) geprüft |
-| UX-03 | **Ablehnungsgrund** bei Freigaben (Endpunkt + Freitext) | ENG | S | P1 | |
+| UX-03 | ~~Ablehnungsgrund bei Freigaben~~ **umgesetzt** (`ASSUMPTIONS.md` #562) | ENG | S | erledigt | |
 | UX-04 | Kontakte, Opportunities, Lieferanten und Admin-Unterseiten **vertiefen** (heute nur einheitlich gestaltet) | ENG | M | P3 | |
 | UX-05 | Listen mit **Seitenwechsel statt Voll-Laden** (Kontakte, Firmen, Lieferanten, Termine, Dokumente) | ENG | M | P2 | die API begrenzt seit Oktober auf 1000 Zeilen |
 
@@ -142,9 +142,9 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 
 ## Empfohlene Reihenfolge
 
-1. **Ohne Abhängigkeit, größter Nutzen (P1):** AUT-01 + AUT-02 + AUT-03 (der autonome Vorgangs-Agent mit den fehlenden Fähigkeiten und der Zuordnung), AUT-04 (nach Ihrer
-   Entscheidung), UX-03 (Ablehnungsgrund), MST-07 (CSRF-Konzept), MST-11 (Dependency-Scanning).
-2. **Nur mit Ihnen:** INT-04 (Google „In production“), MST-02 (Rechnungsmail ins Testpostfach), Entscheidungen zu AUT-04/AUT-11, Zugangsdaten für die Adapter
+1. **Umgesetzt (Stand 2026-10-13, zweite Hälfte):** AUT-01…04, UX-03, MST-07, MST-11, BPF-08 (Kalender anlegen). **Als Nächstes ohne Abhängigkeit:** Live-Nachweis des
+   autonomen Vorgangs-Agenten mit echtem Modell (`autonomy-assessment` erweitern, `LIVE_AI=1`) – er entscheidet, ob die Voreinstellung „Ausgewogen = Plan autonom“ trägt.
+2. **Nur mit Ihnen:** INT-04 (Google „In production“ – danach auch die neue Zustimmung „Termine anlegen“ erteilen), MST-02 (Rechnungsmail ins Testpostfach), Entscheidung zu AUT-11, Zugangsdaten für die Adapter
    (AUT-09, MST-01/03/04/05/06, AUT-06, PLT-08).
 3. **Danach (P2):** Meldungen bündeln/Abwesenheit (AUT-05), Sprache (AUT-07), Kundenstamm-Nutzung (AUT-08), Qualitätsmessung (BPF-05), Kostenlimit je Vorgang (BPF-01),
    Anhänge (BPF-02), Aufbewahrung (BPF-03), Plattform-UI (PLT-01), MFA (PLT-02), Lasttest (UNI-01), Test-Infrastruktur (TEC-06/07).

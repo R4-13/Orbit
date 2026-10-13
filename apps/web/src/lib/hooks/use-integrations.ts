@@ -26,9 +26,9 @@ export function useConnectors() {
 export function useStartConnect() {
   return useMutation({
     // `send: true` additionally asks for the Gmail send permission (an explicit, separate consent).
-    mutationFn: (input: IntegrationConnectorType | { connectorType: IntegrationConnectorType; send?: boolean; calendar?: boolean }) => {
-      const { connectorType, send, calendar } = typeof input === 'string' ? { connectorType: input, send: false, calendar: false } : { calendar: false, ...input };
-      const params = [send ? 'send=true' : '', calendar ? 'calendar=true' : ''].filter(Boolean).join('&');
+    mutationFn: (input: IntegrationConnectorType | { connectorType: IntegrationConnectorType; send?: boolean; calendar?: boolean; calendarWrite?: boolean }) => {
+      const { connectorType, send, calendar, calendarWrite } = typeof input === 'string' ? { connectorType: input, send: false, calendar: false, calendarWrite: false } : { calendar: false, calendarWrite: false, ...input };
+      const params = [send ? 'send=true' : '', calendar ? 'calendar=true' : '', calendarWrite ? 'calendarWrite=true' : ''].filter(Boolean).join('&');
       return apiFetch<{ authorizationUrl: string }>(`/v1/integrations/${connectorType}/connect${params ? `?${params}` : ''}`, { method: 'POST' });
     },
   });

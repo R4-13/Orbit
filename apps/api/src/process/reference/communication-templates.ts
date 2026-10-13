@@ -78,3 +78,83 @@ export function replySubject(original?: string | null, fallback = 'Ihre Anfrage'
   const base = (original ?? '').trim() || fallback;
   return /^(re|aw):/i.test(base) ? base : `Re: ${base}`;
 }
+
+// ── Weitere Mitteilungen (Autonomie-Ausbau): Bestätigung, Statusauskunft, Anhang anfordern, Auskunft, Terminbestätigung ──────────────────────────────
+
+const GREETING = ['Guten Tag,', ''];
+const closing = (companyName: string): string[] => ['', 'Mit freundlichen Grüßen', companyName];
+
+/**
+ * Eingangsbestätigung. Sie sagt nur, was stimmt: die Nachricht ist angekommen und wird bearbeitet. Bei einem Notfall kommt hinzu, dass sie als dringend eingestuft und
+ * sofort weitergeleitet wurde – und der Hinweis auf den Notruf bei Gefahr für Personen. Es werden keine Zeiten, Preise oder Leistungen zugesagt.
+ */
+export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean }): string {
+  const about = input.originalSubject ? ` zu „${input.originalSubject}“` : '';
+  return [
+    ...GREETING,
+    `vielen Dank für Ihre Nachricht${about}. Sie ist bei uns eingegangen.`,
+    ...(input.emergency
+      ? ['Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter.', 'Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112.']
+      : ['Wir kümmern uns darum und melden uns bei Ihnen.']),
+    'Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.',
+    ...closing(input.companyName),
+  ].join('\n');
+}
+
+/** Was der Stand eines Vorgangs für die Kundschaft heißt – ohne interne Begriffe und ohne Zusagen über Zeitpunkte. */
+export function caseStatusPhrase(status: string): string {
+  switch (status) {
+    case 'RECEIVED':
+    case 'READY':
+    case 'IN_PROGRESS':
+      return 'Ihre Anfrage ist bei uns in Bearbeitung.';
+    case 'WAITING_FOR_INFORMATION':
+      return 'Wir warten auf Ihre Rückmeldung zu unseren Fragen.';
+    case 'WAITING_FOR_APPROVAL':
+    case 'MANUAL_REVIEW':
+    case 'WAITING_FOR_EXTERNAL_SYSTEM':
+    case 'PAUSED':
+      return 'Ihre Anfrage wird derzeit von uns geprüft.';
+    case 'COMPLETED':
+      return 'Ihre Anfrage ist bei uns abgeschlossen.';
+    case 'REJECTED':
+    case 'CANCELLED':
+      return 'Ihre Anfrage wird von uns nicht weiterverfolgt.';
+    default:
+      return 'Ihre Anfrage ist bei uns in Bearbeitung.';
+  }
+}
+
+export function statusUpdateBody(input: { referenceTitle?: string | null; status: string; lastStep?: string; companyName: string }): string {
+  return [
+    ...GREETING,
+    `zu Ihrer Nachfrage${input.referenceTitle ? ` zu „${input.referenceTitle}“` : ''}: ${caseStatusPhrase(input.status)}`,
+    ...(input.lastStep ? [`Zuletzt ist Folgendes geschehen: ${input.lastStep}`] : []),
+    'Sobald es etwas Neues gibt, melden wir uns bei Ihnen.',
+    ...closing(input.companyName),
+  ].join('\n');
+}
+
+export function attachmentRequestBody(input: { originalSubject?: string | null; what: string; companyName: string }): string {
+  return [
+    ...GREETING,
+    `vielen Dank für Ihre Nachricht${input.originalSubject ? ` „${input.originalSubject}“` : ''}.`,
+    `Leider ist bei uns ${input.what} nicht angekommen bzw. nicht lesbar. Könnten Sie ihn uns bitte noch einmal als Antwort auf diese E-Mail schicken?`,
+    ...closing(input.companyName),
+  ].join('\n');
+}
+
+/** Auskunft aus dem Betriebswissen: der Text kommt aus dem Profil/den freigegebenen Antworten (und wurde als unbedenklich geprüft), die Vorlage fügt nur den Rahmen hinzu. */
+export function informationBody(input: { answer: string; companyName: string }): string {
+  return [...GREETING, 'vielen Dank für Ihre Nachricht.', '', input.answer.trim(), '', 'Bei weiteren Fragen melden Sie sich gern.', ...closing(input.companyName)].join('\n');
+}
+
+export function appointmentConfirmationBody(input: { kind: AppointmentKind; label: string; companyName: string }): string {
+  const what = input.kind === 'SITE_VISIT' ? 'der Vor-Ort-Termin' : 'unser Telefontermin';
+  return [
+    ...GREETING,
+    `${what} ist bestätigt: ${input.label}.`,
+    input.kind === 'SITE_VISIT' ? 'Wir freuen uns auf den Termin. Sollte etwas dazwischenkommen, antworten Sie bitte einfach auf diese E-Mail.' : 'Wir rufen Sie zu dieser Zeit an. Sollte etwas dazwischenkommen, antworten Sie bitte einfach auf diese E-Mail.',
+    ...closing(input.companyName),
+  ].join('\n');
+}

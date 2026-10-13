@@ -15,6 +15,7 @@ import { BlueprintRegistryService } from '../process/blueprint-registry.service'
 import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
+import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
 import { OrchestratorService } from '../process/orchestrator.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -116,6 +117,7 @@ export class IntakeService {
     private readonly correlation: CaseCorrelationService,
     private readonly blueprints: BlueprintRegistryService,
     private readonly orchestrator: OrchestratorService,
+    private readonly adHoc: AdHocIntakeService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -433,8 +435,17 @@ export class IntakeService {
           }),
         ),
       );
-      await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [triage.conciseReason] }, { type: 'AGENT' });
-      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, reason, 'BUSINESS_ACTIONABLE');
+      await this.adHoc.linkReference(tenantId, reviewCase.id, event.sender?.address, triage).catch(() => undefined);
+      // Autonomie: ORBIT plant selbst (bei einem Notfall gilt das feste Notfallverfahren). Gelingt das nicht – etwa weil keine KI erreichbar ist –, liegt der
+      // Vorgang wie bisher bei einer Person zur Prüfung; der Eingang geht nie verloren.
+      await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'IN_PROGRESS' }, { type: 'AGENT' });
+      const started = await this.adHoc.start(tenantId, actorUserId, reviewCase, triage, event.subject ?? '(ohne Betreff)');
+      if (!started || started.result.outcome === 'MANUAL_REVIEW') {
+        await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [triage.conciseReason] }, { type: 'AGENT' });
+        await this.sendToReview(tenantId, actorUserId, event, intakeEventId, reason, 'BUSINESS_ACTIONABLE');
+      } else {
+        await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { status: 'PROCESSING' } });
+      }
       return { case: reviewCase, category: 'OTHER', agentRunIds: [], intakeEventId };
     }
 

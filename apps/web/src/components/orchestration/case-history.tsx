@@ -44,6 +44,20 @@ function describe(event: CaseEventRow): string {
       return 'Frist für die Antwort abgelaufen';
     case 'communication.received':
       return 'Nachricht eingegangen';
+    case 'case.referenced': {
+      const candidates = Array.isArray(p.candidates) ? (p.candidates as Array<{ title?: string }>) : [];
+      return p.ambiguous === true
+        ? `Bezieht sich vermutlich auf einen früheren Vorgang – ${candidates.length} kommen infrage, bitte zuordnen`
+        : `Bezieht sich auf einen früheren Vorgang${candidates[0]?.title ? `: ${candidates[0].title}` : ''}`;
+    }
+    case 'appointment.proposed':
+      return 'Termine vorgeschlagen';
+    case 'appointment.booked':
+      return `Termin im Kalender gebucht${p.start ? ` (${formatDateTime(String(p.start))})` : ''}`;
+    case 'customer.record_checked':
+      return `Kundenstamm geprüft: ${p.status === 'FOUND' ? 'gefunden' : p.status === 'NOT_FOUND' ? 'nicht vorhanden' : 'System nicht erreichbar'}`;
+    case 'requirements.analyzed':
+      return 'Anfrage analysiert';
     case 'command.accepted':
       return `Aktion durch Nutzer: ${String(p.commandType)}`;
     default:

@@ -40,4 +40,18 @@ describe('Automatisierungsgrad', () => {
     expect(detectAutomationLevel(partial)).toBe('CAUTIOUS');
     expect(detectAutomationLevel({ 'something.unknown': 'AUTONOMOUS', ...modesFor('CAUTIOUS') })).toBe('CAUTIOUS');
   });
+
+  it('Autonomie-Ausbau: Bestätigungen und frei geplante Abläufe ab „Ausgewogen“, Auskünfte aus dem Betriebswissen erst bei „Hochautomatisiert“', () => {
+    expect(presetModeFor('CAUTIOUS', POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT)).toBe('REQUIRE_APPROVAL');
+    expect(presetModeFor('CAUTIOUS', POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE)).toBe('REQUIRE_APPROVAL');
+    expect(presetModeFor('BALANCED', POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT)).toBe('AUTONOMOUS');
+    expect(presetModeFor('BALANCED', POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE)).toBe('AUTONOMOUS');
+    expect(presetModeFor('BALANCED', POLICY_ACTIONS.EMAIL_SEND_INFORMATION)).toBe('REQUIRE_APPROVAL');
+    expect(presetModeFor('HIGH', POLICY_ACTIONS.EMAIL_SEND_INFORMATION)).toBe('AUTONOMOUS');
+    // Rein interne Aktionen sind in jeder Stufe autonom.
+    for (const key of AUTOMATION_PRESET_KEYS) {
+      expect(presetModeFor(key, POLICY_ACTIONS.STAFF_NOTIFY)).toBe('AUTONOMOUS');
+      expect(presetModeFor(key, POLICY_ACTIONS.KNOWLEDGE_ANSWER)).toBe('AUTONOMOUS');
+    }
+  });
 });

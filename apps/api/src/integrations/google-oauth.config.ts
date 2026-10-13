@@ -37,3 +37,9 @@ export const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1';
  */
 export const GOOGLE_CALENDAR_FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';
 export const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
+/**
+ * Termine anlegen (Termin buchen): `events.insert` (POST /calendars/{calendarId}/events) verlangt laut offizieller Dokumentation u. a. diesen Scope; ein Termin kann mit
+ * eigener Kennung (`id`, Zeichen a–v und 0–9, mindestens 5) angelegt werden – eine Wiederholung ergibt dann `409 Conflict` statt einer Dublette.
+ * https://developers.google.com/workspace/calendar/api/v3/reference/events/insert
+ */
+export const GOOGLE_CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events';

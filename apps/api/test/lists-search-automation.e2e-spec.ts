@@ -111,14 +111,24 @@ describe('Lists, search and automation level (e2e)', () => {
       expect(body.current).toBe('CAUTIOUS');
       expect(body.presets.map((p) => p.key)).toEqual(['CAUTIOUS', 'BALANCED', 'HIGH']);
       expect(body.presets[0]!.changes).toEqual([]);
-      expect(body.presets[1]!.changes).toEqual([{ action: 'email.send.clarification', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' }]);
+      expect(body.presets[1]!.changes).toEqual(
+        expect.arrayContaining([
+          { action: 'email.send.clarification', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
+          { action: 'email.send.acknowledgement', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
+          { action: 'process.plan.activate', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
+        ]),
+      );
+      expect(body.presets[1]!.changes).toHaveLength(3);
     });
 
     it('„Ausgewogen“ lässt Rückfragen selbstständig hinausgehen, Angebote bleiben freigabepflichtig', async () => {
       const result = (await apply('BALANCED').expect(201)).body as { current: string; changed: number };
-      expect(result).toEqual({ current: 'BALANCED', changed: 1 });
+      expect(result).toEqual({ current: 'BALANCED', changed: 3 });
       expect(await modeOf('email.send.clarification')).toBe('AUTONOMOUS');
+      expect(await modeOf('email.send.acknowledgement')).toBe('AUTONOMOUS');
+      expect(await modeOf('process.plan.activate')).toBe('AUTONOMOUS');
       expect(await modeOf('email.send.quote_delivery')).toBe('REQUIRE_APPROVAL');
+      expect(await modeOf('email.send.information')).toBe('REQUIRE_APPROVAL');
       expect(((await get().expect(200)).body as { current: string }).current).toBe('BALANCED');
     });
 

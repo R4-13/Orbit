@@ -6,7 +6,8 @@ import { ORBIT_ENV } from '../config/env.token';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialVaultService } from '../security/credential-vault.service';
-import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_CALENDAR_API_BASE, GOOGLE_CALENDAR_FREEBUSY_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
+import { GMAIL_API_BASE, GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE, GOOGLE_CALENDAR_API_BASE, GOOGLE_CALENDAR_FREEBUSY_SCOPE,
+  GOOGLE_CALENDAR_EVENTS_SCOPE, GOOGLE_OAUTH_AUTHORIZATION_ENDPOINT, GOOGLE_OAUTH_REVOKE_ENDPOINT, GOOGLE_OAUTH_TOKEN_ENDPOINT } from './google-oauth.config';
 import { base64UrlToBase64, extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
 import { OAuth2Service, OAuthGrantRejectedError, type OAuth2ProviderConfig } from './oauth2.service';
 import { buildRfc822Message, toBase64Url, type OutgoingMessage } from './rfc822';
@@ -83,13 +84,14 @@ export class GmailConnectorService {
    * Startet die Zustimmung. Bereits erteilte Berechtigungen bleiben bei einer Erneuerung erhalten: wer die Verbindung nach einem Ablauf erneuert, ohne
    * Senden oder Kalender erneut anzuhaken, verliert sie sonst unbemerkt (die Fähigkeiten werden aus dem tatsächlich gewährten Umfang abgeleitet).
    */
-  async startConnection(tenantId: string, userId: string, options: { includeSend?: boolean; includeCalendar?: boolean } = {}): Promise<{ authorizationUrl: string }> {
+  async startConnection(tenantId: string, userId: string, options: { includeSend?: boolean; includeCalendar?: boolean; includeCalendarWrite?: boolean } = {}): Promise<{ authorizationUrl: string }> {
     this.assertPlatformConfigured();
     const existing = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
     const had = Array.isArray(existing?.grantedCapabilities) ? (existing?.grantedCapabilities as unknown[]) : [];
     const scopes = [GMAIL_READONLY_SCOPE];
     if (options.includeSend || had.includes('email.send')) scopes.push(GMAIL_SEND_SCOPE);
     if (options.includeCalendar || had.includes('calendar.freebusy')) scopes.push(GOOGLE_CALENDAR_FREEBUSY_SCOPE);
+    if (options.includeCalendarWrite || had.includes('calendar.write')) scopes.push(GOOGLE_CALENDAR_EVENTS_SCOPE);
     const state = this.state.sign({ tenantId, userId, connectorType: 'GMAIL' });
     const authorizationUrl = this.oauth2.buildAuthorizationUrl(this.providerConfig, {
       scope: scopes.join(' '),
@@ -110,7 +112,7 @@ export class GmailConnectorService {
     const profile = await this.fetchProfile(tokens.accessToken);
     // The capability list reflects what Google actually granted (the user can untick scopes), not what was requested.
     const grantedScopes = (tokens.scope ?? GMAIL_READONLY_SCOPE).split(/\s+/).filter(Boolean);
-    const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : []), ...(grantedScopes.includes(GOOGLE_CALENDAR_FREEBUSY_SCOPE) ? ['calendar.freebusy'] : [])];
+    const grantedCapabilities = ['email.read', ...(grantedScopes.includes(GMAIL_SEND_SCOPE) ? ['email.send'] : []), ...(grantedScopes.includes(GOOGLE_CALENDAR_FREEBUSY_SCOPE) ? ['calendar.freebusy'] : []), ...(grantedScopes.includes(GOOGLE_CALENDAR_EVENTS_SCOPE) ? ['calendar.write'] : [])];
 
     const existing = await this.prisma
       .forTenantId(tenantId)
@@ -339,6 +341,46 @@ export class GmailConnectorService {
       perCalendar.push({ calendarId: id, busy: (entry.busy ?? []).map((interval) => ({ start: new Date(interval.start), end: new Date(interval.end) })) });
     }
     return perCalendar;
+  }
+
+  /**
+   * Legt einen Termin im Kalender an (Google `events.insert`). Die Kennung wird vom Aufrufer vorgegeben (stabil je Vorgang und Termin): Wiederholt ORBIT den Aufruf
+   * (Neustart, Wiederholung), antwortet Google mit 409 und es entsteht kein zweiter Termin. Es werden bewusst keine Gäste eingeladen und keine Benachrichtigungen
+   * von Google versendet (`sendUpdates=none`) – die Bestätigung an die Kundschaft ist eine eigene, geregelte Nachricht.
+   */
+  async createCalendarEvent(
+    tenantId: string,
+    input: { calendarId: string; eventId: string; summary: string; description?: string; start: Date; end: Date; timeZone: string },
+  ): Promise<{ eventId: string; htmlLink?: string; alreadyExisted: boolean }> {
+    const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    const granted = Array.isArray(integration?.grantedCapabilities) ? (integration?.grantedCapabilities as unknown[]) : [];
+    if (!integration || integration.status !== 'CONNECTED' || !granted.includes('calendar.write')) {
+      throw new IntegrationUnavailableError('Der Kalender ist nicht zum Anlegen von Terminen freigegeben (Berechtigung „Termine anlegen“ fehlt).');
+    }
+    if (!/^[a-v0-9]{5,200}$/.test(input.eventId)) throw new ExternalSystemError('Ungültige Termin-Kennung.', { eventId: input.eventId });
+    const accessToken = await this.getValidAccessToken(tenantId);
+    let response: Response;
+    try {
+      response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(input.calendarId)}/events?sendUpdates=none`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: input.eventId,
+          summary: input.summary,
+          description: input.description,
+          start: { dateTime: input.start.toISOString(), timeZone: input.timeZone },
+          end: { dateTime: input.end.toISOString(), timeZone: input.timeZone },
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      // Ob Google den Termin angelegt hat, ist unbekannt – der Aufrufer behandelt das als ungewiss und prüft, statt blind zu wiederholen.
+      throw new GmailSendOutcomeUnknownError('Der Kalender hat nicht geantwortet; ob der Termin angelegt wurde, ist ungewiss.');
+    }
+    if (response.status === 409) return { eventId: input.eventId, alreadyExisted: true };
+    if (!response.ok) throw new ExternalSystemError(`Der Kalender hat das Anlegen abgelehnt (${response.status}).`, { status: response.status });
+    const body = (await response.json()) as { id?: string; htmlLink?: string };
+    return { eventId: body.id ?? input.eventId, htmlLink: body.htmlLink, alreadyExisted: false };
   }
 
   private async getValidAccessToken(tenantId: string): Promise<string> {

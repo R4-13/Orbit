@@ -28,17 +28,20 @@ export const AUTOMATION_PRESETS: Readonly<Record<AutomationPresetKey, Automation
     key: 'BALANCED',
     label: 'Ausgewogen (empfohlen)',
     description:
-      'Rückfragen an Absender („Welche Menge benötigen Sie?“) gehen selbstständig hinaus. Angebote, Follow-ups, Termine und Buchhaltung bleiben freigabepflichtig.',
-    overrides: { [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: 'AUTONOMOUS' },
+      'Rückfragen an Absender („Welche Menge benötigen Sie?“), Eingangsbestätigungen und Statusauskünfte gehen selbstständig hinaus, von der KI frei geplante Abläufe starten ohne vorherige Bestätigung. Angebote, Auskünfte aus dem Betriebswissen, Follow-ups, Termine und Buchhaltung bleiben freigabepflichtig.',
+    overrides: { [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: 'AUTONOMOUS', [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: 'AUTONOMOUS', [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: 'AUTONOMOUS' },
   },
   HIGH: {
     key: 'HIGH',
     label: 'Hochautomatisiert',
     description:
-      'ORBIT erledigt Rückfragen, Angebotsversand, Follow-ups, Termine und die Übertragung an die Buchhaltung selbstständig, wenn die Prüfungen bestanden sind. Sie sehen alles im Verlauf; Freigaben bleiben nur für gesperrte Aktionen (neuer Lieferant, geänderte Bankdaten) und bei auffälligen Fällen.',
+      'ORBIT erledigt Rückfragen, Bestätigungen, Auskünfte, Angebotsversand, Follow-ups, Termine und die Übertragung an die Buchhaltung selbstständig, wenn die Prüfungen bestanden sind. Sie sehen alles im Verlauf; Freigaben bleiben nur für gesperrte Aktionen (neuer Lieferant, geänderte Bankdaten) und bei auffälligen Fällen.',
     overrides: {
       [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: 'AUTONOMOUS',
       [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: 'AUTONOMOUS',
+      [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: 'AUTONOMOUS',
+      [POLICY_ACTIONS.EMAIL_SEND_INFORMATION]: 'AUTONOMOUS',
+      [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: 'AUTONOMOUS',
       [POLICY_ACTIONS.FOLLOW_UP_SEND]: 'AUTONOMOUS',
       [POLICY_ACTIONS.MEETING_CREATE]: 'AUTONOMOUS',
       [POLICY_ACTIONS.INVOICE_TRANSFER_TO_FIBU]: 'AUTONOMOUS',

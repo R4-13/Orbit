@@ -125,3 +125,35 @@ describe('Betriebsprofil in der Analyse-Anweisung', () => {
     expect(text).toContain('Richte Fragen und Wortwahl nach diesem Betrieb');
   });
 });
+
+import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, caseStatusPhrase, informationBody, statusUpdateBody } from './communication-templates';
+
+describe('Weitere Mitteilungen', () => {
+  it('die Eingangsbestätigung sagt nur, was stimmt; bei einem Notfall kommt der Hinweis auf den Notruf dazu', () => {
+    const normal = acknowledgementBody({ originalSubject: 'Heizung', companyName: 'Muster GmbH' });
+    expect(normal).toContain('Sie ist bei uns eingegangen.');
+    expect(normal).not.toContain('112');
+    expect(normal).not.toMatch(/innerhalb|heute|morgen|Stunden/);
+    const emergency = acknowledgementBody({ originalSubject: 'Rohrbruch', companyName: 'Muster GmbH', emergency: true });
+    expect(emergency).toContain('als dringend eingestuft');
+    expect(emergency).toContain('Notruf 112');
+  });
+
+  it('der Stand wird in Worten der Kundschaft ausgedrückt, ohne interne Begriffe', () => {
+    for (const status of ['IN_PROGRESS', 'WAITING_FOR_INFORMATION', 'MANUAL_REVIEW', 'COMPLETED', 'CANCELLED', 'UNBEKANNT']) {
+      const phrase = caseStatusPhrase(status);
+      expect(phrase).toMatch(/^(Ihre Anfrage|Wir warten)/);
+      expect(phrase).not.toMatch(/MANUAL|REVIEW|WAITING|Freigabe|Orchestr/);
+    }
+    const body = statusUpdateBody({ referenceTitle: 'Neue Anfrage: Fenster', status: 'WAITING_FOR_INFORMATION', lastStep: 'Wir haben Ihnen Rückfragen gesendet.', companyName: 'Muster GmbH' });
+    expect(body).toContain('„Neue Anfrage: Fenster“');
+    expect(body).toContain('Wir warten auf Ihre Rückmeldung');
+  });
+
+  it('Anhang anfordern, Auskunft und Terminbestätigung tragen Rahmen und Absender', () => {
+    expect(attachmentRequestBody({ originalSubject: 'Rechnung', what: 'der Anhang', companyName: 'Muster GmbH' })).toContain('noch einmal als Antwort');
+    expect(informationBody({ answer: 'Wir sind Mo–Fr von 7 bis 16 Uhr erreichbar.', companyName: 'Muster GmbH' })).toContain('Wir sind Mo–Fr von 7 bis 16 Uhr erreichbar.');
+    expect(appointmentConfirmationBody({ kind: 'SITE_VISIT', label: 'Do., 15.10.2026, 10:00–11:00 Uhr', companyName: 'Muster GmbH' })).toContain('Vor-Ort-Termin ist bestätigt');
+    expect(appointmentConfirmationBody({ kind: 'PHONE_CALL', label: 'Fr., 16.10.2026, 09:00 Uhr', companyName: 'Muster GmbH' })).toContain('Telefontermin ist bestätigt');
+  });
+});

@@ -32,6 +32,10 @@ export const CASE_EVENT_TYPES = {
   CUSTOMER_RECORD_CHECKED: 'customer.record_checked',
   /** Ein Schritt wurde wieder aufgenommen bzw. live wiederholt, weil der echte Weg (Verbindung, KI-Dienst, Versand) verfügbar wurde. */
   LIVE_UPGRADE: 'live.upgrade',
+  /** Ein von der Kundschaft gewählter Termin wurde im Kalender des Betriebs gebucht (mit Kennung des Kalendereintrags). */
+  APPOINTMENT_BOOKED: 'appointment.booked',
+  /** Die Nachricht bezieht sich erkennbar auf einen früheren Vorgang derselben Absenderadresse (ein Bezug, keine Verschmelzung). */
+  CASE_REFERENCED: 'case.referenced',
   /** Der Kundschaft wurde ein Vor-Ort- oder Telefontermin vorgeschlagen (mit den Zeiten bzw. dem Grund, warum keine genannt wurden). */
   APPOINTMENT_PROPOSED: 'appointment.proposed',
   COMPLETION_EVALUATED: 'completion.evaluated',

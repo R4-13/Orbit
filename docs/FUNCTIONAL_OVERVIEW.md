@@ -69,10 +69,12 @@ Step-up, unveränderliches Plattform-Audit). Kein Token der einen Domäne gilt i
 | Funktion | Status | Kern |
 |---|---|---|
 | Universal Case, Fakten mit Herkunft und Beleg, Korrelation | TESTED LOCALLY / LIVE | Fakten gelten nur mit wörtlichem Beleg als bestätigt |
-| Blueprints (Registry, Versionen, Aktivierung), Capability-Katalog (9 Fähigkeiten), Planer + deterministischer Validator, Orchestrator, Action-Ledger | TESTED LOCALLY | Ad-hoc-Pläne brauchen Freigabe; Limits für Aktionen/Fehler (BP-39) |
+| Blueprints (Registry, Versionen, Aktivierung), Capability-Katalog (13 Fähigkeiten), Planer + deterministischer Validator, Orchestrator, Action-Ledger | TESTED LOCALLY | frei geplante Abläufe starten je nach Regel `process.plan.activate` mit oder ohne Bestätigung des Plans; jede Wirkung bleibt einzeln geregelt; Limits für Aktionen/Fehler (BP-39) |
 | **Referenzprozess „Angebotsanfrage“** | LIVE TESTED (Modell echt, Versand teils simuliert → live) | Kontext → Angaben entnehmen → Anforderungen → Rückfrage (Freigabe oder autonom) → Antwort fortsetzen → Preis aus Quelle → Angebot → Dokument → Versand mit Nachweis |
 | KI-Anforderungsanalyse | LIVE TESTED | gezielte Fragen je Leistung, Vor-Ort-/Telefontermin-Entscheidung |
-| Terminvorschläge aus dem Kalender (frei/belegt) | LIVE TESTED (Gmail-Kalender), kein automatischer Eintrag | Terminwahl wird als Fakt festgehalten |
+| Terminvorschläge aus dem Kalender (frei/belegt) | LIVE TESTED (Gmail-Kalender) | Terminwahl wird als Fakt festgehalten |
+| **Termin im Kalender buchen** (`calendar.book`) | TESTED LOCALLY (Kalender als Double), neue Google-Zustimmung nötig | nur vorgeschlagene, wörtlich belegt gewählte und erneut als frei geprüfte Termine; feste Kennung, keine Gäste; anschließend Bestätigung an die Kundschaft |
+| **Autonomer Vorgangs-Agent** für Nachrichten ohne Prozess | TESTED LOCALLY (Modell als Double) | Notfallverfahren (Meldung + Eingangsbestätigung nach Regel), sonst KI-Plan mit Bestätigung, Statusauskunft, Auskunft aus dem Betriebswissen, Anhang anfordern, Interessent anlegen; Bezug auf frühere Vorgänge |
 | Wartepunkte, Fristen, Wiederaufnahme nach Neustart (Sweep) | TESTED LOCALLY | Zustand liegt in Postgres, die Queue ist nur Auslöser |
 | **Live-Abgleich** | TESTED LOCALLY | simulierte oder an einer Verbindung hängende Schritte werden automatisch live wiederholt (mit Schutzregeln) |
 | Orchestrierungsansicht (Schritte, Graph, Historie, Knotendetails, ehrlicher Ausführungsmodus Live/Simuliert) | TESTED LOCALLY (Playwright) | `/cases/[id]` |

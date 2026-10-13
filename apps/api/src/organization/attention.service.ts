@@ -134,6 +134,7 @@ export class AttentionService {
       select: { caseId: true, status: true, reason: true, displayName: true, email: true, case: { select: { title: true, type: true, updatedAt: true } } },
     });
     for (const m of missing) {
+      if (emergencyCaseIds.has(m.caseId)) continue; // wie oben: ein Notfall wird einmal gemeldet; der fehlende Kundeneintrag steht am Vorgang
       desired.set(`${m.caseId}:CUSTOMER_RECORD_MISSING`, {
         caseId: m.caseId,
         kind: 'CUSTOMER_RECORD_MISSING',
@@ -143,6 +144,13 @@ export class AttentionService {
         updatedAt: m.case.updatedAt,
       });
     }
+
+    // Ausdrücklich angeforderte Benachrichtigungen (Fähigkeit „staff.notify“) bleiben offen, bis der Vorgang beendet ist oder jemand übernimmt.
+    const requested = await db.attentionItem.findMany({
+      where: { tenantId, kind: 'NOTIFY_REQUEST', state: { not: 'RESOLVED' }, case: { orchestrationStatus: { notIn: [...FINAL_STATUSES] } } },
+      select: { caseId: true, reason: true, case: { select: { title: true, type: true, updatedAt: true } } },
+    });
+    for (const r of requested) if (!emergencyCaseIds.has(r.caseId)) desired.set(`${r.caseId}:NOTIFY_REQUEST`, { caseId: r.caseId, kind: 'NOTIFY_REQUEST', title: r.case.title, type: r.case.type, reason: r.reason ?? '', updatedAt: r.case.updatedAt });
 
     // 2. Einträge anlegen bzw. auflösen.
     const open = await db.attentionItem.findMany({ where: { tenantId, state: { not: 'RESOLVED' } } });
@@ -289,6 +297,24 @@ export class AttentionService {
   }
 
   // ---------------------------------------------------------------- Oberfläche
+
+  /**
+   * Bittet ausdrücklich um Aufmerksamkeit für einen Vorgang (Fähigkeit „staff.notify“): ein Eintrag je Vorgang, dessen Text bei erneutem Aufruf aktualisiert wird.
+   * Die Meldung selbst, Erinnerung und Eskalation übernimmt derselbe Takt wie bei den anderen Fällen.
+   */
+  async raise(tenantId: string, caseId: string, input: { message: string; urgent: boolean }): Promise<{ id: string; responsibility: string; created: boolean }> {
+    const db = this.prisma.forTenantId(tenantId);
+    const existing = await db.attentionItem.findFirst({ where: { tenantId, caseId, kind: 'NOTIFY_REQUEST', state: { not: 'RESOLVED' } } });
+    if (existing) {
+      if (existing.reason !== input.message) await db.attentionItem.update({ where: { id: existing.id }, data: { reason: input.message, emergency: existing.emergency || input.urgent } });
+      return { id: existing.id, responsibility: existing.responsibility, created: false };
+    }
+    const row = await db.case.findUnique({ where: { id: caseId }, select: { type: true } });
+    const categories = await this.categoriesFor(tenantId, [caseId]);
+    const responsibility = responsibilityForCase({ category: categories.get(caseId), caseType: row?.type, emergency: input.urgent });
+    const created = await db.attentionItem.create({ data: { tenantId, caseId, kind: 'NOTIFY_REQUEST', responsibility, emergency: input.urgent, reason: input.message, state: 'OPEN', firstSeenAt: new Date() } });
+    return { id: created.id, responsibility, created: true };
+  }
 
   /** Was zu diesem Vorgang gemeldet wurde: offener Eintrag samt Meldungen (wer, wie, wann, ob zugestellt). */
   async forCase(tenantId: string, caseId: string): Promise<CaseAttentionView | null> {

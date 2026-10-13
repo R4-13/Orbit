@@ -51,7 +51,7 @@ const CAPABILITY_TEXT: Record<string, string> = {
   'email.send': 'Nachrichten in Ihrem Namen versenden – je nach Ihren Regeln mit oder ohne vorherige Freigabe.',
   'calendar.freebusy': 'Verfügbarkeit lesen (nur frei/belegt, keine Termininhalte) – damit ORBIT Vor-Ort- und Telefontermine zu Ihren freien Zeiten vorschlagen kann.',
   'calendar.read': 'Termine lesen – damit Terminvorschläge zu Ihrer Verfügbarkeit passen.',
-  'calendar.write': 'Termine anlegen – nur nach Ihrer Freigabe.',
+  'calendar.write': 'Termine anlegen – ORBIT bucht den von der Kundschaft gewählten Termin, je nach Ihren Regeln mit oder ohne vorherige Freigabe. Es werden keine Gäste eingeladen.',
 };
 const describeCapability = (capability: string): string => CAPABILITY_TEXT[capability] ?? `Funktion „${capability}“`;
 
@@ -327,6 +327,7 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
   const view = STATUS_VIEW[integration.status] ?? STATUS_VIEW.CONNECTED!;
   const grantedSend = Array.isArray(integration.grantedCapabilities) && (integration.grantedCapabilities as unknown[]).includes('email.send');
   const grantedCalendar = Array.isArray(integration.grantedCapabilities) && (integration.grantedCapabilities as unknown[]).includes('calendar.freebusy');
+  const grantedCalendarWrite = Array.isArray(integration.grantedCapabilities) && (integration.grantedCapabilities as unknown[]).includes('calendar.write');
   const lastOk = integration.lastSuccessAt ?? integration.lastTestedAt;
 
   async function handleTest() {
@@ -339,11 +340,11 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
     }
   }
 
-  async function grant(what: 'send' | 'calendar') {
+  async function grant(what: 'send' | 'calendar' | 'calendarWrite') {
     setMessage(null);
     try {
       // Bereits erteilte Berechtigungen bleiben erhalten (das Backend übernimmt sie bei jeder Zustimmung).
-      const { authorizationUrl } = await startConnect.mutateAsync({ connectorType: connector.id, send: what === 'send', calendar: what === 'calendar' });
+      const { authorizationUrl } = await startConnect.mutateAsync({ connectorType: connector.id, send: what === 'send', calendar: what === 'calendar', calendarWrite: what === 'calendarWrite' });
       window.location.href = authorizationUrl;
     } catch (err) {
       setMessage({ tone: 'danger', text: err instanceof ApiError ? err.message : 'Der Vorgang konnte nicht gestartet werden.' });
@@ -382,6 +383,11 @@ function ConnectionCard({ connector, integration, onDisconnect, onRenew }: { con
             {connector.id === 'GMAIL' && !grantedCalendar ? (
               <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void grant('calendar')} title="Erlaubt ORBIT zu sehen, wann Sie frei oder belegt sind – nur frei/belegt, keine Termininhalte. Damit schlägt ORBIT Vor-Ort- und Telefontermine zu Ihren freien Zeiten vor.">
                 Kalender-Verfügbarkeit erlauben
+              </Button>
+            ) : null}
+            {connector.id === 'GMAIL' && grantedCalendar && !grantedCalendarWrite ? (
+              <Button variant="secondary" disabled={startConnect.isPending} onClick={() => void grant('calendarWrite')} title="Erlaubt ORBIT, den von der Kundschaft gewählten Termin in Ihrem Kalender zu buchen. Es werden keine Gäste eingeladen. Ob vorher eine Freigabe nötig ist, bestimmen Ihre Regeln.">
+                Termine anlegen erlauben
               </Button>
             ) : null}
             <Button variant="secondary" disabled={test.isPending} onClick={() => void handleTest()}>

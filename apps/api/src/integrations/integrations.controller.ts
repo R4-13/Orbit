@@ -90,12 +90,13 @@ export class IntegrationsController {
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
     @Query('send') send?: string,
     @Query('calendar') calendar?: string,
+    @Query('calendarWrite') calendarWrite?: string,
   ) {
     this.assertOAuthCapable(connectorType, 'OAuth-Connect');
     await this.assertConnectorOpen(connectorType);
     // `?send=true` additionally requests the gmail.send scope (explicit, minimal-permission opt-in).
     // `?calendar=true` fordert zusätzlich „Verfügbarkeit lesen“ (calendar.freebusy) für Terminvorschläge an.
-    return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true', includeCalendar: calendar === 'true' });
+    return this.gmailConnector.startConnection(user.tenantId, user.id, { includeSend: send === 'true', includeCalendar: calendar === 'true', includeCalendarWrite: calendarWrite === 'true' });
   }
 
   /** Welche Kalender für Terminvorschläge gelesen werden (z. B. die der Monteure). */

@@ -69,6 +69,19 @@ export const POLICY_ACTIONS = {
   EMAIL_SEND_QUOTE_DELIVERY: 'email.send.quote_delivery',
   /** Amendment 02 §11: der KI-Prozessplaner schlägt einen Plan vor (reine Planung ohne Wirkung; jede Aktion im Plan bleibt einzeln policy-pflichtig). */
   PROCESS_PLAN: 'process.plan',
+  /**
+   * Autonomie-Ausbau (Oktober 2026): ein von der KI frei geplanter Ablauf (ohne hinterlegten Prozess) darf **ohne vorherige Bestätigung des ganzen Plans** starten.
+   * Jede Wirkung nach außen bleibt trotzdem einzeln durch ihre eigene Regel geschützt (Freigabe oder autonom). Vorsichtig: der Plan wartet auf eine Bestätigung.
+   */
+  PROCESS_PLAN_ACTIVATE: 'process.plan.activate',
+  /** Eingangsbestätigung, Statusauskunft, Anforderung eines fehlenden Anhangs, Terminbestätigung: Mitteilungen ohne Zusage von Preis oder Leistung. */
+  EMAIL_SEND_ACKNOWLEDGEMENT: 'email.send.acknowledgement',
+  /** Auskunft aus dem Betriebswissen (Profil, freigegebene Antworten) an die Kundschaft – inhaltlich eine Zusage des Betriebs, daher strenger geführt. */
+  EMAIL_SEND_INFORMATION: 'email.send.information',
+  /** Interne Benachrichtigung einer Person des Betriebs (Meldung, Erinnerung, Eskalation) – kein Kundenkontakt. */
+  STAFF_NOTIFY: 'staff.notify',
+  /** Antwort aus dem Betriebswissen ermitteln (Lesen, keine Wirkung). */
+  KNOWLEDGE_ANSWER: 'knowledge.answer',
 } as const;
 
 export type PolicyActionKey = (typeof POLICY_ACTIONS)[keyof typeof POLICY_ACTIONS];
@@ -112,4 +125,9 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.PROCESS_PLAN]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.EMAIL_SEND_INFORMATION]: { mode: 'REQUIRE_APPROVAL' },
+  [POLICY_ACTIONS.STAFF_NOTIFY]: { mode: 'AUTONOMOUS' },
+  [POLICY_ACTIONS.KNOWLEDGE_ANSWER]: { mode: 'AUTONOMOUS' },
 };
