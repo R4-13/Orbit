@@ -15,7 +15,7 @@ import { hashOf } from '../canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { AppointmentSlotsService } from './appointment-slots.service';
-import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
+import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
 import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isSafeCustomerText } from './request-analysis';
@@ -123,6 +123,12 @@ export class ReferenceProcessTools implements OnModuleInit {
   private async tenantName(tenantId: string): Promise<string> {
     const tenant = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }));
     return tenant?.name ?? 'Ihr Ansprechpartner';
+  }
+
+  /** Name der Person für die Anrede (aus der Prüfung des Kundenstamms); nur wenn er wie ein Personenname aussieht, sonst neutrale Anrede (AUT-08). */
+  private async customerName(tenantId: string, caseId: string): Promise<string | undefined> {
+    const watch = await this.prisma.forTenantId(tenantId).customerRecordWatch.findUnique({ where: { caseId }, select: { displayName: true } });
+    return safeSalutationName(watch?.displayName);
   }
 
   /** Sprache der Antwort: die der eingegangenen Nachricht, soweit der Betrieb sie im Profil führt (AUT-07). */
@@ -398,6 +404,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const companyName = await this.tenantName(ctx.tenantId);
 
         const lang = await this.languageFor(ctx.tenantId, inbound);
+        const name = await this.customerName(ctx.tenantId, caseId);
         let subject = replySubject(inbound?.subject);
         let bodyText: string;
         const attachmentDocumentIds: string[] = [];
@@ -430,28 +437,28 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           bodyText = quoteDeliveryBody({ quoteNumber: quote.number, grossCents: ReferenceProcessService.cents(quote.grossAmount), validUntil: quote.validUntil, companyName });
           attachmentDocumentIds.push(input.documentId);
         } else if (input.purpose === 'ACKNOWLEDGEMENT') {
-          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang });
+          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang, name });
         } else if (input.purpose === 'STATUS_UPDATE') {
           const status = await this.statusFor(ctx.tenantId, caseId, replyTarget);
-          bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: lang === 'en' ? status.lastStepEn : status.lastStep, companyName, lang });
+          bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: lang === 'en' ? status.lastStepEn : status.lastStep, companyName, lang, name });
         } else if (input.purpose === 'ATTACHMENT_REQUEST') {
           const what = (input.what ?? 'der Anhang').trim();
           const safe = isSafeCustomerText(what);
           if (!safe.safe) throw new ToolFailedError(`Die Angabe, was fehlt, ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
-          bodyText = attachmentRequestBody({ originalSubject: inbound?.subject, what, companyName, lang });
+          bodyText = attachmentRequestBody({ originalSubject: inbound?.subject, what, companyName, lang, name });
         } else if (input.purpose === 'INFORMATION') {
           const answer = (input.answer ?? '').trim();
           if (!answer) throw new ToolFailedError('Es liegt keine Antwort aus dem Betriebswissen vor.', { errorCode: 'NO_ANSWER' });
           const safe = isSafeCustomerText(answer);
           if (!safe.safe) throw new ToolFailedError(`Die Antwort ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
-          bodyText = informationBody({ answer, companyName, lang });
+          bodyText = informationBody({ answer, companyName, lang, name });
         } else {
           if (!input.start || !input.end || !input.kind) throw new ToolFailedError('Für die Terminbestätigung fehlt der gebuchte Termin.', { errorCode: 'MISSING_APPOINTMENT' });
           const start = new Date(input.start);
           const end = new Date(input.end);
           if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new ToolFailedError('Der gebuchte Termin hat kein gültiges Datum.', { errorCode: 'MISSING_APPOINTMENT' });
           const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }));
-          bodyText = appointmentConfirmationBody({ kind: input.kind, label: formatSlotLabel(start, end, tenantRow?.timezone || 'Europe/Berlin', lang), companyName, lang });
+          bodyText = appointmentConfirmationBody({ kind: input.kind, label: formatSlotLabel(start, end, tenantRow?.timezone || 'Europe/Berlin', lang), companyName, lang, name });
         }
         const { draft } = await this.reference.saveDraftVersion(ctx.tenantId, {
           caseId,

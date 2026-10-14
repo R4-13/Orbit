@@ -212,7 +212,8 @@ describe('Customer record: look up, create or ask, re-check (e2e)', () => {
       expect(first.opened).toBeGreaterThanOrEqual(1);
       const item = await db().attentionItem.findFirst({ where: { tenantId, caseId: c.id } });
       expect(item).toMatchObject({ kind: 'CUSTOMER_RECORD_MISSING', responsibility: 'QUOTES', state: 'OPEN' });
-      const mail = sent.find((m) => m.subject.includes('Anfrage Fensterbau'));
+      // Haben sich vorher mehrere Vorgänge angesammelt, kommt die erste Meldung in einer Zusammenfassung (AUT-05): der Vorgang steht dann im Text statt im Betreff.
+      const mail = sent.find((m) => m.subject.includes('Anfrage Fensterbau') || m.bodyText.includes('Anfrage Fensterbau'));
       expect(mail?.to).toBe('sven@betrieb.test');
       expect(mail?.bodyText).toContain('braucht einen Kundeneintrag');
       expect(mail?.bodyText).toContain('Mia Melden');

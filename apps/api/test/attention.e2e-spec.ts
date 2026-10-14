@@ -302,6 +302,36 @@ describe('Attention: notify, remind, escalate (e2e)', () => {
       await attention.syncTenant(tenantId, new Date());
     });
 
+    it('Zusammenfassung: viele neue Meldungen an dieselbe Person ergeben eine Mail; darunter geht es einzeln, Notfälle nie gebündelt (AUT-05)', async () => {
+      // Zwei neue Vorgänge: unter der Schwelle (3) – zwei Einzelmails an Bea.
+      const two = [await createCase(), await createCase()];
+      await attention.syncTenant(tenantId, new Date());
+      expect(recipients()).toEqual(['bea@betrieb.test', 'bea@betrieb.test']);
+      expect(sent.every((s) => s.subject.startsWith('Neu:'))).toBe(true);
+      for (const c of two) await prisma.forTenantId(tenantId).case.update({ where: { id: c.id }, data: { orchestrationStatus: 'COMPLETED' } });
+      await attention.syncTenant(tenantId, new Date());
+
+      // Vier neue Vorgänge im selben Takt: eine Zusammenfassung.
+      sent = [];
+      const four = [await createCase(), await createCase(), await createCase(), await createCase()];
+      const result = await attention.syncTenant(tenantId, new Date());
+      expect(recipients()).toEqual(['bea@betrieb.test']);
+      expect(sent[0]!.subject).toBe('4 neue Vorgänge brauchen Ihre Aufmerksamkeit');
+      for (const c of four) expect(sent[0]!.text).toContain(`/cases/${c.id}`);
+      expect(result.notified).toBe(4);
+      // Jede Meldung steht trotzdem einzeln am Vorgang – mit Hinweis auf die Zusammenfassung.
+      const item = (await itemFor(four[0]!.id))!;
+      const [n] = await notifications(item.id);
+      expect(n).toMatchObject({ status: 'SENT', phase: 'INITIAL' });
+      expect(n!.note).toContain('Zusammenfassung mit 4 Vorgängen');
+      // Ein weiterer Takt sendet nichts nach.
+      sent = [];
+      await attention.syncTenant(tenantId, new Date());
+      expect(sent).toEqual([]);
+      for (const c of four) await prisma.forTenantId(tenantId).case.update({ where: { id: c.id }, data: { orchestrationStatus: 'COMPLETED' } });
+      await attention.syncTenant(tenantId, new Date());
+    });
+
     it('der Takt (sweep) ist abschaltbar und fasst nur Mandanten mit erfassten Mitarbeitern an', async () => {
       const previous = process.env.ESCALATION_ENABLED;
       // Im Test ist der Takt aus (ESCALATION_ENABLED=false in e2e-env): kein Mandant wird angefasst, es geht nichts hinaus.

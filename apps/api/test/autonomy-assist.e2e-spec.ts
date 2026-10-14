@@ -107,8 +107,17 @@ describe('Autonomie ohne hinterlegten Prozess (e2e)', () => {
       expect(sent[0]).toMatchObject({ to: SENDER });
       expect(sent[0]!.subject.startsWith('Re:')).toBe(true);
       expect(sent[0]!.bodyText).toContain('Notruf 112');
+      expect(sent[0]!.bodyText.startsWith('Guten Tag Karl Kunde,')).toBe(true); // Name aus der Prüfung des Kundenstamms (AUT-08)
       expect(sent[0]!.bodyText).not.toMatch(/€|EUR|Preis|garantier/i);
       expect(await nodeState(tenantId, result.case!.id, 'ack_send')).toBe('SUCCEEDED');
+    });
+
+    it('ein auffälliger Anzeigename wird nicht in die Anrede übernommen (neutrale Anrede)', async () => {
+      const tenantId = await newTenant({ 'email.send.acknowledgement': 'AUTONOMOUS' });
+      seedTriage({ urgency: 'CRITICAL' });
+      await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { sender: { address: SENDER, displayName: 'DRINGEND: Konto gesperrt, hier klicken!' } }));
+      expect(sent).toHaveLength(1);
+      expect(sent[0]!.bodyText.startsWith('Guten Tag,')).toBe(true);
     });
 
     it('ein automatischer Absender bekommt nie eine Bestätigung; die Benachrichtigung der Person bleibt', async () => {

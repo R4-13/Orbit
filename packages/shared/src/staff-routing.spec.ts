@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ESCALATION_POLICY, composeStaffNotice, escalationChain, isAbsent, formatWaiting, responsibilityForCase, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
+import { DEFAULT_ESCALATION_POLICY, DIGEST_MIN_ITEMS, composeStaffDigest, composeStaffNotice, escalationChain, isAbsent, formatWaiting, responsibilityForCase, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
 
 const person = (id: string, over: Partial<RoutableStaff> = {}): RoutableStaff => ({
   id,
@@ -176,5 +176,23 @@ describe('Abwesenheit (AUT-05)', () => {
   it('die Meldung nennt, für wen die Vertretung einspringt', () => {
     const notice = composeStaffNotice({ phase: 'INITIAL', kind: 'MANUAL_REVIEW', role: 'DEPUTY', recipientFirstName: 'Vera', caseTitle: 'Rechnung', waitingMinutes: 1, responsibleName: 'Bea Buchhaltung', standInFor: 'Bea Buchhaltung', link: 'https://x', appName: 'ORBIT' });
     expect(notice.text).toContain('Bea Buchhaltung ist heute abwesend');
+  });
+});
+
+describe('Zusammenfassung mehrerer Meldungen (AUT-05)', () => {
+  it('eine Mail nennt jeden Vorgang mit Anlass und Link', () => {
+    const digest = composeStaffDigest({
+      recipientFirstName: 'Bea',
+      appName: 'ORBIT',
+      entries: [
+        { kind: 'WAITING_FOR_APPROVAL', caseTitle: 'Rechnung 1', reason: 'Eine Freigabe ist offen.', link: 'https://x/cases/1' },
+        { kind: 'MANUAL_REVIEW', caseTitle: 'Anfrage 2', link: 'https://x/cases/2' },
+        { kind: 'FAILED', caseTitle: 'Bestellung 3', link: 'https://x/cases/3' },
+      ],
+    });
+    expect(digest.subject).toBe('3 neue Vorgänge brauchen Ihre Aufmerksamkeit');
+    expect(digest.text).toContain('„Rechnung 1“ wartet auf eine Freigabe. Grund: Eine Freigabe ist offen.');
+    expect(digest.text).toContain('https://x/cases/3');
+    expect(DIGEST_MIN_ITEMS).toBe(3);
   });
 });

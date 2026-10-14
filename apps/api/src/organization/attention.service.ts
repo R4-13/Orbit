@@ -1,8 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { StaffNotification } from '@orbit/domain';
 import { loadBrandingConfig, type OrbitEnv } from '@orbit/config';
 import {
+  DIGEST_MIN_ITEMS,
   LIVE_DELIVERY_CHANNELS,
   NotFoundError,
+  composeStaffDigest,
   composeStaffNotice,
   escalationChain,
   escalationPhase,
@@ -188,10 +191,12 @@ export class AttentionService {
 
     // 3. Meldungen nach Wartezeit.
     const items = await db.attentionItem.findMany({ where: { tenantId, state: 'OPEN' }, include: { case: { select: { title: true } } } });
+    // Viele neue Meldungen an dieselbe Person im selben Takt: eine Zusammenfassung statt vieler Einzelmails (AUT-05).
+    const handled = await this.sendDigests(tenantId, items, staff, policy, now, result);
     for (const item of items) {
       const minutes = (now.getTime() - item.firstSeenAt.getTime()) / 60_000;
       const phase = escalationPhase(minutes, policy, item.emergency);
-      const sent = await this.notifyPhase(tenantId, item, phase, staff, minutes, now);
+      const sent = await this.notifyPhase(tenantId, item, phase, staff, minutes, now, handled.get(item.id));
       result.notified += sent.sent;
       result.failed += sent.failed;
       if (phase !== item.phase || sent.sent > 0) {
@@ -204,6 +209,100 @@ export class AttentionService {
     return result;
   }
 
+  /**
+   * Wer in dieser Phase noch eine Meldung zu diesem Eintrag braucht: die Empfänger der Kette (je Person die höchste Rolle – die erste zuständige Person nennt die Meldung als Anlass),
+   * ohne die, die in dieser Phase schon eine bekommen haben (fehlgeschlagene Zustellungen werden nach Abstand und höchstens begrenzt oft wiederholt).
+   */
+  private async pendingTargets(
+    tenantId: string,
+    item: { id: string; responsibility: string },
+    phase: EscalationPhase,
+    staff: RoutableStaff[],
+    now: Date,
+  ): Promise<Array<{ staffId: string; step: EscalationStep; responsibleName: string; existing: StaffNotification | undefined }>> {
+    const responsibles = responsiblesFor(staff, item.responsibility as Parameters<typeof responsiblesFor>[1]);
+    if (responsibles.length === 0) return [];
+    const targets = new Map<string, { step: EscalationStep; responsibleName: string }>();
+    for (const responsible of responsibles) {
+      for (const step of recipientsForPhase(escalationChain(staff, responsible.id, now), phase)) {
+        if (!targets.has(step.staff.id)) targets.set(step.staff.id, { step, responsibleName: fullName(responsible) });
+      }
+    }
+    // Alle bisherigen Meldungen dieses Eintrags in der Phase mit einer Abfrage (statt eine je Person).
+    const already = new Map((await this.prisma.forTenantId(tenantId).staffNotification.findMany({ where: { attentionItemId: item.id, phase } })).map((n) => [n.staffMemberId, n]));
+    const out: Array<{ staffId: string; step: EscalationStep; responsibleName: string; existing: StaffNotification | undefined }> = [];
+    for (const [staffId, { step, responsibleName }] of targets) {
+      const existing = already.get(staffId);
+      if (existing && (existing.status !== 'FAILED' || existing.attempts >= MAX_ATTEMPTS || now.getTime() - existing.updatedAt.getTime() < RETRY_AFTER_MS)) continue;
+      out.push({ staffId, step, responsibleName, existing });
+    }
+    return out;
+  }
+
+  /**
+   * Fasst neue Erstmeldungen zusammen (AUT-05): bekommt eine Person im selben Takt `DIGEST_MIN_ITEMS` oder mehr neue, nicht dringende Meldungen, geht **eine** Mail mit allen hinaus.
+   * Jede Meldung wird trotzdem einzeln festgehalten (mit Hinweis auf die Zusammenfassung); Erinnerung und Eskalation sind nicht betroffen. Notfälle werden nie gebündelt.
+   * Rückgabe: je Eintrag die Personen, die schon versorgt sind.
+   */
+  private async sendDigests(
+    tenantId: string,
+    items: Array<{ id: string; caseId: string; kind: string; responsibility: string; emergency: boolean; reason: string | null; firstSeenAt: Date; case: { title: string } }>,
+    staff: RoutableStaff[],
+    policy: ReturnType<typeof resolveEscalationPolicy>,
+    now: Date,
+    result: { notified: number; failed: number },
+  ): Promise<Map<string, Set<string>>> {
+    const handled = new Map<string, Set<string>>();
+    const pending = new Map<string, Array<{ item: (typeof items)[number]; step: EscalationStep; existing: StaffNotification | undefined }>>();
+    for (const item of items) {
+      if (item.emergency) continue;
+      const minutes = (now.getTime() - item.firstSeenAt.getTime()) / 60_000;
+      if (escalationPhase(minutes, policy, false) !== 'INITIAL') continue;
+      for (const target of await this.pendingTargets(tenantId, item, 'INITIAL', staff, now)) {
+        pending.set(target.staffId, [...(pending.get(target.staffId) ?? []), { item, step: target.step, existing: target.existing }]);
+      }
+    }
+    const db = this.prisma.forTenantId(tenantId);
+    const connected = new Set<DeliveryChannel>(LIVE_DELIVERY_CHANNELS);
+    const appName = loadBrandingConfig().appName;
+    for (const [staffId, entries] of pending) {
+      if (entries.length < DIGEST_MIN_ITEMS) continue;
+      const recipient = entries[0]!.step.staff;
+      const plan = planDelivery(recipient, connected);
+      const digest = composeStaffDigest({
+        recipientFirstName: recipient.firstName,
+        entries: entries.map((e) => ({ kind: e.item.kind as AttentionKind, caseTitle: e.item.case.title, reason: e.item.reason, link: `${this.env.WEB_BASE_URL.replace(/\/$/, '')}/cases/${e.item.caseId}` })),
+        appName,
+      });
+      let outcome: { status: 'SENT' | 'FAILED' | 'SKIPPED'; deliveredVia?: string; executionMode?: string; note?: string; error?: string };
+      if (!plan) {
+        outcome = { status: 'SKIPPED', note: 'Keine erreichbare Adresse für einen angebundenen Kanal – bitte Kontaktdaten ergänzen.' };
+      } else {
+        try {
+          const delivered = await this.mail.send(tenantId, { to: plan.address, subject: digest.subject, bodyText: digest.text });
+          outcome = { status: 'SENT', deliveredVia: plan.via, executionMode: delivered.executionMode, note: plan.note };
+        } catch (error) {
+          outcome = { status: 'FAILED', deliveredVia: plan.via, error: (error instanceof Error ? error.message : String(error)).slice(0, 300), note: plan.note };
+        }
+      }
+      const note = [`In einer Zusammenfassung mit ${entries.length} Vorgängen gemeldet.`, outcome.note].filter(Boolean).join(' ');
+      for (const { item, step, existing } of entries) {
+        const data = { tenantId, attentionItemId: item.id, staffMemberId: staffId, phase: 'INITIAL', role: step.role, subject: digest.subject, wantedChannel: step.staff.preferredChannel, status: outcome.status, deliveredVia: outcome.deliveredVia ?? null, executionMode: outcome.executionMode ?? null, note, error: outcome.error ?? null };
+        if (existing) await db.staffNotification.update({ where: { id: existing.id }, data: { ...data, attempts: existing.attempts + 1 } });
+        else await db.staffNotification.create({ data });
+        if (outcome.status === 'SENT') {
+          result.notified += 1;
+          await db.attentionItem.update({ where: { id: item.id }, data: { lastNotifiedAt: now } });
+          await this.audit.record({ tenantId, eventType: 'ATTENTION_NOTIFIED', actorType: 'SYSTEM', entityType: 'Case', entityId: item.caseId, payload: { staffMemberId: staffId, role: step.role, phase: 'INITIAL', wantedChannel: step.staff.preferredChannel, deliveredVia: outcome.deliveredVia, executionMode: outcome.executionMode, digest: true } });
+        }
+        // Gelungen oder dauerhaft nicht zustellbar: der Einzelweg soll nicht zusätzlich senden. Fehlgeschlagen: der Einzelweg wiederholt nach Abstand wie gewohnt.
+        if (outcome.status !== 'FAILED') handled.set(item.id, new Set([...(handled.get(item.id) ?? []), staffId]));
+      }
+      if (outcome.status === 'FAILED') result.failed += 1;
+    }
+    return handled;
+  }
+
   /** Meldungen dieser Phase an die zuständigen Personen und – je nach Phase – Vertretung, Vorgesetzte und Leitung; je Person und Phase höchstens eine. */
   private async notifyPhase(
     tenantId: string,
@@ -212,28 +311,15 @@ export class AttentionService {
     staff: RoutableStaff[],
     waitingMinutes: number,
     now: Date,
+    skipStaffIds?: ReadonlySet<string>,
   ): Promise<{ sent: number; failed: number }> {
     const db = this.prisma.forTenantId(tenantId);
-    const responsibles = responsiblesFor(staff, item.responsibility as Parameters<typeof responsiblesFor>[1]);
-    if (responsibles.length === 0) return { sent: 0, failed: 0 };
-
-    // Je Person die höchste Rolle in der Kette (Vertretung vor Vorgesetztem vor Leitung) – die erste zuständige Person nennt die Meldung als Anlass.
-    const targets = new Map<string, { step: EscalationStep; responsibleName: string }>();
-    for (const responsible of responsibles) {
-      for (const step of recipientsForPhase(escalationChain(staff, responsible.id, now), phase)) {
-        if (!targets.has(step.staff.id)) targets.set(step.staff.id, { step, responsibleName: fullName(responsible) });
-      }
-    }
-
     const connected = new Set<DeliveryChannel>(LIVE_DELIVERY_CHANNELS);
     const appName = loadBrandingConfig().appName;
     let sent = 0;
     let failed = 0;
-    // Alle bisherigen Meldungen dieses Eintrags in der Phase mit einer Abfrage (statt eine je Person).
-    const already = new Map((await db.staffNotification.findMany({ where: { attentionItemId: item.id, phase } })).map((n) => [n.staffMemberId, n]));
-    for (const [staffId, { step, responsibleName }] of targets) {
-      const existing = already.get(staffId);
-      if (existing && (existing.status !== 'FAILED' || existing.attempts >= MAX_ATTEMPTS || now.getTime() - existing.updatedAt.getTime() < RETRY_AFTER_MS)) continue;
+    for (const { staffId, step, responsibleName, existing } of await this.pendingTargets(tenantId, item, phase, staff, now)) {
+      if (skipStaffIds?.has(staffId)) continue; // bereits in einer Zusammenfassung gemeldet
 
       const plan = planDelivery(step.staff, connected);
       const notice = composeStaffNotice({

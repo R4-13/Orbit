@@ -263,3 +263,27 @@ export function composeStaffNotice(input: StaffNoticeInput): { subject: string; 
   ];
   return { subject, text: lines.join('\n') };
 }
+
+/** Ab so vielen neuen Meldungen an dieselbe Person im selben Takt wird eine Zusammenfassung statt vieler Einzelmails gesendet (Notfälle nie). */
+export const DIGEST_MIN_ITEMS = 3;
+
+export interface StaffDigestInput {
+  recipientFirstName: string;
+  entries: Array<{ kind: AttentionKind; caseTitle: string; reason?: string | null; link: string }>;
+  appName: string;
+}
+
+/** Eine Mail statt vieler: jede Zeile nennt Vorgang, Anlass und Link. Die Erinnerung und Eskalation je Vorgang laufen unverändert weiter. */
+export function composeStaffDigest(input: StaffDigestInput): { subject: string; text: string } {
+  const n = input.entries.length;
+  const lines = [
+    `Guten Tag ${input.recipientFirstName},`,
+    '',
+    `${n} Vorgänge brauchen Ihre Aufmerksamkeit:`,
+    '',
+    ...input.entries.flatMap((e) => [`• „${e.caseTitle}“ ${KIND_TEXT[e.kind]}.${e.reason ? ` Grund: ${e.reason}` : ''}`, `  ${e.link}`]),
+    '',
+    `${input.appName} erinnert Sie an jeden dieser Vorgänge einzeln, wenn er liegen bleibt.`,
+  ];
+  return { subject: `${n} neue Vorgänge brauchen Ihre Aufmerksamkeit`, text: lines.join('\n') };
+}

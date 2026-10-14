@@ -1,4 +1,4 @@
-import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, informationBody, statusUpdateBody } from './communication-templates';
+import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, informationBody, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { detectLanguage, replyLanguage } from './reply-language';
 
@@ -38,5 +38,15 @@ describe('Sprache der Antwort (AUT-07)', () => {
     const label = formatSlotLabel(start, new Date('2026-11-03T10:00:00Z'), 'Europe/Berlin', 'en');
     expect(label).toMatch(/Tuesday.*November 2026, 10:00–11:00/);
     expect(appointmentConfirmationBody({ kind: 'SITE_VISIT', label, companyName: company, lang: 'en' })).toContain('is confirmed');
+  });
+
+  it('persönliche Anrede nur mit einem Namen, der wie ein Personenname aussieht (AUT-08)', () => {
+    expect(safeSalutationName('  Karl   Kunde ')).toBe('Karl Kunde');
+    expect(safeSalutationName("Anne-Marie O'Brien")).toBe("Anne-Marie O'Brien");
+    expect(safeSalutationName('Dr. Éva Müller')).toBe('Dr. Éva Müller');
+    for (const bad of ['dringend: konto gesperrt!', 'Hans <script>', 'Rechnung 4711', 'A', 'x'.repeat(80), '', null, undefined, 'info@firma.example', 'https://evil.example']) expect(safeSalutationName(bad)).toBeUndefined();
+    expect(acknowledgementBody({ companyName: 'Muster GmbH', name: 'Karl Kunde' })).toContain('Guten Tag Karl Kunde,');
+    expect(acknowledgementBody({ companyName: 'Muster GmbH', name: 'Karl Kunde', lang: 'en' })).toContain('Hello Karl Kunde,');
+    expect(acknowledgementBody({ companyName: 'Muster GmbH', name: 'Hans <script>' })).toMatch(/^Guten Tag,\n/);
   });
 });
