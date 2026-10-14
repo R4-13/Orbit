@@ -7,7 +7,7 @@ describe('pageSlice (UX-05)', () => {
   it('liefert den Ausschnitt und die Anzeige „von–bis von gesamt“', () => {
     const first = pageSlice(items, 1, 25);
     expect(first.rows).toHaveLength(25);
-    expect(first.window).toEqual({ page: 1, pageCount: 3, from: 1, to: 25, total: 53 });
+    expect(first.window).toEqual({ page: 1, pageCount: 3, from: 1, to: 25, total: 53, showingAll: false });
     const last = pageSlice(items, 3, 25);
     expect(last.rows).toEqual([51, 52, 53]);
     expect(last.window).toMatchObject({ from: 51, to: 53 });
@@ -15,6 +15,11 @@ describe('pageSlice (UX-05)', () => {
   it('begrenzt zu große oder zu kleine Seitenzahlen und behandelt leere Listen', () => {
     expect(pageSlice(items, 99, 25).window.page).toBe(3);
     expect(pageSlice(items, 0, 25).window.page).toBe(1);
-    expect(pageSlice([], 1, 25).window).toEqual({ page: 1, pageCount: 1, from: 0, to: 0, total: 0 });
+    expect(pageSlice([], 1, 25).window).toEqual({ page: 1, pageCount: 1, from: 0, to: 0, total: 0, showingAll: false });
+  });
+  it('„Alle anzeigen“ liefert die ganze Liste auf einer Seite', () => {
+    const all = pageSlice(items, 2, 25, true);
+    expect(all.rows).toHaveLength(53);
+    expect(all.window).toMatchObject({ showingAll: true, from: 1, to: 53, total: 53, pageCount: 1 });
   });
 });

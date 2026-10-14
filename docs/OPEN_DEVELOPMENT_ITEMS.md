@@ -32,7 +32,7 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 | AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: HubSpot (größere Betriebe), Lexware/DATEV (kleinere) – Port `CustomerDirectory` ist vorbereitet | EXT | L je Adapter | P2 | Client-ID/Secret bzw. Partner-Registrierung nötig |
 | AUT-10 | **Betriebsprofil KI-gestützt einrichten** ~~aus eingefügtem Text~~ umgesetzt (`ASSUMPTIONS.md` #581). **Offen:** aus Dokumenten (PDF/Word), Preis- und Terminregeln, Terminlängen im Profil; Nachweis mit echtem Modell | ENG | M | P2 | |
 | AUT-11 | **Zweite automatische Rückfrage-Runde** (Blueprint v1.1) und **Lernen**: Auswertung „Wo greifen Menschen ein?“, Vorschläge aus Korrekturen | PROD → ENG | M | P2 | `maxAutoQuestions: 1` bewusst; Entscheidung steht aus |
-| AUT-12 | Dienstzugang (API-Schlüssel mit enger Berechtigung) für `PUT /staff/sync`, Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | ENG / EXT | M / L | P3 | |
+| AUT-12 | **Dienstzugang** ~~Zugriffsschlüssel mit enger Berechtigung für `PUT /staff/sync`~~ umgesetzt (`ASSUMPTIONS.md` #583). **Offen:** Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | EXT | L | P3 | |
 | AUT-13 | ~~Neukunde: erzwungener Passwortwechsel~~ **umgesetzt** (`ASSUMPTIONS.md` #572). **Offen:** Einladung per E-Mail statt Startpasswort; Playwright-Test der Neukunden-Oberfläche (braucht Betreiberzugang in der Testumgebung) | ENG / MAN | S | P3 | |
 
 ## 2. Master-Spezifikation (66 Abschnitte)
@@ -85,10 +85,10 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| BPF-01 | **Kostenlimit je Vorgang** (BP-39): KI-Nutzung dem Vorgang zuordnen, Limit prüfen | ENG | M | P2 | Kostenerfassung je Aufruf existiert (Plattform) |
+| BPF-01 | ~~Kostenlimit je Vorgang~~ **umgesetzt** (`ASSUMPTIONS.md` #585): Kosten werden dem Vorgang zugerechnet, ab der Grenze Prüfung durch einen Menschen. **Offen:** Wirkung nur mit gepflegtem Kostenprofil; die Triage vor der Anlage ist keinem Vorgang zugerechnet | ENG | S | P3 | |
 | BPF-02 | **Anhänge in der Triage/Extraktion** (E21) | ENG | M–L | P2 | |
 | BPF-03 | ~~Aufbewahrung von `bodyText` und Fakten~~ **umgesetzt** als Kategorien `EMAIL_BODIES` und `SUPERSEDED_FACTS` (`ASSUMPTIONS.md` #577). **Offen:** automatischer Lauf nach Plan, Anhänge | ENG | S | P3 | |
-| BPF-04 | **Limits je Mandant einstellbar** (heute Plattform-Standards, Blueprint nur verschärfend) | ENG | S–M | P3 | |
+| BPF-04 | ~~Limits je Mandant einstellbar~~ **umgesetzt** für vier Grenzen, nur verschärfend (`ASSUMPTIONS.md` #584) | ENG | S–M | erledigt | |
 | BPF-05 | **Qualitätsmessung der KI**: Evaluationskatalog, unabhängiger Triage-Holdout, systematische Bewertung statt Stichproben | ENG | M | P2 | |
 | BPF-06 | **Preisquelle** aus echtem Warenwirtschafts-/ERP-System statt Testbestand (`pricing.resolve` bleibt) | EXT | L | P2 | |
 | BPF-07 | Plan-Editor/Drag-and-drop und besseres Graph-Layout (Kantenkreuzungen) | ENG | L | P3 | Aktionen laufen bewusst nur über Commands |
@@ -134,7 +134,7 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 | TEC-05 | `next build` unter Windows (Standalone-Symlinks): Standalone nur im Docker-Build einschalten | ENG | S | P3 | |
 | TEC-06 | **E2E-Suite beschleunigen:** 52 Suiten laufen seriell ≈ 25 Minuten, der Worker muss gestoppt werden, parallele Läufe stören sich (gemeinsame Datenbank) → Test-Datenbank/Schema je Lauf, Test-Modus für den Worker | ENG | M | P2 | |
 | TEC-07 | ~~Schutz gegen hinterlassene Test-Mandanten~~ **erledigt** (`globalTeardown`, `ASSUMPTIONS.md` #575) | ENG | S | erledigt | |
-| TEC-08 | **Backup-/Restore-Konzept**, Migrationsstrategie ohne Ausfall, Rotation von Geheimnissen | ENG / MAN | M | P2 | `DEPLOYMENT.md` ergänzen |
+| TEC-08 | ~~Backup-/Restore-Konzept, Migrationsstrategie, Rotation von Geheimnissen~~ **dokumentiert und lokal erprobt** (`DEPLOYMENT.md`, `scripts/backup-postgres.sh`, `rotate-credential-key.ts`; `ASSUMPTIONS.md` #586). **Offen:** Sicherungs-Zeitplan, MinIO-Sicherung, Rotationslauf gegen eine echte Datenbank | ENG / MAN | S | P3 | |
 | TEC-09 | ~~Alarmregeln für Prometheus~~ **erledigt** (`infra/prometheus/orbit-alerts.yml`); offen: Schwellen nach Betriebserfahrung kalibrieren | ENG | S | erledigt | |
 | TEC-10 | Playwright-Gesamtlauf und Live-Suite (mit echtem Modell) nach größeren Änderungen routinemäßig wiederholen | MAN | S | P2 | in dieser Prüfung nur gezielte Teilmengen gelaufen |
 

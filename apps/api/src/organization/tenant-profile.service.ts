@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma, TenantProfile } from '@orbit/domain';
+import { Prisma, type TenantProfile } from '@orbit/domain';
 import {
   DEFAULT_ESCALATION_POLICY,
   EscalationPolicySchema,
@@ -16,7 +16,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type TenantProfileView = Omit<TenantProfile, 'tenantId' | 'openingHours' | 'faqs' | 'escalationPolicy'> & { openingHours: unknown; faqs: unknown; escalationPolicy: unknown };
+export type TenantProfileView = Omit<TenantProfile, 'tenantId' | 'openingHours' | 'faqs' | 'escalationPolicy' | 'processLimits'> & { openingHours: unknown; faqs: unknown; escalationPolicy: unknown; processLimits: unknown };
 
 export interface TenantProfileState {
   profile: TenantProfileView | null;
@@ -59,7 +59,7 @@ export class TenantProfileService {
   }
 
   async update(tenantId: string, actorUserId: string, input: UpdateTenantProfileRequest): Promise<TenantProfileState> {
-    const { escalationPolicy: escalationInput, ...fields } = input;
+    const { escalationPolicy: escalationInput, processLimits: limitsInput, ...fields } = input;
     const existing = await this.prisma.forTenantId(tenantId).tenantProfile.findUnique({ where: { tenantId } });
 
     let escalationPolicy: Prisma.InputJsonValue | undefined;
@@ -69,8 +69,20 @@ export class TenantProfileService {
       escalationPolicy = merged.data;
     }
 
+    // Eigene Grenzen: Feld für Feld ändern; `null` setzt auf den Standard zurück (Eintrag entfällt).
+    let processLimits: Prisma.InputJsonValue | typeof Prisma.DbNull | undefined;
+    if (limitsInput) {
+      const merged: Record<string, number> = { ...((existing?.processLimits as Record<string, number> | null) ?? {}) };
+      for (const [key, value] of Object.entries(limitsInput)) {
+        if (value === null || value === undefined) delete merged[key];
+        else merged[key] = value;
+      }
+      processLimits = Object.keys(merged).length > 0 ? (merged as Prisma.InputJsonValue) : Prisma.DbNull;
+    }
+
     const data = {
       ...fields,
+      processLimits,
       openingHours: fields.openingHours as Prisma.InputJsonValue | undefined,
       faqs: fields.faqs as Prisma.InputJsonValue | undefined,
       escalationPolicy,

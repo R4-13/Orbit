@@ -338,6 +338,7 @@ model Tenant {
   toolInvocations              ToolInvocation[]
   webhookEvents                WebhookEvent[]
   idempotencyRecords           IdempotencyRecord[]
+  apiKeys                      ApiKey[]
   retentionPolicies            RetentionPolicy[]
   agentDefinitions             AgentDefinition[]
   agentDefinitionVersions      AgentDefinitionVersion[]
@@ -2554,10 +2555,13 @@ model AIUsageRecord {
   latencyMs     Int?     @map("latency_ms")
   estimatedCost Decimal? @map("estimated_cost") @db.Decimal(14, 6)
   costCurrency  String?  @map("cost_currency")
+  /// Vorgang, in dessen Bearbeitung der Aufruf stattfand (BPF-01); leer bei Aufrufen ohne Vorgang (z. B. Triage vor der Anlage, Profil-Vorschlag).
+  caseId        String?  @map("case_id")
   createdAt     DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId, caseId])
   @@index([tenantId, createdAt])
   @@index([profileKey, createdAt])
   @@index([providerKey, createdAt])
@@ -2735,6 +2739,8 @@ model TenantProfile {
   faqs                  Json?
   /// Wann ORBIT erinnert und eskaliert: { reminderAfterMinutes, escalateAfterMinutes, emergencyReminderMinutes, emergencyEscalateMinutes } (Standard im Code).
   escalationPolicy      Json?     @map("escalation_policy")
+  /// Eigene Grenzen des Betriebs für automatische Abläufe (nur verschärfend): { maxActionsPerCase?, maxReplans?, maxConsecutiveCapabilityFailures?, maxAiCostPerCase? } (BPF-04).
+  processLimits         Json?     @map("process_limits")
   onboardingCompletedAt DateTime? @map("onboarding_completed_at")
   /// Wann der Automatisierungsgrad bewusst gewählt (oder bei der Anlage des Betriebs festgelegt) wurde.
   automationConfirmedAt DateTime? @map("automation_confirmed_at")
@@ -2911,4 +2917,29 @@ model IdempotencyRecord {
   @@unique([tenantId, key])
   @@index([expiresAt])
   @@map("idempotency_records")
+}
+
+// ============================================================================
+// Zugriffsschlüssel / Dienstzugang (AUT-12)
+// ============================================================================
+
+/// Ein Schlüssel für Systeme statt Menschen (z. B. Personalverwaltung → `PUT /staff/sync`). Gespeichert wird nur der SHA-256 des Schlüssels; der Klartext wird einmal bei
+/// der Anlage gezeigt. Jeder Schlüssel trägt Bereiche (`scopes`) und kann widerrufen werden; `lastUsedAt` zeigt, ob er noch gebraucht wird.
+model ApiKey {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  name            String
+  /// Die ersten Zeichen des Schlüssels (nach `osk_`), zum Wiedererkennen in der Liste – kein Geheimnis.
+  prefix          String
+  keyHash         String    @unique @map("key_hash")
+  scopes          String[]
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  lastUsedAt      DateTime? @map("last_used_at")
+  revokedAt       DateTime? @map("revoked_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("api_keys")
 }

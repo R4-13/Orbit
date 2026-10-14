@@ -71,6 +71,8 @@ export const AUDIT_EVENT_TYPES = [
   'ATTENTION_ACKNOWLEDGED',
   'STAFF_CREATED',
   'STAFF_UPDATED',
+  'API_KEY_CREATED',
+  'API_KEY_REVOKED',
   'STAFF_DEACTIVATED',
   /** Mitarbeiter per CSV oder Schnittstelle abgeglichen (Anzahl neu/geändert/unverändert, nie die Daten selbst). */
   'STAFF_IMPORTED',

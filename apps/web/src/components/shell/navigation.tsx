@@ -81,6 +81,7 @@ export const NAV_ITEMS: NavItem[] = [
       { href: '/admin/branding', label: 'Erscheinungsbild', permission: PERMISSIONS.TENANT_BRANDING_CONFIGURE },
       { href: '/admin/company', label: 'Unternehmensprofil', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
       { href: '/admin/staff', label: 'Mitarbeiter', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
+      { href: '/admin/api-keys', label: 'Zugriffsschlüssel', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
       { href: '/admin/users', label: 'Benutzer & Rollen', permission: PERMISSIONS.USER_MANAGE },
       { href: '/admin/policies', label: 'Regeln & Freigaben', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/ai-providers', label: 'KI & Modelle', permission: PERMISSIONS.INTEGRATION_CONFIGURE },

@@ -4,7 +4,9 @@ import type { Case, CaseFact, Prisma, ProcessPlanNode } from '@orbit/domain';
 import {
   NotFoundError,
   bindInputs,
+  checkAiCostLimit,
   effectiveLimits,
+  type TenantLimitsInput,
   evaluateCompletion,
   nextActions,
   type BlueprintDefinition,
@@ -27,6 +29,7 @@ import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
+import { runInCaseContext } from '../common/case-context';
 import { PlannerService } from './planner.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
@@ -103,7 +106,11 @@ export class OrchestratorService {
 
   // ── Starting a case ─────────────────────────────────────────────────────────
 
-  async startCase(tenantId: string, caseId: string, options: StartCaseOptions = {}): Promise<StartCaseResult> {
+  startCase(tenantId: string, caseId: string, options: StartCaseOptions = {}): Promise<StartCaseResult> {
+    return runInCaseContext(caseId, () => this.startCaseInContext(tenantId, caseId, options));
+  }
+
+  private async startCaseInContext(tenantId: string, caseId: string, options: StartCaseOptions): Promise<StartCaseResult> {
     const active = options.blueprintKey ? await this.blueprints.getActive(tenantId, options.blueprintKey) : options.intentKey ? await this.blueprints.findActiveForIntent(tenantId, options.intentKey) : null;
     if (options.blueprintKey && !active) {
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: [`Der Prozess ${options.blueprintKey} ist für diesen Mandanten nicht aktiviert.`] });
@@ -121,7 +128,7 @@ export class OrchestratorService {
    * Scheitert die Prüfung (z. B. eine Fähigkeit ist nicht ausführbar), kommt der Vorgang zur Prüfung – das Verfahren wird nie verkürzt oder umgangen.
    */
   async startProcedure(tenantId: string, caseId: string, procedure: Parameters<PlannerService['plan']>[2]['procedure'], options: { userId?: string; intentSummary?: string } = {}): Promise<StartCaseResult> {
-    return this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, intentSummary: options.intentSummary, procedure });
+    return runInCaseContext(caseId, () => this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, intentSummary: options.intentSummary, procedure }));
   }
 
   private async planAndActivate(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2]): Promise<StartCaseResult> {
@@ -159,7 +166,11 @@ export class OrchestratorService {
 
   // ── The advance loop ────────────────────────────────────────────────────────
 
-  async advance(tenantId: string, caseId: string): Promise<AdvanceResult> {
+  advance(tenantId: string, caseId: string): Promise<AdvanceResult> {
+    return runInCaseContext(caseId, () => this.advanceInContext(tenantId, caseId));
+  }
+
+  private async advanceInContext(tenantId: string, caseId: string): Promise<AdvanceResult> {
     if (!(await this.acquireLease(tenantId, caseId))) return { status: 'LEASED_ELSEWHERE', executed: [] };
     const executed: string[] = [];
     try {
@@ -201,6 +212,13 @@ export class OrchestratorService {
         if (actions.length === 0) {
           await this.settle(tenantId, caseRow, graph);
           return { status: 'IDLE', executed };
+        }
+        if (actions.some((a) => a.action === 'EXECUTE')) {
+          const blocked = await this.aiCostBlock(tenantId, caseRow);
+          if (blocked) {
+            await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: [blocked] });
+            return { status: 'IDLE', executed };
+          }
         }
         for (const action of actions) {
           const node = graph.nodes.find((n) => n.nodeKey === action.nodeKey);
@@ -334,7 +352,7 @@ export class OrchestratorService {
             purpose,
             payload: { capability: capability.key, purpose: purpose ?? null, input: bound.values },
           },
-          effectiveLimits((await this.blueprintFor(tenantId, caseRow))?.limits),
+          effectiveLimits((await this.blueprintFor(tenantId, caseRow))?.limits, await this.tenantLimits(tenantId)),
         );
       } catch (error) {
         if (error instanceof ActionLimitReachedError) return this.blockNode(tenantId, caseRow, graph, node, def, error.code, error.message, 'MANUAL_REVIEW');
@@ -633,10 +651,14 @@ export class OrchestratorService {
 
   // ── Replanning, commands support ────────────────────────────────────────────
 
-  async replan(tenantId: string, caseId: string, userId: string | undefined): Promise<StartCaseResult> {
+  replan(tenantId: string, caseId: string, userId: string | undefined): Promise<StartCaseResult> {
+    return runInCaseContext(caseId, () => this.replanInContext(tenantId, caseId, userId));
+  }
+
+  private async replanInContext(tenantId: string, caseId: string, userId: string | undefined): Promise<StartCaseResult> {
     const caseRow = await this.loadCase(tenantId, caseId);
     const blueprint = await this.blueprintRefFor(tenantId, caseRow);
-    const maxReplans = effectiveLimits(blueprint?.definition.limits).maxReplans;
+    const maxReplans = effectiveLimits(blueprint?.definition.limits, await this.tenantLimits(tenantId)).maxReplans;
     const revisions = await this.store.listRevisions(tenantId, caseId);
     if (revisions.length > maxReplans) {
       const reasons = [`Das Limit von ${maxReplans} Neuplanungen ist erreicht.`];
@@ -803,6 +825,25 @@ export class OrchestratorService {
 
   private runtimeEdges(graph: PlanGraph): RuntimeEdge[] {
     return graph.edges.map((e) => ({ key: e.edgeKey, source: e.sourceKey, target: e.targetKey, condition: (e.condition ?? undefined) as RuntimeEdge['condition'] }));
+  }
+
+  /** Eigene Grenzen des Betriebs (nur verschärfend, BPF-04); ohne Eintrag gelten die Standards. */
+  private async tenantLimits(tenantId: string): Promise<TenantLimitsInput> {
+    const profile = await this.prisma.forTenantId(tenantId).tenantProfile.findUnique({ where: { tenantId }, select: { processLimits: true } });
+    const stored = profile?.processLimits;
+    return stored && typeof stored === 'object' && !Array.isArray(stored) ? (stored as TenantLimitsInput) : undefined;
+  }
+
+  /**
+   * KI-Kostengrenze je Vorgang (BPF-01): Summe der geschätzten Kosten aller Modellaufrufe, die diesem Vorgang zugerechnet sind. Gerechnet wird nur in einer Währung (der mit der
+   * höchsten Summe); Aufrufe ohne Kostenprofil haben keine Schätzung und zählen nicht – ohne Kostenprofil bleibt die Grenze wirkungslos (dokumentiert).
+   */
+  private async aiCostBlock(tenantId: string, caseRow: Case): Promise<string | undefined> {
+    const limit = effectiveLimits((await this.blueprintFor(tenantId, caseRow))?.limits, await this.tenantLimits(tenantId)).maxAiCostPerCase;
+    const groups = await this.prisma.forTenantId(tenantId).aIUsageRecord.groupBy({ by: ['costCurrency'], where: { caseId: caseRow.id, estimatedCost: { not: null } }, _sum: { estimatedCost: true } });
+    const spent = Math.max(0, ...groups.map((g) => Number(g._sum.estimatedCost ?? 0)));
+    const verdict = checkAiCostLimit(limit, spent);
+    return verdict.allowed ? undefined : verdict.message;
   }
 
   private async blueprintRefFor(tenantId: string, caseRow: Case): Promise<{ definition: BlueprintDefinition; key: string; version: string } | undefined> {

@@ -169,7 +169,7 @@ export default function OpportunitiesPage() {
             )}
           </tbody>
         </table>
-        <Pager window={paged.window} onPage={paged.setPage} label="Verkaufschancen" />
+        <Pager window={paged.window} onPage={paged.setPage} onShowAll={paged.setShowAll} label="Verkaufschancen" />
       </Card>
       )}
     </div>

@@ -118,7 +118,7 @@ export default function ContactsPage() {
             )}
           </tbody>
         </table>
-        <Pager window={paged.window} onPage={paged.setPage} label="Kontakte" />
+        <Pager window={paged.window} onPage={paged.setPage} onShowAll={paged.setShowAll} label="Kontakte" />
       </Card>
       )}
     </div>

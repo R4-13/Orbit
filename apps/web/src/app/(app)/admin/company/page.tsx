@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PROFILE_TONES, PROFILE_TONE_LABELS, WEEKDAYS, WEEKDAY_LABELS, type ProfileTone, type Weekday } from '@orbit/shared';
+import { LIMIT_CEILINGS, LIMIT_DEFAULTS, LIMIT_LABELS, PROFILE_TONES, PROFILE_TONE_LABELS, TENANT_LIMIT_KEYS, WEEKDAYS, WEEKDAY_LABELS, type ProfileTone, type TenantLimitKey, type Weekday } from '@orbit/shared';
 import { Button, Card, ErrorState, Input, Label } from '@orbit/ui';
 import { OnboardingChecklist } from '../../../../components/common/onboarding-checklist';
 import { errorMessage } from '../../../../lib/api-client';
@@ -32,6 +32,8 @@ interface FormState {
   escalateHours: string;
   emergencyReminderMinutes: string;
   emergencyEscalateMinutes: string;
+  /** Eigene Grenzen als Text; leer = Standard der Plattform. */
+  limits: Record<TenantLimitKey, string>;
 }
 
 const LANGUAGES: Array<[string, string]> = [
@@ -78,6 +80,7 @@ export default function AdminCompanyPage() {
       escalateHours: String(data.escalationPolicy.escalateAfterMinutes / 60),
       emergencyReminderMinutes: String(data.escalationPolicy.emergencyReminderMinutes),
       emergencyEscalateMinutes: String(data.escalationPolicy.emergencyEscalateMinutes),
+      limits: Object.fromEntries(TENANT_LIMIT_KEYS.map((key) => [key, p?.processLimits?.[key] !== undefined ? String(p.processLimits[key]) : ''])) as Record<TenantLimitKey, string>,
     };
   }, [data]);
 
@@ -162,6 +165,8 @@ export default function AdminCompanyPage() {
           emergencyReminderMinutes: Number(form.emergencyReminderMinutes),
           emergencyEscalateMinutes: Number(form.emergencyEscalateMinutes),
         },
+        // Leer = Standard der Plattform (null setzt zurück).
+        processLimits: Object.fromEntries(TENANT_LIMIT_KEYS.map((key) => [key, form.limits[key].trim() === '' ? null : Number(form.limits[key].replace(',', '.'))])),
       });
       setSaved(true);
     } catch (e) {
@@ -343,6 +348,32 @@ export default function AdminCompanyPage() {
             <Label htmlFor="emergencyEscalate">Notfall: Eskalation nach (Minuten)</Label>
             <Input id="emergencyEscalate" inputMode="numeric" value={form.emergencyEscalateMinutes} onChange={(e) => set('emergencyEscalateMinutes', e.target.value)} />
           </div>
+        </div>
+      </Card>
+
+      <Card className="space-y-4 p-5" data-testid="process-limits">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Grenzen für automatische Abläufe</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Wo ORBIT einen Vorgang einem Menschen vorlegt, statt weiterzumachen. Sie können die Grenzen nur strenger setzen als der Standard; leer lassen heißt Standard.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {TENANT_LIMIT_KEYS.map((key) => (
+            <div key={key}>
+              <Label htmlFor={`limit-${key}`}>
+                {LIMIT_LABELS[key].label} (Standard {LIMIT_DEFAULTS[key]}, höchstens {LIMIT_CEILINGS[key]})
+              </Label>
+              <Input
+                id={`limit-${key}`}
+                inputMode="decimal"
+                placeholder={String(LIMIT_DEFAULTS[key])}
+                value={form.limits[key]}
+                onChange={(e) => set('limits', { ...form.limits, [key]: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-slate-600">{LIMIT_LABELS[key].hint}</p>
+            </div>
+          ))}
         </div>
       </Card>
 

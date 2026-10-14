@@ -35,6 +35,7 @@ const GROUPS: AdminGroup[] = [
     links: [
       { href: '/admin/company', label: 'Unternehmensprofil', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
       { href: '/admin/staff', label: 'Mitarbeiter', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
+      { href: '/admin/api-keys', label: 'Zugriffsschlüssel', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
     ],
   },
   {

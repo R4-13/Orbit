@@ -121,7 +121,7 @@ export default function SuppliersPage() {
             )}
           </tbody>
         </table>
-        <Pager window={paged.window} onPage={paged.setPage} label="Lieferanten" />
+        <Pager window={paged.window} onPage={paged.setPage} onShowAll={paged.setShowAll} label="Lieferanten" />
       </Card>
       )}
     </div>

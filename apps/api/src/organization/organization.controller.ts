@@ -7,6 +7,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
+import { ApiKeyOrJwtGuard } from '../api-keys/api-key-or-jwt.guard';
 import { AttentionService } from './attention.service';
 import { ProfileSuggestionService } from './profile-suggestion.service';
 import { StaffService } from './staff.service';
@@ -89,13 +90,6 @@ export class StaffController {
     return this.staff.importCsv(user.tenantId, user.id, csv, { dryRun: false, deactivateMissing: deactivateMissing ?? false });
   }
 
-  /** Schnittstelle für größere Betriebe: das Verzeichnis des führenden Systems (Personalverwaltung, Verzeichnisdienst) als JSON-Liste, Schlüssel `externalId`. */
-  @Put('sync')
-  sync(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
-    const { staff, deactivateMissing, dryRun } = parseBody(SyncBodySchema, body);
-    return this.staff.sync(user.tenantId, user.id, staff, { dryRun: dryRun ?? false, deactivateMissing: deactivateMissing ?? false });
-  }
-
   @Get(':id')
   get(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.staff.get(user.tenantId, id);
@@ -110,6 +104,25 @@ export class StaffController {
   @Delete(':id')
   deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id', new ParseUUIDPipe()) id: string) {
     return this.staff.deactivate(user.tenantId, user.id, id);
+  }
+}
+
+/**
+ * Schnittstelle für größere Betriebe (`PUT /staff/sync`): das Verzeichnis des führenden Systems (Personalverwaltung, Verzeichnisdienst) als JSON-Liste, Schlüssel
+ * `externalId`. Aufrufbar mit einem Konto mit `staff.sync` **oder** mit einem Zugriffsschlüssel dieses Bereichs (Dienstzugang, AUT-12) – ein Schlüssel kann sonst nichts.
+ */
+@ApiTags('organization')
+@ApiBearerAuth()
+@UseGuards(ApiKeyOrJwtGuard, PermissionsGuard)
+@RequirePermissions(PERMISSIONS.STAFF_SYNC)
+@Controller({ path: 'staff/sync' })
+export class StaffSyncController {
+  constructor(private readonly staff: StaffService) {}
+
+  @Put()
+  sync(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    const { staff, deactivateMissing, dryRun } = parseBody(SyncBodySchema, body);
+    return this.staff.sync(user.tenantId, user.id, staff, { dryRun: dryRun ?? false, deactivateMissing: deactivateMissing ?? false });
   }
 }
 

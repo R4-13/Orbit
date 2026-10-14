@@ -137,7 +137,7 @@ export default function InvoicesPage() {
               )}
             </tbody>
           </table>
-          <Pager window={paged.window} onPage={paged.setPage} label="Rechnungen" />
+          <Pager window={paged.window} onPage={paged.setPage} onShowAll={paged.setShowAll} label="Rechnungen" />
         </div>
       )}
     </div>

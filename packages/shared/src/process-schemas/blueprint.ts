@@ -73,6 +73,7 @@ export const LimitsSchema = z
     maxRuntimeHours: z.number().positive().max(24 * 90).optional(),
     maxActionsPerCase: z.number().int().positive().max(50).optional(),
     maxConsecutiveCapabilityFailures: z.number().int().positive().max(10).optional(),
+    maxAiCostPerCase: z.number().positive().max(100).optional(),
   })
   .strict();
 

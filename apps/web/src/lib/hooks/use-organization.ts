@@ -17,6 +17,8 @@ export interface TenantProfileView {
   faqs: Array<{ question: string; answer: string }> | null;
   automationConfirmedAt: string | null;
   onboardingCompletedAt: string | null;
+  /** Eigene Grenzen des Betriebs (nur verschärfend); fehlende Schlüssel = Standard der Plattform. */
+  processLimits?: Partial<Record<'maxActionsPerCase' | 'maxReplans' | 'maxConsecutiveCapabilityFailures' | 'maxAiCostPerCase', number>> | null;
 }
 
 export interface TenantProfileState {

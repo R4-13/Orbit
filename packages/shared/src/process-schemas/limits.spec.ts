@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIMIT_CEILINGS, LIMIT_DEFAULTS, checkActionLimits, effectiveLimits } from './limits';
+import { LIMIT_CEILINGS, LIMIT_DEFAULTS, checkActionLimits, checkAiCostLimit, effectiveLimits } from './limits';
 
 describe('zentrale Limits (BP-39)', () => {
   it('ohne Blueprint-Angabe gelten die Standardwerte', () => {
@@ -27,5 +27,24 @@ describe('zentrale Limits (BP-39)', () => {
     expect(checkActionLimits(limits, 3, [true, true, false, true])).toEqual({ allowed: true }); // Erfolg unterbricht die Folge
     expect(checkActionLimits(limits, 3, [true, true, true])).toMatchObject({ allowed: false, code: 'LIMIT_CONSECUTIVE_FAILURES' });
     expect(checkActionLimits(limits, 0, [])).toEqual({ allowed: true });
+  });
+
+  it('der Betrieb darf weiter verschärfen (BPF-04), nie lockern; ungültige Angaben zählen nicht', () => {
+    expect(effectiveLimits(undefined, { maxActionsPerCase: 5 }).maxActionsPerCase).toBe(5);
+    expect(effectiveLimits({ maxActionsPerCase: 4 }, { maxActionsPerCase: 9 }).maxActionsPerCase).toBe(4); // Blueprint ist strenger
+    expect(effectiveLimits({ maxActionsPerCase: 9 }, { maxActionsPerCase: 4 }).maxActionsPerCase).toBe(4); // Betrieb ist strenger
+    expect(effectiveLimits(undefined, { maxActionsPerCase: 999 }).maxActionsPerCase).toBe(LIMIT_DEFAULTS.maxActionsPerCase); // lockern über den Standard hinaus geht nicht
+    expect(effectiveLimits(undefined, { maxActionsPerCase: -3, maxReplans: null }).maxActionsPerCase).toBe(LIMIT_DEFAULTS.maxActionsPerCase);
+    expect(effectiveLimits(undefined, { maxReplans: 0 }).maxReplans).toBe(0); // 0 Neuplanungen ist eine gültige Strenge
+    // Andere Schlüssel (z. B. Planschritte) kann der Betrieb nicht setzen.
+    expect(effectiveLimits(undefined, { maxSteps: 1 } as never).maxSteps).toBe(LIMIT_DEFAULTS.maxSteps);
+  });
+
+  it('KI-Kostengrenze je Vorgang (BPF-01): unter der Grenze frei, ab der Grenze Prüfung mit fachlichem Text', () => {
+    expect(checkAiCostLimit(5, 4.99)).toEqual({ allowed: true });
+    const blocked = checkAiCostLimit(5, 5);
+    expect(blocked).toMatchObject({ allowed: false, code: 'LIMIT_AI_COST' });
+    expect(blocked.message).toContain('KI-Kosten');
+    expect(effectiveLimits(undefined, { maxAiCostPerCase: 1.5 }).maxAiCostPerCase).toBe(1.5);
   });
 });

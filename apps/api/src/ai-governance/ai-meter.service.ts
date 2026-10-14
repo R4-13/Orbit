@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
 import { applyHealthOutcome, classifyLlmError, estimateCost, type HealthState, type LlmErrorClass } from '@orbit/shared';
+import { currentCaseId } from '../common/case-context';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -57,6 +58,7 @@ export class AiMeterService {
           latencyMs: outcome.latencyMs,
           estimatedCost: cost,
           costCurrency: cost === null ? undefined : context.cost?.currency,
+          caseId: currentCaseId(),
         },
       });
     } catch (error) {

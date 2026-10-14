@@ -212,7 +212,7 @@ export default function LeadsPage() {
               )}
             </tbody>
           </table>
-          <Pager window={paged.window} onPage={paged.setPage} label="Interessenten" />
+          <Pager window={paged.window} onPage={paged.setPage} onShowAll={paged.setShowAll} label="Interessenten" />
         </div>
       )}
     </div>

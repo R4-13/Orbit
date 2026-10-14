@@ -20,7 +20,7 @@ export interface PrepareActionInput {
 /** Eine neue Aktion würde ein zentrales Limit (BP-39) überschreiten: der Vorgang geht zur Prüfung, es wird nichts vorbereitet. */
 export class ActionLimitReachedError extends Error {
   constructor(
-    readonly code: 'LIMIT_ACTIONS_PER_CASE' | 'LIMIT_CONSECUTIVE_FAILURES',
+    readonly code: 'LIMIT_ACTIONS_PER_CASE' | 'LIMIT_CONSECUTIVE_FAILURES' | 'LIMIT_AI_COST',
     message: string,
   ) {
     super(message);

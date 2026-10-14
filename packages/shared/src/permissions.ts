@@ -51,6 +51,8 @@ export const PERMISSIONS = {
   TENANT_BRANDING_CONFIGURE: 'tenant.branding.configure',
   /** Betriebsprofil und Mitarbeiterverzeichnis pflegen (Branche, Leistungen, Zeiten, Notdienst; Rollen, Zuständigkeiten, Erreichbarkeit). TENANT_ADMIN. */
   TENANT_PROFILE_MANAGE: 'tenant.profile.manage',
+  /** Das Mitarbeiterverzeichnis über die Schnittstelle `PUT /staff/sync` abgleichen – auch für Zugriffsschlüssel (Dienstzugang) gedacht, die sonst nichts dürfen. */
+  STAFF_SYNC: 'staff.sync',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

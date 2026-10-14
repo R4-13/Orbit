@@ -155,6 +155,9 @@ test.describe('Freigaben: Entscheidungsdetail mit Kontext (§14, AC-15)', () => 
     await page.getByRole('button', { name: 'Abbrechen' }).click();
     await expect(page.getByRole('button', { name: 'Genehmigen' })).toBeVisible();
     await page.getByRole('button', { name: 'Ablehnen' }).click();
+    // Für diese Entscheidung verlangt ORBIT einen Grund (UX-03): ohne ihn bleibt „Ja, ablehnen“ gesperrt.
+    await expect(page.getByRole('button', { name: 'Ja, ablehnen' })).toBeDisabled();
+    await page.getByPlaceholder(/Warum wird abgelehnt/).fill('Lieferant ist uns nicht bekannt.');
     await page.getByRole('button', { name: 'Ja, ablehnen' }).click();
     await expect(page.getByText(/^Abgelehnt\./)).toBeVisible();
   });

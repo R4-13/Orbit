@@ -1,9 +1,19 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 import { EscalationPolicyInputSchema, escalationChain, type RoutableStaff } from './staff-routing';
 import { OpeningHoursSchema, UpdateTenantProfileSchema, channelAddressProblem } from './tenant-profile';
 
 /** Anfrage zum Speichern des Betriebsprofils: Profilfelder plus (teilweise) die Zeiten für Erinnerung und Eskalation. */
-export const UpdateTenantProfileRequestSchema = UpdateTenantProfileSchema.extend({ escalationPolicy: EscalationPolicyInputSchema.optional() });
+/** Eigene Grenzen des Betriebs (BPF-04): jedes Feld leer/`null` = Standard der Plattform. */
+export const ProcessLimitsInputSchema = z
+  .object({
+    maxActionsPerCase: z.number().int().min(1).max(50).nullable(),
+    maxReplans: z.number().int().min(0).max(20).nullable(),
+    maxConsecutiveCapabilityFailures: z.number().int().min(1).max(10).nullable(),
+    maxAiCostPerCase: z.number().positive().max(100).nullable(),
+  })
+  .partial()
+  .strict();
+export const UpdateTenantProfileRequestSchema = UpdateTenantProfileSchema.extend({ escalationPolicy: EscalationPolicyInputSchema.optional(), processLimits: ProcessLimitsInputSchema.optional() });
 export type UpdateTenantProfileRequest = z.infer<typeof UpdateTenantProfileRequestSchema>;
 
 /**

@@ -39,6 +39,9 @@ test.describe('Finance', () => {
     // dev DB create their own additional invoices (by design, so they never
     // mutate these seeded fixtures — see finance-workflow.e2e-spec.ts) and
     // accumulate across runs without a reseed in between.
+    // Die Liste zeigt seitenweise 25 Zeilen (UX-05); bei vielen Rechnungen vorher auf „Alle anzeigen“ umstellen.
+    const showAll = page.getByRole('button', { name: /^Alle \d+ anzeigen$/ });
+    if (await showAll.isVisible()) await showAll.click();
     await expect(page.getByText('RE-2026-0312')).toBeVisible();
     const schmidtRow = page.locator('tbody tr', { hasText: 'SW-2026-014' });
     await expect(schmidtRow.getByText('Freigabe erforderlich')).toBeVisible();

@@ -156,6 +156,52 @@ Kategorien:
   (RDS/Cloud SQL, ElastiCache/Memorystore, S3) zu ersetzen, siehe
   unten.
 
+## Betrieb: Sicherung, Wiederherstellung, Migrationen, Schlüsselrotation (TEC-08)
+
+Stand Oktober 2026. Was unten steht, ist **lokal gegen den Docker-Stack erprobt** (`scripts/backup-postgres.sh`), nicht gegen eine Produktivumgebung.
+
+### Sicherung und Wiederherstellung (Postgres)
+
+```bash
+scripts/backup-postgres.sh backup ./backups          # pg_dump (Custom-Format, komprimiert) → orbit-<Zeitstempel>.dump
+scripts/backup-postgres.sh verify ./backups/orbit-….dump   # stellt in eine Wegwerf-Datenbank wieder her und prüft Tabellen/Mandanten/Migrationen
+```
+
+* **Probe statt Hoffnung:** `verify` legt eine temporäre Datenbank an, spielt die Sicherung ein, zählt Tabellen, Mandanten und angewendete Migrationen und löscht die Datenbank wieder.
+  Die echte Datenbank bleibt unberührt. Eine Sicherung, deren Wiederherstellung nie geprobt wurde, gilt nicht als Sicherung – die Probe gehört in den Zeitplan (z. B. wöchentlich).
+* **Echte Wiederherstellung** (Notfall): API und Worker stoppen, Datenbank neu anlegen (`CREATE DATABASE`), `pg_restore --no-owner -d <db> <datei>`, danach **die Rechte der
+  eingeschränkten Rolle `orbit_app` prüfen** (`ALTER DEFAULT PRIVILEGES` gilt nur für danach angelegte Tabellen – siehe „Datenbank-Setup“; `pg_restore` legt Tabellen als Besitzer an, die Rolle
+  braucht `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO orbit_app` und `GRANT USAGE, SELECT ON ALL SEQUENCES …`), dann API und Worker starten.
+* **Aufbewahrung:** Sicherungen außerhalb des Servers speichern (anderer Standort, verschlüsselt); sie enthalten Kundendaten und (verschlüsselte) Zugangsdaten. Die Löschfristen aus
+  „Datenaufbewahrung“ gelten nicht rückwirkend für Sicherungen – das gehört in die Verfahrensbeschreibung nach DSGVO.
+* **Dokumente (MinIO):** nicht Teil von `pg_dump`. Sicherung des Buckets mit `mc mirror` (`mc alias set orbit http://<host>:9000 <Benutzer> <Passwort>` → `mc mirror orbit/<bucket> ./backups/minio`)
+  oder Snapshots des Volumes `orbit_minio_data`. **Nicht gebaut und nicht erprobt** – offen.
+* **Redis** enthält nur Warteschlangen/Drosselung (wiederherstellbar aus der Datenbank bzw. unkritisch); keine Sicherung nötig.
+
+### Migrationen ohne Ausfall
+
+* Migrationen laufen weiterhin als eigener Schritt **vor** dem Start der neuen API (`pnpm prisma:deploy`), nie beim Container-Start.
+* Alle bisherigen Migrationen sind **additiv** (neue Tabellen/Spalten mit Standardwert, neue Enum-Werte, Daten-Nachträge mit `ON CONFLICT DO NOTHING`); die laufende alte Version bleibt damit
+  während und nach der Migration lauffähig. Regel für künftige Migrationen: **Expand → Deploy → Contract.** (1) Neue Spalte/Tabelle anlegen, (2) neue Version ausrollen, die in beide
+  schreibt und aus der neuen liest, (3) in einer späteren Migration die alte Spalte entfernen. Spalten umbenennen oder Typen ändern nie in einem Schritt.
+* Rollback: die Anwendung kehrt zur alten Version zurück (die additive Migration stört sie nicht); Daten werden nicht zurückgespielt, solange nichts zerstört wurde.
+  Vor jeder Migration, die Daten verändert oder löscht, **zuerst sichern** (siehe oben).
+* Mehrere API-Instanzen: Migration einmal ausführen, dann die Instanzen nacheinander ersetzen (Health-Check `/api/v1/health` abwarten).
+
+### Rotation von Geheimnissen
+
+| Geheimnis | Wirkung der Rotation | Vorgehen |
+|---|---|---|
+| `JWT_SECRET` | Ausgestellte Zugriffstoken (15 Minuten) werden ungültig; **Sitzungen bleiben bestehen**, weil Refresh-Token zufällige Datenbankwerte sind – die Oberfläche erneuert still. | Neuen Wert setzen, API und Worker neu starten. |
+| `PLATFORM_JWT_SECRET` | Betreiber-Sitzungen werden ungültig (Neuanmeldung). | Wie oben. |
+| `CREDENTIAL_ENCRYPTION_KEY` | Alle gespeicherten Zugangsdaten (Anbindungen, KI-Zugänge, Plattform-Geheimnisse) sind mit diesem Schlüssel verschlüsselt: ein neuer Wert **ohne** Umschlüsselung macht sie unlesbar. | **Sicherung**, dann `scripts/rotate-credential-key.ts` (Probelauf mit `--dry-run`, dann echter Lauf in einer Transaktion), danach `CREDENTIAL_ENCRYPTION_KEY` auf den neuen Wert setzen und API/Worker neu starten. Beschreibung im Kopf des Skripts. |
+| Zugriffsschlüssel (`osk_…`) | Der Schlüssel funktioniert nicht mehr. | Unter „Zugriffsschlüssel“ einen neuen anlegen, im Zielsystem eintragen, den alten widerrufen. |
+| Google-/OAuth-Client-Secret | Neue Verbindungen brauchen den neuen Wert; bestehende Refresh-Token bleiben gültig. | Secret in der Google Cloud Console erneuern, Umgebung anpassen, API neu starten. |
+| Datenbank-Passwörter (`orbit`, `orbit_app`) | Verbindungen brechen beim Wechsel ab. | Passwort in Postgres ändern (`ALTER ROLE`), `DATABASE_URL`/`DATABASE_URL_APP` anpassen, API/Worker neu starten. |
+
+Das Skript `rotate-credential-key.ts` ist gegen Test-Doubles geprüft (Neuverschlüsselung, Probelauf, Abbruch bei falschem Schlüssel); **ein Lauf gegen eine echte Datenbank mit Zugangsdaten
+wurde nicht durchgeführt** (die Entwicklungsdatenbank enthält echte Gmail-Zugangsdaten und wurde bewusst nicht angefasst).
+
 ## Was für einen echten Produktivbetrieb noch fehlt
 
 Ehrlich benannt statt stillschweigend vorausgesetzt (§63):
@@ -177,14 +223,14 @@ Ehrlich benannt statt stillschweigend vorausgesetzt (§63):
 - **Kein Kubernetes-/Multi-Region-Deployment** — explizites Nicht-Ziel
   des MVP (§60 des Master-Prompts, siehe
   `docs/KNOWN_LIMITATIONS.md`).
-- **Kein Dependency-Vulnerability-Scanning** (`pnpm audit` o. Ä.) in der
-  CI-Pipeline.
+- **Dependency-Scanning** läuft seit Oktober 2026 in der CI (`pnpm audit`, Dependabot;
+  `docs/SECURITY.md` §9) – auf einem echten Runner noch nicht gelaufen.
 - **CI-Pipeline-Erweiterungen (MinIO-Service, RLS-Rollen-Setup,
   Playwright-Install) sind nicht gegen einen echten
   GitHub-Actions-Runner verifiziert** — nur gegen die lokal
   identischen Docker-Äquivalente (`docs/ASSUMPTIONS.md` #83, #89).
-- **Kein automatisiertes Backup/Restore-Verfahren** für Postgres/MinIO
-  dokumentiert oder gebaut.
+- **Backup/Restore:** für Postgres dokumentiert und lokal erprobt (`scripts/backup-postgres.sh`,
+  siehe „Betrieb: Sicherung, Wiederherstellung …“); **kein Zeitplan, keine Sicherung von MinIO**.
 - **`OTEL_ENABLED`** ist als Env-Flag vorgesehen, aber nicht verdrahtet
   — kein verteiltes Tracing in Produktion verfügbar.
 

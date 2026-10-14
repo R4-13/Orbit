@@ -264,8 +264,8 @@ function ImportPanel() {
       <details className="text-sm text-slate-700">
         <summary className="cursor-pointer font-medium">Größere Betriebe: Abgleich über die Schnittstelle</summary>
         <p className="mt-2">
-          Ein Personalsystem oder Verzeichnisdienst kann die Liste automatisch senden: <code>PUT /api/v1/staff/sync</code> mit einem Zugriffstoken eines Benutzers mit Berechtigung
-          „Unternehmensprofil pflegen“. Schlüssel ist die Personalnummer (<code>externalId</code>); mit <code>dryRun: true</code> lässt sich der Abgleich zunächst nur prüfen.
+          Ein Personalsystem oder Verzeichnisdienst kann die Liste automatisch senden: <code>PUT /api/v1/staff/sync</code> mit einem <a className="underline" href="/admin/api-keys">Zugriffsschlüssel</a>
+          (Dienstzugang, der nur diesen Abgleich darf) oder dem Zugriffstoken eines Benutzers mit Berechtigung „Mitarbeiterverzeichnis abgleichen“. Schlüssel ist die Personalnummer (<code>externalId</code>); mit <code>dryRun: true</code> lässt sich der Abgleich zunächst nur prüfen.
         </p>
         <pre className="mt-2 overflow-auto rounded bg-slate-50 p-2 text-xs">{`{
   "staff": [
