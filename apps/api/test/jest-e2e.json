@@ -13,5 +13,7 @@
   "testTimeout": 20000,
   "setupFiles": [
     "<rootDir>/utils/e2e-env.ts"
-  ]
+  ],
+  "globalSetup": "<rootDir>/utils/global-setup.ts",
+  "globalTeardown": "<rootDir>/utils/global-teardown.ts"
 }

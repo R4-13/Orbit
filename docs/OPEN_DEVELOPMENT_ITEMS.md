@@ -27,13 +27,13 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 | AUT-04 | ~~Eingangsbestätigung bei Notfällen~~ **umgesetzt (TESTED LOCALLY)** als festes Notfallverfahren; Vorsichtig ⇒ mit Freigabe, ab Ausgewogen ⇒ autonom (`ASSUMPTIONS.md` #566). **Offen:** Sprache der Kundschaft (AUT-07), Live-Versand | ENG | S | P2 | Standard ist meine Annahme – bitte bei Bedarf unter „Regeln & Freigaben“ ändern |
 | AUT-05 | Meldungen bündeln (Zusammenfassung statt einer E-Mail je Vorgang/Phase), **Abwesenheits-/Urlaubskalender** für die Vertretung, Meldungen auch beim Warten auf Systeme und Kundschaft (Fristen der `WaitSubscription` → Eskalation) | ENG | M | P2 | |
 | AUT-06 | Zustellkanäle **Teams, WhatsApp, SMS, Anruf** für Mitarbeitermeldungen | EXT | L je Kanal | P2 | als Wunsch bereits erfasst; Zustellung heute ehrlich per E-Mail |
-| AUT-07 | Antworten in der **Sprache der Kundschaft** (Rahmentexte der Vorlagen, nicht nur Fragen) | ENG | S–M | P2 | `communication-templates.ts` |
+| AUT-07 | ~~Antworten in der Sprache der Kundschaft~~ **umgesetzt für Deutsch/Englisch** bei Bestätigung, Statusauskunft, Anhang anfordern, Auskunft, Terminbestätigung (`ASSUMPTIONS.md` #571). **Offen:** Rückfragen und Angebotsversand, weitere Sprachen | ENG | S | P3 | |
 | AUT-08 | Kundenstamm: **Daten im Ablauf nutzen** (Anrede, Konditionen, bekannte Adresse), Abgleich auch über Name/Firma/Domain (mit Vorsicht gegen falsche Treffer) | ENG | M | P2 | heute nur E-Mail-Adresse, und der Angebotsablauf nutzt den Eintrag nicht |
 | AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: HubSpot (größere Betriebe), Lexware/DATEV (kleinere) – Port `CustomerDirectory` ist vorbereitet | EXT | L je Adapter | P2 | Client-ID/Secret bzw. Partner-Registrierung nötig |
 | AUT-10 | **Betriebsprofil KI-gestützt einrichten** (aus eingefügtem Text/Dokumenten), Preis- und Terminregeln, Terminlängen im Profil | ENG | M | P2 | |
 | AUT-11 | **Zweite automatische Rückfrage-Runde** (Blueprint v1.1) und **Lernen**: Auswertung „Wo greifen Menschen ein?“, Vorschläge aus Korrekturen | PROD → ENG | M | P2 | `maxAutoQuestions: 1` bewusst; Entscheidung steht aus |
 | AUT-12 | Dienstzugang (API-Schlüssel mit enger Berechtigung) für `PUT /staff/sync`, Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | ENG / EXT | M / L | P3 | |
-| AUT-13 | Neukunde: **erzwungener Passwortwechsel** bzw. Einladung per E-Mail statt einmaligem Startpasswort; Playwright-Test der Neukunden-Oberfläche (braucht Betreiberzugang in der Testumgebung) | ENG / MAN | S–M | P2 | |
+| AUT-13 | ~~Neukunde: erzwungener Passwortwechsel~~ **umgesetzt** (`ASSUMPTIONS.md` #572). **Offen:** Einladung per E-Mail statt Startpasswort; Playwright-Test der Neukunden-Oberfläche (braucht Betreiberzugang in der Testumgebung) | ENG / MAN | S | P3 | |
 
 ## 2. Master-Spezifikation (66 Abschnitte)
 
@@ -48,8 +48,8 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-05 | **Microsoft 365** (Mail, Kalender) und **Google Calendar Schreiben** | EXT | L / M | P2 | Client-IDs und Zustimmung |
 | MST-06 | **HubSpot** als CRM-Anbindung | EXT | L | P2 | siehe AUT-09 |
 | MST-07 | ~~CSRF-Konzept~~ **dokumentiert** (`SECURITY.md` §6a) | ENG | S | erledigt | |
-| MST-08 | **Allgemeine API-Idempotenzschlüssel** für Schreiboperationen (nicht nur Webhooks) | ENG | M | P2 | |
-| MST-09 | **Upload-Prüfung auf Bytes** (Magic Bytes, Virenscan) statt nur deklarierter Metadaten | ENG | M | P2 | `SECURITY.md` §5 |
+| MST-08 | ~~Allgemeine API-Idempotenzschlüssel~~ **umgesetzt** (`Idempotency-Key`, `ASSUMPTIONS.md` #573). **Offen:** die Oberfläche sendet noch keine Schlüssel (Doppelklick-Schutz im Client) | ENG | S | P3 | |
+| MST-09 | ~~Upload-Prüfung auf Bytes~~ **umgesetzt** (Größe + Magic Bytes, `ASSUMPTIONS.md` #574). **Offen:** Virenscan (ClamAV o. Ä.), Prüfung des Inhalts von Office-Dateien | ENG / EXT | M | P2 | `SECURITY.md` §5 |
 | MST-10 | Webhook-Endpunkt mit **Signaturprüfung** (sobald ein Anbieter Webhooks sendet) | EXT | M | P3 | Idempotenz-Infrastruktur steht |
 | MST-11 | ~~Dependency-Scanning~~ **in der CI** (`pnpm audit`, Dependabot); 33 → 4 Funde (`SECURITY.md`) | ENG | S | erledigt | 4 verbleibende Funde: Entwicklungswerkzeuge, begründet |
 | MST-12 | CI-Pipeline auf einem **echten GitHub-Runner** verifizieren | EXT | S | P2 | Erweiterungen nur gegen lokales Docker geprüft |
@@ -68,7 +68,7 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 | SON-02 | Action-Cards mit **Bestätigen-Button**, `prepare_follow_up`, Token-Streaming (`message.delta`), **„Antwort stoppen“** (Abbruch im Backend) | ENG | M | P2 | |
 | MV3-01 | Vollständiger **8-stufiger Agent-Lifecycle** (heute DRAFT/ACTIVE/DISABLED) | ENG | M | P3 | prüfen, was seit Amendment 03 abgedeckt ist |
 | MV3-02 | **Evaluationslauf-Historie** (Verlauf der Auswertungsläufe je Agent) | ENG | M | P3 | |
-| MV3-03 | **Generische Connector-Idempotenzschlüssel** für Schreibaufrufe | ENG | M | P2 | gemeinsam mit MST-08 |
+| MV3-03 | ~~Generische Idempotenzschlüssel~~ **umgesetzt** zusammen mit MST-08 | ENG | M | erledigt | |
 | UNI-01 | **Lasttests und Skalierungsnachweis** (Unified Phase 12), Latenzbudgets (p95) | ENG | M–L | P2 | Messskript siehe Codebasis-Review |
 | UNI-02 | Phase 11 „echte Anbieter und Connectoren validieren“ | EXT | L | – | `BLOCKED_BY_EXTERNAL_CREDENTIALS` |
 
@@ -127,15 +127,15 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| TEC-01 | `.gitattributes` mit Zeilenende-Regel (Warnungen „LF will be replaced by CRLF“ bei jedem Commit) | ENG | S | P2 | |
+| TEC-01 | ~~`.gitattributes`~~ **erledigt** (`ASSUMPTIONS.md` #575) | ENG | S | erledigt | |
 | TEC-02 | Spec-Dateien aus den `dist`-Ausgaben der Pakete ausnehmen (Build-Größe) | ENG | S | P3 | `shared`, `domain`, `agent-core` … |
 | TEC-03 | `knip` und `jscpd` mit Konfiguration in die CI aufnehmen (ungenutzter Code, Duplikate) | ENG | S | P2 | Erstlauf siehe Review |
 | TEC-04 | Große Dienste aufteilen (`intake.service.ts` ≈ 900 Zeilen, `orchestrator.service.ts` ≈ 830) | ENG | M | P3 | nur bei weiterem Wachstum |
 | TEC-05 | `next build` unter Windows (Standalone-Symlinks): Standalone nur im Docker-Build einschalten | ENG | S | P3 | |
 | TEC-06 | **E2E-Suite beschleunigen:** 52 Suiten laufen seriell ≈ 25 Minuten, der Worker muss gestoppt werden, parallele Läufe stören sich (gemeinsame Datenbank) → Test-Datenbank/Schema je Lauf, Test-Modus für den Worker | ENG | M | P2 | |
-| TEC-07 | Schutz gegen **hinterlassene Test-Mandanten** (fünf Suiten hatten 380 hinterlassen) als Regel/Teardown für alle Suiten | ENG | S | P2 | die fünf Suiten sind behoben |
+| TEC-07 | ~~Schutz gegen hinterlassene Test-Mandanten~~ **erledigt** (`globalTeardown`, `ASSUMPTIONS.md` #575) | ENG | S | erledigt | |
 | TEC-08 | **Backup-/Restore-Konzept**, Migrationsstrategie ohne Ausfall, Rotation von Geheimnissen | ENG / MAN | M | P2 | `DEPLOYMENT.md` ergänzen |
-| TEC-09 | Alarmregeln für Prometheus (Latenz, Fehlerquote, Queue-Rückstand) | ENG | S | P2 | Metriken sind vorhanden |
+| TEC-09 | ~~Alarmregeln für Prometheus~~ **erledigt** (`infra/prometheus/orbit-alerts.yml`); offen: Schwellen nach Betriebserfahrung kalibrieren | ENG | S | erledigt | |
 | TEC-10 | Playwright-Gesamtlauf und Live-Suite (mit echtem Modell) nach größeren Änderungen routinemäßig wiederholen | MAN | S | P2 | in dieser Prüfung nur gezielte Teilmengen gelaufen |
 
 ---

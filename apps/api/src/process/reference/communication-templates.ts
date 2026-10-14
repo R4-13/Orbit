@@ -1,5 +1,6 @@
 import { APPOINTMENT_DURATION_MINUTES, type AppointmentKind } from './appointment-slots';
 import { formatEuro } from './money';
+import type { ReplyLanguage } from './reply-language';
 
 /**
  * Business wording of the reference process's outbound messages. These are process content (a tenant can later replace
@@ -81,17 +82,29 @@ export function replySubject(original?: string | null, fallback = 'Ihre Anfrage'
 
 // ── Weitere Mitteilungen (Autonomie-Ausbau): Bestätigung, Statusauskunft, Anhang anfordern, Auskunft, Terminbestätigung ──────────────────────────────
 
-const GREETING = ['Guten Tag,', ''];
-const closing = (companyName: string): string[] => ['', 'Mit freundlichen Grüßen', companyName];
+const GREETING: Record<ReplyLanguage, string[]> = { de: ['Guten Tag,', ''], en: ['Hello,', ''] };
+const closing = (companyName: string, lang: ReplyLanguage = 'de'): string[] => ['', lang === 'en' ? 'Kind regards' : 'Mit freundlichen Grüßen', companyName];
 
 /**
  * Eingangsbestätigung. Sie sagt nur, was stimmt: die Nachricht ist angekommen und wird bearbeitet. Bei einem Notfall kommt hinzu, dass sie als dringend eingestuft und
  * sofort weitergeleitet wurde – und der Hinweis auf den Notruf bei Gefahr für Personen. Es werden keine Zeiten, Preise oder Leistungen zugesagt.
  */
-export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean }): string {
+export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean; lang?: ReplyLanguage }): string {
+  const lang = input.lang ?? 'de';
+  if (lang === 'en') {
+    return [
+      ...GREETING.en,
+      `thank you for your message${input.originalSubject ? ` regarding "${input.originalSubject}"` : ''}. We have received it.`,
+      ...(input.emergency
+        ? ['We have classed it as urgent and are passing it on to the person responsible right away.', 'If anyone is in immediate danger, please call the emergency number 112 straight away.']
+        : ['We will look into it and get back to you.']),
+      'You are welcome to simply reply to this email if you would like to add anything.',
+      ...closing(input.companyName, lang),
+    ].join('\n');
+  }
   const about = input.originalSubject ? ` zu „${input.originalSubject}“` : '';
   return [
-    ...GREETING,
+    ...GREETING.de,
     `vielen Dank für Ihre Nachricht${about}. Sie ist bei uns eingegangen.`,
     ...(input.emergency
       ? ['Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter.', 'Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112.']
@@ -102,32 +115,39 @@ export function acknowledgementBody(input: { originalSubject?: string | null; co
 }
 
 /** Was der Stand eines Vorgangs für die Kundschaft heißt – ohne interne Begriffe und ohne Zusagen über Zeitpunkte. */
-export function caseStatusPhrase(status: string): string {
+export function caseStatusPhrase(status: string, lang: ReplyLanguage = 'de'): string {
+  const text = (de: string, en: string) => (lang === 'en' ? en : de);
   switch (status) {
-    case 'RECEIVED':
-    case 'READY':
-    case 'IN_PROGRESS':
-      return 'Ihre Anfrage ist bei uns in Bearbeitung.';
     case 'WAITING_FOR_INFORMATION':
-      return 'Wir warten auf Ihre Rückmeldung zu unseren Fragen.';
+      return text('Wir warten auf Ihre Rückmeldung zu unseren Fragen.', 'We are waiting for your reply to our questions.');
     case 'WAITING_FOR_APPROVAL':
     case 'MANUAL_REVIEW':
     case 'WAITING_FOR_EXTERNAL_SYSTEM':
     case 'PAUSED':
-      return 'Ihre Anfrage wird derzeit von uns geprüft.';
+      return text('Ihre Anfrage wird derzeit von uns geprüft.', 'Your request is currently being reviewed by us.');
     case 'COMPLETED':
-      return 'Ihre Anfrage ist bei uns abgeschlossen.';
+      return text('Ihre Anfrage ist bei uns abgeschlossen.', 'Your request has been completed on our side.');
     case 'REJECTED':
     case 'CANCELLED':
-      return 'Ihre Anfrage wird von uns nicht weiterverfolgt.';
+      return text('Ihre Anfrage wird von uns nicht weiterverfolgt.', 'We are not pursuing your request any further.');
     default:
-      return 'Ihre Anfrage ist bei uns in Bearbeitung.';
+      return text('Ihre Anfrage ist bei uns in Bearbeitung.', 'Your request is being processed by us.');
   }
 }
 
-export function statusUpdateBody(input: { referenceTitle?: string | null; status: string; lastStep?: string; companyName: string }): string {
+export function statusUpdateBody(input: { referenceTitle?: string | null; status: string; lastStep?: string; companyName: string; lang?: ReplyLanguage }): string {
+  const lang = input.lang ?? 'de';
+  if (lang === 'en') {
+    return [
+      ...GREETING.en,
+      `regarding your enquiry${input.referenceTitle ? ` about "${input.referenceTitle}"` : ''}: ${caseStatusPhrase(input.status, lang)}`,
+      ...(input.lastStep ? [`The most recent step was: ${input.lastStep}`] : []),
+      'As soon as there is any news, we will get in touch with you.',
+      ...closing(input.companyName, lang),
+    ].join('\n');
+  }
   return [
-    ...GREETING,
+    ...GREETING.de,
     `zu Ihrer Nachfrage${input.referenceTitle ? ` zu „${input.referenceTitle}“` : ''}: ${caseStatusPhrase(input.status)}`,
     ...(input.lastStep ? [`Zuletzt ist Folgendes geschehen: ${input.lastStep}`] : []),
     'Sobald es etwas Neues gibt, melden wir uns bei Ihnen.',
@@ -135,9 +155,18 @@ export function statusUpdateBody(input: { referenceTitle?: string | null; status
   ].join('\n');
 }
 
-export function attachmentRequestBody(input: { originalSubject?: string | null; what: string; companyName: string }): string {
+export function attachmentRequestBody(input: { originalSubject?: string | null; what: string; companyName: string; lang?: ReplyLanguage }): string {
+  const lang = input.lang ?? 'de';
+  if (lang === 'en') {
+    return [
+      ...GREETING.en,
+      `thank you for your message${input.originalSubject ? ` "${input.originalSubject}"` : ''}.`,
+      `Unfortunately, ${input.what} did not reach us or could not be read. Could you please send it again as a reply to this email?`,
+      ...closing(input.companyName, lang),
+    ].join('\n');
+  }
   return [
-    ...GREETING,
+    ...GREETING.de,
     `vielen Dank für Ihre Nachricht${input.originalSubject ? ` „${input.originalSubject}“` : ''}.`,
     `Leider ist bei uns ${input.what} nicht angekommen bzw. nicht lesbar. Könnten Sie ihn uns bitte noch einmal als Antwort auf diese E-Mail schicken?`,
     ...closing(input.companyName),
@@ -145,14 +174,26 @@ export function attachmentRequestBody(input: { originalSubject?: string | null; 
 }
 
 /** Auskunft aus dem Betriebswissen: der Text kommt aus dem Profil/den freigegebenen Antworten (und wurde als unbedenklich geprüft), die Vorlage fügt nur den Rahmen hinzu. */
-export function informationBody(input: { answer: string; companyName: string }): string {
-  return [...GREETING, 'vielen Dank für Ihre Nachricht.', '', input.answer.trim(), '', 'Bei weiteren Fragen melden Sie sich gern.', ...closing(input.companyName)].join('\n');
+export function informationBody(input: { answer: string; companyName: string; lang?: ReplyLanguage }): string {
+  const lang = input.lang ?? 'de';
+  if (lang === 'en') return [...GREETING.en, 'thank you for your message.', '', input.answer.trim(), '', 'If you have any further questions, please get in touch.', ...closing(input.companyName, lang)].join('\n');
+  return [...GREETING.de, 'vielen Dank für Ihre Nachricht.', '', input.answer.trim(), '', 'Bei weiteren Fragen melden Sie sich gern.', ...closing(input.companyName)].join('\n');
 }
 
-export function appointmentConfirmationBody(input: { kind: AppointmentKind; label: string; companyName: string }): string {
+export function appointmentConfirmationBody(input: { kind: AppointmentKind; label: string; companyName: string; lang?: ReplyLanguage }): string {
+  const lang = input.lang ?? 'de';
+  if (lang === 'en') {
+    const what = input.kind === 'SITE_VISIT' ? 'The on-site appointment' : 'Our phone appointment';
+    return [
+      ...GREETING.en,
+      `${what} is confirmed: ${input.label}.`,
+      input.kind === 'SITE_VISIT' ? 'We look forward to seeing you. If anything comes up, please simply reply to this email.' : 'We will call you at that time. If anything comes up, please simply reply to this email.',
+      ...closing(input.companyName, lang),
+    ].join('\n');
+  }
   const what = input.kind === 'SITE_VISIT' ? 'der Vor-Ort-Termin' : 'unser Telefontermin';
   return [
-    ...GREETING,
+    ...GREETING.de,
     `${what} ist bestätigt: ${input.label}.`,
     input.kind === 'SITE_VISIT' ? 'Wir freuen uns auf den Termin. Sollte etwas dazwischenkommen, antworten Sie bitte einfach auf diese E-Mail.' : 'Wir rufen Sie zu dieser Zeit an. Sollte etwas dazwischenkommen, antworten Sie bitte einfach auf diese E-Mail.',
     ...closing(input.companyName),

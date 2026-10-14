@@ -3,8 +3,9 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import type { OrbitEnv } from '@orbit/config';
-import { AuthenticationExpiredError, parseDurationToMs, tenantGateOf, type Permission } from '@orbit/shared';
+import { AuthenticationExpiredError, TENANT_MIN_PASSWORD_LENGTH, ValidationFailedError, parseDurationToMs, tenantGateOf, type Permission } from '@orbit/shared';
 import { Prisma } from '@orbit/domain';
+import { AuditService } from '../audit/audit.service';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedUser, JwtPayload } from './types';
@@ -37,6 +38,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+    private readonly audit: AuditService,
   ) {}
 
   async login(email: string, password: string): Promise<AuthTokens> {
@@ -95,6 +97,27 @@ export class AuthService {
     return found;
   }
 
+  /**
+   * Passwortwechsel durch die Person selbst (auch zwingend beim Startpasswort). Das aktuelle Passwort wird erneut geprüft, das neue muss lang genug sein und sich
+   * unterscheiden. Alle bisherigen Sitzungen enden; die Antwort enthält neue Tokens ohne Einschränkung. Das Audit hält den Wechsel fest – nie ein Passwort.
+   */
+  async changePassword(authUser: AuthenticatedUser, input: { currentPassword: string; newPassword: string }): Promise<AuthTokens> {
+    const user = await this.prisma.withRlsBypass((tx) => tx.user.findUnique({ where: { id: authUser.id }, include: USER_WITH_ROLES_INCLUDE }));
+    const valid = user ? await argon2.verify(user.passwordHash, input.currentPassword).catch(() => false) : false;
+    if (!user || user.status !== 'ACTIVE' || !valid) throw new UnauthorizedException('Invalid credentials.');
+    if (input.newPassword.length < TENANT_MIN_PASSWORD_LENGTH) throw new ValidationFailedError(`Das neue Passwort muss mindestens ${TENANT_MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
+    if (input.newPassword === input.currentPassword) throw new ValidationFailedError('Das neue Passwort muss sich vom bisherigen unterscheiden.');
+
+    const passwordHash = await argon2.hash(input.newPassword);
+    const updated = await this.prisma.withRlsBypass(async (tx) => {
+      const row = await tx.user.update({ where: { id: user.id }, data: { passwordHash, passwordChangeRequired: false }, include: USER_WITH_ROLES_INCLUDE });
+      await tx.refreshToken.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      return row;
+    });
+    await this.audit.record({ tenantId: user.tenantId, eventType: 'USER_PASSWORD_CHANGED', actorType: 'USER', actorUserId: user.id, entityType: 'User', entityId: user.id, payload: { wasStartPassword: user.passwordChangeRequired } });
+    return this.issueTokens(this.toAuthenticatedUser(updated));
+  }
+
   async logout(rawRefreshToken: string): Promise<void> {
     const tokenHash = this.hashToken(rawRefreshToken);
     await this.prisma.withRlsBypass((tx) =>
@@ -112,6 +135,7 @@ export class AuthService {
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      ...(user.passwordChangeRequired ? { pcr: true } : {}),
     };
     const accessToken = this.jwtService.sign(payload, { expiresIn: this.env.JWT_ACCESS_TTL });
 
@@ -158,6 +182,7 @@ export class AuthService {
       email: user.email,
       roles,
       permissions,
+      ...(user.passwordChangeRequired ? { passwordChangeRequired: true } : {}),
     };
   }
 }

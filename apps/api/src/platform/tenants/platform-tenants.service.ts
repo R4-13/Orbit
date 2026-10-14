@@ -96,6 +96,7 @@ export class PlatformTenantsService {
       adminLastName: input.adminLastName.trim(),
       industry: input.industry?.trim() || undefined,
       automationPreset: input.automationPreset as AutomationPresetKey,
+      requirePasswordChange: true,
     });
     await this.audit.record({
       eventType: 'PLATFORM_TENANT_PROVISIONED',

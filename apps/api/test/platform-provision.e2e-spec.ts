@@ -80,7 +80,15 @@ describe('Platform: provision a new customer (e2e)', () => {
     expect(created.temporaryPassword.length).toBeGreaterThanOrEqual(20);
 
     const login = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: created.adminEmail, password: created.temporaryPassword }).expect(200);
-    const state = (await request(app.getHttpServer()).get('/api/v1/tenant/profile').set({ Authorization: `Bearer ${login.body.accessToken as string}` }).expect(200)).body as ProfileBody;
+    // Startpasswort: bis zum ersten Wechsel ist nichts außer dem Passwortwechsel möglich (AUT-13).
+    expect(login.body.user.passwordChangeRequired).toBe(true);
+    await request(app.getHttpServer()).get('/api/v1/tenant/profile').set({ Authorization: `Bearer ${login.body.accessToken as string}` }).expect(403);
+    const changed = await request(app.getHttpServer())
+      .post('/api/v1/auth/change-password')
+      .set({ Authorization: `Bearer ${login.body.accessToken as string}` })
+      .send({ currentPassword: created.temporaryPassword, newPassword: `Eigenes-Passwort-${suffix}` })
+      .expect(200);
+    const state = (await request(app.getHttpServer()).get('/api/v1/tenant/profile').set({ Authorization: `Bearer ${changed.body.accessToken as string}` }).expect(200)).body as ProfileBody;
     expect(state.profile?.industry).toBe('Dachdecker');
     expect(state.automation).toBe('HIGH');
     expect(state.onboarding.steps.filter((s) => s.done).map((s) => s.key)).toEqual(expect.arrayContaining(['INDUSTRY', 'AUTOMATION']));

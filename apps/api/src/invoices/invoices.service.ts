@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError, PolicyViolationError } from '@orbit/shared';
+import { NotFoundError, PolicyViolationError, verifyFileSignature } from '@orbit/shared';
 import { Prisma, type BookingProposal, type FinanceTransfer, type Invoice, type Supplier } from '@orbit/domain';
 import type { FinanceConnector, OcrProvider } from '@orbit/integration-core';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -70,6 +70,9 @@ export class InvoicesService {
     }
 
     const bytes = await this.storage.getObjectBytes(document.storageKey);
+    // Die Bytes werden hier ohnehin gelesen: ein Programm oder eine Datei, die nicht zur angegebenen Art passt, wird nicht verarbeitet (MST-09).
+    const signature = verifyFileSignature(document.mimeType, bytes);
+    if (signature.status === 'MISMATCH') throw new PolicyViolationError(`Die Datei wird nicht verarbeitet: ${signature.reason}`, { id: document.id });
     const extracted = await this.ocrProvider.extractInvoiceData(bytes, document.mimeType);
 
     const duplicate =

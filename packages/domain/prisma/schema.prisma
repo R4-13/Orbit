@@ -337,6 +337,7 @@ model Tenant {
   agentRuns                    AgentRun[]
   toolInvocations              ToolInvocation[]
   webhookEvents                WebhookEvent[]
+  idempotencyRecords           IdempotencyRecord[]
   retentionPolicies            RetentionPolicy[]
   agentDefinitions             AgentDefinition[]
   agentDefinitionVersions      AgentDefinitionVersion[]
@@ -378,6 +379,8 @@ model User {
   firstName    String     @map("first_name")
   lastName     String     @map("last_name")
   status       UserStatus @default(INVITED)
+  /// Startpasswort (z. B. bei der Anlage durch den Betreiber): bis zum ersten Wechsel sind nur Passwortwechsel, Kontoabfrage und Abmelden erlaubt.
+  passwordChangeRequired Boolean @default(false) @map("password_change_required")
   lastLoginAt  DateTime?  @map("last_login_at")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
@@ -613,6 +616,10 @@ model Document {
   checksum         String?
   uploadedByUserId String?  @map("uploaded_by_user_id")
   createdAt        DateTime @default(now()) @map("created_at")
+  /// PENDING (noch nicht an den Bytes geprüft), VERIFIED oder REJECTED (Inhalt passt nicht zur angegebenen Art – die Datei wurde gelöscht). Siehe DocumentsService.verifyUpload.
+  verificationStatus String  @default("PENDING") @map("verification_status")
+  verifiedAt       DateTime? @map("verified_at")
+  verificationNote String?  @map("verification_note")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
@@ -2868,4 +2875,33 @@ model CustomerRecordWatch {
   @@index([tenantId, status])
   @@index([status, nextCheckAt])
   @@map("customer_record_watches")
+}
+
+// ============================================================================
+// Allgemeine Idempotenzschlüssel für schreibende API-Aufrufe (MST-08 / MV3-03)
+// ============================================================================
+
+/// Ein Aufruf mit dem Header `Idempotency-Key`: dieselbe Anfrage mit demselben Schlüssel wird nicht zweimal ausgeführt, sondern liefert die gespeicherte Antwort.
+/// Der eindeutige Index (tenantId, key) macht das Anlegen atomar (kein „erst prüfen, dann schreiben“). Einträge verfallen nach 24 Stunden.
+model IdempotencyRecord {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  userId         String   @map("user_id")
+  key            String
+  method         String
+  path           String
+  /// Hash von Methode, Pfad und Inhalt: derselbe Schlüssel mit anderem Inhalt ist ein Fehler, keine Wiederholung.
+  requestHash    String   @map("request_hash")
+  /// IN_PROGRESS (läuft noch) oder COMPLETED (Antwort gespeichert).
+  state          String
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at")
+  expiresAt      DateTime @map("expires_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
 }

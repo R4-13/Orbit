@@ -48,6 +48,7 @@ import { ThrottlerRedisStorageService } from './throttler/throttler-redis-storag
 import { ThrottlerStorageModule } from './throttler/throttler-storage.module';
 import { UsersModule } from './users/users.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 
 /**
@@ -130,6 +131,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     IntegrationsModule,
     ChannelSyncModule,
     WebhooksModule,
+    IdempotencyModule,
     HealthModule,
   ],
   providers: [

@@ -8,6 +8,8 @@ export interface JwtPayload {
   email: string;
   roles: string[];
   permissions: Permission[];
+  /** Das Konto hat noch ein Startpasswort (Claim `pcr`). */
+  pcr?: boolean;
 }
 
 /** `request.user` once JwtAuthGuard has validated the access token. */
@@ -17,4 +19,6 @@ export interface AuthenticatedUser {
   email: string;
   roles: string[];
   permissions: Permission[];
+  /** Gesetzt, solange das Startpasswort noch nicht geändert wurde: bis dahin sind nur Passwortwechsel, Kontoabfrage und Abmelden erlaubt. */
+  passwordChangeRequired?: boolean;
 }

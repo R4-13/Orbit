@@ -84,6 +84,7 @@ export const TENANT_SCOPED_MODELS = [
   'Quote',
   'TenantSequence',
   'AIUsageRecord',
+  'IdempotencyRecord',
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);

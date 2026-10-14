@@ -5,3 +5,15 @@
 # Found live while adding docker/postgres/10-init-app-role.sh (Phase 15,
 # docs/ASSUMPTIONS.md) on this Windows dev machine.
 *.sh text eol=lf
+
+# Zeilenenden: Quelltext und Dokumente werden im Repository mit LF gespeichert (siehe .editorconfig); beim Auschecken unter Windows bleibt LF,
+# damit "LF will be replaced by CRLF"-Warnungen entfallen und Docker-Builds identische Dateien sehen.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary

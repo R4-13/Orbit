@@ -13,6 +13,8 @@ export interface AuthUser {
   email: string;
   roles: string[];
   permissions: string[];
+  /** Startpasswort: bis zum ersten Wechsel zeigt die Anwendung nur den Passwortwechsel. */
+  passwordChangeRequired?: boolean;
 }
 
 export interface StoredAuth {

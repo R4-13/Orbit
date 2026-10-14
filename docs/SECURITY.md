@@ -171,7 +171,8 @@ die ausführliche Begründung):
   `putObjectBytes()` (Phase 18, aktuell nur vom Agent-Intake-Pfad
   genutzt) für jeden Upload — beides eine größere Änderung am
   Upload-Flow, bewusst nicht in dieser Phase mitgezogen.
-- **Keine Antiviren-/Malware-Prüfung** hochgeladener Dokumente.
+- **Seit Oktober 2026 (MST-09):** nach dem Upload prüft `POST /documents/:id/verify` die tatsächlichen Bytes (Größe wie angekündigt, Magic Bytes zur angegebenen Art, keine Programme/Skripte); eine abweichende Datei wird gelöscht und nie ausgeliefert, eine ungeprüfte beim ersten Download geprüft (`docs/ASSUMPTIONS.md` #574).
+- **Weiterhin keine Antiviren-/Malware-Prüfung** hochgeladener Dokumente (braucht eine eigene Komponente, `OPEN_DEVELOPMENT_ITEMS.md` MST-09).
 
 ## 6. HTTP-Härtung
 

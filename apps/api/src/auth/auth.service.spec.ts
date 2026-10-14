@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import { isOrbitError } from '@orbit/shared';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { AuthService } from './auth.service';
 
 const ENV = {
@@ -62,6 +63,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: new JwtService({ secret: ENV.JWT_SECRET }) },
         { provide: ORBIT_ENV, useValue: ENV },
+        { provide: AuditService, useValue: { record: jest.fn() } },
       ],
     }).compile();
 

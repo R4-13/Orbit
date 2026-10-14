@@ -95,6 +95,8 @@ export interface BootstrapTenantInput {
   industry?: string;
   /** Automatisierungsgrad von Anfang an; ohne Angabe „Vorsichtig“ (alles Wichtige braucht Freigabe). */
   automationPreset?: AutomationPresetKey;
+  /** Das Passwort ist ein Startpasswort: die erste Anmeldung verlangt einen Wechsel. */
+  requirePasswordChange?: boolean;
 }
 
 export interface BootstrapTenantResult {
@@ -249,6 +251,7 @@ export class TenantsService {
           firstName: input.adminFirstName,
           lastName: input.adminLastName,
           status: 'ACTIVE',
+          passwordChangeRequired: input.requirePasswordChange === true,
         },
       });
 

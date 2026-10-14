@@ -131,3 +131,7 @@ Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM
 * **Auskunft aus dem Betriebswissen:** nur aus Profil und freigegebenen Antworten, ohne Quelle/Sicherheit ≥ 0,7/Textprüfung keine Antwort. Die Qualität der Antworten hängt von der Pflege des Profils ab; ohne echten KI-Anbieter wird nicht simuliert.
 * **Bezug auf frühere Vorgänge:** nur über die E-Mail-Adresse des Absenders und die Einschätzung „Fortsetzung“ der KI; bei mehreren Kandidaten entscheidet eine Person – eine Oberfläche zum Setzen oder Ändern des Bezugs gibt es noch nicht.
 * **Interessent anlegen:** nur zu Kontakten in ORBIT; liegt der Kundeneintrag in einem führenden CRM/ERP, wird kein Interessent angelegt (ein Mensch tut es dort).
+* **Sprache der Antworten:** Deutsch und Englisch für Bestätigung, Statusauskunft, Anhang anfordern, Auskunft und Terminbestätigung, nur wenn der Betrieb die Sprache im Profil führt; Rückfragen und Angebote sind deutsch (`docs/ASSUMPTIONS.md` #571).
+* **Startpasswort:** Neukunden müssen es bei der ersten Anmeldung ändern (#572); eine Einladung per E-Mail-Link fehlt.
+* **Idempotenzschlüssel:** nur auf Wunsch des Clients (Header); die Oberfläche sendet sie nicht; keine Wiederholungssicherheit für Datei-Uploads und Antworten über 512 KB (#573).
+* **Upload-Prüfung:** Größe und Magic Bytes werden nach dem Upload geprüft (#574); es gibt **keinen Virenscan** und keine Prüfung des Inneren von Office-/PDF-Dateien.

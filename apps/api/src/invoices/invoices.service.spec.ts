@@ -32,7 +32,7 @@ describe('InvoicesService', () => {
       financeTransfer: { create: jest.fn() },
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
-    storage = { getObjectBytes: jest.fn().mockResolvedValue(Buffer.from('pdf-bytes')) };
+    storage = { getObjectBytes: jest.fn().mockResolvedValue(Buffer.from('%PDF-1.7 pdf-bytes')) };
     ocr = { extractInvoiceData: jest.fn() };
     financeConnector = {
       transferInvoice: jest.fn().mockResolvedValue({ externalReference: 'mock-voucher-1' }),

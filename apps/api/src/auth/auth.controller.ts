@@ -11,6 +11,8 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './types';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AllowWhilePasswordChangePending } from './decorators/allow-password-change-pending.decorator';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 /**
@@ -77,8 +79,19 @@ export class AuthController {
   /** Anzeigename des angemeldeten Nutzers (Begrüßung, Profil) – bewusst getrennt vom Token, das keine Namen trägt. */
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @AllowWhilePasswordChangePending()
   me(@CurrentUser() user: AuthenticatedUser): Promise<UserProfile> {
     return this.authService.profile(user.tenantId, user.id);
+  }
+
+  /** Passwortwechsel des angemeldeten Kontos – zwingend beim Startpasswort. Beendet alle Sitzungen und liefert neue Tokens. */
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(AUTH_THROTTLE)
+  @UseGuards(JwtAuthGuard)
+  @AllowWhilePasswordChangePending()
+  async changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<AuthTokens> {
+    return this.deliver(await this.authService.changePassword(user, dto), request, response);
   }
 
   @Post('logout')

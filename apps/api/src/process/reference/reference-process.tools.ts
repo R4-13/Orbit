@@ -17,6 +17,7 @@ import { CaseFactsService } from '../case-facts.service';
 import { AppointmentSlotsService } from './appointment-slots.service';
 import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
+import { replyLanguage, type ReplyLanguage } from './reply-language';
 import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
@@ -124,6 +125,12 @@ export class ReferenceProcessTools implements OnModuleInit {
     return tenant?.name ?? 'Ihr Ansprechpartner';
   }
 
+  /** Sprache der Antwort: die der eingegangenen Nachricht, soweit der Betrieb sie im Profil führt (AUT-07). */
+  private async languageFor(tenantId: string, inbound: { subject: string | null; bodyText: string | null; bodyPreview: string | null } | null): Promise<ReplyLanguage> {
+    const profile = await this.prisma.forTenantId(tenantId).tenantProfile.findUnique({ where: { tenantId }, select: { languages: true } });
+    return replyLanguage(`${inbound?.subject ?? ''}\n${inbound?.bodyText ?? inbound?.bodyPreview ?? ''}`, profile?.languages);
+  }
+
   /** Wurde der Eingang als Notfall eingestuft (kritische Dringlichkeit in der Triage)? */
   private async isEmergency(tenantId: string, caseId: string): Promise<boolean> {
     const events = await this.prisma.forTenantId(tenantId).intakeEvent.findMany({ where: { caseId }, select: { decision: { select: { result: true } } } });
@@ -134,7 +141,7 @@ export class ReferenceProcessTools implements OnModuleInit {
    * Stand für die Statusauskunft: der Vorgang selbst oder der Vorgang, auf den sich die Nachfrage bezieht (Fakt `case.reference`). Der Bezug gilt nur, wenn die
    * absendende Adresse an jenem Vorgang beteiligt ist – sonst würde die Auskunft Angaben eines fremden Vorgangs preisgeben.
    */
-  private async statusFor(tenantId: string, caseId: string, replyTarget: string): Promise<{ title: string | null; status: string; lastStep?: string }> {
+  private async statusFor(tenantId: string, caseId: string, replyTarget: string): Promise<{ title: string | null; status: string; lastStep?: string; lastStepEn?: string }> {
     const scoped = this.prisma.forTenantId(tenantId);
     const ref = await this.confirmedFact(tenantId, caseId, 'case.reference');
     const targetId = typeof ref === 'string' && ref !== caseId ? ref : caseId;
@@ -146,7 +153,8 @@ export class ReferenceProcessTools implements OnModuleInit {
     }
     const last = await scoped.actionIntent.findFirst({ where: { caseId: targetId, status: 'CONFIRMED', capabilityKey: 'email.send', purpose: { in: ['CLARIFICATION', 'QUOTE_DELIVERY'] } }, orderBy: { updatedAt: 'desc' } });
     const lastStep = last ? `${last.purpose === 'QUOTE_DELIVERY' ? 'Wir haben Ihnen unser Angebot zugesendet' : 'Wir haben Ihnen Rückfragen gesendet'} (${last.updatedAt.toLocaleDateString('de-DE')}).` : undefined;
-    return { title: target.title, status: target.orchestrationStatus, lastStep };
+    const lastStepEn = last ? `${last.purpose === 'QUOTE_DELIVERY' ? 'We sent you our quote' : 'We sent you some questions'} (${last.updatedAt.toLocaleDateString('en-GB')}).` : undefined;
+    return { title: target.title, status: target.orchestrationStatus, lastStep, lastStepEn };
   }
 
   // ── 1. context ─────────────────────────────────────────────────────────────
@@ -389,6 +397,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
         const companyName = await this.tenantName(ctx.tenantId);
 
+        const lang = await this.languageFor(ctx.tenantId, inbound);
         let subject = replySubject(inbound?.subject);
         let bodyText: string;
         const attachmentDocumentIds: string[] = [];
@@ -421,28 +430,28 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           bodyText = quoteDeliveryBody({ quoteNumber: quote.number, grossCents: ReferenceProcessService.cents(quote.grossAmount), validUntil: quote.validUntil, companyName });
           attachmentDocumentIds.push(input.documentId);
         } else if (input.purpose === 'ACKNOWLEDGEMENT') {
-          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId) });
+          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang });
         } else if (input.purpose === 'STATUS_UPDATE') {
           const status = await this.statusFor(ctx.tenantId, caseId, replyTarget);
-          bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: status.lastStep, companyName });
+          bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: lang === 'en' ? status.lastStepEn : status.lastStep, companyName, lang });
         } else if (input.purpose === 'ATTACHMENT_REQUEST') {
           const what = (input.what ?? 'der Anhang').trim();
           const safe = isSafeCustomerText(what);
           if (!safe.safe) throw new ToolFailedError(`Die Angabe, was fehlt, ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
-          bodyText = attachmentRequestBody({ originalSubject: inbound?.subject, what, companyName });
+          bodyText = attachmentRequestBody({ originalSubject: inbound?.subject, what, companyName, lang });
         } else if (input.purpose === 'INFORMATION') {
           const answer = (input.answer ?? '').trim();
           if (!answer) throw new ToolFailedError('Es liegt keine Antwort aus dem Betriebswissen vor.', { errorCode: 'NO_ANSWER' });
           const safe = isSafeCustomerText(answer);
           if (!safe.safe) throw new ToolFailedError(`Die Antwort ist für eine Nachricht an die Kundschaft nicht geeignet (${safe.reason}).`, { errorCode: 'UNSAFE_CUSTOMER_TEXT' });
-          bodyText = informationBody({ answer, companyName });
+          bodyText = informationBody({ answer, companyName, lang });
         } else {
           if (!input.start || !input.end || !input.kind) throw new ToolFailedError('Für die Terminbestätigung fehlt der gebuchte Termin.', { errorCode: 'MISSING_APPOINTMENT' });
           const start = new Date(input.start);
           const end = new Date(input.end);
           if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new ToolFailedError('Der gebuchte Termin hat kein gültiges Datum.', { errorCode: 'MISSING_APPOINTMENT' });
           const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }));
-          bodyText = appointmentConfirmationBody({ kind: input.kind, label: formatSlotLabel(start, end, tenantRow?.timezone || 'Europe/Berlin'), companyName });
+          bodyText = appointmentConfirmationBody({ kind: input.kind, label: formatSlotLabel(start, end, tenantRow?.timezone || 'Europe/Berlin', lang), companyName, lang });
         }
         const { draft } = await this.reference.saveDraftVersion(ctx.tenantId, {
           caseId,

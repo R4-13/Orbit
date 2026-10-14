@@ -107,6 +107,20 @@ export class StepUpRequiredError extends OrbitError {
   readonly retryable = false;
 }
 
+/** `Idempotency-Key` wurde bereits für eine **andere** Anfrage verwendet (anderer Pfad oder anderer Inhalt) – ein Schlüssel gehört zu genau einer Anfrage. */
+export class IdempotencyKeyReusedError extends OrbitError {
+  readonly code = 'IDEMPOTENCY_KEY_REUSED';
+  readonly httpStatus = 422;
+  readonly retryable = false;
+}
+
+/** Dieselbe Anfrage mit demselben `Idempotency-Key` läuft noch; die Antwort kann erst nach dem Ende wiederholt werden. */
+export class IdempotentRequestInProgressError extends OrbitError {
+  readonly code = 'IDEMPOTENT_REQUEST_IN_PROGRESS';
+  readonly httpStatus = 409;
+  readonly retryable = true;
+}
+
 /** Der Zugang muss zuerst das Passwort ändern (nach Zurücksetzen durch den Owner oder bei Startpasswort); bis dahin sind nur Passwortwechsel, Abmelden und die Kontoabfrage erlaubt. */
 export class PasswordChangeRequiredError extends OrbitError {
   readonly code = 'PASSWORD_CHANGE_REQUIRED';

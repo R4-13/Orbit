@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Post, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS } from '@orbit/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -26,6 +26,14 @@ export class DocumentsController {
   @RequirePermissions(PERMISSIONS.CASE_MANAGE)
   createUploadUrl(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateUploadUrlDto) {
     return this.documentsService.createUploadUrl(user.tenantId, user.id, dto);
+  }
+
+  /** Nach dem Upload aufzurufen: prüft die tatsächlich hochgeladenen Bytes gegen die Ankündigung (Größe, Art) und löscht eine abweichende Datei. */
+  @Post(':id/verify')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSIONS.CASE_MANAGE)
+  verify(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.documentsService.verifyUpload(user.tenantId, id, user.id);
   }
 
   @Get()

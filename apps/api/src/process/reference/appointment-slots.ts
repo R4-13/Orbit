@@ -71,10 +71,11 @@ export function zonedTimeToUtc(local: LocalDate, hour: number, minute: number, t
   return new Date(result);
 }
 
-export function formatSlotLabel(start: Date, end: Date, timeZone: string): string {
-  const day = new Intl.DateTimeFormat('de-DE', { timeZone, weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }).format(start);
-  const time = (d: Date) => new Intl.DateTimeFormat('de-DE', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
-  return `${day}, ${time(start)}–${time(end)} Uhr`;
+export function formatSlotLabel(start: Date, end: Date, timeZone: string, lang: 'de' | 'en' = 'de'): string {
+  const locale = lang === 'en' ? 'en-GB' : 'de-DE';
+  const day = new Intl.DateTimeFormat(locale, { timeZone, weekday: 'long', day: '2-digit', month: lang === 'en' ? 'long' : '2-digit', year: 'numeric' }).format(start);
+  const time = (d: Date) => new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+  return lang === 'en' ? `${day}, ${time(start)}–${time(end)}` : `${day}, ${time(start)}–${time(end)} Uhr`;
 }
 
 const overlaps = (aStart: number, aEnd: number, b: BusyInterval, bufferMs: number) => aStart < b.end.getTime() + bufferMs && aEnd > b.start.getTime() - bufferMs;

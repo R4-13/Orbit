@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { DeleteObjectCommand, PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
@@ -98,6 +98,22 @@ export class StorageService {
 
   async delete(storageKey: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: storageKey }));
+  }
+
+  /** Größe und Anfangsbytes eines Objekts (für die Prüfung nach dem Upload); `undefined`, wenn es nicht existiert. */
+  async probeObject(storageKey: string, probeBytes: number): Promise<{ sizeBytes: number; head: Buffer } | undefined> {
+    let sizeBytes: number;
+    try {
+      const head = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: storageKey }));
+      sizeBytes = head.ContentLength ?? 0;
+    } catch (error) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (status === 404 || (error as { name?: string }).name === 'NotFound') return undefined;
+      throw error;
+    }
+    if (sizeBytes === 0) return { sizeBytes, head: Buffer.alloc(0) };
+    const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: storageKey, Range: `bytes=0-${Math.max(probeBytes, 1) - 1}` }));
+    return { sizeBytes, head: Buffer.from((await response.Body?.transformToByteArray()) ?? []) };
   }
 
   /**

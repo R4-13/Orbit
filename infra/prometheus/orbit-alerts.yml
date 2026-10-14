@@ -1,0 +1,70 @@
+# Alarmregeln für Prometheus (TEC-09). Die Metriknamen stammen aus apps/api/src/metrics/metrics.service.ts;
+# ein Test (alert-rules.spec.ts) stellt sicher, dass jede hier verwendete Metrik dort existiert.
+# Einbindung: in prometheus.yml unter `rule_files:` eintragen und den Scrape-Job `orbit-api` auf GET /api/v1/metrics zeigen lassen.
+groups:
+  - name: orbit-availability
+    rules:
+      - alert: OrbitApiDown
+        expr: up{job="orbit-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: 'ORBIT-API nicht erreichbar'
+          description: 'Der Scrape-Job orbit-api liefert seit 2 Minuten keine Metriken.'
+
+  - name: orbit-http
+    rules:
+      - alert: OrbitHighErrorRate
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+            / clamp_min(sum(rate(http_request_duration_seconds_count[5m])), 1) > 0.05
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: 'Mehr als 5 % der Anfragen enden mit einem Serverfehler'
+          description: 'Fehlerquote (5xx) der letzten 5 Minuten über 5 % seit mindestens 10 Minuten.'
+      - alert: OrbitHighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 1.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: 'Antwortzeit p95 über 1,5 Sekunden'
+          description: 'Das 95. Perzentil der Antwortzeiten liegt seit 10 Minuten über 1,5 s.'
+
+  - name: orbit-queues
+    rules:
+      - alert: OrbitQueueBacklog
+        expr: sum by (queue) (queue_depth{state="waiting"}) > 100
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: 'Rückstau in der Warteschlange {{ $labels.queue }}'
+          description: 'Mehr als 100 wartende Aufträge seit 15 Minuten – läuft der Worker?'
+      - alert: OrbitQueueFailedJobs
+        expr: sum by (queue) (queue_depth{state="failed"}) > 20
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: 'Viele fehlgeschlagene Aufträge in {{ $labels.queue }}'
+          description: 'Mehr als 20 fehlgeschlagene Aufträge in der Warteschlange.'
+
+  - name: orbit-processing
+    rules:
+      - alert: OrbitWorkflowFailures
+        expr: increase(workflow_run_failures_total[15m]) > 3
+        labels: { severity: warning }
+        annotations:
+          summary: 'Mehrere Workflow-Läufe fehlgeschlagen'
+          description: 'Mehr als 3 fehlgeschlagene Workflow-Läufe in 15 Minuten.'
+      - alert: OrbitAgentFailures
+        expr: sum by (agent_type) (increase(agent_run_failures_total[15m])) > 3
+        labels: { severity: warning }
+        annotations:
+          summary: 'Agent {{ $labels.agent_type }} scheitert wiederholt'
+          description: 'Mehr als 3 fehlgeschlagene Agent-Läufe in 15 Minuten.'
+      - alert: OrbitConnectorErrors
+        expr: sum by (error_code) (increase(connector_errors_total[15m])) > 10
+        labels: { severity: warning }
+        annotations:
+          summary: 'Anbindung meldet Fehler ({{ $labels.error_code }})'
+          description: 'Mehr als 10 Fehler externer Systeme in 15 Minuten.'

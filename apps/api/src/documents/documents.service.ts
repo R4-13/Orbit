@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError, PolicyViolationError } from '@orbit/shared';
+import { FILE_SIGNATURE_PROBE_BYTES, NotFoundError, PolicyViolationError, ValidationFailedError, verifyFileSignature } from '@orbit/shared';
 import type { Document } from '@orbit/domain';
 import type { OrbitEnv } from '@orbit/config';
 import { AuditService } from '../audit/audit.service';
@@ -24,10 +24,9 @@ export interface CreateUploadUrlResult {
  * Document rows are metadata only — actual bytes never transit through the
  * API process. The client asks for an upload URL, PUTs the file straight to
  * object storage, and only then is the Document row's existence meaningful.
- * There is deliberately no separate "confirm upload" step for the MVP: a
- * Document row pointing at an object that was never actually uploaded is a
- * harmless dangling reference (download would 404), not a data-integrity
- * risk, and the added complexity of a two-phase commit isn't justified yet.
+ * Die hochgeladenen Bytes werden **nach** dem Upload geprüft (`verifyUpload`, MST-09): Größe wie angekündigt, Anfangsbytes passend zur angegebenen Art, keine
+ * Programme/Skripte. Der Client ruft dazu `POST /documents/:id/verify` auf; wer es vergisst, wird beim ersten Download bzw. bei der Verarbeitung geprüft
+ * (`ensureUsable`). Eine abgelehnte Datei wird aus dem Speicher gelöscht und nie ausgeliefert.
  */
 @Injectable()
 export class DocumentsService {
@@ -103,6 +102,43 @@ export class DocumentsService {
     return { document, uploadUrl };
   }
 
+  /**
+   * Prüft die tatsächlich hochgeladene Datei gegen die Ankündigung. Liegt noch nichts im Speicher, bleibt der Status offen (der Upload kann noch laufen).
+   * Eine Abweichung löscht die Datei, vermerkt den Grund am Dokument und im Audit und liefert `PolicyViolationError`.
+   */
+  async verifyUpload(tenantId: string, id: string, actorUserId?: string): Promise<Document> {
+    const document = await this.findOne(tenantId, id);
+    if (document.verificationStatus === 'VERIFIED') return document;
+    if (document.verificationStatus === 'REJECTED') throw new PolicyViolationError('Die Datei wurde abgelehnt und gelöscht.', { id, reason: document.verificationNote });
+
+    const probe = await this.storage.probeObject(document.storageKey, FILE_SIGNATURE_PROBE_BYTES);
+    if (!probe) throw new ValidationFailedError('Die Datei ist noch nicht hochgeladen.', { id });
+
+    let reason: string | undefined;
+    if (probe.sizeBytes > this.env.MAX_UPLOAD_SIZE_BYTES) reason = `Die Datei ist größer als erlaubt (${probe.sizeBytes} Bytes).`;
+    else if (probe.sizeBytes !== document.sizeBytes) reason = `Die Größe (${probe.sizeBytes} Bytes) weicht von der Ankündigung (${document.sizeBytes} Bytes) ab.`;
+    else {
+      const verdict = verifyFileSignature(document.mimeType, probe.head);
+      if (verdict.status === 'MISMATCH') reason = verdict.reason;
+    }
+
+    const scoped = this.prisma.forTenantId(tenantId);
+    if (reason) {
+      await this.storage.delete(document.storageKey).catch(() => undefined);
+      await scoped.document.update({ where: { id }, data: { verificationStatus: 'REJECTED', verifiedAt: new Date(), verificationNote: reason } });
+      await this.audit.record({ tenantId, eventType: 'DOCUMENT_UPLOAD_REJECTED', actorType: actorUserId ? 'USER' : 'SYSTEM', actorUserId, entityType: 'Document', entityId: id, payload: { fileName: document.fileName, declaredMimeType: document.mimeType, reason } });
+      throw new PolicyViolationError(`Die Datei wurde abgelehnt: ${reason}`, { id, reason });
+    }
+    return scoped.document.update({ where: { id }, data: { verificationStatus: 'VERIFIED', verifiedAt: new Date(), verificationNote: null } });
+  }
+
+  /** Vor jeder Auslieferung oder Verarbeitung: eine noch ungeprüfte Datei wird jetzt geprüft, eine abgelehnte nie freigegeben. */
+  async ensureUsable(tenantId: string, id: string): Promise<Document> {
+    const document = await this.findOne(tenantId, id);
+    if (document.verificationStatus === 'VERIFIED') return document;
+    return this.verifyUpload(tenantId, id);
+  }
+
   findAll(tenantId: string, caseId?: string): Promise<Document[]> {
     return this.prisma.forTenantId(tenantId).document.findMany({
       where: { caseId },
@@ -120,7 +156,7 @@ export class DocumentsService {
   }
 
   async getDownloadUrl(tenantId: string, id: string): Promise<string> {
-    const document = await this.findOne(tenantId, id);
+    const document = await this.ensureUsable(tenantId, id);
     return this.storage.getDownloadUrl(document.storageKey);
   }
 

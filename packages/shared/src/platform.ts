@@ -201,6 +201,8 @@ export interface PlatformPrincipal {
 /** Plattform-Audit-Ereignistypen (Amendment 03 §19.1). Dieselbe Audit-Tabelle wie die Mandanten, `domain = PLATFORM`. */
 /** Mindestlänge eines Betreiberpassworts: eine Quelle für Anlegen und Wechseln. */
 export const PLATFORM_MIN_PASSWORD_LENGTH = 14;
+/** Mindestlänge eines Passworts im Mandanten (Passwortwechsel bei Startpasswort). */
+export const TENANT_MIN_PASSWORD_LENGTH = 12;
 
 export const PLATFORM_AUDIT_EVENT_TYPES = [
   'PLATFORM_LOGIN',
