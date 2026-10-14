@@ -68,7 +68,8 @@ export const UNKNOWN_CATEGORY = 'UNKNOWN' as const;
  */
 export const DEFAULT_TRIAGE_CATEGORIES: ReadonlyArray<{ key: string; description: string }> = [
   { key: 'REQUEST_FOR_QUOTE', description: 'Ein Kunde oder Interessent bittet um ein Angebot oder eine Preisauskunft.' },
-  { key: 'SALES_INQUIRY', description: 'Allgemeine Vertriebsanfrage oder Interesse, ohne konkrete Angebotsbitte.' },
+  { key: 'SALES_INQUIRY', description: 'Vertriebsanfrage mit erkennbarem Kauf- oder Auftragsinteresse, ohne konkrete Angebotsbitte (reine Fragen zu Leistungen, Zeiten oder Gebiet gehören zu GENERAL_INQUIRY).' },
+  { key: 'GENERAL_INQUIRY', description: 'Allgemeine Frage zum Betrieb (Leistungen, Öffnungszeiten, Einsatzgebiet, Erreichbarkeit) oder Nachfrage zum Stand bzw. Termin einer früheren Anfrage – ohne Bitte um Angebot oder Preis.' },
   { key: 'INVOICE_RECEIVED', description: 'Eine Eingangsrechnung oder Zahlungsaufforderung eines Lieferanten.' },
   { key: 'SUPPLIER_OFFER', description: 'Ein Lieferant bietet dem Unternehmen etwas an (Einkaufsseite).' },
   { key: 'COMPLAINT_OR_SERVICE', description: 'Beschwerde, Serviceproblem oder Supportanfrage eines Kunden.' },

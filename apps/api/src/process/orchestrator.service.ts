@@ -324,7 +324,10 @@ export class OrchestratorService {
 
     const bound = bindInputs(def, ctx);
     if (bound.missing.length > 0) {
-      return this.blockNode(tenantId, caseRow, graph, node, def, 'MISSING_INPUT', `Es fehlen Angaben: ${bound.missing.join(', ')}.`, 'WAITING_FOR_INFORMATION');
+      // In einem hinterlegten Prozess beantwortet die Kundschaft (Rückfrage) die fehlenden Angaben. Ein frei geplanter Ablauf hat keine Rückfrage: niemand würde sie liefern,
+      // der Vorgang bliebe lautlos liegen – er geht deshalb zur Prüfung an einen Menschen (der dann informiert wird).
+      const awaitedFromCustomer = Boolean(caseRow.blueprintKey);
+      return this.blockNode(tenantId, caseRow, graph, node, def, 'MISSING_INPUT', `Es fehlen Angaben: ${bound.missing.join(', ')}.`, awaitedFromCustomer ? 'WAITING_FOR_INFORMATION' : 'MANUAL_REVIEW');
     }
 
     const purpose = typeof def.config.purpose === 'string' ? def.config.purpose : undefined;

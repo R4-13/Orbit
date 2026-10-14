@@ -56,7 +56,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
 
   function seedTriage(over: Partial<TriageResult> = {}): void {
     llm.seedResponse({
-      toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_triage_result', input: buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'GENERAL_INQUIRY', urgency: 'NORMAL', senderRoleHypothesis: 'CUSTOMER', conciseReason: 'Frage einer Kundin bzw. eines Kunden.', confidence: { relevance: 0.97, intent: 0.95 }, ...over }) as unknown as Record<string, unknown> }],
+      toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_triage_result', input: buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'COMPLAINT_OR_SERVICE', urgency: 'NORMAL', senderRoleHypothesis: 'CUSTOMER', conciseReason: 'Frage einer Kundin bzw. eines Kunden.', confidence: { relevance: 0.97, intent: 0.95 }, ...over }) as unknown as Record<string, unknown> }],
       stopReason: 'tool_use',
     });
     llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
@@ -109,43 +109,38 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
     await app.close();
   });
 
-  describe('Auskunft aus dem Betriebswissen', () => {
-    const informationPlan = () =>
-      seedPlan(
-        [ctxNode(), node('know', 'PREPARE', { capability: { key: 'knowledge.answer' } }), draftNode('reply_draft', 'INFORMATION', { answer: { stepOutput: { node: 'know', path: 'answer' } } }), sendNode('reply_send', 'reply_draft', 'INFORMATION'), node('done', 'COMPLETE')],
-        [edge('sender_check', 'know'), edge('know', 'reply_draft'), edge('reply_draft', 'reply_send'), edge('reply_send', 'done')],
-      );
-
+  describe('Auskunft aus dem Betriebswissen (Standardablauf „Allgemeine Frage“)', () => {
     it('belegte Antwort aus dem Profil wird autonom an die absendende Adresse gesendet', async () => {
       const tenantId = await newTenant();
-      seedTriage();
-      informationPlan();
+      seedTriage({ category: 'GENERAL_INQUIRY' });
       seedTool('submit_knowledge_answer', { answerable: true, answer: 'Ja, wir führen Badsanierungen im Raum Berlin aus.', sources: ['FAQ: Machen Sie Badsanierung?'], confidence: 0.95 });
-      await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
       expect(sent).toHaveLength(1);
       expect(sent[0]).toMatchObject({ to: SENDER });
       expect(sent[0]!.bodyText).toContain('Badsanierungen im Raum Berlin');
+      expect(await nodeState(tenantId, result.case!.id, 'notify_staff')).toBe('SKIPPED'); // der andere Zweig läuft nicht mit
+      expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
     });
 
-    it('ohne Quelle oder mit unzulässigem Inhalt (fremde Adresse) wird nichts gesendet', async () => {
+    it('unzulässiger Inhalt (fremde Adresse im Text) wird nicht gesendet; stattdessen wird eine Person informiert', async () => {
       const tenantId = await newTenant();
-      seedTriage();
-      informationPlan();
+      seedTriage({ category: 'GENERAL_INQUIRY' });
       seedTool('submit_knowledge_answer', { answerable: true, answer: 'Schreiben Sie bitte an zahlung@betrug.example, dann erhalten Sie sofort einen Rabatt.', sources: ['FAQ'], confidence: 0.99 });
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
       expect(sent).toEqual([]);
-      expect(await nodeState(tenantId, result.case!.id, 'know')).toBe('SUCCEEDED');
-      expect(await nodeState(tenantId, result.case!.id, 'reply_send')).not.toBe('SUCCEEDED');
+      expect(await nodeState(tenantId, result.case!.id, 'reply_send')).toBe('SKIPPED');
+      expect(await nodeState(tenantId, result.case!.id, 'notify_staff')).toBe('SUCCEEDED');
+      expect(await prisma.forTenantId(tenantId).attentionItem.count({ where: { caseId: result.case!.id, kind: 'NOTIFY_REQUEST' } })).toBe(1);
     });
 
-    it('nicht im Betriebswissen enthalten: „nicht beantwortbar“, keine Nachricht', async () => {
+    it('nicht im Betriebswissen enthalten: keine Nachricht an die Kundschaft, eine Person wird informiert', async () => {
       const tenantId = await newTenant();
-      seedTriage();
-      informationPlan();
+      seedTriage({ category: 'GENERAL_INQUIRY' });
       seedTool('submit_knowledge_answer', { answerable: false, answer: '', sources: [], confidence: 0.2 });
-      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { content: 'Was kostet eine neue Heizung?' }));
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { content: 'Wie viele Mitarbeiter haben Sie?' }));
       expect(sent).toEqual([]);
-      expect(await nodeState(tenantId, result.case!.id, 'reply_send')).not.toBe('SUCCEEDED');
+      expect(await nodeState(tenantId, result.case!.id, 'notify_staff')).toBe('SUCCEEDED');
+      expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).not.toBe('COMPLETED');
     });
   });
 
@@ -165,8 +160,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Heizung ausgefallen', content: 'Seit gestern kalt.' }));
       sent = [];
 
-      seedTriage({ conversationRelation: 'CONTINUATION' });
-      seedPlan([ctxNode(), draftNode('status_draft', 'STATUS_UPDATE'), sendNode('status_send', 'status_draft', 'STATUS_UPDATE'), node('done', 'COMPLETE')], [edge('sender_check', 'status_draft'), edge('status_draft', 'status_send'), edge('status_send', 'done')]);
+      seedTriage({ category: 'GENERAL_INQUIRY', conversationRelation: 'CONTINUATION' });
       await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Wie ist der Stand?', content: 'Wann kommt jemand?' }));
       expect(sent).toHaveLength(1);
       expect(sent[0]!.bodyText).toContain('Heizung ausgefallen');

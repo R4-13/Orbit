@@ -178,3 +178,69 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(noTerminalAndNoWait, ctx()))).toContain('NO_TERMINAL');
   });
 });
+
+describe('strenge Bindungen für frei geplante Abläufe (Steckbriefe der Fähigkeiten)', () => {
+  const strict = (over: Partial<PlanValidationContext> = {}) =>
+    ctx({
+      blueprint: undefined,
+      strictBindings: true,
+      knownFactKeys: new Set(['case.reference']),
+      policyModes: new Map([
+        ['context.lookup', 'AUTONOMOUS'],
+        ['staff.notify', 'AUTONOMOUS'],
+        ['email.draft', 'AUTONOMOUS'],
+        ['email.send.acknowledgement', 'REQUIRE_APPROVAL'],
+        ['knowledge.answer', 'AUTONOMOUS'],
+        ['task.create', 'AUTONOMOUS'],
+      ]),
+      ...over,
+    });
+  const wait = node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } });
+
+  it('ein Plan nach Steckbrief ist zulässig', () => {
+    const plan = {
+      goalKeys: ['x'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' } }, config: { purpose: 'ACKNOWLEDGEMENT' } }),
+        node('send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'draft', path: 'draftId' } } }, config: { purpose: 'ACKNOWLEDGEMENT' } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte prüfen' } } }),
+        wait,
+      ],
+      edges: [edge('e1', 'ctx', 'draft'), edge('e2', 'draft', 'send'), edge('e3', 'send', 'notify'), edge('e4', 'notify', 'wait')],
+      conciseExplanation: 'Bestätigen und melden.',
+    };
+    expect(codes(validatePlan(plan, strict()))).toEqual([]);
+  });
+
+  it('erfundene Eingaben, fehlende Pflichteingaben, unbekannte Quellen/Fakten und Ausgabefelder machen den Plan unzulässig', () => {
+    const plan = {
+      goalKeys: ['x'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' }, inputs: { sender: { fact: 'sender' } } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { context: { stepOutput: { node: 'ctx', path: 'verifiedContext' } } } }),
+        node('interpret', 'INTERPRET'),
+        node('task', 'ACTION', { capability: { key: 'task.create' }, inputs: { title: { stepOutput: { node: 'interpret', path: 'summary' } }, assignee: { fact: 'staff.person' }, ref: { sourceRef: 'inbound.message' } } }),
+        wait,
+      ],
+      edges: [edge('e1', 'ctx', 'notify'), edge('e2', 'notify', 'interpret'), edge('e3', 'interpret', 'task'), edge('e4', 'task', 'wait')],
+      conciseExplanation: 'Erfunden.',
+    };
+    const found = codes(validatePlan(plan, strict()));
+    expect(found).toEqual(expect.arrayContaining(['INPUT_UNKNOWN', 'INPUT_MISSING', 'STEP_OUTPUT_UNKNOWN', 'FACT_UNKNOWN', 'SOURCE_REF_UNKNOWN']));
+  });
+
+  it('Fähigkeiten nur für hinterlegte Prozesse sind in einem frei geplanten Ablauf unzulässig', () => {
+    const plan = {
+      goalKeys: ['x'],
+      nodes: [node('price', 'PREPARE', { capability: { key: 'pricing.resolve' }, inputs: { sku: { literal: 'A' }, quantity: { literal: 1 } } }), wait],
+      edges: [edge('e1', 'price', 'wait')],
+      conciseExplanation: 'Preis.',
+    };
+    expect(codes(validatePlan(plan, strict()))).toContain('CAPABILITY_BLUEPRINT_ONLY');
+  });
+
+  it('ohne strenge Bindung (hinterlegter Prozess) bleibt das Verhalten unverändert', () => {
+    expect(validatePlan(clarificationPlan(), ctx()).valid).toBe(true);
+  });
+});

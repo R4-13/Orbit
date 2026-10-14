@@ -25,6 +25,7 @@ export type ModuleKey = keyof typeof MODULE_LABELS;
 export const CATEGORY_LABELS: Readonly<Record<string, string>> = {
   REQUEST_FOR_QUOTE: 'Angebotsanfrage',
   SALES_INQUIRY: 'Vertriebsanfrage',
+  GENERAL_INQUIRY: 'Allgemeine Anfrage',
   INVOICE_RECEIVED: 'Rechnungseingang',
   SUPPLIER_OFFER: 'Lieferantenangebot',
   COMPLAINT_OR_SERVICE: 'Reklamation oder Service',

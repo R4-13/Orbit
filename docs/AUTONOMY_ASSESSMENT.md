@@ -69,3 +69,22 @@ Anwendungsfall. Mit `handwerkernull@gmail.com` (Betrieb) und `tomorbit777@gmail.
 1. **Wer wird bei Notfällen benachrichtigt, und wie?** (Person, Mail/SMS/Push, Notdienstzeiten)
 2. **Was darf ORBIT ohne Freigabe zusagen?** (Eingang bestätigen: ja; Termin buchen; Preise nennen; Notdienst zusagen)
 3. **Wer pflegt das Betriebsprofil?** (Einrichtung durch den Inhaber mit KI-Hilfe, laufende Ergänzung durch Korrekturen)
+
+## Nachtrag 14.10.2026: der autonome Vorgangs-Agent mit dem echten Modell
+
+Live-Suite `apps/api/test/autonomy-agent.live.e2e-spec.ts` (`LIVE_AI=1`, Modell `gpt-6-luna`, Betrieb „Ausgewogen“ mit Profil und Mitarbeitern, Versand als Double):
+
+| Eingang | Ergebnis (nach den Behebungen) |
+|---|---|
+| Frage, die das Profil beantwortet | Antwort mit Name, nur aus dem Profil, Vorgang abgeschlossen |
+| Englische Frage | vollständig englische Antwort |
+| Preisfrage | bisheriger Verkaufsablauf (keine Auskunft über Preise) |
+| Wasserrohrbruch | Meldung an Notfallzuständige, Bestätigung an den Absender (Notruf 112), Mensch übernimmt |
+| Beschwerde (fordert Erstattung) | Meldung an die Zuständigen für Beschwerden, keine Zusage |
+| Bewerbung | Meldung an die Zuständigen für Bewerbungen |
+| Statusfrage zu früherer Anfrage | Bezug gesetzt, Stand des früheren Vorgangs mitgeteilt |
+| Eingeschleuste Anweisung | kein Vorgang, nichts gesendet |
+| Newsletter | nicht geschäftlich, nichts gesendet |
+
+**Was der erste Lauf zeigte** (und das Skript-Double nie gezeigt hatte): Das Modell erfand Eingaben und Ausgabefelder, die Pläne blieben stehen, ohne dass ein Mensch es erfuhr. Behoben durch Steckbriefe der Fähigkeiten mit strenger Plan-Prüfung, feste Standardabläufe für die häufigsten Fälle, die Kategorie `GENERAL_INQUIRY` und ein Sicherheitsnetz (`ASSUMPTIONS.md` #589–#592).
+Wiederholung: `LIVE_AI=1 ASSESSMENT_OUT=<Datei> npx jest --config test/jest-e2e.json test/autonomy-agent.live.e2e-spec.ts` (Schlüssel aus `.env.llm.local`, Worker vorher stoppen).

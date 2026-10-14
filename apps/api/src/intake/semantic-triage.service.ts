@@ -24,7 +24,7 @@ import type { NormalizedIntakeEvent } from './channel-event.types';
 import { ProfileContextService } from '../organization/profile-context.service';
 
 /** Bumped whenever the triage prompt contract changes, so a recorded result can be tied to the prompt that produced it. */
-export const TRIAGE_PROMPT_VERSION = 'triage-prompt/3';
+export const TRIAGE_PROMPT_VERSION = 'triage-prompt/4';
 export const SUBMIT_TRIAGE_TOOL = 'submit_triage_result';
 
 const MAX_BODY_CHARS = 12_000;

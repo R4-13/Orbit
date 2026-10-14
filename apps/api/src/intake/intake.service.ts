@@ -441,7 +441,9 @@ export class IntakeService {
       await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'IN_PROGRESS' }, { type: 'AGENT' });
       const started = await this.adHoc.start(tenantId, actorUserId, reviewCase, triage, event.subject ?? '(ohne Betreff)');
       if (!started || started.result.outcome === 'MANUAL_REVIEW') {
-        await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [triage.conciseReason] }, { type: 'AGENT' });
+        // Warum ORBIT es nicht selbst erledigt hat, gehört vor die Einschätzung der KI – sonst weiß die Person nicht, ob die Automatik versagt hat oder nie vorgesehen war.
+        const why = started?.result.reasons.filter(Boolean).slice(0, 3) ?? [];
+        await this.lifecycle.transition(tenantId, reviewCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [...why, triage.conciseReason] }, { type: 'AGENT' });
         await this.sendToReview(tenantId, actorUserId, event, intakeEventId, reason, 'BUSINESS_ACTIONABLE');
       } else {
         await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { status: 'PROCESSING' } });

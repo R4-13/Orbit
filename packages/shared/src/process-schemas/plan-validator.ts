@@ -51,6 +51,12 @@ export interface PlanValidationContext {
   /** Effects with a confirmed receipt in earlier revisions — they must survive a replan unchanged (§11.3 item 9). */
   confirmedEffects?: readonly ConfirmedEffect[];
   limits: { maxSteps: number; maxExternalActions: number; maxAutoQuestions: number };
+  /**
+   * Strenge Bindungsprüfung für frei geplante Abläufe (ohne Blueprint): Eingaben müssen im Steckbrief der Fähigkeit stehen, Pflichteingaben fehlen nicht, Fakten
+   * existieren (oder legt eine Fähigkeit im Plan selbst an), und gelesene Ausgabefelder gehören zur Fähigkeit des vorgelagerten Schritts. Ohne diese Strenge scheitert ein
+   * Plan erst bei der Ausführung – bei einem frei geplanten Ablauf wartet dann niemand darauf.
+   */
+  strictBindings?: boolean;
 }
 
 export interface PlanValidationResult {
@@ -78,6 +84,9 @@ export const FORBIDDEN_LITERAL_INPUT_KEYS = [
   'customerid',
   'contactid',
 ] as const;
+
+/** Die Quellen, die der Ausführung für `sourceRef` bekannt sind (siehe Orchestrator `buildEvalContext`). */
+export const KNOWN_SOURCE_REFS: readonly string[] = ['case.id', 'inbound.latestMessageId', 'inbound.latestThreadId'];
 
 export function isForbiddenLiteralKey(key: string): boolean {
   return (FORBIDDEN_LITERAL_INPUT_KEYS as readonly string[]).includes(key.toLowerCase().replace(/[_-]/g, ''));
@@ -268,6 +277,52 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
         nodeId: node.id,
         message: `Eingabe "${name}" nutzt den Fakt "${operand.fact}", der weder vorhanden noch erhebbar ist.`,
       });
+    }
+  }
+
+  // ── 5b. Strenge Bindungen (nur frei geplante Abläufe) ─────────────────────
+  if (ctx.strictBindings) {
+    const producedFacts = new Set<string>();
+    for (const node of nodes) for (const key of (node.capability ? ctx.capabilities.get(node.capability.key) : undefined)?.contract?.producesFacts ?? []) producedFacts.add(key);
+    for (const node of nodes) {
+      if (!node.capability) {
+        // Ein Schritt ohne Fähigkeit führt nichts aus und liefert nichts: seine Ausgabe zu lesen ist erfunden.
+        continue;
+      }
+      const cap = ctx.capabilities.get(node.capability.key);
+      if (!cap?.contract) continue;
+      if (cap.contract.scope === 'BLUEPRINT_ONLY' && !ctx.blueprint) {
+        add({ code: 'CAPABILITY_BLUEPRINT_ONLY', check: 5, nodeId: node.id, message: `Die Fähigkeit "${cap.key}" ist nur in einem hinterlegten Prozess nutzbar, nicht in einem frei geplanten Ablauf.` });
+      }
+      const allowed = new Map(cap.contract.inputs.map((i) => [i.name, i]));
+      for (const name of Object.keys(node.inputs)) {
+        if (!allowed.has(name)) {
+          add({ code: 'INPUT_UNKNOWN', check: 5, nodeId: node.id, message: `"${cap.key}" kennt die Eingabe "${name}" nicht. Erlaubt: ${[...allowed.keys()].join(', ') || '(keine)'}.` });
+        }
+      }
+      for (const input of cap.contract.inputs) {
+        if (input.required && !(input.name in node.inputs)) {
+          add({ code: 'INPUT_MISSING', check: 5, nodeId: node.id, message: `"${cap.key}" braucht die Eingabe "${input.name}"${input.hint ? ` (${input.hint})` : ''}.` });
+        }
+      }
+      for (const [name, operand] of Object.entries(node.inputs)) {
+        if ('sourceRef' in operand && !KNOWN_SOURCE_REFS.includes(operand.sourceRef)) {
+          add({ code: 'SOURCE_REF_UNKNOWN', check: 5, nodeId: node.id, message: `Eingabe "${name}": die Quelle "${operand.sourceRef}" gibt es nicht. Bekannt: ${KNOWN_SOURCE_REFS.join(', ')}.` });
+        }
+        if ('fact' in operand && !ctx.knownFactKeys.has(operand.fact) && !ctx.collectableFactKeys.has(operand.fact) && !producedFacts.has(operand.fact)) {
+          add({ code: 'FACT_UNKNOWN', check: 5, nodeId: node.id, message: `Eingabe "${name}": der Fakt "${operand.fact}" existiert nicht und wird von keinem Schritt angelegt. Vorhandene Fakten stehen im Auftrag.` });
+        }
+        if ('stepOutput' in operand) {
+          const source = nodeById.get(operand.stepOutput.node);
+          const sourceCap = source?.capability ? ctx.capabilities.get(source.capability.key) : undefined;
+          const first = operand.stepOutput.path.split('.')[0] ?? '';
+          if (source && !source.capability) {
+            add({ code: 'STEP_OUTPUT_UNKNOWN', check: 5, nodeId: node.id, message: `Eingabe "${name}": der Schritt "${source.id}" hat keine Fähigkeit und liefert nichts, das gelesen werden könnte.` });
+          } else if (sourceCap?.contract && !sourceCap.contract.outputs.includes(first)) {
+            add({ code: 'STEP_OUTPUT_UNKNOWN', check: 5, nodeId: node.id, message: `Eingabe "${name}": "${sourceCap.key}" liefert kein Feld "${first}". Es liefert: ${sourceCap.contract.outputs.join(', ')}.` });
+          }
+        }
+      }
     }
   }
 

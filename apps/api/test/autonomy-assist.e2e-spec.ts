@@ -160,7 +160,7 @@ describe('Autonomie ohne hinterlegten Prozess (e2e)', () => {
 
     it('Regel „Planen ohne Bestätigung“: der Ablauf läuft sofort, die Wirkung nach außen folgt ihrer eigenen Regel', async () => {
       const tenantId = await newTenant({ 'process.plan.activate': 'AUTONOMOUS', 'email.send.acknowledgement': 'AUTONOMOUS' });
-      seedTriage({ urgency: 'NORMAL', category: 'GENERAL_INQUIRY' });
+      seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
       ackPlan();
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage zu Ihren Leistungen', content: 'Machen Sie auch Badsanierung?' }));
       expect(sent).toHaveLength(1);
@@ -170,7 +170,7 @@ describe('Autonomie ohne hinterlegten Prozess (e2e)', () => {
 
     it('Regel „Plan nur mit Bestätigung“: der Plan wartet, es geschieht nichts', async () => {
       const tenantId = await newTenant({ 'process.plan.activate': 'REQUIRE_APPROVAL', 'email.send.acknowledgement': 'AUTONOMOUS' });
-      seedTriage({ urgency: 'NORMAL', category: 'GENERAL_INQUIRY' });
+      seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
       ackPlan();
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage', content: 'Machen Sie auch Badsanierung?' }));
       expect(sent).toEqual([]);
@@ -179,7 +179,7 @@ describe('Autonomie ohne hinterlegten Prozess (e2e)', () => {
 
     it('ohne verwertbaren Plan (keine KI) bleibt der Vorgang wie bisher bei einer Person zur Prüfung', async () => {
       const tenantId = await newTenant({ 'process.plan.activate': 'AUTONOMOUS' });
-      seedTriage({ urgency: 'NORMAL', category: 'GENERAL_INQUIRY' });
+      seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage', content: 'Hallo?' }));
       expect(sent).toEqual([]);
       expect((await caseOf(tenantId, result.case!.id)).orchestrationStatus).toBe('MANUAL_REVIEW');

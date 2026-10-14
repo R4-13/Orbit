@@ -34,6 +34,22 @@ export const CapabilityDefinitionSchema = z
     timeoutMs: z.number().int().positive().max(10 * 60_000),
     retryPolicyRef: z.string().min(1).max(60),
     compensationCapability: z.string().max(120).optional(),
+    /**
+     * Der verbindliche Steckbrief für die Planung: welche Eingaben die Fähigkeit kennt (sonst nichts), welche Pflicht sind und welche Ausgaben ein späterer Schritt lesen darf.
+     * Die KI sieht ihn im Auftrag, die deterministische Prüfung erzwingt ihn (erfundene Eingaben, fehlende Pflichtangaben und unbekannte Ausgabefelder machen einen Plan
+     * unzulässig, statt später lautlos zu stocken). Ein Test gleicht den Steckbrief mit dem Schema des Werkzeugs ab.
+     */
+    contract: z
+      .object({
+        inputs: z.array(z.object({ name: z.string().min(1).max(40), required: z.boolean(), hint: z.string().max(200) }).strict()).max(12),
+        outputs: z.array(z.string().min(1).max(40)).max(12),
+        /** Fakten, die diese Fähigkeit selbst anlegt – spätere Schritte dürfen sie binden. */
+        producesFacts: z.array(z.string().min(1).max(60)).max(5).optional(),
+        /** `BLUEPRINT_ONLY`: nur in einem hinterlegten Prozess nutzbar (Preise, Angebote, Anforderungsermittlung) – ein frei geplanter Ablauf darf sie nicht verwenden. */
+        scope: z.enum(['ADHOC', 'BLUEPRINT_ONLY']),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type CapabilityDefinition = z.infer<typeof CapabilityDefinitionSchema>;
@@ -56,6 +72,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'NONE',
     riskClass: 'LOW',
     toolBindings: ['resolve_context'],
+    contract: { inputs: [], outputs: ['replyTarget', 'contactKnown', 'customerRecord', 'contactId', 'priorCaseCount'], producesFacts: ['contact.email'], scope: 'ADHOC' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'NONE',
     timeoutMs: 15_000,
@@ -72,6 +89,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'MEDIUM',
     toolBindings: ['extract_message_facts'],
+    contract: { inputs: [{ name: 'messageId', required: true, hint: 'sourceRef inbound.latestMessageId' }], outputs: ['recorded', 'rejected'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 60_000,
@@ -88,6 +106,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'NONE',
     riskClass: 'LOW',
     toolBindings: ['resolve_requirements'],
+    contract: { inputs: [], outputs: ['complete', 'missing', 'internalMissing', 'requirements'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'NONE',
     timeoutMs: 15_000,
@@ -104,6 +123,21 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['draft_communication'],
+    contract: {
+      inputs: [
+        { name: 'to', required: true, hint: 'immer {"fact":"contact.email"}' },
+        { name: 'missing', required: false, hint: 'nur Rückfrage' },
+        { name: 'quoteId', required: false, hint: 'nur Angebot' },
+        { name: 'documentId', required: false, hint: 'nur Angebot' },
+        { name: 'answer', required: false, hint: 'INFORMATION: stepOutput der Fähigkeit knowledge.answer, Pfad "answer"' },
+        { name: 'what', required: false, hint: 'ATTACHMENT_REQUEST: kurzer Satzteil als literal, z. B. "der Anhang mit der Rechnung"' },
+        { name: 'start', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "start"' },
+        { name: 'end', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "end"' },
+        { name: 'kind', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "kind"' },
+      ],
+      outputs: ['draftId', 'version', 'contentHash', 'to', 'subject'],
+      scope: 'ADHOC',
+    },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 60_000,
@@ -132,6 +166,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'EXTERNAL_WRITE',
     riskClass: 'HIGH',
     toolBindings: ['send_communication'],
+    contract: { inputs: [{ name: 'draftId', required: true, hint: 'stepOutput des Entwurfs, Pfad "draftId"' }], outputs: ['providerRef', 'threadId', 'rfcMessageId', 'sentAt', 'recipient'], scope: 'ADHOC' },
     connectorRequirements: [{ connectorType: 'GMAIL', capability: 'email.send' }],
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'PROVIDER_RECEIPT',
@@ -149,6 +184,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'NONE',
     riskClass: 'MEDIUM',
     toolBindings: ['resolve_price'],
+    contract: { inputs: [{ name: 'sku', required: true, hint: '' }, { name: 'quantity', required: true, hint: '' }], outputs: ['lines', 'currency', 'priceSource', 'pricedAt', 'totalNetCents'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'NONE',
     timeoutMs: 15_000,
@@ -165,6 +201,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'MEDIUM',
     toolBindings: ['create_quote'],
+    contract: { inputs: [{ name: 'lines', required: true, hint: '' }, { name: 'currency', required: true, hint: '' }, { name: 'priceSource', required: true, hint: '' }], outputs: ['quoteId', 'number', 'grossCents', 'reused'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 30_000,
@@ -181,6 +218,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['render_quote'],
+    contract: { inputs: [{ name: 'quoteId', required: true, hint: '' }], outputs: ['documentId', 'quoteId', 'sizeBytes', 'reused'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 30_000,
@@ -197,6 +235,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'NONE',
     riskClass: 'MEDIUM',
     toolBindings: ['answer_from_knowledge'],
+    contract: { inputs: [{ name: 'question', required: false, hint: 'weglassen: die eingegangene Nachricht wird verwendet' }], outputs: ['answerable', 'answer', 'sources', 'confidence', 'reason'], scope: 'ADHOC' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'NONE',
     timeoutMs: 60_000,
@@ -213,6 +252,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['notify_staff'],
+    contract: { inputs: [{ name: 'message', required: true, hint: 'ein kurzer sachlicher Satz als {"literal": "…"} (3–400 Zeichen), ohne Zusagen' }, { name: 'urgent', required: false, hint: '{"literal": true} nur bei Notfall' }], outputs: ['attentionItemId', 'responsibility'], scope: 'ADHOC' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 15_000,
@@ -229,6 +269,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['create_lead_for_case'],
+    contract: { inputs: [{ name: 'note', required: false, hint: 'kurze Notiz als literal' }], outputs: ['leadId', 'reused'], scope: 'ADHOC' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 15_000,
@@ -245,6 +286,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'EXTERNAL_WRITE',
     riskClass: 'HIGH',
     toolBindings: ['book_appointment'],
+    contract: { inputs: [{ name: 'choice', required: true, hint: 'Fakt appointment.agreed (Antwort der Kundschaft auf vorgeschlagene Termine)' }], outputs: ['eventId', 'htmlLink', 'kind', 'start', 'end', 'reused'], scope: 'ADHOC' },
     connectorRequirements: [
       { connectorType: 'GMAIL', capability: 'calendar.freebusy' },
       { connectorType: 'GMAIL', capability: 'calendar.write' },
@@ -265,6 +307,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['create_task'],
+    contract: { inputs: [{ name: 'title', required: true, hint: 'kurzer Titel als literal' }, { name: 'description', required: false, hint: 'literal' }, { name: 'dueDate', required: false, hint: 'literal, ISO-Datum' }, { name: 'caseId', required: false, hint: 'weglassen' }], outputs: ['id', 'title'], scope: 'ADHOC' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 15_000,

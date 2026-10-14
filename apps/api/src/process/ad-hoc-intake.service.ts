@@ -7,6 +7,7 @@ import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { buildEmergencyProcedure } from './emergency-procedure';
+import { buildInformationProcedure, buildStatusProcedure } from './standard-procedures';
 import { OrchestratorService, type StartCaseResult } from './orchestrator.service';
 
 const REFERENCE_WINDOW_DAYS = 60;
@@ -16,7 +17,7 @@ const ACKNOWLEDGED_SENDER_ROLES: ReadonlySet<string> = new Set(['CUSTOMER', 'PRO
 export interface AdHocStartResult {
   /** `MANUAL_REVIEW` heißt: nichts wurde geplant (z. B. KI nicht verfügbar) – der Vorgang liegt zur Prüfung bei einer Person. */
   result: StartCaseResult;
-  mode: 'EMERGENCY_PROCEDURE' | 'PLANNED';
+  mode: 'EMERGENCY_PROCEDURE' | 'STANDARD_PROCEDURE' | 'PLANNED';
 }
 
 /**
@@ -50,7 +51,13 @@ export class AdHocIntakeService {
         });
         result = await this.orchestrator.startProcedure(tenantId, caseRow.id, procedure, { userId, intentSummary: subject });
       } else {
-        result = await this.orchestrator.startCase(tenantId, caseRow.id, { userId, intentSummary: subject });
+        const standard = await this.standardProcedure(tenantId, caseRow.id, triage, subject);
+        if (standard) {
+          mode = 'STANDARD_PROCEDURE';
+          result = await this.orchestrator.startProcedure(tenantId, caseRow.id, standard, { userId, intentSummary: subject });
+        } else {
+          result = await this.orchestrator.startCase(tenantId, caseRow.id, { userId, intentSummary: subject });
+        }
       }
       if (result.outcome === 'RUNNING') await this.orchestrator.advance(tenantId, caseRow.id);
       return { result, mode };
@@ -58,6 +65,22 @@ export class AdHocIntakeService {
       this.logger.warn(`Ad-hoc processing failed for case ${caseRow.id}: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
+  }
+
+  /**
+   * Standardabläufe für die zwei häufigsten Fälle ohne hinterlegten Prozess: eine allgemeine Frage (aus dem Betriebswissen beantworten) und die Nachfrage zum Stand einer früheren
+   * Anfrage. Sie gelten nur, wenn alles dafür bereit ist (Versand, Entwurf, Auskunft ausführbar, Regel nicht deaktiviert) und der Absender Kundschaft ist – sonst plant die KI.
+   */
+  private async standardProcedure(tenantId: string, caseId: string, triage: TriageResult, subject: string) {
+    if (triage.category !== 'GENERAL_INQUIRY' || !ACKNOWLEDGED_SENDER_ROLES.has(triage.senderRoleHypothesis)) return undefined;
+    const executability = await this.capabilities.executabilityFor(tenantId);
+    const ready = (...keys: string[]) => keys.every((key) => executability.get(key)?.executable === true);
+    const reference = await this.prisma.forTenantId(tenantId).caseFact.findFirst({ where: { caseId, key: 'case.reference', isCurrent: true, status: 'CONFIRMED' } });
+    if (reference && ready('email.send', 'communication.draft') && (await this.policy.resolveMode(tenantId, 'email.send.acknowledgement')) !== 'DISABLED') return buildStatusProcedure();
+    if (ready('email.send', 'communication.draft', 'knowledge.answer') && (await this.policy.resolveMode(tenantId, 'email.send.information')) !== 'DISABLED' && (await this.policy.resolveMode(tenantId, 'knowledge.answer')) !== 'DISABLED') {
+      return buildInformationProcedure({ message: `Allgemeine Frage „${subject.slice(0, 120)}“ – aus dem Betriebswissen nicht belegt beantwortbar, bitte persönlich antworten.` });
+    }
+    return undefined;
   }
 
   private async canAcknowledge(tenantId: string, triage: TriageResult): Promise<boolean> {
