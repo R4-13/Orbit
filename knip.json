@@ -1,0 +1,55 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreWorkspaces": [],
+  "workspaces": {
+    "apps/api": {
+      "entry": [
+        "src/main.ts",
+        "worker/main.ts",
+        "test/**/*.e2e-spec.ts",
+        "src/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "worker/**/*.ts",
+        "test/**/*.ts"
+      ]
+    },
+    "apps/web": {
+      "entry": [
+        "src/app/**/{page,layout,route}.tsx",
+        "e2e/**/*.spec.ts",
+        "src/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "e2e/**/*.ts"
+      ]
+    },
+    "packages/*": {
+      "entry": [
+        "src/index.ts",
+        "src/**/*.spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    }
+  },
+  "rules": {
+    "exports": "off",
+    "types": "off",
+    "nsExports": "off",
+    "nsTypes": "off",
+    "enumMembers": "off",
+    "classMembers": "off",
+    "duplicates": "off"
+  },
+  "ignoreDependencies": [
+    "pino-pretty",
+    "ts-node",
+    "eslint",
+    "eslint-config-next",
+    "@eslint/js"
+  ]
+}

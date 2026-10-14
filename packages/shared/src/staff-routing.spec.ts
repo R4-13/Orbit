@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ESCALATION_POLICY, composeStaffNotice, escalationChain, formatWaiting, responsibilityForCase, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
+import { DEFAULT_ESCALATION_POLICY, composeStaffNotice, escalationChain, isAbsent, formatWaiting, responsibilityForCase, escalationPhase, planDelivery, recipientsForPhase, resolveEscalationPolicy, responsiblesFor, type DeliveryChannel, type RoutableStaff } from './staff-routing';
 
 const person = (id: string, over: Partial<RoutableStaff> = {}): RoutableStaff => ({
   id,
@@ -128,5 +128,53 @@ describe('Betreff bei Notfällen', () => {
   it('doppelt das Präfix des Vorgangstitels nicht', () => {
     const { subject } = composeStaffNotice({ phase: 'INITIAL', kind: 'EMERGENCY', role: 'RESPONSIBLE', recipientFirstName: 'Ben', caseTitle: 'Notfall: Rohrbruch', waitingMinutes: 1, link: 'x', appName: 'ORBIT' });
     expect(subject).toBe('NOTFALL: Rohrbruch');
+  });
+});
+
+describe('Abwesenheit (AUT-05)', () => {
+  const holiday = [{ from: '2026-10-12', until: '2026-10-16', note: 'Urlaub' }];
+  const away = (list: RoutableStaff[], id: string) => list.map((s) => (s.id === id ? { ...s, absences: holiday } : s));
+  const during = new Date('2026-10-14T10:00:00Z');
+  const after = new Date('2026-10-20T10:00:00Z');
+
+  it('erkennt Abwesenheit tageweise mit beiden Grenzen und ignoriert Unbrauchbares', () => {
+    expect(isAbsent({ absences: holiday }, during)).toBe(true);
+    expect(isAbsent({ absences: holiday }, new Date('2026-10-12T00:30:00+02:00'))).toBe(true); // erster Tag, Zeitzone des Betriebs
+    expect(isAbsent({ absences: holiday }, new Date('2026-10-16T22:30:00Z'))).toBe(false); // schon der 17. in Berlin
+    expect(isAbsent({ absences: holiday }, after)).toBe(false);
+    expect(isAbsent({ absences: 'kaputt' }, during)).toBe(false);
+    expect(isAbsent({}, during)).toBe(false);
+  });
+
+  it('ist die zuständige Person abwesend, meldet schon die erste Meldung der Vertretung – nicht der abwesenden Person', () => {
+    const chain = escalationChain(away(directory, 'buchhalterin'), 'buchhalterin', during);
+    const initial = recipientsForPhase(chain, 'INITIAL');
+    expect(initial.map((s) => s.staff.id)).toEqual(['vertretung']);
+    expect(initial[0]).toMatchObject({ standIn: true, role: 'DEPUTY' });
+    expect(recipientsForPhase(chain, 'REMINDER').map((s) => s.staff.id)).toEqual(['vertretung']);
+    expect(recipientsForPhase(chain, 'ESCALATED').map((s) => s.staff.id)).toEqual(['vertretung', 'leiter', 'chef']);
+  });
+
+  it('ist auch die Vertretung abwesend, übernimmt die nächste erreichbare Stufe', () => {
+    const both = away(away(directory, 'buchhalterin'), 'vertretung');
+    const initial = recipientsForPhase(escalationChain(both, 'buchhalterin', during), 'INITIAL');
+    expect(initial.map((s) => s.staff.id)).toEqual(['leiter']);
+    expect(initial[0]).toMatchObject({ standIn: true });
+  });
+
+  it('niemand erreichbar: es wird trotzdem gemeldet (ein Eingang bleibt nie ohne Adressat)', () => {
+    const everyone = directory.map((s) => ({ ...s, absences: holiday }));
+    expect(recipientsForPhase(escalationChain(everyone, 'buchhalterin', during), 'INITIAL').map((s) => s.staff.id)).toEqual(['buchhalterin']);
+  });
+
+  it('ohne Zeitpunkt oder nach der Abwesenheit gilt die normale Kette', () => {
+    const list = away(directory, 'buchhalterin');
+    expect(recipientsForPhase(escalationChain(list, 'buchhalterin'), 'INITIAL').map((s) => s.staff.id)).toEqual(['buchhalterin']);
+    expect(recipientsForPhase(escalationChain(list, 'buchhalterin', after), 'INITIAL').map((s) => s.staff.id)).toEqual(['buchhalterin']);
+  });
+
+  it('die Meldung nennt, für wen die Vertretung einspringt', () => {
+    const notice = composeStaffNotice({ phase: 'INITIAL', kind: 'MANUAL_REVIEW', role: 'DEPUTY', recipientFirstName: 'Vera', caseTitle: 'Rechnung', waitingMinutes: 1, responsibleName: 'Bea Buchhaltung', standInFor: 'Bea Buchhaltung', link: 'https://x', appName: 'ORBIT' });
+    expect(notice.text).toContain('Bea Buchhaltung ist heute abwesend');
   });
 });

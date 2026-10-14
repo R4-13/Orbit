@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import type { Invoice } from '@orbit/domain';
-import { ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { ErrorState, Pager, SortableTh, usePagedList, useSortableList } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { errorMessage } from '../../../../lib/api-client';
@@ -54,6 +54,7 @@ export default function InvoicesPage() {
   );
   const filtered = view.filter !== 'TODO' || q !== '';
   const { sorted, sort, requestSort } = useSortableList(rows, SORT_ACCESSORS);
+  const paged = usePagedList(sorted);
 
   return (
     <div className="space-y-4">
@@ -104,7 +105,7 @@ export default function InvoicesPage() {
                   </td>
                 </tr>
               ) : sorted && sorted.length > 0 ? (
-                sorted.map((invoice) => {
+                paged.rows?.map((invoice) => {
                   const status = statusLabel(invoice.status);
                   return (
                     <tr key={invoice.id} className="hover:bg-slate-50">
@@ -136,6 +137,7 @@ export default function InvoicesPage() {
               )}
             </tbody>
           </table>
+          <Pager window={paged.window} onPage={paged.setPage} label="Rechnungen" />
         </div>
       )}
     </div>

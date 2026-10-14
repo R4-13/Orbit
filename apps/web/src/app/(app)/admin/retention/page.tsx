@@ -14,9 +14,18 @@ import {
 const CATEGORY_LABELS: Record<RetentionCategory, string> = {
   AGENT_RUNS: 'Agent-Läufe',
   TOOL_INVOCATIONS: 'Tool-Aufrufe',
+  EMAIL_BODIES: 'Nachrichtentexte abgeschlossener Vorgänge',
+  SUPERSEDED_FACTS: 'Überholte Fakten abgeschlossener Vorgänge',
 };
 
-const CATEGORIES: RetentionCategory[] = ['AGENT_RUNS', 'TOOL_INVOCATIONS'];
+const CATEGORY_HINTS: Record<RetentionCategory, string> = {
+  AGENT_RUNS: 'Verlauf der KI-Läufe samt Tool-Aufrufen.',
+  TOOL_INVOCATIONS: 'Ein- und Ausgaben einzelner Tool-Aufrufe (früher löschbar als der Lauf selbst).',
+  EMAIL_BODIES: 'Nur der Text wird entfernt; Absender, Zeitpunkt, Betreff und Zuordnung bleiben. Offene Vorgänge sind nie betroffen.',
+  SUPERSEDED_FACTS: 'Frühere Fassungen von Angaben; die endgültigen Angaben des Vorgangs bleiben.',
+};
+
+const CATEGORIES: RetentionCategory[] = ['AGENT_RUNS', 'TOOL_INVOCATIONS', 'EMAIL_BODIES', 'SUPERSEDED_FACTS'];
 
 /** Matches MIN_RETENTION_DAYS in apps/api/src/retention/retention.constants.ts — the backend is the source of truth and re-validates regardless. */
 const MIN_RETENTION_DAYS = 30;
@@ -41,6 +50,7 @@ function CategoryRow({ category, currentDays }: { category: RetentionCategory; c
     <tr className="align-top hover:bg-slate-50">
       <td className="px-4 py-3">
         <span className="font-medium text-slate-900">{CATEGORY_LABELS[category]}</span>
+        <span className="block text-xs text-slate-600">{CATEGORY_HINTS[category]}</span>
       </td>
       <td className="px-4 py-3">
         {currentDays !== null ? <Badge tone="info">{currentDays} Tage</Badge> : <Badge tone="neutral">Unbegrenzt</Badge>}

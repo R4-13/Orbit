@@ -62,16 +62,14 @@ export class UsersService {
       select: USER_LIST_SELECT,
     });
 
-    // RefreshToken carries no tenantId column (see docs/ASSUMPTIONS.md) and
-    // has no RLS policy of its own — scoping is already guaranteed by the
-    // forTenantId() lookup above having confirmed `userId` belongs to this
-    // tenant, so a direct query here (not forTenantId()) is correct, not a
-    // shortcut. A deactivated account must lose access immediately, not
-    // merely be blocked from a *future* login.
-    await this.prisma.refreshToken.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    // RefreshToken trägt keine tenant_id; seine RLS-Regel prüft den Mandanten über die Elterntabelle `users` (MST-13). Deshalb in einer Mandanten-Transaktion:
+    // ein deaktiviertes Konto muss sofort den Zugang verlieren, nicht erst bei der nächsten Anmeldung.
+    await this.prisma.inTenantTransaction(tenantId, (tx) =>
+      tx.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    );
 
     await this.audit.record({
       tenantId,

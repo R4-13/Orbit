@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { LeadSource } from '@orbit/domain';
 import type { LeadFilter, LeadListItem } from '@orbit/shared';
-import { Button, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { Button, ErrorState, Pager, SortableTh, usePagedList, useSortableList } from '@orbit/ui';
 import { SavedViewsMenu } from '../../../../components/common/saved-views-menu';
 import { EmptyState, EntityLink, FilterTabs, LastUpdated, Notice, PageHeader, SearchField, StatusBadge } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
@@ -40,6 +40,7 @@ export default function LeadsPage() {
   const { data: contacts } = useContacts();
   const createLead = useCreateLead();
   const { sorted, sort, requestSort } = useSortableList(data?.items, SORT_ACCESSORS);
+  const paged = usePagedList(sorted);
   const width = useMainWidth();
   const compact = width > 0 && width < 900;
 
@@ -177,7 +178,7 @@ export default function LeadsPage() {
                   </td>
                 </tr>
               ) : sorted && sorted.length > 0 ? (
-                sorted.map((lead) => (
+                paged.rows?.map((lead) => (
                   <tr key={lead.id} className="hover:bg-slate-50">
                     <td className="px-3 py-3 align-top">
                       <Link href={lead.href} className="block truncate font-medium text-slate-900 hover:underline" title={lead.contactLabel}>
@@ -211,6 +212,7 @@ export default function LeadsPage() {
               )}
             </tbody>
           </table>
+          <Pager window={paged.window} onPage={paged.setPage} label="Interessenten" />
         </div>
       )}
     </div>

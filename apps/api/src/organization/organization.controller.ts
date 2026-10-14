@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { PERMISSIONS, StaffInputSchema, UpdateTenantProfileRequestSchema, ValidationFailedError } from '@orbit/shared';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { AttentionService } from './attention.service';
+import { ProfileSuggestionService } from './profile-suggestion.service';
 import { StaffService } from './staff.service';
 import { TenantProfileService } from './tenant-profile.service';
 
@@ -30,11 +31,21 @@ const SyncBodySchema = z.object({ staff: z.array(z.unknown()).min(1).max(2000), 
 @RequirePermissions(PERMISSIONS.TENANT_PROFILE_MANAGE)
 @Controller({ path: 'tenant/profile' })
 export class TenantProfileController {
-  constructor(private readonly profile: TenantProfileService) {}
+  constructor(
+    private readonly profile: TenantProfileService,
+    private readonly suggestions: ProfileSuggestionService,
+  ) {}
 
   @Get()
   get(@CurrentUser() user: AuthenticatedUser) {
     return this.profile.get(user.tenantId);
+  }
+
+  /** Profil aus einem eingefügten Text vorschlagen (AUT-10): speichert nichts, der Vorschlag wird im Formular geprüft. */
+  @Post('suggest')
+  @HttpCode(HttpStatus.OK)
+  suggest(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
+    return this.suggestions.suggest(user.tenantId, parseBody(z.object({ text: z.string().max(40_000) }).strict(), body).text);
   }
 
   @Put()

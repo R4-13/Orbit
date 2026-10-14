@@ -50,11 +50,11 @@ Verteidigungslinien", live verifiziert in `docs/ASSUMPTIONS.md` #85-87):
    Transaktion (SET-LOCAL-Semantik) — kein Leck über den
    Connection-Pool auf eine spätere, fremde Anfrage möglich.
 
-**Bewusste Ausnahme**: `role_permissions`, `user_roles`,
-`refresh_tokens` haben keine eigene `tenant_id`-Spalte und sind nur
-indirekt über die Elterntabelle (`roles.tenant_id`/`users.tenant_id`)
-abgesichert — sie werden im aktuellen Code nie direkt mit
-nutzergesteuerten Filtern abgefragt (`docs/ASSUMPTIONS.md` #87).
+**Seit Oktober 2026 (MST-13)**: auch `role_permissions`, `user_roles` und
+`refresh_tokens` – ohne eigene `tenant_id`-Spalte – haben eine RLS-Regel, die den
+Mandanten über die Elterntabelle (`roles.tenant_id`/`users.tenant_id`) prüft;
+`forTenant()` setzt den Mandantenkontext auch für sie (`docs/ASSUMPTIONS.md` #578).
+Die frühere bewusste Ausnahme (#87) entfällt.
 
 **Bewusster Bypass**: `PrismaService.withRlsBypass()` für die Handvoll
 echter Cross-Tenant-Fälle (Login, bevor der Tenant bekannt ist;
@@ -236,7 +236,7 @@ echten Nebenläufigkeits-Tests (5 parallele Aufrufe desselben Ereignisses
 | Datei-Upload: tatsächliche Bytes nicht gegen deklariertes Größe/MIME-Type geprüft | Nur die Deklaration wird serverseitig durchgesetzt (seit Phase 19g), nicht die real hochgeladenen Bytes | Abschnitt 5 |
 | Antiviren-/Malware-Scan für Uploads | Nicht implementiert | Abschnitt 5 |
 | Dependency-Vulnerability-Scanning | **Seit Oktober 2026 in der CI** (`pnpm audit --prod`: kritisch bricht ab, hoch wird gemeldet) und wöchentlich per Dependabot. Von 33 Funden (16 hoch) im Oktober 2026 blieben nach Patch-Updates und `pnpm.overrides` 4 (1 hoch: `deepmerge-ts` im Prisma-CLI, 3 mittel: `file-type`, `@nestjs/core`); sie verlangen Hauptversions-Sprünge (NestJS 11, Prisma) | `OPEN_DEVELOPMENT_ITEMS.md` MST-11 |
-| `role_permissions`/`user_roles`/`refresh_tokens` ohne direkte RLS-Policy | Indirekt über Elterntabelle abgesichert, akzeptierter MVP-Tradeoff | `ASSUMPTIONS.md` #87 |
+| ~~`role_permissions`/`user_roles`/`refresh_tokens` ohne direkte RLS-Policy~~ | **behoben** (Oktober 2026, MST-13) | `ASSUMPTIONS.md` #578 |
 | Rechteänderungen wirken erst nach Token-Ablauf | Architektur-Tradeoff (zustandsloses JWT) | Abschnitt 2 |
 | Webhook-Endpunkt selbst | `WebhookIdempotencyService` ist einsatzbereit, aber es gibt noch keinen echten Webhook-Empfänger, der ihn aufruft (kein realer Connector) | Abschnitt 8 |
 

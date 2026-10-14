@@ -128,4 +128,47 @@ describe('Retention policies (e2e)', () => {
     expect(keptRecentRun).not.toBeNull();
     expect(keptRunningRun).not.toBeNull();
   });
+
+  it('Nachrichtentexte: nur von abgeschlossenen oder nicht zugeordneten Nachrichten, nur nach der Frist – die Zeile bleibt (BPF-03)', async () => {
+    const scoped = prisma.forTenantId(tenantId);
+    const old = new Date(Date.now() - 60 * DAY_MS);
+    const mk = async (caseStatus: string | null, createdAt: Date) => {
+      const c = caseStatus ? await scoped.case.create({ data: { tenantId, type: 'GENERAL', title: `Fall ${randomUUID().slice(0, 4)}`, orchestrationStatus: caseStatus } as never }) : null;
+      return scoped.emailMessage.create({ data: { tenantId, caseId: c?.id, direction: 'INBOUND', fromAddress: 'a@x.example', toAddresses: ['b@y.example'], subject: 'Betreff', bodyText: 'Persönlicher Text', bodyPreview: 'Persönlich', createdAt } });
+    };
+    const done = await mk('COMPLETED', old);
+    const open = await mk('IN_PROGRESS', old);
+    const loose = await mk(null, old);
+    const recent = await mk('COMPLETED', new Date());
+
+    await request(app.getHttpServer()).put('/api/v1/retention-policies/EMAIL_BODIES').set('Authorization', `Bearer ${adminToken}`).send({ retentionDays: 30 }).expect(200);
+    const preview = await request(app.getHttpServer()).get('/api/v1/retention-policies/EMAIL_BODIES/preview').set('Authorization', `Bearer ${adminToken}`).expect(200);
+    expect(preview.body.matchingCount).toBe(2);
+    const applied = await request(app.getHttpServer()).post('/api/v1/retention-policies/EMAIL_BODIES/apply').set('Authorization', `Bearer ${adminToken}`).expect(200);
+    expect(applied.body.deletedCount).toBe(2);
+
+    const rows = new Map((await scoped.emailMessage.findMany({ where: { id: { in: [done.id, open.id, loose.id, recent.id] } } })).map((r) => [r.id, r]));
+    expect(rows.get(done.id)).toMatchObject({ bodyText: null, bodyPreview: null, subject: 'Betreff', fromAddress: 'a@x.example' });
+    expect(rows.get(loose.id)).toMatchObject({ bodyText: null, bodyPreview: null });
+    expect(rows.get(open.id)?.bodyText).toBe('Persönlicher Text'); // offener Vorgang
+    expect(rows.get(recent.id)?.bodyText).toBe('Persönlicher Text'); // innerhalb der Frist
+  });
+
+  it('überholte Fakten: nur Altfassungen abgeschlossener Vorgänge; die aktuellen Fakten bleiben (BPF-03)', async () => {
+    const scoped = prisma.forTenantId(tenantId);
+    const old = new Date(Date.now() - 60 * DAY_MS);
+    const done = await scoped.case.create({ data: { tenantId, type: 'GENERAL', title: 'Fakten abgeschlossen', orchestrationStatus: 'COMPLETED' } as never });
+    const open = await scoped.case.create({ data: { tenantId, type: 'GENERAL', title: 'Fakten offen', orchestrationStatus: 'IN_PROGRESS' } as never });
+    const fact = (caseId: string, isCurrent: boolean) => scoped.caseFact.create({ data: { tenantId, caseId, key: 'request.quantity', value: 5, sourceType: 'EMAIL', status: 'CANDIDATE', isCurrent, createdAt: old } as never });
+    const oldDone = await fact(done.id, false);
+    const currentDone = await fact(done.id, true);
+    const oldOpen = await fact(open.id, false);
+
+    await request(app.getHttpServer()).put('/api/v1/retention-policies/SUPERSEDED_FACTS').set('Authorization', `Bearer ${adminToken}`).send({ retentionDays: 30 }).expect(200);
+    const applied = await request(app.getHttpServer()).post('/api/v1/retention-policies/SUPERSEDED_FACTS/apply').set('Authorization', `Bearer ${adminToken}`).expect(200);
+    expect(applied.body.deletedCount).toBe(1);
+    expect(await scoped.caseFact.findUnique({ where: { id: oldDone.id } })).toBeNull();
+    expect(await scoped.caseFact.findUnique({ where: { id: currentDone.id } })).not.toBeNull();
+    expect(await scoped.caseFact.findUnique({ where: { id: oldOpen.id } })).not.toBeNull();
+  });
 });

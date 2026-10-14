@@ -25,12 +25,12 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 | AUT-02 | ~~Fähigkeiten~~ **umgesetzt (TESTED LOCALLY, Doubles für Mail/Kalender)**: Eingang bestätigen, Statusauskunft, fehlenden Anhang anfordern, Auskunft aus dem Betriebswissen, intern benachrichtigen, Interessent anlegen, Termin **buchen** + bestätigen (`ASSUMPTIONS.md` #567/#568); jetzt 13 Fähigkeiten. **Offen:** Live gegen Google (Zustimmung `calendar.events` nötig), Monteur-Zuordnung (BPF-08), Umbuchen/Absagen | ENG / EXT | M | P1 → P2 | |
 | AUT-03 | ~~Zuordnung Absender → offene Vorgänge~~ **umgesetzt als Bezug (TESTED LOCALLY)**: genau ein Kandidat ⇒ `case.reference`, mehrere ⇒ Hinweis im Verlauf, nie Verschmelzung (`ASSUMPTIONS.md` #569). **Offen:** Oberfläche zum Setzen/Ändern des Bezugs, Abgleich über Name/Firma | ENG | S–M | P2 | |
 | AUT-04 | ~~Eingangsbestätigung bei Notfällen~~ **umgesetzt (TESTED LOCALLY)** als festes Notfallverfahren; Vorsichtig ⇒ mit Freigabe, ab Ausgewogen ⇒ autonom (`ASSUMPTIONS.md` #566). **Offen:** Sprache der Kundschaft (AUT-07), Live-Versand | ENG | S | P2 | Standard ist meine Annahme – bitte bei Bedarf unter „Regeln & Freigaben“ ändern |
-| AUT-05 | Meldungen bündeln (Zusammenfassung statt einer E-Mail je Vorgang/Phase), **Abwesenheits-/Urlaubskalender** für die Vertretung, Meldungen auch beim Warten auf Systeme und Kundschaft (Fristen der `WaitSubscription` → Eskalation) | ENG | M | P2 | |
+| AUT-05 | **Abwesenheitskalender** ~~umgesetzt~~ (`ASSUMPTIONS.md` #576). **Offen:** Meldungen bündeln (Zusammenfassung statt einer E-Mail je Vorgang/Phase), Abwesenheit aus Google/Outlook übernehmen, Meldungen auch beim Warten auf Systeme und Kundschaft (Fristen der `WaitSubscription` → Eskalation) | ENG | M | P2 | |
 | AUT-06 | Zustellkanäle **Teams, WhatsApp, SMS, Anruf** für Mitarbeitermeldungen | EXT | L je Kanal | P2 | als Wunsch bereits erfasst; Zustellung heute ehrlich per E-Mail |
 | AUT-07 | ~~Antworten in der Sprache der Kundschaft~~ **umgesetzt für Deutsch/Englisch** bei Bestätigung, Statusauskunft, Anhang anfordern, Auskunft, Terminbestätigung (`ASSUMPTIONS.md` #571). **Offen:** Rückfragen und Angebotsversand, weitere Sprachen | ENG | S | P3 | |
 | AUT-08 | Kundenstamm: **Daten im Ablauf nutzen** (Anrede, Konditionen, bekannte Adresse), Abgleich auch über Name/Firma/Domain (mit Vorsicht gegen falsche Treffer) | ENG | M | P2 | heute nur E-Mail-Adresse, und der Angebotsablauf nutzt den Eintrag nicht |
 | AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: HubSpot (größere Betriebe), Lexware/DATEV (kleinere) – Port `CustomerDirectory` ist vorbereitet | EXT | L je Adapter | P2 | Client-ID/Secret bzw. Partner-Registrierung nötig |
-| AUT-10 | **Betriebsprofil KI-gestützt einrichten** (aus eingefügtem Text/Dokumenten), Preis- und Terminregeln, Terminlängen im Profil | ENG | M | P2 | |
+| AUT-10 | **Betriebsprofil KI-gestützt einrichten** ~~aus eingefügtem Text~~ umgesetzt (`ASSUMPTIONS.md` #581). **Offen:** aus Dokumenten (PDF/Word), Preis- und Terminregeln, Terminlängen im Profil; Nachweis mit echtem Modell | ENG | M | P2 | |
 | AUT-11 | **Zweite automatische Rückfrage-Runde** (Blueprint v1.1) und **Lernen**: Auswertung „Wo greifen Menschen ein?“, Vorschläge aus Korrekturen | PROD → ENG | M | P2 | `maxAutoQuestions: 1` bewusst; Entscheidung steht aus |
 | AUT-12 | Dienstzugang (API-Schlüssel mit enger Berechtigung) für `PUT /staff/sync`, Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | ENG / EXT | M / L | P3 | |
 | AUT-13 | ~~Neukunde: erzwungener Passwortwechsel~~ **umgesetzt** (`ASSUMPTIONS.md` #572). **Offen:** Einladung per E-Mail statt Startpasswort; Playwright-Test der Neukunden-Oberfläche (braucht Betreiberzugang in der Testumgebung) | ENG / MAN | S | P3 | |
@@ -53,7 +53,7 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-10 | Webhook-Endpunkt mit **Signaturprüfung** (sobald ein Anbieter Webhooks sendet) | EXT | M | P3 | Idempotenz-Infrastruktur steht |
 | MST-11 | ~~Dependency-Scanning~~ **in der CI** (`pnpm audit`, Dependabot); 33 → 4 Funde (`SECURITY.md`) | ENG | S | erledigt | 4 verbleibende Funde: Entwicklungswerkzeuge, begründet |
 | MST-12 | CI-Pipeline auf einem **echten GitHub-Runner** verifizieren | EXT | S | P2 | Erweiterungen nur gegen lokales Docker geprüft |
-| MST-13 | **RLS für Tabellen ohne `tenant_id`** (`role_permissions`, `user_roles`, `refresh_tokens`) – heute nur über die Elterntabelle abgesichert | ENG | M | P2 | `ASSUMPTIONS.md` #87 |
+| MST-13 | ~~RLS für Tabellen ohne `tenant_id`~~ **umgesetzt** (`ASSUMPTIONS.md` #578, `SECURITY.md`) | ENG | M | erledigt | |
 | MST-14 | Rechtevergabe nach `pnpm db:reset` auf wiederverwendetem Container automatisieren | ENG | S | P3 | `LOCAL_DEVELOPMENT.md` |
 | MST-15 | Integrationstests für **Queue + Worker** (BullMQ mit Redis) über das Vorhandene hinaus | ENG | M | P3 | |
 | MST-16 | Dokument-Upload gegen echtes MinIO durchgängig live nachweisen | MAN | S | P3 | |
@@ -87,7 +87,7 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 |---|---|---|---|---|---|
 | BPF-01 | **Kostenlimit je Vorgang** (BP-39): KI-Nutzung dem Vorgang zuordnen, Limit prüfen | ENG | M | P2 | Kostenerfassung je Aufruf existiert (Plattform) |
 | BPF-02 | **Anhänge in der Triage/Extraktion** (E21) | ENG | M–L | P2 | |
-| BPF-03 | **Aufbewahrung** von `bodyText` und Fakten an die Retention-Konfiguration koppeln | ENG | M | P2 | DSGVO |
+| BPF-03 | ~~Aufbewahrung von `bodyText` und Fakten~~ **umgesetzt** als Kategorien `EMAIL_BODIES` und `SUPERSEDED_FACTS` (`ASSUMPTIONS.md` #577). **Offen:** automatischer Lauf nach Plan, Anhänge | ENG | S | P3 | |
 | BPF-04 | **Limits je Mandant einstellbar** (heute Plattform-Standards, Blueprint nur verschärfend) | ENG | S–M | P3 | |
 | BPF-05 | **Qualitätsmessung der KI**: Evaluationskatalog, unabhängiger Triage-Holdout, systematische Bewertung statt Stichproben | ENG | M | P2 | |
 | BPF-06 | **Preisquelle** aus echtem Warenwirtschafts-/ERP-System statt Testbestand (`pricing.resolve` bleibt) | EXT | L | P2 | |
@@ -109,7 +109,7 @@ Quelle: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM_OPERATIONS_ACCEPTA
 | PLT-06 | Mandantenlebenszyklus `offboard`/`close` als Abläufe, Support-Historie je Mandant | ENG | M | P2 | `provision` ist seit Oktober vorhanden |
 | PLT-07 | Passwort-Ablauf/-Verlauf, Einladung neuer Betreiber per E-Mail | ENG | S–M | P3 | |
 | PLT-08 | **Zweiter echter KI-Anbieter** (Anthropic/OpenAI sind registriert, ein weiterer echter Aufruf fehlt) | EXT | M | P3 | |
-| PLT-09 | BYOK-Adapter senden `reasoning_effort` nicht mit | ENG | S | P3 | |
+| PLT-09 | ~~BYOK-Adapter senden `reasoning_effort` nicht mit~~ **bereits umgesetzt**: der OpenAI-Adapter der Registry übergibt `OPENAI_REASONING_EFFORT` (geprüft 2026-10-14); der Punkt war veraltet | ENG | S | erledigt | |
 
 ## 7. UI/UX Specification v2
 
@@ -121,15 +121,15 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 | UX-02 | AC-19: **manuelle Screenreader- und Mobile-Tastaturprüfung** | MAN | S | P2 | nur automatisiert (axe) geprüft |
 | UX-03 | ~~Ablehnungsgrund bei Freigaben~~ **umgesetzt** (`ASSUMPTIONS.md` #562) | ENG | S | erledigt | |
 | UX-04 | Kontakte, Opportunities, Lieferanten und Admin-Unterseiten **vertiefen** (heute nur einheitlich gestaltet) | ENG | M | P3 | |
-| UX-05 | Listen mit **Seitenwechsel statt Voll-Laden** (Kontakte, Firmen, Lieferanten, Termine, Dokumente) | ENG | M | P2 | die API begrenzt seit Oktober auf 1000 Zeilen |
+| UX-05 | **Seitenwechsel** ~~umgesetzt~~ im Browser für Kontakte, Lieferanten, Interessenten, Verkaufschancen, Rechnungen (`ASSUMPTIONS.md` #579). **Offen:** Server-Seiten/Suche über 1000 Zeilen; Ansichten für Firmen, Termine, Dokumente | ENG | M | P3 | |
 
 ## 8. Technische Schulden und Betrieb (aus der Codebasis-Prüfung)
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
 | TEC-01 | ~~`.gitattributes`~~ **erledigt** (`ASSUMPTIONS.md` #575) | ENG | S | erledigt | |
-| TEC-02 | Spec-Dateien aus den `dist`-Ausgaben der Pakete ausnehmen (Build-Größe) | ENG | S | P3 | `shared`, `domain`, `agent-core` … |
-| TEC-03 | `knip` und `jscpd` mit Konfiguration in die CI aufnehmen (ungenutzter Code, Duplikate) | ENG | S | P2 | Erstlauf siehe Review |
+| TEC-02 | ~~Spec-Dateien aus den `dist`-Ausgaben~~ **erledigt** für `shared`, `domain`, `config` (`ASSUMPTIONS.md` #582) | ENG | S | erledigt | |
+| TEC-03 | ~~`knip` und `jscpd` in der CI~~ **erledigt** (`knip.json`, `.jscpd.json`, `ASSUMPTIONS.md` #580) | ENG | S | erledigt | |
 | TEC-04 | Große Dienste aufteilen (`intake.service.ts` ≈ 900 Zeilen, `orchestrator.service.ts` ≈ 830) | ENG | M | P3 | nur bei weiterem Wachstum |
 | TEC-05 | `next build` unter Windows (Standalone-Symlinks): Standalone nur im Docker-Build einschalten | ENG | S | P3 | |
 | TEC-06 | **E2E-Suite beschleunigen:** 52 Suiten laufen seriell ≈ 25 Minuten, der Worker muss gestoppt werden, parallele Läufe stören sich (gemeinsame Datenbank) → Test-Datenbank/Schema je Lauf, Test-Modus für den Worker | ENG | M | P2 | |

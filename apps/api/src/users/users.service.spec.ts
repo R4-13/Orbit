@@ -6,16 +6,19 @@ import { UsersService } from './users.service';
 describe('UsersService', () => {
   let service: UsersService;
   let scoped: { user: { findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock } };
-  let prisma: { forTenantId: jest.Mock; refreshToken: { updateMany: jest.Mock } };
+  let prisma: { forTenantId: jest.Mock; inTenantTransaction: jest.Mock };
+  let refreshToken: { updateMany: jest.Mock };
   let audit: { record: jest.Mock };
 
   beforeEach(async () => {
     scoped = {
       user: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn(), update: jest.fn() },
     };
+    refreshToken = { updateMany: jest.fn().mockResolvedValue({ count: 0 }) };
     prisma = {
       forTenantId: jest.fn().mockReturnValue(scoped),
-      refreshToken: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      // Die Sitzungen werden in einer Mandanten-Transaktion widerrufen (RLS über die Elterntabelle, MST-13).
+      inTenantTransaction: jest.fn(async (_tenantId: string, fn: (tx: { refreshToken: typeof refreshToken }) => unknown) => fn({ refreshToken })),
     };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
 
@@ -75,7 +78,8 @@ describe('UsersService', () => {
         data: { status: 'DEACTIVATED' },
         select: expect.any(Object),
       });
-      expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      expect(prisma.inTenantTransaction).toHaveBeenCalledWith('tenant_1', expect.any(Function));
+      expect(refreshToken.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user_2', revokedAt: null },
         data: { revokedAt: expect.any(Date) },
       });

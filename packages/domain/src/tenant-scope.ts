@@ -12,15 +12,11 @@ import { TenantIsolationViolationError } from '@orbit/shared';
  *
  * `RefreshToken`, `RolePermission`, `UserRole` are deliberately excluded:
  * none of the three has its own `tenant_id` column (they reach their tenant
- * only indirectly, via `User`/`Role`) and none has a Postgres RLS policy of
- * its own (docs/SECURITY.md §1) — the three excluded tables mentioned there.
- * Listing them here used to be a real, if dormant, bug: `applyTenantScope()`
- * would try to stamp a nonexistent `tenantId` column into their writes,
- * which Prisma rejects outright (`Unknown argument \`tenantId\``), and their
- * reads would come back empty under RLS with no GUC set — found live while
- * writing `tenant-admin.e2e-spec.ts` (Phase 19f), the first code path ever
- * to call `forTenantId().userRole.create()`. See docs/ASSUMPTIONS.md.
- */
+ * only indirectly, via `User`/`Role`). Since MST-13 (migration 20261014140000_rls_join_tables)
+ * they do have a Postgres RLS policy that checks the parent's tenant, so `forTenant()`
+ * sets the tenant context for them too (see TENANT_CONTEXT_ONLY_MODELS) but never
+ * stamps or filters a `tenantId` column — there is none (`applyTenantScope()` would
+ * make Prisma reject the write with `Unknown argument \`tenantId\``). */
 export const TENANT_SCOPED_MODELS = [
   'User',
   'Role',
@@ -88,6 +84,8 @@ export const TENANT_SCOPED_MODELS = [
 ] as const satisfies readonly Prisma.ModelName[];
 
 const TENANT_SCOPED_MODEL_SET: ReadonlySet<string> = new Set(TENANT_SCOPED_MODELS);
+/** Modelle ohne `tenant_id`, die per RLS über ihre Elterntabelle isoliert sind: sie bekommen den Mandantenkontext, aber keinen Filter. */
+const TENANT_CONTEXT_ONLY_MODELS: ReadonlySet<string> = new Set(['UserRole', 'RolePermission', 'RefreshToken']);
 
 export function isTenantScopedModel(modelName: string): boolean {
   return TENANT_SCOPED_MODEL_SET.has(modelName);
@@ -211,10 +209,13 @@ export function forTenant<T extends PrismaClient>(prisma: T, tenantId: string): 
     query: {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
-          if (!model || !isTenantScopedModel(model)) {
+          const scoped = model ? isTenantScopedModel(model) : false;
+          // Tabellen ohne eigene tenant_id, deren RLS-Regel den Mandanten über die Elterntabelle prüft (MST-13): kein Filter im Code (es gibt keine Spalte), aber der
+          // Mandantenkontext muss in der Transaktion gesetzt sein, sonst sähe die Abfrage nichts bzw. dürfte nichts schreiben.
+          if (!model || (!scoped && !TENANT_CONTEXT_ONLY_MODELS.has(model))) {
             return query(args);
           }
-          const scopedArgs = applyTenantScope(operation, args, tenantId);
+          const scopedArgs = scoped ? applyTenantScope(operation, args, tenantId) : (args as PlainArgs);
 
           return prisma.$transaction(async (tx) => {
             await tx.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;

@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import type { Contact } from '@orbit/domain';
-import { Button, Card, ErrorState, Input, Label, SortableTh, useSortableList } from '@orbit/ui';
+import { Button, Card, ErrorState, Input, Label, Pager, SortableTh, usePagedList, useSortableList } from '@orbit/ui';
 import { FocusNotice } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useFocusParam } from '../../../../lib/hooks/use-focus-param';
@@ -22,6 +22,7 @@ export default function ContactsPage() {
   const focus = useFocusParam('focus');
   const company = useFocusParam('company');
   const visible = sorted?.filter((c) => (focus.value ? c.id === focus.value : company.value ? c.companyId === company.value : true));
+  const paged = usePagedList(visible);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -99,7 +100,7 @@ export default function ContactsPage() {
                 </td>
               </tr>
             ) : visible && visible.length > 0 ? (
-              visible.map((contact) => (
+              paged.rows?.map((contact) => (
                 <tr key={contact.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-900">
                     {contact.firstName} {contact.lastName}
@@ -117,6 +118,7 @@ export default function ContactsPage() {
             )}
           </tbody>
         </table>
+        <Pager window={paged.window} onPage={paged.setPage} label="Kontakte" />
       </Card>
       )}
     </div>

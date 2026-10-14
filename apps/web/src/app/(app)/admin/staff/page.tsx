@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import {
   LIVE_DELIVERY_CHANNELS,
+  isAbsent,
   STAFF_CHANNEL_LABELS,
   STAFF_CONTACT_CHANNELS,
   STAFF_CSV_TEMPLATE,
@@ -43,6 +44,7 @@ interface FormState {
   responsibilities: StaffResponsibility[];
   calendarId: string;
   availabilityNote: string;
+  absences: Array<{ from: string; until: string; note: string }>;
   supervisorRef: string;
   deputyRef: string;
 }
@@ -61,6 +63,7 @@ const EMPTY: FormState = {
   responsibilities: [],
   calendarId: '',
   availabilityNote: '',
+  absences: [],
   supervisorRef: '',
   deputyRef: '',
 };
@@ -90,6 +93,7 @@ function toForm(person: StaffView): FormState {
     responsibilities: person.responsibilities as StaffResponsibility[],
     calendarId: person.calendarId ?? '',
     availabilityNote: person.availabilityNote ?? '',
+    absences: (Array.isArray(person.absences) ? person.absences : []).map((a) => ({ from: a.from, until: a.until, note: a.note ?? '' })),
     supervisorRef: person.supervisorId ?? '',
     deputyRef: person.deputyId ?? '',
   };
@@ -289,8 +293,9 @@ function StaffForm({ initial, others, onCancel, onSaved, editingId }: { initial:
   async function submit() {
     setError(null);
     try {
-      if (editingId) await update.mutateAsync({ id: editingId, patch: form });
-      else await create.mutateAsync(form);
+      const payload = { ...form, absences: form.absences.filter((a) => a.from && a.until).map((a) => ({ from: a.from, until: a.until, note: a.note.trim() })) };
+      if (editingId) await update.mutateAsync({ id: editingId, patch: payload });
+      else await create.mutateAsync(payload);
       onSaved();
     } catch (e) {
       setError(errorMessage(e, 'Die Person konnte nicht gespeichert werden.'));
@@ -383,6 +388,32 @@ function StaffForm({ initial, others, onCancel, onSaved, editingId }: { initial:
         {field('calendarId', 'Kalender (für Terminvorschläge)', { placeholder: 'Google-Kalender-ID oder E-Mail' })}
         {field('availabilityNote', 'Verfügbarkeit (Hinweis)', { placeholder: 'z. B. Mo–Do 7–16 Uhr' })}
       </div>
+      <fieldset className="space-y-2" data-testid="staff-absences">
+        <legend className="text-sm font-medium text-slate-800">Abwesenheit (Urlaub, Krankheit)</legend>
+        <p className="text-xs text-slate-600">In dieser Zeit meldet ORBIT sofort der Vertretung (bzw. der nächsten erreichbaren Person) – die abwesende Person bekommt keine Meldung.</p>
+        {form.absences.map((absence, index) => (
+          <div key={index} className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label htmlFor={`absence-from-${index}`}>Von</Label>
+              <Input id={`absence-from-${index}`} type="date" value={absence.from} onChange={(e) => set('absences', form.absences.map((a, i) => (i === index ? { ...a, from: e.target.value } : a)))} />
+            </div>
+            <div>
+              <Label htmlFor={`absence-until-${index}`}>Bis (einschließlich)</Label>
+              <Input id={`absence-until-${index}`} type="date" value={absence.until} min={absence.from || undefined} onChange={(e) => set('absences', form.absences.map((a, i) => (i === index ? { ...a, until: e.target.value } : a)))} />
+            </div>
+            <div className="min-w-40 flex-1">
+              <Label htmlFor={`absence-note-${index}`}>Hinweis (optional)</Label>
+              <Input id={`absence-note-${index}`} value={absence.note} maxLength={120} onChange={(e) => set('absences', form.absences.map((a, i) => (i === index ? { ...a, note: e.target.value } : a)))} />
+            </div>
+            <Button variant="ghost" onClick={() => set('absences', form.absences.filter((_, i) => i !== index))}>
+              Entfernen
+            </Button>
+          </div>
+        ))}
+        <Button variant="secondary" onClick={() => set('absences', [...form.absences, { from: '', until: '', note: '' }])}>
+          Abwesenheit hinzufügen
+        </Button>
+      </fieldset>
       {error ? (
         <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
@@ -474,6 +505,7 @@ export default function AdminStaffPage() {
                       {person.firstName} {person.lastName}
                     </span>
                     {!person.active ? <Badge tone="neutral" className="ml-2">Deaktiviert</Badge> : null}
+                    {person.active && isAbsent(person, new Date()) ? <Badge tone="warning" className="ml-2">Abwesend</Badge> : null}
                     {person.externalId ? <span className="block text-xs text-slate-500">{person.externalId}</span> : null}
                   </td>
                   <td className="px-4 py-3">

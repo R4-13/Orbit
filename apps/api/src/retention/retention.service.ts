@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { NotFoundError } from '@orbit/shared';
+import { NotFoundError, TERMINAL_CASE_STATUSES } from '@orbit/shared';
 import { AgentRunStatus, RetentionCategory, type RetentionPolicy } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +12,9 @@ const AGENT_RUN_TERMINAL_STATUSES: AgentRunStatus[] = [
   AgentRunStatus.FAILED,
   AgentRunStatus.REJECTED,
 ];
+
+/** Abgeschlossene Vorgänge – nur deren Texte und überholte Fakten dürfen der Aufbewahrungsfrist zum Opfer fallen. */
+const TERMINAL_CASE_STATUS_LIST = [...TERMINAL_CASE_STATUSES];
 
 export interface RetentionPreviewResult {
   category: RetentionCategory;
@@ -126,6 +129,26 @@ export class RetentionService {
     category: RetentionCategory,
     cutoffAt: Date,
   ): Promise<{ matchingCount: number; oldestMatchingAt: Date | null; newestMatchingAt: Date | null }> {
+    if (category === RetentionCategory.EMAIL_BODIES) {
+      const where = this.emailBodiesWhere(cutoffAt);
+      const scoped = this.prisma.forTenantId(tenantId);
+      const [matchingCount, oldest, newest] = await Promise.all([
+        scoped.emailMessage.count({ where }),
+        scoped.emailMessage.findFirst({ where, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+        scoped.emailMessage.findFirst({ where, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      ]);
+      return { matchingCount, oldestMatchingAt: oldest?.createdAt ?? null, newestMatchingAt: newest?.createdAt ?? null };
+    }
+    if (category === RetentionCategory.SUPERSEDED_FACTS) {
+      const where = this.supersededFactsWhere(cutoffAt);
+      const scoped = this.prisma.forTenantId(tenantId);
+      const [matchingCount, oldest, newest] = await Promise.all([
+        scoped.caseFact.count({ where }),
+        scoped.caseFact.findFirst({ where, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+        scoped.caseFact.findFirst({ where, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+      ]);
+      return { matchingCount, oldestMatchingAt: oldest?.createdAt ?? null, newestMatchingAt: newest?.createdAt ?? null };
+    }
     if (category === RetentionCategory.AGENT_RUNS) {
       const where = { startedAt: { lt: cutoffAt }, status: { in: AGENT_RUN_TERMINAL_STATUSES } };
       const [matchingCount, oldest, newest] = await Promise.all([
@@ -145,7 +168,28 @@ export class RetentionService {
     return { matchingCount, oldestMatchingAt: oldest?.createdAt ?? null, newestMatchingAt: newest?.createdAt ?? null };
   }
 
+  /** Nachrichten mit noch vorhandenem Text, älter als die Frist, die zu keinem oder einem abgeschlossenen Vorgang gehören. */
+  private emailBodiesWhere(cutoffAt: Date) {
+    return {
+      createdAt: { lt: cutoffAt },
+      AND: [{ OR: [{ bodyText: { not: null } }, { bodyPreview: { not: null } }] }, { OR: [{ caseId: null }, { case: { orchestrationStatus: { in: TERMINAL_CASE_STATUS_LIST } } }] }],
+    };
+  }
+
+  private supersededFactsWhere(cutoffAt: Date) {
+    return { isCurrent: false, createdAt: { lt: cutoffAt }, case: { orchestrationStatus: { in: TERMINAL_CASE_STATUS_LIST } } };
+  }
+
   private async deleteMatching(tenantId: string, category: RetentionCategory, cutoffAt: Date): Promise<number> {
+    if (category === RetentionCategory.EMAIL_BODIES) {
+      // Der Text wird entfernt, nicht die Zeile: Absender, Zeitpunkt, Betreff und Zuordnung bleiben als Nachweis.
+      const result = await this.prisma.forTenantId(tenantId).emailMessage.updateMany({ where: this.emailBodiesWhere(cutoffAt), data: { bodyText: null, bodyPreview: null } });
+      return result.count;
+    }
+    if (category === RetentionCategory.SUPERSEDED_FACTS) {
+      const result = await this.prisma.forTenantId(tenantId).caseFact.deleteMany({ where: this.supersededFactsWhere(cutoffAt) });
+      return result.count;
+    }
     if (category === RetentionCategory.AGENT_RUNS) {
       const result = await this.prisma.forTenantId(tenantId).agentRun.deleteMany({
         where: { startedAt: { lt: cutoffAt }, status: { in: AGENT_RUN_TERMINAL_STATUSES } },

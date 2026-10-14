@@ -89,6 +89,12 @@ jobs:
         run: pnpm audit --prod --audit-level high
         continue-on-error: true
 
+      # Codequalität (TEC-03): ungenutzte Dateien/Abhängigkeiten (knip.json) und Duplikate über 3 % (.jscpd.json) brechen den Lauf ab.
+      - name: Unused code and dependencies (knip)
+        run: npx --yes knip@5 --no-progress --reporter compact
+      - name: Duplicated code (jscpd)
+        run: npx --yes jscpd@4
+
       - name: Generate Prisma client
         run: pnpm prisma:generate
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Supplier } from '@orbit/domain';
-import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { Badge, Button, Card, ErrorState, Pager, SortableTh, usePagedList, useSortableList } from '@orbit/ui';
 import { FocusNotice } from '../../../../components/common/primitives';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { useFocusParam } from '../../../../lib/hooks/use-focus-param';
@@ -23,6 +23,7 @@ export default function SuppliersPage() {
   const rejectSupplier = useRejectSupplier();
   const focus = useFocusParam('focus');
   const visible = sorted?.filter((s) => (focus.value ? s.id === focus.value : true));
+  const paged = usePagedList(visible);
   const [error, setError] = useState<string | null>(null);
 
   async function handleApprove(id: string) {
@@ -83,7 +84,7 @@ export default function SuppliersPage() {
                 </td>
               </tr>
             ) : visible && visible.length > 0 ? (
-              visible.map((supplier) => {
+              paged.rows?.map((supplier) => {
                 const status = statusLabel(supplier.status);
                 return (
                   <tr key={supplier.id} className="hover:bg-slate-50">
@@ -120,6 +121,7 @@ export default function SuppliersPage() {
             )}
           </tbody>
         </table>
+        <Pager window={paged.window} onPage={paged.setPage} label="Lieferanten" />
       </Card>
       )}
     </div>

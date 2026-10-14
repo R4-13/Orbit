@@ -23,6 +23,8 @@ export interface RoutableStaff {
   phone?: string | null;
   teamsAddress?: string | null;
   whatsappNumber?: string | null;
+  /** Abwesenheiten in ganzen Tagen (JJJJ-MM-TT, beide Grenzen eingeschlossen); unbekanntes Format wird ignoriert. */
+  absences?: unknown;
 }
 
 const escalationShape = {
@@ -68,18 +70,37 @@ export function responsiblesFor(directory: readonly RoutableStaff[], responsibil
   return leaders.sort((a, b) => LEADERSHIP.indexOf(a.roleKind) - LEADERSHIP.indexOf(b.roleKind));
 }
 
+/** Der Kalendertag von `now` in der Zeitzone des Betriebs als JJJJ-MM-TT. */
+export function dayInZone(now: Date, timeZone = 'Europe/Berlin'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+/** Ist die Person an diesem Tag abwesend (Urlaub, Krankheit)? */
+export function isAbsent(staff: Pick<RoutableStaff, 'absences'>, now: Date, timeZone?: string): boolean {
+  if (!Array.isArray(staff.absences)) return false;
+  const today = dayInZone(now, timeZone);
+  return staff.absences.some((a) => {
+    const entry = a as { from?: unknown; until?: unknown };
+    return typeof entry.from === 'string' && typeof entry.until === 'string' && entry.from <= today && today <= entry.until;
+  });
+}
+
 export interface EscalationStep {
   /** 0 = zuständige Person, danach Vertretung, Vorgesetzter, Leitung. */
   level: 0 | 1 | 2 | 3;
   role: 'RESPONSIBLE' | 'DEPUTY' | 'SUPERVISOR' | 'LEADERSHIP';
   staff: RoutableStaff;
+  /** Die Person ist heute abwesend: sie wird nicht angeschrieben, solange jemand anderes erreichbar ist. */
+  absent?: boolean;
+  /** Diese Person übernimmt, weil die zuständige Person abwesend ist (die erste erreichbare Stufe nach ihr). */
+  standIn?: boolean;
 }
 
 /**
  * Die Eskalationskette einer zuständigen Person: sie selbst, ihre Vertretung, ihr Vorgesetzter, die Leitung. Inaktive Personen (ausgeschieden) werden übersprungen,
  * jede Person kommt nur einmal vor (die höchste Stufe, auf der sie auftaucht, ist die früheste).
  */
-export function escalationChain(directory: readonly RoutableStaff[], responsibleId: string): EscalationStep[] {
+export function escalationChain(directory: readonly RoutableStaff[], responsibleId: string, now?: Date, timeZone?: string): EscalationStep[] {
   const byId = new Map(directory.map((s) => [s.id, s]));
   const steps: EscalationStep[] = [];
   const seen = new Set<string>();
@@ -94,7 +115,14 @@ export function escalationChain(directory: readonly RoutableStaff[], responsible
   push(2, 'SUPERVISOR', responsible?.supervisorId ? byId.get(responsible.supervisorId) : undefined);
   // Hat die Kette keinen Vorgesetzten, ist es die Leitung; ist die Person selbst die Leitung, gibt es keine weitere Stufe.
   for (const leader of directory.filter((s) => s.active && LEADERSHIP.includes(s.roleKind)).sort((a, b) => LEADERSHIP.indexOf(a.roleKind) - LEADERSHIP.indexOf(b.roleKind))) push(3, 'LEADERSHIP', leader);
-  return steps;
+  if (!now) return steps;
+  // Abwesenheiten: abwesende Personen werden markiert; ist die zuständige Person abwesend, übernimmt die erste erreichbare Stufe nach ihr (Vertretung, sonst Vorgesetzte/Leitung).
+  const marked = steps.map((step) => (isAbsent(step.staff, now, timeZone) ? { ...step, absent: true } : step));
+  if (marked[0]?.level === 0 && marked[0].absent) {
+    const next = marked.findIndex((step, index) => index > 0 && !step.absent);
+    if (next > 0) marked[next] = { ...marked[next]!, standIn: true };
+  }
+  return marked;
 }
 
 export type EscalationPhase = 'INITIAL' | 'REMINDER' | 'ESCALATED';
@@ -110,9 +138,10 @@ export function escalationPhase(minutesWaiting: number, policy: EscalationPolicy
 
 /** Wer wird in welcher Phase informiert? Erinnerung: zuständige Person und Vertretung; Eskalation: zusätzlich Vorgesetzter und Leitung. */
 export function recipientsForPhase(chain: readonly EscalationStep[], phase: EscalationPhase): EscalationStep[] {
-  if (phase === 'INITIAL') return chain.filter((s) => s.level === 0);
-  if (phase === 'REMINDER') return chain.filter((s) => s.level <= 1);
-  return [...chain];
+  const byPhase = phase === 'INITIAL' ? chain.filter((s) => s.level === 0 || s.standIn) : phase === 'REMINDER' ? chain.filter((s) => s.level <= 1 || s.standIn) : [...chain];
+  // Abwesende werden nicht angeschrieben – es sei denn, es wäre sonst niemand erreichbar (ein Eingang bleibt nie ohne Adressat, ein Notfall schon gar nicht).
+  const available = byPhase.filter((s) => !s.absent);
+  return available.length > 0 ? available : byPhase;
 }
 
 export type DeliveryChannel = 'EMAIL' | 'TEAMS' | 'WHATSAPP' | 'SMS' | 'PHONE';
@@ -183,6 +212,8 @@ export interface StaffNoticeInput {
   waitingMinutes: number;
   /** Wer zuerst zuständig war – bei Vertretung und Eskalation wichtig („Anna Beispiel hat nicht reagiert“). */
   responsibleName?: string;
+  /** Die zuständige Person ist abwesend, der Empfänger übernimmt für sie (schon in der ersten Meldung). */
+  standInFor?: string;
   link: string;
   appName: string;
 }
@@ -224,6 +255,7 @@ export function composeStaffNotice(input: StaffNoticeInput): { subject: string; 
     emergency ? `${input.appName} hat einen Notfall erkannt: „${input.caseTitle}“.` : `Der Vorgang „${input.caseTitle}“ ${KIND_TEXT[input.kind]}.`,
     ...(input.reason ? [`Grund: ${input.reason}`] : []),
     ...(why ? ['', why] : []),
+    ...(input.standInFor ? ['', `${input.standInFor} ist heute abwesend; Sie erhalten die Meldung als Vertretung.`] : []),
     '',
     `Vorgang öffnen: ${input.link}`,
     '',

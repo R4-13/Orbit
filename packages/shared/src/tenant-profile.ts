@@ -67,8 +67,47 @@ export const UpdateTenantProfileSchema = z
   .strict();
 export type UpdateTenantProfileInput = z.infer<typeof UpdateTenantProfileSchema>;
 
+/**
+ * Was die KI aus einem eingefügten Text (Webseite, Flyer, Selbstbeschreibung) als Profil vorschlagen darf (AUT-10): nur die inhaltlichen Felder des Profils – nie
+ * Eskalationszeiten, Sprachen oder Automatisierungsgrad. Ein Vorschlag wird nie gespeichert, sondern zur Prüfung in das Formular übernommen.
+ */
+export const ProfileSuggestionSchema = UpdateTenantProfileSchema.pick({
+  industry: true,
+  description: true,
+  services: true,
+  exclusions: true,
+  serviceArea: true,
+  openingHours: true,
+  emergencyService: true,
+  emergencyNote: true,
+  tone: true,
+  faqs: true,
+}).partial();
+export type ProfileSuggestion = z.infer<typeof ProfileSuggestionSchema>;
+
+/** Bereinigt eine Modellantwort feldweise: ein unbrauchbares Feld (zu lang, falsches Format) verwirft nur sich selbst, nicht den ganzen Vorschlag. */
+export function sanitizeProfileSuggestion(raw: unknown): ProfileSuggestion {
+  if (typeof raw !== 'object' || raw === null) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, schema] of Object.entries(ProfileSuggestionSchema.shape)) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (value === undefined || value === null || value === '') continue;
+    const parsed = (schema as z.ZodTypeAny).safeParse(value);
+    if (parsed.success && parsed.data !== undefined) out[key] = parsed.data;
+  }
+  return out as ProfileSuggestion;
+}
+
 const optionalText = (max: number) => z.string().trim().max(max).optional().or(z.literal('').transform(() => undefined));
 const phone = z.string().trim().regex(/^\+?[0-9 ()/.-]{5,25}$/, 'Rufnummer im Format +49 171 1234567');
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum im Format JJJJ-MM-TT');
+/** Eine Abwesenheit (Urlaub, Krankheit) in ganzen Tagen, beide Grenzen eingeschlossen. */
+export const StaffAbsenceSchema = z
+  .object({ from: isoDay, until: isoDay, note: optionalText(120) })
+  .strict()
+  .refine((a) => a.until >= a.from, { message: 'Das Ende der Abwesenheit liegt vor dem Beginn.', path: ['until'] });
+export type StaffAbsence = z.infer<typeof StaffAbsenceSchema>;
 
 export const StaffInputSchema = z
   .object({
@@ -85,6 +124,8 @@ export const StaffInputSchema = z
     responsibilities: z.array(z.enum(STAFF_RESPONSIBILITIES)).max(7).default([]),
     calendarId: optionalText(200),
     availabilityNote: optionalText(300),
+    /** Abwesenheiten; ohne Angabe bleiben bestehende unverändert (z. B. beim CSV-Abgleich). */
+    absences: z.array(StaffAbsenceSchema).max(20).optional(),
     /** Verweis auf den Vorgesetzten / die Vertretung: Personalnummer oder E-Mail-Adresse einer anderen Person im Verzeichnis (beim Speichern aufgelöst). */
     supervisorRef: optionalText(200),
     deputyRef: optionalText(200),

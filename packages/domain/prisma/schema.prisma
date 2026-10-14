@@ -1597,6 +1597,11 @@ enum RetentionCategory {
   /// daten) früher zu löschen als den bloßen Nachweis, dass ein Agentenlauf
   /// stattfand.
   TOOL_INVOCATIONS
+  /// Nachrichtentexte (`bodyText`, `bodyPreview`) eingegangener und gesendeter E-Mails von abgeschlossenen oder keinem Vorgang zugeordneten Nachrichten: der Text wird
+  /// entfernt, die Zeile (Absender, Zeitpunkt, Betreff, Zuordnung, Einstufung) bleibt als Nachweis. Offene Vorgänge bleiben unberührt.
+  EMAIL_BODIES
+  /// Überholte Fassungen von Vorgangs-Fakten (`isCurrent=false`) abgeschlossener Vorgänge; die aktuellen Fakten bleiben als Ergebnis des Vorgangs erhalten.
+  SUPERSEDED_FACTS
 }
 
 /// Pro Tenant und Kategorie konfigurierbar. **Keine Zeile = unbegrenzte
@@ -2763,6 +2768,8 @@ model StaffMember {
   /// Google-Kalender-ID für die Verfügbarkeit bei Terminvorschlägen (z. B. Monteure).
   calendarId       String?             @map("calendar_id")
   availabilityNote String?             @map("availability_note")
+  /// Abwesenheiten (Urlaub, Krankheit): [{ from: 'YYYY-MM-DD', until: 'YYYY-MM-DD', note? }] – an diesen Tagen übernimmt die Vertretung die Meldungen.
+  absences         Json?
   userId           String?             @map("user_id")
   /// Vorgesetzte Person: wird informiert, wenn die zuständige Person nicht reagiert (Eskalation).
   supervisorId     String?             @map("supervisor_id")

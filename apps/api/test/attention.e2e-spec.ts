@@ -282,6 +282,26 @@ describe('Attention: notify, remind, escalate (e2e)', () => {
       await attention.syncTenant(tenantId, new Date());
     });
 
+    it('Abwesenheit: ist die zuständige Person im Urlaub, meldet schon die erste Meldung der Vertretung – mit Hinweis, für wen sie einspringt (AUT-05)', async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const tomorrow = new Date(Date.now() + 24 * HOUR).toISOString().slice(0, 10);
+      await request(app.getHttpServer()).patch(`/api/v1/staff/${staffIds.bea}`).set(auth()).send({ absences: [{ from: today, until: tomorrow, note: 'Urlaub' }] }).expect(200);
+      const c = await createCase();
+      await attention.syncTenant(tenantId, new Date());
+      expect(recipients()).toEqual(['vera@betrieb.test']);
+      expect(sent[0]!.text).toContain('Bea Buchhaltung ist heute abwesend');
+      await prisma.forTenantId(tenantId).case.update({ where: { id: c.id }, data: { orchestrationStatus: 'COMPLETED' } });
+      await attention.syncTenant(tenantId, new Date());
+      // Nach der Abwesenheit gilt wieder die normale Kette.
+      await request(app.getHttpServer()).patch(`/api/v1/staff/${staffIds.bea}`).set(auth()).send({ absences: [] }).expect(200);
+      sent = [];
+      const c2 = await createCase();
+      await attention.syncTenant(tenantId, new Date());
+      expect(recipients()).toEqual(['bea@betrieb.test']);
+      await prisma.forTenantId(tenantId).case.update({ where: { id: c2.id }, data: { orchestrationStatus: 'COMPLETED' } });
+      await attention.syncTenant(tenantId, new Date());
+    });
+
     it('der Takt (sweep) ist abschaltbar und fasst nur Mandanten mit erfassten Mitarbeitern an', async () => {
       const previous = process.env.ESCALATION_ENABLED;
       // Im Test ist der Takt aus (ESCALATION_ENABLED=false in e2e-env): kein Mandant wird angefasst, es geht nichts hinaus.

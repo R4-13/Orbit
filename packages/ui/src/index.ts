@@ -11,5 +11,7 @@ export * from './components/trend-bar-chart';
 export * from './components/segmented-bar';
 export * from './components/workflow-timeline';
 export * from './hooks/use-sortable-list';
+export * from './hooks/use-paged-list';
+export * from './components/pager';
 export * from './lib/donut-segments';
 export * from './lib/segmented-bar-parts';

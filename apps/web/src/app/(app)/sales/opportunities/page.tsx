@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import type { Opportunity } from '@orbit/domain';
-import { Badge, Button, Card, ErrorState, SortableTh, useSortableList } from '@orbit/ui';
+import { Badge, Button, Card, ErrorState, Pager, SortableTh, usePagedList, useSortableList } from '@orbit/ui';
 import { ApiError, errorMessage } from '../../../../lib/api-client';
 import { formatListDateTime } from '../../../../lib/home-format';
 import { formatAmount } from '../../../../lib/format';
@@ -21,6 +21,7 @@ const SORT_ACCESSORS = {
 export default function OpportunitiesPage() {
   const { data: opportunities, isLoading, isError, error: loadError, refetch } = useOpportunities();
   const { sorted, sort, requestSort } = useSortableList(opportunities, SORT_ACCESSORS);
+  const paged = usePagedList(sorted);
   const { data: companies } = useCompanies();
   const createOpportunity = useCreateOpportunity();
 
@@ -137,7 +138,7 @@ export default function OpportunitiesPage() {
                 </td>
               </tr>
             ) : sorted && sorted.length > 0 ? (
-              sorted.map((opportunity) => {
+              paged.rows?.map((opportunity) => {
                 const stage = statusLabel(opportunity.stage);
                 return (
                   <tr key={opportunity.id} className="hover:bg-slate-50">
@@ -168,6 +169,7 @@ export default function OpportunitiesPage() {
             )}
           </tbody>
         </table>
+        <Pager window={paged.window} onPage={paged.setPage} label="Verkaufschancen" />
       </Card>
       )}
     </div>

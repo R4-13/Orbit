@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STAFF_CSV_TEMPLATE, parseCsv, parseStaffCsv } from './staff-csv';
-import { StaffInputSchema, UpdateTenantProfileSchema, channelAddressProblem, profileForPrompt } from './tenant-profile';
+import { StaffInputSchema, UpdateTenantProfileSchema, channelAddressProblem, profileForPrompt, sanitizeProfileSuggestion } from './tenant-profile';
 
 describe('Mitarbeiter-Import (CSV)', () => {
   it('die mitgelieferte Beispieldatei ist selbst gültig: zwei Personen, Rolle, Kanal, Zuständigkeiten, Notdienst, Kalender', () => {
@@ -111,5 +111,32 @@ describe('Betriebsprofil', () => {
     expect(text).toContain('Notdienst: ja (rund um die Uhr unter der Notdienst-Nummer).');
     expect(text).toContain('„Machen Sie Fliesenarbeiten?“ → Ja, im Rahmen einer Badsanierung.');
     expect(profileForPrompt({ emergencyService: false })).toContain('Notdienst: nein');
+  });
+});
+
+describe('sanitizeProfileSuggestion (AUT-10)', () => {
+  it('übernimmt brauchbare Felder und verwirft unbrauchbare einzeln', () => {
+    const result = sanitizeProfileSuggestion({
+      industry: 'Heizung und Sanitär',
+      services: ['Heizungswartung', 'Badsanierung'],
+      openingHours: [{ days: ['MON', 'TUE'], from: '07:00', to: '16:00' }],
+      emergencyService: true,
+      tone: 'ERFUNDEN',
+      faqs: [{ question: 'Machen Sie Badsanierung?', answer: 'Ja, im Raum Berlin.' }],
+      escalationPolicy: { reminderAfterMinutes: 1 },
+      languages: ['xx'],
+    });
+    expect(result).toEqual({
+      industry: 'Heizung und Sanitär',
+      services: ['Heizungswartung', 'Badsanierung'],
+      openingHours: [{ days: ['MON', 'TUE'], from: '07:00', to: '16:00' }],
+      emergencyService: true,
+      faqs: [{ question: 'Machen Sie Badsanierung?', answer: 'Ja, im Raum Berlin.' }],
+    }); // ungültige Tonalität verworfen; Eskalation und Sprachen sind nie Teil eines Vorschlags
+  });
+  it('liefert bei unbrauchbarer Eingabe einen leeren Vorschlag', () => {
+    expect(sanitizeProfileSuggestion(null)).toEqual({});
+    expect(sanitizeProfileSuggestion('text')).toEqual({});
+    expect(sanitizeProfileSuggestion({ industry: '', services: [] })).toEqual({ services: [] });
   });
 });

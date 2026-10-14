@@ -220,7 +220,7 @@ export class AttentionService {
     // Je Person die höchste Rolle in der Kette (Vertretung vor Vorgesetztem vor Leitung) – die erste zuständige Person nennt die Meldung als Anlass.
     const targets = new Map<string, { step: EscalationStep; responsibleName: string }>();
     for (const responsible of responsibles) {
-      for (const step of recipientsForPhase(escalationChain(staff, responsible.id), phase)) {
+      for (const step of recipientsForPhase(escalationChain(staff, responsible.id, now), phase)) {
         if (!targets.has(step.staff.id)) targets.set(step.staff.id, { step, responsibleName: fullName(responsible) });
       }
     }
@@ -245,6 +245,7 @@ export class AttentionService {
         reason: item.reason,
         waitingMinutes,
         responsibleName: step.role === 'RESPONSIBLE' ? undefined : responsibleName,
+        standInFor: step.standIn ? responsibleName : undefined,
         link: `${this.env.WEB_BASE_URL.replace(/\/$/, '')}/cases/${item.caseId}`,
         appName,
       });

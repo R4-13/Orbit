@@ -5,7 +5,7 @@ import { PROFILE_TONES, PROFILE_TONE_LABELS, WEEKDAYS, WEEKDAY_LABELS, type Prof
 import { Button, Card, ErrorState, Input, Label } from '@orbit/ui';
 import { OnboardingChecklist } from '../../../../components/common/onboarding-checklist';
 import { errorMessage } from '../../../../lib/api-client';
-import { useTenantProfile, useUpdateTenantProfile } from '../../../../lib/hooks/use-organization';
+import { useSuggestProfile, useTenantProfile, useUpdateTenantProfile, type ProfileSuggestionResponse } from '../../../../lib/hooks/use-organization';
 
 interface HoursRow {
   days: Weekday[];
@@ -52,6 +52,9 @@ const textarea =
 export default function AdminCompanyPage() {
   const { data, isLoading, isError, error, refetch } = useTenantProfile();
   const update = useUpdateTenantProfile();
+  const suggest = useSuggestProfile();
+  const [pasted, setPasted] = useState('');
+  const [suggestNote, setSuggestNote] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [form, setForm] = useState<FormState | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -98,6 +101,44 @@ export default function AdminCompanyPage() {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
   };
 
+  /** Übernimmt einen Vorschlag der KI in das Formular (ungespeichert): nur Felder, zu denen die KI etwas gefunden hat. */
+  function applySuggestion(response: ProfileSuggestionResponse) {
+    const s = response.suggestion;
+    setSaved(false);
+    setForm((prev) =>
+      prev
+        ? {
+            ...prev,
+            industry: s.industry ?? prev.industry,
+            description: s.description ?? prev.description,
+            services: s.services ? s.services.join('\n') : prev.services,
+            exclusions: s.exclusions ? s.exclusions.join('\n') : prev.exclusions,
+            serviceArea: s.serviceArea ?? prev.serviceArea,
+            openingHours: s.openingHours ? s.openingHours.map((h) => ({ days: h.days as Weekday[], from: h.from, to: h.to })) : prev.openingHours,
+            emergencyService: s.emergencyService ?? prev.emergencyService,
+            emergencyNote: s.emergencyNote ?? prev.emergencyNote,
+            tone: (s.tone as ProfileTone | undefined) ?? prev.tone,
+            faqs: s.faqs ?? prev.faqs,
+          }
+        : prev,
+    );
+  }
+
+  async function runSuggestion() {
+    setSuggestNote(null);
+    try {
+      const response = await suggest.mutateAsync(pasted);
+      if (response.fields.length === 0) {
+        setSuggestNote({ tone: 'error', text: 'Im Text wurden keine passenden Angaben gefunden. Es wurde nichts übernommen.' });
+        return;
+      }
+      applySuggestion(response);
+      setSuggestNote({ tone: 'ok', text: `Vorschlag übernommen (${response.fields.length} Felder). Bitte unten prüfen, ändern und erst dann speichern – bisher ist nichts gespeichert.` });
+    } catch (e) {
+      setSuggestNote({ tone: 'error', text: errorMessage(e, 'Der Vorschlag konnte nicht erstellt werden.') });
+    }
+  }
+
   async function save() {
     if (!form) return;
     setSaveError(null);
@@ -139,6 +180,24 @@ export default function AdminCompanyPage() {
       </div>
 
       <OnboardingChecklist state={data} />
+
+      <Card className="space-y-3 p-5" data-testid="profile-suggestion">
+        <h2 className="text-base font-semibold text-slate-900">Profil aus einem Text vorschlagen</h2>
+        <p className="text-sm text-slate-600">
+          Fügen Sie einen Text über Ihren Betrieb ein (Webseite, Flyer, Selbstbeschreibung). ORBIT füllt daraus das Formular vor – nur mit dem, was im Text steht. Nichts wird ohne Ihre Prüfung gespeichert.
+        </p>
+        <textarea id="profile-text" aria-label="Text über Ihren Betrieb" className={textarea} rows={5} maxLength={40000} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="z. B. Wir sind ein Meisterbetrieb für Heizung und Sanitär in Köln. Montag bis Freitag von 7 bis 16 Uhr …" />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="secondary" disabled={suggest.isPending || pasted.trim().length < 40} onClick={() => void runSuggestion()}>
+            {suggest.isPending ? 'Wird gelesen …' : 'Vorschlag erstellen'}
+          </Button>
+          {suggestNote ? (
+            <p role={suggestNote.tone === 'error' ? 'alert' : 'status'} className={suggestNote.tone === 'error' ? 'text-sm text-red-700' : 'text-sm text-green-800'}>
+              {suggestNote.text}
+            </p>
+          ) : null}
+        </div>
+      </Card>
 
       <Card className="space-y-4 p-5">
         <h2 className="text-base font-semibold text-slate-900">Betrieb und Leistungen</h2>

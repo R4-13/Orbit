@@ -39,6 +39,27 @@ export function useUpdateTenantProfile() {
   });
 }
 
+export interface ProfileSuggestionResponse {
+  suggestion: {
+    industry?: string;
+    description?: string;
+    services?: string[];
+    exclusions?: string[];
+    serviceArea?: string;
+    openingHours?: Array<{ days: string[]; from: string; to: string }>;
+    emergencyService?: boolean;
+    emergencyNote?: string;
+    tone?: string;
+    faqs?: Array<{ question: string; answer: string }>;
+  };
+  fields: string[];
+}
+
+/** Profil aus einem eingefügten Text vorschlagen (AUT-10): speichert nichts, der Vorschlag wird im Formular geprüft. */
+export function useSuggestProfile() {
+  return useMutation({ mutationFn: (text: string) => apiFetch<ProfileSuggestionResponse>('/v1/tenant/profile/suggest', { method: 'POST', body: JSON.stringify({ text }) }) });
+}
+
 export interface StaffView {
   id: string;
   externalId: string | null;
@@ -54,6 +75,7 @@ export interface StaffView {
   responsibilities: string[];
   calendarId: string | null;
   availabilityNote: string | null;
+  absences?: Array<{ from: string; until: string; note?: string }> | null;
   supervisorId: string | null;
   deputyId: string | null;
   supervisorName: string | null;

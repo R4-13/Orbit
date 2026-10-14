@@ -328,6 +328,8 @@ export class StaffService {
       preferredChannel: input.preferredChannel,
       calendarId: input.calendarId ?? null,
       availabilityNote: input.availabilityNote ?? null,
+      // Ohne Angabe (z. B. CSV-Abgleich) bleiben bestehende Abwesenheiten unberührt.
+      ...(input.absences !== undefined ? { absences: input.absences.map((a) => ({ from: a.from, until: a.until, ...(a.note ? { note: a.note } : {}) })) } : {}),
       active: input.active,
     };
   }
@@ -347,6 +349,7 @@ export class StaffService {
       responsibilities: row.responsibilities,
       calendarId: row.calendarId ?? undefined,
       availabilityNote: row.availabilityNote ?? undefined,
+      absences: Array.isArray(row.absences) ? row.absences : undefined,
       active: row.active,
     };
   }

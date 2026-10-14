@@ -75,7 +75,7 @@ describe('Copilot / Sonde (e2e)', () => {
         status: 'ACTIVE',
       },
     });
-    await prisma.userRole.create({ data: { userId: otherUser.id, roleId: tenantAAdminRole.id } });
+    await prisma.forTenantId(tenantA.id).userRole.create({ data: { userId: otherUser.id, roleId: tenantAAdminRole.id } });
     const loginAOther = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({ email: otherUser.email, password: PASSWORD })
