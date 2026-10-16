@@ -117,7 +117,7 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| UX-01 | AC-18: automatisierter **Mandantenwechsel A/B im Browser** | ENG | S | P2 | |
+| UX-01 | ~~AC-18: automatisierter Mandantenwechsel A/B im Browser~~ **umgesetzt** (`apps/web/e2e/tenant-switch.spec.ts`: zweiter Betrieb per Skript, andere Primärfarbe, kein Datenrest im Wechsel, Rückkehr zu A) | ENG | S | erledigt | |
 | UX-02 | AC-19: **manuelle Screenreader- und Mobile-Tastaturprüfung** | MAN | S | P2 | nur automatisiert (axe) geprüft |
 | UX-03 | ~~Ablehnungsgrund bei Freigaben~~ **umgesetzt** (`ASSUMPTIONS.md` #562) | ENG | S | erledigt | |
 | UX-04 | Kontakte, Opportunities, Lieferanten und Admin-Unterseiten **vertiefen** (heute nur einheitlich gestaltet) | ENG | M | P3 | |
