@@ -70,19 +70,19 @@ function stripMarkup(markup: string): string {
     .replace(/&#39;/g, "'");
 }
 
-async function pdfText(bytes: Buffer): Promise<AttachmentText> {
+async function pdfText(bytes: Buffer, maxChars: number): Promise<AttachmentText> {
   const pdf = await getDocumentProxy(new Uint8Array(bytes));
   const { text } = await extractText(pdf, { mergePages: true });
   const merged = Array.isArray(text) ? text.join('\n') : text;
   if (cleaned(merged).length < MIN_PDF_TEXT_CHARS) {
     return { status: 'NO_TEXT', note: 'PDF ohne Textebene (vermutlich ein Scan); eine Texterkennung ist nicht eingerichtet' };
   }
-  const result = limited(merged);
+  const result = limited(merged, maxChars);
   if (pdf.numPages > MAX_PDF_PAGES) result.truncated = true;
   return result;
 }
 
-function docxText(bytes: Buffer): AttachmentText {
+function docxText(bytes: Buffer, maxChars: number): AttachmentText {
   const files = unzipSync(new Uint8Array(bytes), { filter: (file) => file.name === 'word/document.xml' && file.originalSize <= MAX_DOCX_XML_BYTES });
   const xml = files['word/document.xml'];
   if (!xml) return { status: 'NO_TEXT', note: 'Word-Datei ohne lesbaren Text' };
@@ -90,11 +90,12 @@ function docxText(bytes: Buffer): AttachmentText {
     .replace(/<w:tab\s*\/>/g, '\t')
     .replace(/<\/w:p>|<w:br\s*\/>/g, '\n')
     .replace(/<[^>]+>/g, '');
-  return limited(stripMarkup(text));
+  return limited(stripMarkup(text), maxChars);
 }
 
-export async function extractAttachmentText(input: { fileName: string; mimeType: string; bytes: Buffer }): Promise<AttachmentText> {
+export async function extractAttachmentText(input: { fileName: string; mimeType: string; bytes: Buffer; /** Längere Auszüge, z. B. für das Betriebsprofil; Standard: {@link MAX_EXCERPT_CHARS}. */ maxChars?: number }): Promise<AttachmentText> {
   const { mimeType, bytes } = input;
+  const maxChars = input.maxChars ?? MAX_EXCERPT_CHARS;
   const type = mimeType.toLowerCase().split(';')[0]?.trim() ?? '';
   if (bytes.byteLength === 0) return { status: 'NO_TEXT', note: 'leere Datei' };
   if (bytes.byteLength > MAX_ATTACHMENT_BYTES) return { status: 'TOO_LARGE', note: `größer als ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB, nicht gelesen` };
@@ -102,10 +103,10 @@ export async function extractAttachmentText(input: { fileName: string; mimeType:
   const signature = verifyFileSignature(type, bytes);
   if (signature.status === 'MISMATCH') return { status: 'REJECTED', note: 'Inhalt passt nicht zur angegebenen Dateiart, nicht gelesen' };
   try {
-    if (type === 'application/pdf') return await pdfText(bytes);
-    if (type === DOCX_TYPE) return docxText(bytes);
-    if (type === 'text/html') return limited(stripMarkup(bytes.toString('utf8')));
-    if (TEXT_TYPES.has(type)) return limited(bytes.toString('utf8'));
+    if (type === 'application/pdf') return await pdfText(bytes, maxChars);
+    if (type === DOCX_TYPE) return docxText(bytes, maxChars);
+    if (type === 'text/html') return limited(stripMarkup(bytes.toString('utf8')), maxChars);
+    if (TEXT_TYPES.has(type)) return limited(bytes.toString('utf8'), maxChars);
     if (type.startsWith('image/')) return { status: 'NO_TEXT', note: 'Bild; eine Texterkennung ist nicht eingerichtet' };
     return { status: 'UNSUPPORTED', note: 'Dateiart wird nicht gelesen' };
   } catch {

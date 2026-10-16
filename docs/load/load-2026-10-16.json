@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-10-16T10:17:13.937Z",
+  "base": "http://localhost:3002",
+  "concurrency": 10,
+  "seconds": 15,
+  "errorRate": 0,
+  "failures": [
+    "Rechnungen: p95 543 ms über dem Budget von 500 ms",
+    "Startseite (Zusammenfassung): p95 1547 ms über dem Budget von 1200 ms"
+  ],
+  "results": [
+    {
+      "name": "Kontoabfrage",
+      "path": "/api/v1/auth/me",
+      "budgetMs": 150,
+      "requests": 2274,
+      "errors": 0,
+      "p50": 59,
+      "p95": 112,
+      "p99": 158,
+      "perSecond": 151.3,
+      "withinBudget": true
+    },
+    {
+      "name": "Vorgänge",
+      "path": "/api/v1/cases",
+      "budgetMs": 400,
+      "requests": 700,
+      "errors": 0,
+      "p50": 212,
+      "p95": 286,
+      "p99": 315,
+      "perSecond": 46.2,
+      "withinBudget": true
+    },
+    {
+      "name": "Aufgaben",
+      "path": "/api/v1/tasks",
+      "budgetMs": 400,
+      "requests": 610,
+      "errors": 0,
+      "p50": 235,
+      "p95": 390,
+      "p99": 453,
+      "perSecond": 40.4,
+      "withinBudget": true
+    },
+    {
+      "name": "Rechnungen",
+      "path": "/api/v1/invoices",
+      "budgetMs": 500,
+      "requests": 352,
+      "errors": 0,
+      "p50": 434,
+      "p95": 543,
+      "p99": 610,
+      "perSecond": 23,
+      "withinBudget": false
+    },
+    {
+      "name": "Freigaben",
+      "path": "/api/v1/approvals",
+      "budgetMs": 500,
+      "requests": 427,
+      "errors": 0,
+      "p50": 353,
+      "p95": 451,
+      "p99": 521,
+      "perSecond": 27.8,
+      "withinBudget": true
+    },
+    {
+      "name": "Lieferanten",
+      "path": "/api/v1/suppliers",
+      "budgetMs": 400,
+      "requests": 725,
+      "errors": 0,
+      "p50": 193,
+      "p95": 369,
+      "p99": 493,
+      "perSecond": 47.8,
+      "withinBudget": true
+    },
+    {
+      "name": "Kontakte",
+      "path": "/api/v1/contacts",
+      "budgetMs": 400,
+      "requests": 1181,
+      "errors": 0,
+      "p50": 123,
+      "p95": 176,
+      "p99": 196,
+      "perSecond": 78,
+      "withinBudget": true
+    },
+    {
+      "name": "Suche",
+      "path": "/api/v1/search?q=muster",
+      "budgetMs": 500,
+      "requests": 861,
+      "errors": 0,
+      "p50": 163,
+      "p95": 275,
+      "p99": 413,
+      "perSecond": 57.1,
+      "withinBudget": true
+    },
+    {
+      "name": "Startseite (Zusammenfassung)",
+      "path": "/api/v1/dashboard/snapshot?view=TEAM&period=WEEK",
+      "budgetMs": 1200,
+      "requests": 124,
+      "errors": 0,
+      "p50": 1222,
+      "p95": 1547,
+      "p99": 1591,
+      "perSecond": 7.9,
+      "withinBudget": false
+    },
+    {
+      "name": "Bericht Eingriffe",
+      "path": "/api/v1/reports/interventions?days=30",
+      "budgetMs": 1500,
+      "requests": 632,
+      "errors": 0,
+      "p50": 228,
+      "p95": 327,
+      "p99": 453,
+      "perSecond": 41.7,
+      "withinBudget": true
+    },
+    {
+      "name": "Mitarbeiterverzeichnis",
+      "path": "/api/v1/staff",
+      "budgetMs": 400,
+      "requests": 1711,
+      "errors": 0,
+      "p50": 83,
+      "p95": 136,
+      "p99": 170,
+      "perSecond": 113.8,
+      "withinBudget": true
+    },
+    {
+      "name": "Betriebsprofil",
+      "path": "/api/v1/tenant/profile",
+      "budgetMs": 400,
+      "requests": 1437,
+      "errors": 0,
+      "p50": 93,
+      "p95": 185,
+      "p99": 245,
+      "perSecond": 95.5,
+      "withinBudget": true
+    }
+  ]
+}

@@ -58,8 +58,10 @@ export interface ProfileSuggestionResponse {
 }
 
 /** Profil aus einem eingefügten Text vorschlagen (AUT-10): speichert nichts, der Vorschlag wird im Formular geprüft. */
+export type ProfileSuggestionSource = { text: string } | { fileName: string; mimeType: string; contentBase64: string };
+
 export function useSuggestProfile() {
-  return useMutation({ mutationFn: (text: string) => apiFetch<ProfileSuggestionResponse>('/v1/tenant/profile/suggest', { method: 'POST', body: JSON.stringify({ text }) }) });
+  return useMutation({ mutationFn: (source: ProfileSuggestionSource) => apiFetch<ProfileSuggestionResponse>('/v1/tenant/profile/suggest', { method: 'POST', body: JSON.stringify(source) }) });
 }
 
 export interface StaffView {

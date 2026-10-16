@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { MockLLMProvider } from '@orbit/agent-core';
+import { strToU8, zipSync } from 'fflate';
 import request from 'supertest';
 import { LLM_PROVIDER } from '../src/agent/agent.tokens';
 import { AiProviderResolverService } from '../src/ai-providers/ai-provider-resolver.service';
@@ -68,6 +69,26 @@ describe('Profil-Vorschlag aus Text (e2e)', () => {
     expect(res.body.suggestion).toMatchObject({ industry: 'Heizung und Sanitär', exclusions: ['Elektroarbeiten'], emergencyService: true });
     // Der Vorschlag ist nur ein Vorschlag: im Profil steht danach nichts.
     expect(await prisma.forTenantId(tenantId).tenantProfile.findUnique({ where: { tenantId } })).toBeNull();
+  });
+
+  it('aus einer Datei: der gelesene Text geht an die KI (als untrusted Inhalt); ohne lesbaren Text gibt es einen verständlichen Hinweis', async () => {
+    const docx = zipSync({ 'word/document.xml': strToU8(`<w:document xmlns:w="x"><w:body><w:p><w:r><w:t>${TEXT}</w:t></w:r></w:p></w:body></w:document>`) });
+    const postFile = (fileName: string, mimeType: string, bytes: Uint8Array) =>
+      api().post('/api/v1/tenant/profile/suggest').set({ Authorization: `Bearer ${token}` }).send({ fileName, mimeType, contentBase64: Buffer.from(bytes).toString('base64') });
+
+    // Ein Bild hat keinen Text: kein Aufruf der KI, klarer Hinweis.
+    const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const noText = await postFile('flyer.png', 'image/png', png).expect(400);
+    expect(JSON.stringify(noText.body)).toContain('kein Text gelesen werden');
+
+    const live = { providerName: 'scripted-live', modelName: 'scripted', complete: (r: Parameters<MockLLMProvider['complete']>[0]) => llm.complete(r) };
+    resolveSpy = jest.spyOn(app.get(AiProviderResolverService), 'resolveForTenant').mockResolvedValue(live as never);
+    llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_profile_suggestion', input: { industry: 'Heizung und Sanitär', serviceArea: 'Köln' } }], stopReason: 'tool_use' });
+    llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
+    const res = await postFile('profil.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', docx).expect(200);
+    expect(res.body.fields).toEqual(['industry', 'serviceArea']);
+    const sent = llm.getRequests().filter((r) => r.tools.some((t) => t.name === 'submit_profile_suggestion')).at(-1);
+    expect(JSON.stringify(sent?.messages[0]?.content)).toContain('Meisterbetrieb für Heizung und Sanitär');
   });
 
   it('die Antwort einer Person ohne Berechtigung wird abgewiesen', async () => {

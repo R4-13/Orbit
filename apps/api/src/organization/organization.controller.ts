@@ -25,6 +25,12 @@ function parseBody<S extends z.ZodTypeAny>(schema: S, body: unknown): z.infer<S>
 const CsvBodySchema = z.object({ csv: z.string().min(1).max(1_500_000), deactivateMissing: z.boolean().optional() }).strict();
 const SyncBodySchema = z.object({ staff: z.array(z.unknown()).min(1).max(2000), deactivateMissing: z.boolean().optional(), dryRun: z.boolean().optional() }).strict();
 
+/** Entweder ein eingefügter Text oder eine Datei (Base64, bis etwa 1,4 MB wegen der Größe der Anfrage). */
+const SuggestBodySchema = z.union([
+  z.object({ text: z.string().max(40_000) }).strict(),
+  z.object({ fileName: z.string().min(1).max(255), mimeType: z.string().min(3).max(120), contentBase64: z.string().min(4).max(1_900_000) }).strict(),
+]);
+
 /** Betriebsprofil und Einrichtungs-Checkliste (`/tenant/profile`). Lesen wie Schreiben erfordern `tenant.profile.manage` (TENANT_ADMIN). */
 @ApiTags('organization')
 @ApiBearerAuth()
@@ -46,7 +52,8 @@ export class TenantProfileController {
   @Post('suggest')
   @HttpCode(HttpStatus.OK)
   suggest(@CurrentUser() user: AuthenticatedUser, @Body() body: unknown) {
-    return this.suggestions.suggest(user.tenantId, parseBody(z.object({ text: z.string().max(40_000) }).strict(), body).text);
+    const parsed = parseBody(SuggestBodySchema, body);
+    return 'text' in parsed ? this.suggestions.suggest(user.tenantId, parsed.text) : this.suggestions.suggestFromFile(user.tenantId, parsed);
   }
 
   @Put()

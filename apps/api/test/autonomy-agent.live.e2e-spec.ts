@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
+import { scoreAgentRecord } from '../src/evaluation/agent-evaluation';
 import { IntakeService } from '../src/intake/intake.service';
 import { GmailConnectorService } from '../src/integrations/gmail-connector.service';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbound-mail.port';
@@ -141,6 +142,9 @@ const SCENARIOS: Scenario[] = [
         rejectedPlanIssues: rejected.map((r) => ((r.validation as { issues?: Array<{ severity: string; code: string; message: string }> } | null)?.issues ?? []).filter((i) => i.severity === 'ERROR').map((i) => `${i.code}: ${i.message}`.slice(0, 200))),
         mails: mails.map((m) => ({ to: m.to, subject: m.subject, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 700) })),
       };
+      // Güte des Ergebnisses (BPF-05, Agent-Ebene): nicht hart geprüft, sondern bewertet und im Protokoll festgehalten; über mehrere Läufe wertet `scripts/score-agent-runs.ts` aus.
+      const score = scoreAgentRecord({ id: record.id, error, triage: record.triage, case: record.case, attention: record.attention, mails: record.mails });
+      (record as Record<string, unknown>).score = { pass: score.pass, failing: score.checks.filter((c) => !c.ok).map((c) => c.name) };
       records.push(record);
       console.log(`AGENT ${JSON.stringify(record)}`);
 

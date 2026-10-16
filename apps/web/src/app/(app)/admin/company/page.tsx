@@ -5,7 +5,7 @@ import { LIMIT_CEILINGS, LIMIT_DEFAULTS, LIMIT_LABELS, PROFILE_TONES, PROFILE_TO
 import { Button, Card, ErrorState, Input, Label } from '@orbit/ui';
 import { OnboardingChecklist } from '../../../../components/common/onboarding-checklist';
 import { errorMessage } from '../../../../lib/api-client';
-import { useSuggestProfile, useTenantProfile, useUpdateTenantProfile, type ProfileSuggestionResponse } from '../../../../lib/hooks/use-organization';
+import { useSuggestProfile, useTenantProfile, useUpdateTenantProfile, type ProfileSuggestionResponse, type ProfileSuggestionSource } from '../../../../lib/hooks/use-organization';
 
 interface HoursRow {
   days: Weekday[];
@@ -50,6 +50,18 @@ const LANGUAGES: Array<[string, string]> = [
 const lines = (value: string): string[] => value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const textarea =
   'block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand';
+
+/** Größte Datei, die als Base64 noch in die Anfrage (2 MB) passt. */
+const MAX_FILE_BYTES = 1_400_000;
+
+/** Liest die Datei im Browser als Base64; bei einem Problem kommt statt der Quelle der Hinweis an die Person zurück. */
+async function readFileAsSource(file: File): Promise<ProfileSuggestionSource | string> {
+  if (file.size > MAX_FILE_BYTES) return 'Die Datei ist größer als 1,4 MB. Fügen Sie stattdessen den wichtigsten Text ein.';
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { fileName: file.name, mimeType: file.type || 'application/octet-stream', contentBase64: btoa(binary) };
+}
 
 export default function AdminCompanyPage() {
   const { data, isLoading, isError, error, refetch } = useTenantProfile();
@@ -127,10 +139,10 @@ export default function AdminCompanyPage() {
     );
   }
 
-  async function runSuggestion() {
+  async function runSuggestion(source: ProfileSuggestionSource) {
     setSuggestNote(null);
     try {
-      const response = await suggest.mutateAsync(pasted);
+      const response = await suggest.mutateAsync(source);
       if (response.fields.length === 0) {
         setSuggestNote({ tone: 'error', text: 'Im Text wurden keine passenden Angaben gefunden. Es wurde nichts übernommen.' });
         return;
@@ -193,9 +205,24 @@ export default function AdminCompanyPage() {
         </p>
         <textarea id="profile-text" aria-label="Text über Ihren Betrieb" className={textarea} rows={5} maxLength={40000} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="z. B. Wir sind ein Meisterbetrieb für Heizung und Sanitär in Köln. Montag bis Freitag von 7 bis 16 Uhr …" />
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="secondary" disabled={suggest.isPending || pasted.trim().length < 40} onClick={() => void runSuggestion()}>
+          <Button variant="secondary" disabled={suggest.isPending || pasted.trim().length < 40} onClick={() => void runSuggestion({ text: pasted })}>
             {suggest.isPending ? 'Wird gelesen …' : 'Vorschlag erstellen'}
           </Button>
+          <label className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50 focus-within:ring-1 focus-within:ring-brand">
+            Oder Datei wählen (PDF, Word, Text; bis 1,4 MB)
+            <input
+              type="file"
+              className="sr-only"
+              aria-label="Datei über Ihren Betrieb"
+              accept=".pdf,.docx,.txt,.html,.htm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/html"
+              disabled={suggest.isPending}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void readFileAsSource(file).then((source) => (typeof source === 'string' ? setSuggestNote({ tone: 'error', text: source }) : runSuggestion(source)));
+              }}
+            />
+          </label>
           {suggestNote ? (
             <p role={suggestNote.tone === 'error' ? 'alert' : 'status'} className={suggestNote.tone === 'error' ? 'text-sm text-red-700' : 'text-sm text-green-800'}>
               {suggestNote.text}

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AgentRuntime, buildLayeredSystemPrompt, wrapUntrustedContent, type ToolRegistry } from '@orbit/agent-core';
 import { AiProviderUnavailableError, ProfileSuggestionSchema, ValidationFailedError, sanitizeProfileSuggestion, type ProfileSuggestion } from '@orbit/shared';
+import { extractAttachmentText } from '../documents/attachment-text';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
@@ -40,6 +41,16 @@ export class ProfileSuggestionService implements OnModuleInit {
       policyAction: 'knowledge.answer',
       execute: async (input: ProfileSuggestion) => input,
     });
+  }
+
+  /** Profil aus einer Datei vorschlagen (PDF mit Textebene, Word, Text/HTML): der Text wird gelesen und wie ein eingefügter Text behandelt. */
+  async suggestFromFile(tenantId: string, file: { fileName: string; mimeType: string; contentBase64: string }): Promise<ProfileSuggestionResult> {
+    const bytes = Buffer.from(file.contentBase64, 'base64');
+    const extracted = await extractAttachmentText({ fileName: file.fileName, mimeType: file.mimeType, bytes, maxChars: MAX_TEXT_CHARS });
+    if (extracted.status !== 'TEXT' || !extracted.text) {
+      throw new ValidationFailedError(`Aus der Datei konnte kein Text gelesen werden: ${extracted.note ?? 'unbekannter Grund'}. Gelesen werden PDF mit Textebene, Word-Dokumente (.docx) und Textdateien.`);
+    }
+    return this.suggest(tenantId, extracted.text);
   }
 
   async suggest(tenantId: string, text: string): Promise<ProfileSuggestionResult> {
