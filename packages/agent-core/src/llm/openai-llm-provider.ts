@@ -99,6 +99,7 @@ export class OpenAILLMProvider implements LLMProvider {
         model: this.model,
         // `max_tokens` is rejected by current OpenAI models; `max_completion_tokens` is the supported parameter.
         max_completion_tokens: request.maxTokens ?? 4096,
+        ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
         ...this.reasoningParams(),
         messages,
         tools: tools.length > 0 ? tools : undefined,

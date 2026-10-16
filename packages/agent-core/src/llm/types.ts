@@ -44,6 +44,8 @@ export interface LLMCompletionRequest {
   messages: LLMMessage[];
   tools: LLMToolDefinition[];
   maxTokens?: number;
+  /** 0 = möglichst deterministisch (Einstufung, Entnahme); ohne Angabe gilt der Standard des Anbieters. */
+  temperature?: number;
 }
 
 export interface ProviderValidationResult {

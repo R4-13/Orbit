@@ -190,7 +190,8 @@ export class SemanticTriageService {
       try {
         lastTurn = await runtime.runTurn(
           { tenantId, agentRunId: run.id, actorUserId },
-          { systemPrompt, messages: [...messages], maxToolIterations: 2 },
+          // Temperatur 0: dieselbe Nachricht soll dieselbe Einstufung ergeben (gemessen: ohne diese Angabe wichen 15 von 40 Fällen zwischen drei Läufen voneinander ab, BPF-05).
+          { systemPrompt, messages: [...messages], maxToolIterations: 2, temperature: 0 },
         );
         await this.runs.recordToolCalls(tenantId, run.id, lastTurn.toolCallOutcomes);
       } catch (error) {

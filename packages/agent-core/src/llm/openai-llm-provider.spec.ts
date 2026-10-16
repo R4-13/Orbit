@@ -22,6 +22,15 @@ describe('OpenAILLMProvider', () => {
     expect(params).not.toHaveProperty('max_tokens');
   });
 
+  it('reicht die Temperatur nur weiter, wenn sie gesetzt ist', async () => {
+    const create = vi.fn().mockReturnValue({ choices: [{ message: { content: 'x', tool_calls: [] }, finish_reason: 'stop' }] });
+    const provider = new OpenAILLMProvider('k', 'm', { client: fakeClient(create) });
+    await provider.complete({ messages: [{ role: 'user', content: 'x' }], tools: [], temperature: 0 });
+    await provider.complete({ messages: [{ role: 'user', content: 'x' }], tools: [] });
+    expect((create.mock.calls[0]?.[0] as Record<string, unknown>).temperature).toBe(0);
+    expect(create.mock.calls[1]?.[0] as Record<string, unknown>).not.toHaveProperty('temperature');
+  });
+
   it('maps tool calls and rejects malformed tool arguments instead of passing an empty input', async () => {
     const ok = new OpenAILLMProvider(
       'k',

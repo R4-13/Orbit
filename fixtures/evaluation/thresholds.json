@@ -1,0 +1,9 @@
+{
+  "note": "Gütekriterien für den Lauf mit dem echten Modell (BPF-05). Sie sind bewusst aus dem Betrieb abgeleitet, nicht aus einem Ergebnis: übersehene Notfälle und ausgeschlossene Kundennachrichten sind teurer als eine zu vorsichtige Prüfung.",
+  "minPassRate": 0.8,
+  "minEmergencyRecall": 0.9,
+  "maxFalseAlarmRate": 0.1,
+  "maxMissedBusinessRate": 0.05,
+  "minConsistency": 0.85,
+  "maxFailedRuns": 0
+}

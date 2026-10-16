@@ -41,6 +41,7 @@ export class AnthropicLLMProvider implements LLMProvider {
       response = await this.client.messages.create({
         model: this.model,
         max_tokens: request.maxTokens ?? 4096,
+        ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
         system: request.systemPrompt,
         messages: request.messages.map((message) => ({
           role: message.role,

@@ -89,7 +89,7 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 | BPF-02 | **Anhänge in der Triage/Extraktion** (E21) | ENG | M–L | P2 | |
 | BPF-03 | ~~Aufbewahrung von `bodyText` und Fakten~~ **umgesetzt** als Kategorien `EMAIL_BODIES` und `SUPERSEDED_FACTS` (`ASSUMPTIONS.md` #577). **Offen:** automatischer Lauf nach Plan, Anhänge | ENG | S | P3 | |
 | BPF-04 | ~~Limits je Mandant einstellbar~~ **umgesetzt** für vier Grenzen, nur verschärfend (`ASSUMPTIONS.md` #584) | ENG | S–M | erledigt | |
-| BPF-05 | **Qualitätsmessung der KI**: Evaluationskatalog, unabhängiger Triage-Holdout, systematische Bewertung statt Stichproben | ENG | M | P2 | |
+| BPF-05 | ~~Qualitätsmessung der KI~~ **umgesetzt** für die Triage (`ASSUMPTIONS.md` #593–595, `docs/evaluation/README.md`): versiegelter Prüfsatz, Kennzahlen, Gütekriterien, Wiederholungen, Vergleich mit früherem Lauf. **Offen:** strenges Konsistenzkriterium verfehlt (70 % statt 85 %); größerer Satz `holdout-v2` (nötig vor jeder Anweisungsänderung); Bewertung des Agenten mit Punktzahlen; weitere Modelle; Definition Lieferantenangebot gegen Newsletter | ENG | M | erledigt (Rest P3) | |
 | BPF-06 | **Preisquelle** aus echtem Warenwirtschafts-/ERP-System statt Testbestand (`pricing.resolve` bleibt) | EXT | L | P2 | |
 | BPF-07 | Plan-Editor/Drag-and-drop und besseres Graph-Layout (Kantenkreuzungen) | ENG | L | P3 | Aktionen laufen bewusst nur über Commands |
 | BPF-08 | Kalendereintrag **automatisch anlegen** ~~umgesetzt~~ (siehe AUT-02); offen: bestimmten Monteur zuordnen | ENG | M | P2 | |

@@ -30,6 +30,8 @@ export interface RunAgentTurnInput {
   messages: LLMMessage[];
   /** Guards against infinite tool-calling loops. Default 5. */
   maxToolIterations?: number;
+  /** Siehe `LLMCompletionRequest.temperature`. */
+  temperature?: number;
   /** Optional progress callback — see `AgentTurnEvent`. Never awaited; a slow/throwing subscriber must not stall or break the turn. */
   onEvent?: (event: AgentTurnEvent) => void;
 }
@@ -104,6 +106,7 @@ export class AgentRuntime {
         systemPrompt: input.systemPrompt,
         messages,
         tools: this.tools.toLLMToolDefinitions(),
+        ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
       });
 
       if (completion.toolCalls.length === 0) {
