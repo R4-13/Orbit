@@ -382,6 +382,10 @@ model User {
   status       UserStatus @default(INVITED)
   /// Startpasswort (z. B. bei der Anlage durch den Betreiber): bis zum ersten Wechsel sind nur Passwortwechsel, Kontoabfrage und Abmelden erlaubt.
   passwordChangeRequired Boolean @default(false) @map("password_change_required")
+  /// Zeitpunkt der letzten Passwortänderung (leer = seit der Anlage unverändert); Grundlage für den Ablauf (PASSWORD_MAX_AGE_DAYS).
+  passwordChangedAt DateTime? @map("password_changed_at")
+  /// Hashes früherer Passwörter (neueste zuletzt, höchstens PASSWORD_HISTORY_COUNT): sie dürfen nicht wieder vergeben werden.
+  passwordHistory String[] @default([]) @map("password_history")
   lastLoginAt  DateTime?  @map("last_login_at")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
@@ -2276,6 +2280,8 @@ model PlatformUser {
   lastLoginAt             DateTime?          @map("last_login_at")
   /// Nach Zurücksetzen oder Anlage mit Startpasswort: bis zum Wechsel sind nur Passwortwechsel, Abmelden und die eigene Kontoabfrage erlaubt.
   passwordChangeRequired  Boolean            @default(false) @map("password_change_required")
+  passwordChangedAt       DateTime?          @map("password_changed_at")
+  passwordHistory         String[]           @default([]) @map("password_history")
   createdByPlatformUserId String?            @map("created_by_platform_user_id")
   createdAt               DateTime           @default(now()) @map("created_at")
   updatedAt               DateTime           @updatedAt @map("updated_at")

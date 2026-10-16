@@ -111,7 +111,7 @@ Kategorien:
 | Kategorie | Variablen | Hinweis |
 |---|---|---|
 | Datenbank | `DATABASE_URL` (Migrations-Rolle, Superuser), `DATABASE_URL_APP` (App-Laufzeit-Rolle, RLS-gebunden) | **Zwei verschiedene Rollen, zwei verschiedene URLs** — niemals dieselbe Verbindung für beide Zwecke nutzen, sonst ist RLS wirkungslos (siehe `docs/SECURITY.md`) |
-| Auth | `JWT_SECRET` (≥16 Zeichen), `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL` | `JWT_SECRET` **muss** in Produktion ein echtes, zufälliges Secret sein — kein Default vorhanden (Zod-Validierung bricht sonst beim Boot ab) |
+| Auth | `JWT_SECRET` (≥16 Zeichen), `JWT_ACCESS_TTL`, `JWT_REFRESH_TTL`, optional `PASSWORD_MAX_AGE_DAYS` (0 = nie), `PASSWORD_HISTORY_COUNT` (Standard 5) | `JWT_SECRET` **muss** in Produktion ein echtes, zufälliges Secret sein — kein Default vorhanden (Zod-Validierung bricht sonst beim Boot ab) |
 | Verschlüsselung | `CREDENTIAL_ENCRYPTION_KEY` (Base64, muss zu exakt 32 Bytes dekodieren) | Seit Phase 19g tatsächlich für AES-256-GCM genutzt (`CredentialEncryptionService`, `docs/SECURITY.md` Abschnitt 4) — `apps/api` verweigert den Boot, wenn der Wert nicht zu 32 Bytes dekodiert |
 | Datei-Upload-Limits | `MAX_UPLOAD_SIZE_BYTES` (Default 20 MB), `ALLOWED_UPLOAD_MIME_TYPES` (kommagetrennt) | Seit Phase 19g serverseitig durchgesetzt vor Ausstellung einer Presigned-URL (`docs/SECURITY.md` Abschnitt 5) |
 | Connectors | `FINANCE_CONNECTOR`, `MAIL_CONNECTOR`, `CALENDAR_CONNECTOR`, `CRM_CONNECTOR`, `TELEPHONY_CONNECTOR`, `OCR_PROVIDER`, `STT_PROVIDER` | Jeweils `mock` oder ein realer Provider-Name; eine nicht-`mock`-Auswahl ohne die zugehörigen Credentials lässt die App beim Boot mit `IntegrationUnavailableError` laut scheitern (kein stiller Mock-Fallback) |

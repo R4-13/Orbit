@@ -22,6 +22,7 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { CopilotModule } from './copilot/copilot.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ReportsModule } from './reports/reports.module';
 import { DocumentsModule } from './documents/documents.module';
 import { EmailMessagesModule } from './email-messages/email-messages.module';
 import { FollowUpsModule } from './follow-ups/follow-ups.module';
@@ -122,6 +123,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     AgentDefinitionsModule,
     CopilotModule,
     DashboardModule,
+    ReportsModule,
     SearchModule,
     InboxModule,
     ActivityModule,

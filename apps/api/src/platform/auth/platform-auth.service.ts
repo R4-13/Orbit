@@ -9,7 +9,9 @@ import {
   PlatformNotConfiguredError,
   ValidationFailedError,
   isPlatformRole,
+  nextPasswordHistory,
   parseDurationToMs,
+  passwordExpired,
   scopesForRoles,
   type PlatformPrincipal,
   type PlatformRole,
@@ -52,6 +54,11 @@ export class PlatformAuthService {
     private readonly audit: PlatformAuditService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
+
+  /** Startpasswort/Zurücksetzung oder ein abgelaufenes Passwort (PLT-07): bis zum Wechsel sind nur Passwortwechsel, Abmelden und die eigene Kontoabfrage erlaubt. */
+  private mustChangePassword(user: { passwordChangeRequired: boolean; passwordChangedAt: Date | null; createdAt: Date }): boolean {
+    return user.passwordChangeRequired || passwordExpired(user.passwordChangedAt, user.createdAt, this.env.PASSWORD_MAX_AGE_DAYS);
+  }
 
   get enabled(): boolean {
     return Boolean(this.env.PLATFORM_JWT_SECRET);
@@ -100,7 +107,7 @@ export class PlatformAuthService {
       });
     });
     await this.audit.record({ eventType: 'PLATFORM_LOGIN', actor: { userId: user.id, roles }, targetType: 'PlatformSession', targetId: session.id });
-    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken, user.passwordChangeRequired);
+    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken, this.mustChangePassword(user));
   }
 
   async refresh(rawRefreshToken: string): Promise<PlatformTokens> {
@@ -124,7 +131,7 @@ export class PlatformAuthService {
     if (!claimed) throw new AuthenticationExpiredError('Refresh token is invalid, revoked or expired.');
     const roles = claimed.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new AuthenticationExpiredError('No platform role assigned.');
-    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next, claimed.user.passwordChangeRequired);
+    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next, this.mustChangePassword(claimed.user));
   }
 
   async logout(principal: PlatformPrincipal): Promise<void> {
@@ -149,9 +156,19 @@ export class PlatformAuthService {
     if (input.newPassword.length < PLATFORM_MIN_PASSWORD_LENGTH) throw new ValidationFailedError(`Das neue Passwort muss mindestens ${PLATFORM_MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
     if (input.newPassword === input.currentPassword) throw new ValidationFailedError('Das neue Passwort muss sich vom bisherigen unterscheiden.');
 
+    // Ein früher benutztes Passwort wird nicht wieder vergeben (PLT-07).
+    if (this.env.PASSWORD_HISTORY_COUNT > 0) {
+      for (const previous of user.passwordHistory) {
+        if (await argon2.verify(previous, input.newPassword).catch(() => false)) throw new ValidationFailedError('Dieses Passwort wurde früher schon verwendet. Bitte wählen Sie ein neues.');
+      }
+    }
+
     const passwordHash = await argon2.hash(input.newPassword);
     const revoked = await this.prisma.withPlatformScope(async (tx) => {
-      await tx.platformUser.update({ where: { id: principal.userId }, data: { passwordHash, passwordChangeRequired: false } });
+      await tx.platformUser.update({
+        where: { id: principal.userId },
+        data: { passwordHash, passwordChangeRequired: false, passwordChangedAt: new Date(), passwordHistory: nextPasswordHistory(user.passwordHistory, user.passwordHash, this.env.PASSWORD_HISTORY_COUNT) },
+      });
       const result = await tx.platformSession.updateMany({ where: { platformUserId: principal.userId, revokedAt: null, id: { not: principal.sessionId } }, data: { revokedAt: new Date(), revokedReason: 'PASSWORD_CHANGED' } });
       return result.count;
     });
@@ -212,7 +229,7 @@ export class PlatformAuthService {
     }
     const roles = session.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new UnauthorizedException('No platform role assigned.');
-    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload, session.user.passwordChangeRequired);
+    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload, this.mustChangePassword(session.user));
   }
 
   private issue(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, rawRefresh: string, passwordChangeRequired: boolean): PlatformTokens {

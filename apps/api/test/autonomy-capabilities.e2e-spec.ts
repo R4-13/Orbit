@@ -245,6 +245,30 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       expect(sent).toEqual([]);
     });
 
+    it('der Termin kommt in den Kalender des freien Monteurs; eine Person mit Abwesenheit wird übersprungen (BPF-08)', async () => {
+      const tenantId = await newTenant({ calendar: true, profile: false });
+      const scoped = prisma.forTenantId(tenantId);
+      const today = new Date().toISOString().slice(0, 10);
+      const staff = (firstName: string, calendarId: string, absences?: unknown) =>
+        scoped.staffMember.create({ data: { tenantId, firstName, lastName: 'Monteur', roleKind: 'TECHNICIAN', email: `${firstName.toLowerCase()}@e2e.example`, calendarId, responsibilities: ['APPOINTMENTS'], ...(absences ? { absences } : {}) } as never });
+      await staff('Anton', 'anton@kalender.example', [{ from: '2000-01-01', until: '2099-12-31' }]); // dauerhaft abwesend
+      await staff('Ben', 'ben@kalender.example');
+      const { caseId, slots } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');
+      seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+      // Alle gefragten Kalender melden sich als frei: Anton ist nur wegen seiner Abwesenheit im Verzeichnis nicht verfügbar.
+      (GmailConnectorService.prototype.queryFreeBusy as jest.Mock).mockImplementationOnce(async (_t: string, ids: string[]) => ids.map((id) => ({ calendarId: id, busy: [] })));
+      const orchestrator = app.get(OrchestratorService);
+      await orchestrator.startProcedure(tenantId, caseId, bookingProcedure() as never);
+      await orchestrator.advance(tenantId, caseId);
+      expect(today).toMatch(/^\d{4}-/);
+      expect(created).toHaveLength(1);
+      expect(created[0]).toMatchObject({ calendarId: 'ben@kalender.example' });
+      expect(String(created[0]!.description)).toContain('Zuständig: Ben Monteur');
+      const booked = await scoped.caseEvent.findFirst({ where: { caseId, type: 'appointment.booked' } });
+      expect((booked?.payload as { assignee?: { name?: string } }).assignee?.name).toBe('Ben Monteur');
+      expect(slots[0]).toBeDefined();
+    });
+
     it('ohne Kalender-Schreibberechtigung ist die Fähigkeit nicht ausführbar: der Plan wird nicht aktiviert', async () => {
       const tenantId = await newTenant({ calendar: false, profile: false });
       const { caseId } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');

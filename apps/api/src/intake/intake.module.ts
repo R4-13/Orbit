@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AttachmentTextModule } from '../documents/attachment-text.module';
 import { ProfileContextModule } from '../organization/profile-context.module';
 import { AgentModule } from '../agent/agent.module';
 import { AiProvidersModule } from '../ai-providers/ai-providers.module';
@@ -17,7 +18,7 @@ import { IntakeService } from './intake.service';
 import { SemanticTriageService } from './semantic-triage.service';
 
 @Module({
-  imports: [ProfileContextModule, AgentModule, AiProvidersModule, ProcessModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule],
+  imports: [ProfileContextModule, AgentModule, AiProvidersModule, ProcessModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule, AttachmentTextModule],
   controllers: [IntakeController, IntakeDecisionsController],
   providers: [IntakeService, ExecutionEvidenceService, SemanticTriageService, IntakeDecisionsService],
   // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector

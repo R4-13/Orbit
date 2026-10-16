@@ -92,7 +92,7 @@ Eingänge, Entscheidungen und Läufe. Was fehlt: Mail-Anbieter außer Gmail (Mic
 * **Reasoning-Modell:** `gpt-6-luna` wird für Tool-Aufrufe mit `reasoning_effort=none` betrieben (Chat Completions lehnt Function-Tools sonst ab). Eine Umstellung auf die Responses-API wäre die Alternative.
   BYOK-Verbindungen senden bisher keinen `reasoning_effort`.
 * **Qualität der KI-Extraktion/Planung** ist nur mit wenigen Live-Stichproben geprüft, nicht systematisch bewertet (kein Evaluationskatalog).
-* **Anhänge in der Triage** (E21): Anhangsinhalt fließt noch nicht in die Triage/Extraktion ein.
+* **Anhänge in der Triage** (E21, BPF-02): Text aus Text/CSV/HTML, Word und PDF mit Textebene fließt in Triage und Extraktion ein (je Anhang 4.000, insgesamt 8.000 Zeichen, höchstens 5 Anhänge). **Gescannte PDFs, Bilder und Excel-Dateien werden nicht gelesen** (keine Texterkennung) – das steht dann so in der Anfrage an die KI.
 * **Zweite Wartephase:** der Referenz-Blueprint stellt eine automatische Rückfrage (`maxAutoQuestions: 1`); bleiben Angaben nach der Antwort offen, entsteht eine manuelle Prüfaufgabe statt einer zweiten Rückfrage.
 * **Graph:** automatisches Schichtlayout ohne Kantenkreuzungs-Optimierung; sehr große Pläne (> 60 Knoten) sind per Validator ausgeschlossen. Kein Drag-and-drop-Editor für Pläne (Aktionen laufen nur über Commands).
 * **Aufbewahrung** von `bodyText`/Fakten ist noch nicht an die Retention-Konfiguration gekoppelt.
@@ -136,3 +136,5 @@ Stand 07.10.2026. Details: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM
 * **Idempotenzschlüssel:** nur auf Wunsch des Clients (Header); die Oberfläche sendet sie nicht; keine Wiederholungssicherheit für Datei-Uploads und Antworten über 512 KB (#573).
 * **Upload-Prüfung:** Größe und Magic Bytes werden nach dem Upload geprüft (#574); es gibt **keinen Virenscan** und keine Prüfung des Inneren von Office-/PDF-Dateien.
 * **Qualität der Triage:** gemessen mit 40 versiegelten Fällen, einem Modell (`gpt-6-luna`) und einem Beispielprofil (Oktober 2026): Notfälle und Fehlalarme unauffällig, aber dieselbe Nachricht wird nicht immer gleich eingestuft (strenge Konsistenz 70 % bei Ziel 85 %; die Wahl des Wegs ist in 92,5 % gleich). Grenzfälle wie Lieferantenangebot gegen Newsletter und Bewerbung können zwischen Läufen wechseln. Für Planung und Auskunft gibt es noch keine solche Messung (BPF-05, `docs/evaluation/README.md`).
+* **Termine und Monteure:** die Zuordnung folgt dem ersten freien Personenkalender in der Reihenfolge der Liste (keine Lastverteilung); die Person wird nicht gesondert benachrichtigt – der Eintrag liegt in ihrem Kalender (BPF-08, #600).
+* **Passwortablauf:** standardmäßig aus (`PASSWORD_MAX_AGE_DAYS=0`); die Pflicht zum Wechsel greift beim Anmelden und beim Erneuern der Sitzung, nicht mitten in einer laufenden Sitzung (#602).

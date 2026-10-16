@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { AttachmentTextService } from '../../documents/attachment-text.service';
 import { AgentRuntime, ToolFailedError, buildLayeredSystemPrompt, wrapUntrustedContent, type ToolDefinition, type ToolRegistry } from '@orbit/agent-core';
 import { AiProviderUnavailableError } from '@orbit/shared';
 import { TOOL_REGISTRY } from '../../agent/agent.tokens';
@@ -44,6 +45,7 @@ export class RequestAnalysisService {
     private readonly caseEvents: CaseEventsService,
     private readonly reference: ReferenceProcessService,
     private readonly profileContext: ProfileContextService,
+    private readonly attachmentTexts: AttachmentTextService,
   ) {}
 
   /** Das Einreichungswerkzeug: führt nichts aus, die Prüfung geschieht in `evaluateAnalysis`. */
@@ -86,7 +88,8 @@ export class RequestAnalysisService {
 
     const tenant = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }));
     const catalog = await this.reference.catalog(ctx.tenantId);
-    const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}`;
+    const attachmentBlock = await this.attachmentTexts.blockForMessage(ctx.tenantId, message.id).catch(() => '');
+    const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}${attachmentBlock ? `\n\n${attachmentBlock}` : ''}`;
     const runtime = new AgentRuntime(llm, this.registry.subset([REQUEST_ANALYSIS_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));
     const system = buildLayeredSystemPrompt(
       analysisPrompt({ catalog: catalog.map((c) => `${c.name} (${c.category})`).join('; '), reservedRequirements: reserved.description, companyName: tenant?.name ?? 'dem Betrieb', profile: await this.profileContext.promptFor(ctx.tenantId).catch(() => '') }),

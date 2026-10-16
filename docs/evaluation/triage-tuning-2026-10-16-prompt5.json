@@ -1,0 +1,3584 @@
+{
+  "generatedAt": "2026-10-16T08:46:20.720Z",
+  "model": "openai/gpt-6-luna",
+  "promptVersion": "triage-prompt/5",
+  "set": "tuning",
+  "repeats": 3,
+  "metrics": {
+    "cases": 56,
+    "runs": 168,
+    "passRate": 0.9940476190476191,
+    "accuracy": {
+      "relevance": {
+        "checked": 168,
+        "ok": 167,
+        "rate": 0.9940476190476191
+      },
+      "category": {
+        "checked": 96,
+        "ok": 95,
+        "rate": 0.9895833333333334
+      },
+      "flags": {
+        "checked": 6,
+        "ok": 6,
+        "rate": 1
+      },
+      "multipleIntents": {
+        "checked": 6,
+        "ok": 6,
+        "rate": 1
+      },
+      "urgency": {
+        "checked": 120,
+        "ok": 120,
+        "rate": 1
+      },
+      "relation": {
+        "checked": 15,
+        "ok": 15,
+        "rate": 1
+      }
+    },
+    "emergencyRecall": 1,
+    "falseAlarmRate": 0,
+    "missedBusinessRate": 0.008333333333333333,
+    "consistency": 0.8214285714285714,
+    "routingConsistency": 0.9642857142857143,
+    "failedRuns": 0,
+    "latencyMs": {
+      "p50": 7460,
+      "p95": 10045
+    }
+  },
+  "verdict": {
+    "ok": false,
+    "failures": [
+      "Konsistenz 82.1 % < 85.0 %"
+    ]
+  },
+  "regressions": [],
+  "results": [
+    {
+      "id": "E01",
+      "label": "Angebotsanfrage, Angaben fehlen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8401
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7407
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8515
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "label": "Vollständige Angebotsanfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9779
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8898
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9817
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "label": "Private Nachricht mit Geschäftsvokabular",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "categories": [
+          "PRIVATE",
+          "SPAM",
+          "NEWSLETTER_OR_MARKETING",
+          "UNKNOWN"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7075
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5447
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7071
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "label": "Newsletter mit Werbeangebot",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "SPAM"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7079
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6643
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5627
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "label": "Eindeutiger Spam",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "SPAM"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5230
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7619
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6943
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "label": "Angebliche Anfrage mit Prompt Injection",
+      "expect": {
+        "relevance": "REVIEW",
+        "flags": [
+          "PROMPT_INJECTION_SUSPECTED"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 4736
+          },
+          "checks": {
+            "relevance": true,
+            "flags": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 4800
+          },
+          "checks": {
+            "relevance": true,
+            "flags": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 3864
+          },
+          "checks": {
+            "relevance": true,
+            "flags": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "label": "Rechnung als Anhang, kein Angebotswunsch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6986
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8712
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7644
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "label": "Lieferantenangebot statt Kundenanfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "SUPPLIER_OFFER"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6524
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6217
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6117
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "label": "Serviceproblem / Beschwerde",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6975
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7718
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8739
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E14",
+      "label": "Bewerbung an die Unternehmensadresse",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION",
+          "UNKNOWN"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9226
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8686
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7840
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E22",
+      "label": "Angebot und Beschwerde in einer Mail",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "multipleIntents": true
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 2,
+            "latencyMs": 10013
+          },
+          "checks": {
+            "relevance": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 2,
+            "latencyMs": 8717
+          },
+          "checks": {
+            "relevance": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 9006
+          },
+          "checks": {
+            "relevance": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E25a",
+      "label": "Mehrsprachig (Englisch) ohne Schlüsselwörter",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8169
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8050
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8118
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E25b",
+      "label": "Umgangssprachlich ohne Schlüsselwörter",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6405
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6224
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6195
+          },
+          "checks": {
+            "relevance": true,
+            "category": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "label": "Unklare Kurzantwort ohne Kontext",
+      "expect": {
+        "relevance": "REVIEW"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 4614
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3134
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3313
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E18",
+      "label": "Abwesenheitsnotiz",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6979
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6629
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7763
+          },
+          "checks": {
+            "relevance": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "E21",
+      "label": "Phishing mit Anmeldelink",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "SPAM"
+        ],
+        "flags": [
+          "PHISHING_SUSPECTED"
+        ]
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6519
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "flags": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7117
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "flags": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5651
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "flags": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H01",
+      "label": "Vollständige Angebotsanfrage Wärmepumpe",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "NEW"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 10922
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 10754
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 11145
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H02",
+      "label": "Kurze Preisfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6196
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7634
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8665
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H03",
+      "label": "Frage zu Öffnungszeiten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "NEW"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7313
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8010
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8455
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H04",
+      "label": "Frage zum Einsatzgebiet",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6281
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5719
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6995
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H05",
+      "label": "Statusfrage zum Angebot",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "UNKNOWN"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 14343
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7460
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7802
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H06",
+      "label": "Antwort auf eine Rückfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7045
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8856
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 10351
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H07",
+      "label": "Notfall: Gasgeruch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9880
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9770
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9435
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H08",
+      "label": "Heizungsausfall bei Frost mit Kleinkind",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "HIGH_OR_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8878
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7895
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7984
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H09",
+      "label": "Alarmistischer Ton, aber kein Notfall",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8594
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6877
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6042
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H10",
+      "label": "Notfall: Rohrbruch, Wasser läuft",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8663
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8969
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9106
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H11",
+      "label": "Sturmschaden, Wasser dringt ein",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "HIGH_OR_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9305
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8851
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8177
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H12",
+      "label": "Kleines Problem: tropfender Wasserhahn",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8023
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8175
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8037
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H13",
+      "label": "Beschwerde: Monteur nicht erschienen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7700
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8568
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 3,
+            "latencyMs": 8097
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H14",
+      "label": "Beschwerde mit Rechtsandrohung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7619
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8065
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8680
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H15",
+      "label": "Bewerbung Ausbildung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8164
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6566
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8628
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H16",
+      "label": "Initiativbewerbung auf Englisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9864
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8730
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8369
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H17",
+      "label": "Eingangsrechnung eines Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6835
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6193
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7677
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H18",
+      "label": "Zahlungserinnerung eines Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9036
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9345
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8539
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H19",
+      "label": "Materialangebot eines Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "SUPPLIER_OFFER"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5870
+          },
+          "checks": {
+            "relevance": false,
+            "category": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7225
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8013
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H20",
+      "label": "Newsletter mit Rabattaktion",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5363
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6775
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6416
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H21",
+      "label": "Phishing: Konto gesperrt",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6809
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6833
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6940
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H22",
+      "label": "Reine Prompt-Injection",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6087
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 5305
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 5862
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H23",
+      "label": "Echte Anfrage mit eingeschleuster Anweisung",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6088
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7745
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 8191
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H24",
+      "label": "Private Nachricht",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5687
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 3717
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6006
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H25",
+      "label": "Abwesenheitsnotiz",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6120
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6279
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 7247
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H26",
+      "label": "Paketbenachrichtigung",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6392
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6941
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 5365
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H27",
+      "label": "Lotterie-Spam",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5097
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6279
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5154
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H28",
+      "label": "Englische Angebotsanfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8838
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7338
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7443
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H29",
+      "label": "Englische Beschwerde",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7849
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6709
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8266
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H30",
+      "label": "Anfrage auf Türkisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7876
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7748
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7479
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H31",
+      "label": "Frage auf Polnisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7527
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 2,
+            "latencyMs": 7538
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7974
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H32",
+      "label": "Nur 'Hallo?'",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 4546
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 2864
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3041
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H33",
+      "label": "'Siehe Anhang' ohne Text",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3502
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3606
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "UNKNOWN",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 4566
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H34",
+      "label": "Mehrere Anliegen in einer Mail",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "multipleIntents": true
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 3,
+            "latencyMs": 10076
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 3,
+            "latencyMs": 9954
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 3,
+            "latencyMs": 10045
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H35",
+      "label": "Terminverschiebung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7557
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6611
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8146
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H36",
+      "label": "Lieferverzug eines Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7135
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7143
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6955
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H37",
+      "label": "Schreiben der Handwerkskammer mit Frist",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7308
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 2,
+            "latencyMs": 7974
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6392
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H38",
+      "label": "Weitergeleitete Portal-Anfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SALES_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 10799
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 10486
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SALES_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8327
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H39",
+      "label": "Rückfrage zur Rechnung des Betriebs",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7148
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7073
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7237
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "H40",
+      "label": "Einladung zu einem Webinar",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "UNKNOWN",
+          "SPAM"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8314
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6507
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6290
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

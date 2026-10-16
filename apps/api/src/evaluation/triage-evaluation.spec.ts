@@ -99,35 +99,47 @@ describe('Kennzahlen', () => {
 describe('Kataloge', () => {
   const load = (name: string) => JSON.parse(readFileSync(join(FIXTURES, name), 'utf8')) as { cases: EvaluationCase[] };
   const dev = load('triage-catalogue.json').cases;
-  const holdoutText = readFileSync(join(FIXTURES, 'triage-holdout-v1.json'), 'utf8');
-  const holdout = (JSON.parse(holdoutText) as { cases: EvaluationCase[] }).cases;
+  const v1Text = readFileSync(join(FIXTURES, 'triage-holdout-v1.json'), 'utf8');
+  const v1 = (JSON.parse(v1Text) as { cases: EvaluationCase[] }).cases;
+  const v2Text = readFileSync(join(FIXTURES, 'triage-holdout-v2.json'), 'utf8');
+  const v2 = (JSON.parse(v2Text) as { cases: EvaluationCase[] }).cases;
+  const textsOf = (cases: EvaluationCase[]) => new Set(cases.map((c) => `${c.subject}|${c.body}`));
+  const count = (cases: EvaluationCase[], predicate: (c: EvaluationCase) => boolean) => cases.filter(predicate).length;
 
-  it('beide Kataloge sind in sich stimmig und überschneidungsfrei', () => {
-    expect(catalogueProblems(dev)).toEqual([]);
-    expect(catalogueProblems(holdout)).toEqual([]);
-    expect(dev.filter((d) => holdout.some((h) => h.id === d.id))).toEqual([]);
-    const texts = new Set(dev.map((d) => `${d.subject}|${d.body}`));
-    expect(holdout.filter((h) => texts.has(`${h.subject}|${h.body}`))).toEqual([]); // kein Fall steht in beiden
+  it('alle Kataloge sind in sich stimmig und überschneidungsfrei', () => {
+    for (const cases of [dev, v1, v2]) expect(catalogueProblems(cases)).toEqual([]);
+    expect(dev.filter((d) => v1.some((h) => h.id === d.id))).toEqual([]);
+    expect(v2.filter((w) => [...dev, ...v1].some((h) => h.id === w.id))).toEqual([]);
+    expect(v1.filter((h) => textsOf(dev).has(`${h.subject}|${h.body}`))).toEqual([]); // kein Fall steht in zwei Sätzen
+    expect(v2.filter((w) => textsOf([...dev, ...v1]).has(`${w.subject}|${w.body}`))).toEqual([]);
   });
 
-  it('der versiegelte Prüfsatz ist seit dem ersten Lauf unverändert', () => {
-    const sealed = readFileSync(join(FIXTURES, 'triage-holdout-v1.sha256'), 'utf8').trim();
-    expect(sealOf(holdoutText)).toBe(sealed);
+  it('die versiegelten Prüfsätze sind seit dem ersten Lauf unverändert', () => {
+    expect(sealOf(v1Text)).toBe(readFileSync(join(FIXTURES, 'triage-holdout-v1.sha256'), 'utf8').trim());
+    expect(sealOf(v2Text)).toBe(readFileSync(join(FIXTURES, 'triage-holdout-v2.sha256'), 'utf8').trim());
   });
 
-  it('der Prüfsatz deckt die wichtigen Lagen ab', () => {
-    expect(holdout.length).toBeGreaterThanOrEqual(40);
-    const count = (predicate: (c: EvaluationCase) => boolean) => holdout.filter(predicate).length;
-    expect(count((c) => c.expect.urgency === 'CRITICAL')).toBeGreaterThanOrEqual(2); // eindeutige Notfälle
-    expect(count((c) => c.expect.urgency === 'HIGH_OR_CRITICAL')).toBeGreaterThanOrEqual(2); // dringend, aber Auslegungssache
-    expect(count((c) => c.expect.urgency === 'NOT_CRITICAL' && /DRINGEND|dringend/.test(`${c.subject} ${c.body}`))).toBeGreaterThanOrEqual(1); // Fehlalarm-Falle
-    expect(count((c) => c.expect.relevance === 'NOT_BUSINESS' || c.expect.relevance === 'NOT_BUSINESS_OR_REVIEW')).toBeGreaterThanOrEqual(8);
-    expect(count((c) => c.expect.relation === 'CONTINUATION')).toBeGreaterThanOrEqual(3);
-    expect(count((c) => c.expect.multipleIntents === true)).toBeGreaterThanOrEqual(1);
-    expect(count((c) => /ignoriere|ignore/i.test(c.body))).toBeGreaterThanOrEqual(2); // Einschleusung
-    expect(count((c) => /\b(Hello|Dear|Merhaba|Dzień)\b/.test(c.body))).toBeGreaterThanOrEqual(4); // andere Sprachen
+  it.each([
+    ['holdout-v1', v1, 40],
+    ['holdout-v2', v2, 80],
+  ])('%s deckt die wichtigen Lagen ab', (_name, holdout, size) => {
+    expect(holdout.length).toBeGreaterThanOrEqual(size);
+    expect(count(holdout, (c) => c.expect.urgency === 'CRITICAL')).toBeGreaterThanOrEqual(2); // eindeutige Notfälle
+    expect(count(holdout, (c) => c.expect.urgency === 'HIGH_OR_CRITICAL')).toBeGreaterThanOrEqual(2); // dringend, aber Auslegungssache
+    expect(count(holdout, (c) => c.expect.urgency === 'NOT_CRITICAL' && /DRINGEND|dringend|WICHTIG/.test(`${c.subject} ${c.body}`))).toBeGreaterThanOrEqual(1); // Fehlalarm-Falle
+    expect(count(holdout, (c) => c.expect.relevance === 'NOT_BUSINESS' || c.expect.relevance === 'NOT_BUSINESS_OR_REVIEW')).toBeGreaterThanOrEqual(8);
+    expect(count(holdout, (c) => c.expect.relation === 'CONTINUATION')).toBeGreaterThanOrEqual(3);
+    expect(count(holdout, (c) => c.expect.multipleIntents === true)).toBeGreaterThanOrEqual(1);
+    expect(count(holdout, (c) => /ignoriere|ignore|vergiss alle|systemhinweis/i.test(c.body))).toBeGreaterThanOrEqual(2); // Einschleusung
+    expect(count(holdout, (c) => /(Hello|Dear|Merhaba|Dzień|Bonjour|Buongiorno|Hola)/.test(c.body))).toBeGreaterThanOrEqual(4); // andere Sprachen
     for (const category of ['REQUEST_FOR_QUOTE', 'GENERAL_INQUIRY', 'COMPLAINT_OR_SERVICE', 'APPLICATION', 'INVOICE_RECEIVED', 'SUPPLIER_OFFER', 'NEWSLETTER_OR_MARKETING']) {
-      expect(count((c) => c.expect.categories?.includes(category) ?? false)).toBeGreaterThanOrEqual(1);
+      expect(count(holdout, (c) => c.expect.categories?.includes(category) ?? false)).toBeGreaterThanOrEqual(1);
     }
+  });
+
+  it('holdout-v2 prüft die Randfälle, die der Satz v1 aufgezeigt hat, mit mehreren Fällen', () => {
+    expect(count(v2, (c) => c.expect.categories?.includes('SUPPLIER_OFFER') ?? false)).toBeGreaterThanOrEqual(5); // persönliche Angebote und Massenwerbung
+    expect(count(v2, (c) => c.expect.categories?.includes('APPLICATION') ?? false)).toBeGreaterThanOrEqual(5);
+    expect(count(v2, (c) => c.hints?.autoGenerated === true)).toBeGreaterThanOrEqual(4);
   });
 });

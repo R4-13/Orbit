@@ -1,4 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { AttachmentTextService } from '../../documents/attachment-text.service';
 import { AgentRuntime, ToolFailedError, ToolOutcomeUnknownError, buildLayeredSystemPrompt, wrapUntrustedContent, type ToolDefinition, type ToolRegistry } from '@orbit/agent-core';
 import type { Prisma } from '@orbit/domain';
 import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError, resolutionAttemptFor, resolutionDedupeKey, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
@@ -81,6 +82,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly analysis: RequestAnalysisService,
     private readonly appointments: AppointmentSlotsService,
     private readonly customers: CustomerRecordService,
+    private readonly attachmentTexts: AttachmentTextService,
   ) {}
 
   onModuleInit(): void {
@@ -239,7 +241,8 @@ export class ReferenceProcessTools implements OnModuleInit {
           throw error;
         });
         const mode = llm.providerName.toLowerCase().includes('mock') ? 'SIMULATED' : 'LIVE';
-        const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}`;
+        const attachmentBlock = await this.attachmentTexts.blockForMessage(ctx.tenantId, message.id).catch(() => '');
+        const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}${attachmentBlock ? `\n\n${attachmentBlock}` : ''}`;
         const runtime = new AgentRuntime(llm, this.registry.subset([SUBMIT_FACTS_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));
         const system = buildLayeredSystemPrompt(
           `Entnimm der Nachricht ausschließlich die unten erlaubten Angaben und rufe ${SUBMIT_FACTS_TOOL} genau einmal auf.

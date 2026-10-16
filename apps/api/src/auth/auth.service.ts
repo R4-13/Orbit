@@ -3,7 +3,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import type { OrbitEnv } from '@orbit/config';
-import { AuthenticationExpiredError, TENANT_MIN_PASSWORD_LENGTH, ValidationFailedError, parseDurationToMs, tenantGateOf, type Permission } from '@orbit/shared';
+import { AuthenticationExpiredError, TENANT_MIN_PASSWORD_LENGTH, ValidationFailedError, nextPasswordHistory, parseDurationToMs, passwordExpired, tenantGateOf, type Permission } from '@orbit/shared';
 import { Prisma } from '@orbit/domain';
 import { AuditService } from '../audit/audit.service';
 import { ORBIT_ENV } from '../config/env.token';
@@ -108,9 +108,20 @@ export class AuthService {
     if (input.newPassword.length < TENANT_MIN_PASSWORD_LENGTH) throw new ValidationFailedError(`Das neue Passwort muss mindestens ${TENANT_MIN_PASSWORD_LENGTH} Zeichen lang sein.`);
     if (input.newPassword === input.currentPassword) throw new ValidationFailedError('Das neue Passwort muss sich vom bisherigen unterscheiden.');
 
+    // Ein früher benutztes Passwort wird nicht wieder vergeben (PLT-07).
+    if (this.env.PASSWORD_HISTORY_COUNT > 0) {
+      for (const previous of user.passwordHistory) {
+        if (await argon2.verify(previous, input.newPassword).catch(() => false)) throw new ValidationFailedError('Dieses Passwort wurde früher schon verwendet. Bitte wählen Sie ein neues.');
+      }
+    }
+
     const passwordHash = await argon2.hash(input.newPassword);
     const updated = await this.prisma.withRlsBypass(async (tx) => {
-      const row = await tx.user.update({ where: { id: user.id }, data: { passwordHash, passwordChangeRequired: false }, include: USER_WITH_ROLES_INCLUDE });
+      const row = await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, passwordChangeRequired: false, passwordChangedAt: new Date(), passwordHistory: nextPasswordHistory(user.passwordHistory, user.passwordHash, this.env.PASSWORD_HISTORY_COUNT) },
+        include: USER_WITH_ROLES_INCLUDE,
+      });
       await tx.refreshToken.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
       return row;
     });
@@ -182,7 +193,8 @@ export class AuthService {
       email: user.email,
       roles,
       permissions,
-      ...(user.passwordChangeRequired ? { passwordChangeRequired: true } : {}),
+      // Ein abgelaufenes Passwort wirkt wie ein Startpasswort: bis zum Wechsel sind nur Passwortwechsel, Kontoabfrage und Abmelden erlaubt.
+      ...(user.passwordChangeRequired || passwordExpired(user.passwordChangedAt, user.createdAt, this.env.PASSWORD_MAX_AGE_DAYS) ? { passwordChangeRequired: true } : {}),
     };
   }
 }

@@ -101,4 +101,18 @@ describe('ToolRegistry', () => {
       expect(registry.subset([]).list()).toEqual([]);
     });
   });
+
+  it('execute() behandelt null bei optionalen Feldern wie „nicht angegeben“, nicht aber bei Pflichtfeldern', async () => {
+    const registry = new ToolRegistry();
+    registry.register({
+      name: 'contact',
+      description: 'Legt einen Kontakt an.',
+      inputSchema: z.object({ email: z.string().email(), companyId: z.string().optional(), extra: z.object({ note: z.string().optional() }).optional() }),
+      policyAction: 'crm.activity.log',
+      execute: async (input) => input,
+    } as ToolDefinition<{ email: string; companyId?: string; extra?: { note?: string } }, unknown>);
+    const ctx = { tenantId: 't', agentRunId: 'r' } as never;
+    await expect(registry.execute('contact', { email: 'a@b.de', companyId: null, extra: { note: null } }, ctx)).resolves.toEqual({ email: 'a@b.de', extra: {} });
+    await expect(registry.execute('contact', { email: null, companyId: null }, ctx)).rejects.toThrow(/Invalid input for tool "contact"/);
+  });
 });

@@ -13,6 +13,7 @@ import { PolicyEnforcementService } from '../../policy/policy-enforcement.servic
 import { PrismaService } from '../../prisma/prisma.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { APPOINTMENT_LABELS, type AppointmentKind } from './appointment-slots';
+import { buildCalendarPool, pickCalendar, type PoolCalendar } from './calendar-pool';
 import { isSafeCustomerText } from './request-analysis';
 
 const SUBMIT_KNOWLEDGE_TOOL = 'submit_knowledge_answer';
@@ -234,13 +235,16 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
         // 3. Ist der Termin jetzt noch frei? (Zwischen Vorschlag und Antwort kann er belegt worden sein.)
         const integration = await scoped.integration.findUnique({ where: { tenantId_connectorType: { tenantId: ctx.tenantId, connectorType: 'GMAIL' } } });
         const config = (integration?.config ?? {}) as { calendarIds?: unknown };
-        const calendarIds = Array.isArray(config.calendarIds) && config.calendarIds.length > 0 ? config.calendarIds.filter((id): id is string => typeof id === 'string').slice(0, 20) : ['primary'];
+        const configured = Array.isArray(config.calendarIds) && config.calendarIds.length > 0 ? config.calendarIds.filter((id): id is string => typeof id === 'string').slice(0, 20) : ['primary'];
+        const directory = await scoped.staffMember.findMany({ where: { active: true, calendarId: { not: null } } });
+        const pool = buildCalendarPool(configured, directory);
         try {
-          const perCalendar = await this.gmail.queryFreeBusy(ctx.tenantId, calendarIds, slot.start, slot.end, timeZone);
-          // Frei genügt in EINEM der gelesenen Kalender (z. B. ein Monteur von mehreren); gebucht wird im ersten freien.
-          const free = perCalendar.find((c) => !c.busy.some((b) => b.start < slot.end && b.end > slot.start));
+          const perCalendar = await this.gmail.queryFreeBusy(ctx.tenantId, pool.map((c) => c.calendarId), slot.start, slot.end, timeZone);
+          const busyById = new Map(perCalendar.map((c) => [c.calendarId, c.busy]));
+          // Frei genügt in EINEM der Kalender (z. B. ein Monteur von mehreren); ein freier Kalender einer Person geht vor dem Betriebskalender, damit der Termin eine zuständige Person hat.
+          const free = pickCalendar(pool, (id) => busyById.get(id) ?? [], slot.start, slot.end, timeZone);
           if (!free) throw new ToolFailedError('Der gewählte Termin ist inzwischen nicht mehr frei; bitte einen neuen Termin vorschlagen.', { errorCode: 'SLOT_NO_LONGER_FREE' });
-          return await this.createEvent(ctx.tenantId, caseId, proposal.kind, slot, free.calendarId, timeZone, tenantRow?.name ?? 'ORBIT');
+          return await this.createEvent(ctx.tenantId, caseId, proposal.kind, slot, free, timeZone, tenantRow?.name ?? 'ORBIT');
         } catch (error) {
           if (error instanceof ToolFailedError || error instanceof ToolOutcomeUnknownError) throw error;
           if (error instanceof IntegrationUnavailableError) throw new ToolFailedError(error.message, { errorCode: 'CALENDAR_NOT_CONNECTED' });
@@ -251,17 +255,17 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
     };
   }
 
-  private async createEvent(tenantId: string, caseId: string, kind: AppointmentKind, slot: { start: Date; end: Date }, calendarId: string, timeZone: string, companyName: string) {
+  private async createEvent(tenantId: string, caseId: string, kind: AppointmentKind, slot: { start: Date; end: Date }, calendar: PoolCalendar, timeZone: string, companyName: string) {
     const caseRow = await this.prisma.forTenantId(tenantId).case.findUnique({ where: { id: caseId }, select: { title: true } });
     // Stabile Kennung je Vorgang und Termin: eine Wiederholung ergibt bei Google einen Konflikt statt eines zweiten Eintrags. Hexadezimal ist für Google-Kennungen zulässig.
     const eventId = createHash('sha256').update(`${tenantId}:${caseId}:${slot.start.toISOString()}`).digest('hex').slice(0, 40);
     let created;
     try {
       created = await this.gmail.createCalendarEvent(tenantId, {
-        calendarId,
+        calendarId: calendar.calendarId,
         eventId,
         summary: `${APPOINTMENT_LABELS[kind]}: ${caseRow?.title ?? 'Anfrage'}`,
-        description: `Gebucht von ${companyName} über ORBIT.`,
+        description: `Gebucht von ${companyName} über ORBIT.${calendar.staff ? ` Zuständig: ${calendar.staff.name}.` : ''}`,
         start: slot.start,
         end: slot.end,
         timeZone,
@@ -271,7 +275,7 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
       throw error;
     }
     await this.caseEvents
-      .append(tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_BOOKED, payload: { kind, start: slot.start.toISOString(), end: slot.end.toISOString(), eventId: created.eventId }, dedupeKey: `appointment-booked:${eventId}` })
+      .append(tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_BOOKED, payload: { kind, start: slot.start.toISOString(), end: slot.end.toISOString(), eventId: created.eventId, ...(calendar.staff ? { assignee: { staffId: calendar.staff.id, name: calendar.staff.name } } : {}) }, dedupeKey: `appointment-booked:${eventId}` })
       .catch(() => undefined);
     return {
       providerRef: created.eventId,
@@ -281,8 +285,11 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
       kind,
       start: slot.start.toISOString(),
       end: slot.end.toISOString(),
+      assignee: calendar.staff?.name ?? null,
       executionMode: 'LIVE',
-      facts: [{ key: 'appointment.booked', value: { kind, start: slot.start.toISOString(), end: slot.end.toISOString() }, sourceType: 'SYSTEM_OF_RECORD', sourceRef: created.eventId }],
+      facts: [
+        { key: 'appointment.booked', value: { kind, start: slot.start.toISOString(), end: slot.end.toISOString(), ...(calendar.staff ? { assignee: calendar.staff.name } : {}) }, sourceType: 'SYSTEM_OF_RECORD', sourceRef: created.eventId },
+      ],
     };
   }
 }

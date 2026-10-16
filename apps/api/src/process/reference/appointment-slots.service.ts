@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { GmailConnectorService } from '../../integrations/gmail-connector.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { proposeSlots, type AppointmentKind, type ProposedSlot } from './appointment-slots';
+import { buildCalendarPool, effectiveBusy } from './calendar-pool';
 
 export interface SlotProposal {
   /** Woher die freien Zeiten stammen: ein verbundener Google-Kalender oder gar nicht (dann bittet die Nachricht um Terminwünsche). */
@@ -34,12 +35,16 @@ export class AppointmentSlotsService {
     const tenant = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }));
     const timeZone = tenant?.timezone || 'Europe/Berlin';
     const config = (integration.config ?? {}) as { calendarIds?: unknown };
-    const calendarIds = Array.isArray(config.calendarIds) && config.calendarIds.length > 0 ? config.calendarIds.filter((id): id is string => typeof id === 'string').slice(0, 20) : ['primary'];
+    const configured = Array.isArray(config.calendarIds) && config.calendarIds.length > 0 ? config.calendarIds.filter((id): id is string => typeof id === 'string').slice(0, 20) : ['primary'];
+    // Dazu die Kalender der Monteure (BPF-08); Abwesenheiten aus dem Verzeichnis sperren die jeweilige Person.
+    const directory = await this.prisma.forTenantId(tenantId).staffMember.findMany({ where: { active: true, calendarId: { not: null } } });
+    const pool = buildCalendarPool(configured, directory);
 
     try {
       const horizonEnd = new Date(now.getTime() + 21 * 24 * 3_600_000);
-      const perCalendar = await this.gmail.queryFreeBusy(tenantId, calendarIds, now, horizonEnd, timeZone);
-      const slots = proposeSlots({ kind, now, timeZone, calendars: perCalendar.map((c) => c.busy) });
+      const perCalendar = await this.gmail.queryFreeBusy(tenantId, pool.map((c) => c.calendarId), now, horizonEnd, timeZone);
+      const busyById = new Map(perCalendar.map((c) => [c.calendarId, c.busy]));
+      const slots = proposeSlots({ kind, now, timeZone, calendars: pool.map((c) => effectiveBusy(c, busyById.get(c.calendarId) ?? [], now, horizonEnd, timeZone)) });
       return slots.length > 0 ? { source: 'GOOGLE_CALENDAR', slots } : { source: 'NONE', slots: [], reason: 'Im Suchzeitraum ist kein passender freier Zeitraum.' };
     } catch (error) {
       this.logger.warn(`Kalender für Terminvorschläge nicht nutzbar (Mandant ${tenantId}): ${error instanceof Error ? error.message : String(error)}`);

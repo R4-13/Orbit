@@ -90,6 +90,10 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(16, 'JWT_SECRET must be at least 16 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
+  /** Passwörter laufen nach dieser Zahl von Tagen ab (dann ist ein Wechsel nötig); 0 = nie (Standard). Gilt für Mandanten- und Plattformkonten. */
+  PASSWORD_MAX_AGE_DAYS: z.coerce.number().int().min(0).max(3650).default(0),
+  /** Wie viele frühere Passwörter nicht wieder vergeben werden dürfen; 0 = keine Prüfung. */
+  PASSWORD_HISTORY_COUNT: z.coerce.number().int().min(0).max(24).default(5),
 
   // ZERIONUS Platform Control Plane (Amendment 03) — eigene Sicherheitsdomäne mit eigenem Token-Secret.
   // Ohne PLATFORM_JWT_SECRET ist die Plattformdomäne ausgeschaltet (Anmeldung/Routen antworten 503) – nie ein geteiltes oder Standard-Secret.

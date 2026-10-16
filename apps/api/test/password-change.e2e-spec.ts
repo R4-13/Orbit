@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { ORBIT_ENV } from '../src/config/env.token';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -58,6 +59,43 @@ describe('Erzwungener Passwortwechsel bei Startpasswort (e2e)', () => {
     expect(again.user.passwordChangeRequired).toBeUndefined();
     const audit = await prisma.forTenantId(tenantId).auditLog.count({ where: { eventType: 'USER_PASSWORD_CHANGED' } });
     expect(audit).toBe(1);
+  });
+
+  it('ein früher benutztes Passwort wird nicht wieder vergeben (Verlauf, PLT-07)', async () => {
+    const token = (await api().post('/api/v1/auth/login').send({ email, password: NEW }).expect(200)).body.accessToken as string;
+    // START wurde beim Wechsel in den Verlauf aufgenommen.
+    const rejected = await api().post('/api/v1/auth/change-password').set(auth(token)).send({ currentPassword: NEW, newPassword: START }).expect(400);
+    expect(JSON.stringify(rejected.body)).toContain('früher schon verwendet');
+    const row = await prisma.withRlsBypass((tx) => tx.user.findFirstOrThrow({ where: { email } }));
+    expect(row.passwordHistory).toHaveLength(1);
+    expect(row.passwordChangedAt).toBeInstanceOf(Date);
+    // Ein wirklich neues Passwort geht, und beide früheren sind danach gesperrt.
+    const third = 'Drittes-Passwort-2026!!';
+    const changed = (await api().post('/api/v1/auth/change-password').set(auth(token)).send({ currentPassword: NEW, newPassword: third }).expect(200)).body as { accessToken: string };
+    await api().post('/api/v1/auth/change-password').set(auth(changed.accessToken)).send({ currentPassword: third, newPassword: NEW }).expect(400);
+    const after = await prisma.withRlsBypass((tx) => tx.user.findFirstOrThrow({ where: { email } }));
+    expect(after.passwordHistory).toHaveLength(2);
+  });
+
+  it('ein abgelaufenes Passwort verlangt beim Anmelden den Wechsel – bis zu diesem ist nur das Nötigste erlaubt (Ablauf, PLT-07)', async () => {
+    const env = app.get<{ PASSWORD_MAX_AGE_DAYS: number }>(ORBIT_ENV);
+    const previous = env.PASSWORD_MAX_AGE_DAYS;
+    env.PASSWORD_MAX_AGE_DAYS = 90;
+    try {
+      const current = 'Drittes-Passwort-2026!!';
+      const fresh = (await api().post('/api/v1/auth/login').send({ email, password: current }).expect(200)).body as { accessToken: string; user: { passwordChangeRequired?: boolean } };
+      expect(fresh.user.passwordChangeRequired).toBeUndefined(); // eben erst geändert
+      await prisma.withRlsBypass((tx) => tx.user.updateMany({ where: { email }, data: { passwordChangedAt: new Date(Date.now() - 100 * 24 * 3_600_000) } }));
+      const stale = (await api().post('/api/v1/auth/login').send({ email, password: current }).expect(200)).body as { accessToken: string; user: { passwordChangeRequired?: boolean } };
+      expect(stale.user.passwordChangeRequired).toBe(true);
+      expect((await api().get('/api/v1/cases').set(auth(stale.accessToken)).expect(403)).body).toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+      await api().get('/api/v1/auth/me').set(auth(stale.accessToken)).expect(200);
+      // Nach dem Wechsel ist das Konto wieder frei.
+      const renewed = (await api().post('/api/v1/auth/change-password').set(auth(stale.accessToken)).send({ currentPassword: current, newPassword: 'Viertes-Passwort-2026!!' }).expect(200)).body as { accessToken: string };
+      await api().get('/api/v1/cases').set(auth(renewed.accessToken)).expect(200);
+    } finally {
+      env.PASSWORD_MAX_AGE_DAYS = previous;
+    }
   });
 
   it('ein normal angelegtes Konto (ohne Startpasswort) ist nicht eingeschränkt', async () => {

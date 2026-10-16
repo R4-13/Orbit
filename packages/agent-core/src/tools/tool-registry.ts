@@ -91,7 +91,16 @@ export class ToolRegistry {
       throw new Error(`Unknown tool "${name}".`);
     }
 
-    const parsed = tool.inputSchema.safeParse(rawInput);
+    // Modelle füllen optionale Felder gern mit `null` statt sie wegzulassen; das heißt „nicht angegeben“. Erst wenn die Eingabe auch ohne diese Nullen nicht passt, ist sie ungültig
+    // (ein Pflichtfeld mit `null` bleibt ein Fehler, weil es nach dem Entfernen fehlt).
+    let parsed = tool.inputSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      const withoutNulls = omitNullProperties(rawInput);
+      if (withoutNulls !== rawInput) {
+        const retry = tool.inputSchema.safeParse(withoutNulls);
+        if (retry.success) parsed = retry;
+      }
+    }
     if (!parsed.success) {
       // Field-level detail in the message itself: it is what AgentRuntime feeds back to the model so it can
       // correct the call within the same turn (and what ends up on the ToolInvocation) — bounded in length.
@@ -106,4 +115,25 @@ export class ToolRegistry {
 
     return tool.execute(parsed.data, context);
   }
+}
+
+/** Entfernt Eigenschaften mit dem Wert `null` auf jeder Ebene; gibt dasselbe Objekt zurück, wenn es keine gab. */
+function omitNullProperties(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const mapped = value.map(omitNullProperties);
+    return mapped.some((item, index) => item !== value[index]) ? mapped : value;
+  }
+  if (value === null || typeof value !== 'object') return value;
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (item === null) {
+      changed = true;
+      continue;
+    }
+    const cleaned = omitNullProperties(item);
+    if (cleaned !== item) changed = true;
+    out[key] = cleaned;
+  }
+  return changed ? out : value;
 }

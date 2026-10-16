@@ -88,6 +88,7 @@ export const NAV_ITEMS: NavItem[] = [
       { href: '/admin/processes', label: 'Prozesse', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/agents', label: 'Agenten', permission: PERMISSIONS.AGENT_MANAGE },
       { href: '/admin/workflows', label: 'Abläufe', permission: PERMISSIONS.AGENT_MANAGE },
+      { href: '/admin/interventions', label: 'Wo greifen Menschen ein?', permission: PERMISSIONS.AUDIT_READ },
       { href: '/admin/retention', label: 'Datenaufbewahrung', permission: PERMISSIONS.POLICY_MANAGE },
     ],
   },

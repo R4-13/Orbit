@@ -31,7 +31,7 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 | AUT-08 | Kundenstamm: persönliche Anrede ~~umgesetzt~~ (`ASSUMPTIONS.md` #588). **Offen:** Konditionen und bekannte Adresse im Ablauf nutzen, Abgleich auch über Name/Firma/Domain (mit Vorsicht gegen falsche Treffer) | ENG | M | P2 | |
 | AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: HubSpot (größere Betriebe), Lexware/DATEV (kleinere) – Port `CustomerDirectory` ist vorbereitet | EXT | L je Adapter | P2 | Client-ID/Secret bzw. Partner-Registrierung nötig |
 | AUT-10 | **Betriebsprofil KI-gestützt einrichten** ~~aus eingefügtem Text~~ umgesetzt (`ASSUMPTIONS.md` #581). **Offen:** aus Dokumenten (PDF/Word), Preis- und Terminregeln, Terminlängen im Profil; Nachweis mit echtem Modell | ENG | M | P2 | |
-| AUT-11 | **Zweite automatische Rückfrage-Runde** (Blueprint v1.1) und **Lernen**: Auswertung „Wo greifen Menschen ein?“, Vorschläge aus Korrekturen | PROD → ENG | M | P2 | `maxAutoQuestions: 1` bewusst; Entscheidung steht aus |
+| AUT-11 | ~~Lernen: „Wo greifen Menschen ein?“~~ **umgesetzt** als Bericht mit belegten Vorschlägen (`ASSUMPTIONS.md` #601, Seite `/admin/interventions`). **Entschieden:** keine zweite automatische Rückfrage-Runde (`maxAutoQuestions: 1`). **Offen:** Vorschläge aus einzelnen Korrekturen (Textänderungen an Entwürfen) | ENG | M | erledigt (Rest P3) | |
 | AUT-12 | **Dienstzugang** ~~Zugriffsschlüssel mit enger Berechtigung für `PUT /staff/sync`~~ umgesetzt (`ASSUMPTIONS.md` #583). **Offen:** Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | EXT | L | P3 | |
 | AUT-13 | ~~Neukunde: erzwungener Passwortwechsel~~ **umgesetzt** (`ASSUMPTIONS.md` #572). **Offen:** Einladung per E-Mail statt Startpasswort; Playwright-Test der Neukunden-Oberfläche (braucht Betreiberzugang in der Testumgebung) | ENG / MAN | S | P3 | |
 
@@ -86,13 +86,13 @@ Quelle: [`ORBIT_UNIFIED_IMPLEMENTATION_PLAN.md`](ORBIT_UNIFIED_IMPLEMENTATION_PL
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
 | BPF-01 | ~~Kostenlimit je Vorgang~~ **umgesetzt** (`ASSUMPTIONS.md` #585): Kosten werden dem Vorgang zugerechnet, ab der Grenze Prüfung durch einen Menschen. **Offen:** Wirkung nur mit gepflegtem Kostenprofil; die Triage vor der Anlage ist keinem Vorgang zugerechnet | ENG | S | P3 | |
-| BPF-02 | **Anhänge in der Triage/Extraktion** (E21) | ENG | M–L | P2 | |
+| BPF-02 | ~~Anhänge in der Triage/Extraktion~~ **umgesetzt** für Text/CSV/HTML, Word und PDF mit Textebene (`ASSUMPTIONS.md` #598). **Offen:** Texterkennung für Scans und Bilder (MST-03), Excel, Anhangsinhalt in der Rechnungserfassung (liegt beim OCR-Anbieter) | ENG | M–L | erledigt (Rest P2) | |
 | BPF-03 | ~~Aufbewahrung von `bodyText` und Fakten~~ **umgesetzt** als Kategorien `EMAIL_BODIES` und `SUPERSEDED_FACTS` (`ASSUMPTIONS.md` #577). **Offen:** automatischer Lauf nach Plan, Anhänge | ENG | S | P3 | |
 | BPF-04 | ~~Limits je Mandant einstellbar~~ **umgesetzt** für vier Grenzen, nur verschärfend (`ASSUMPTIONS.md` #584) | ENG | S–M | erledigt | |
-| BPF-05 | ~~Qualitätsmessung der KI~~ **umgesetzt** für die Triage (`ASSUMPTIONS.md` #593–595, `docs/evaluation/README.md`): versiegelter Prüfsatz, Kennzahlen, Gütekriterien, Wiederholungen, Vergleich mit früherem Lauf. **Offen:** strenges Konsistenzkriterium verfehlt (70 % statt 85 %); größerer Satz `holdout-v2` (nötig vor jeder Anweisungsänderung); Bewertung des Agenten mit Punktzahlen; weitere Modelle; Definition Lieferantenangebot gegen Newsletter | ENG | M | erledigt (Rest P3) | |
+| BPF-05 | ~~Qualitätsmessung der KI~~ **umgesetzt** für die Triage (`ASSUMPTIONS.md` #593–595, `docs/evaluation/README.md`): versiegelter Prüfsatz, Kennzahlen, Gütekriterien, Wiederholungen, Vergleich mit früherem Lauf. Zweite Runde mit `holdout-v2` (80 Fälle) und `triage-prompt/5` (`ASSUMPTIONS.md` #596). **Offen:** strenges Konsistenzkriterium knapp verfehlt (83,8 % statt 85 %); `holdout-v3` vor jeder weiteren Anweisungsänderung; Bewertung des Agenten mit Punktzahlen; weitere Modelle | ENG | M | erledigt (Rest P3) | |
 | BPF-06 | **Preisquelle** aus echtem Warenwirtschafts-/ERP-System statt Testbestand (`pricing.resolve` bleibt) | EXT | L | P2 | |
 | BPF-07 | Plan-Editor/Drag-and-drop und besseres Graph-Layout (Kantenkreuzungen) | ENG | L | P3 | Aktionen laufen bewusst nur über Commands |
-| BPF-08 | Kalendereintrag **automatisch anlegen** ~~umgesetzt~~ (siehe AUT-02); offen: bestimmten Monteur zuordnen | ENG | M | P2 | |
+| BPF-08 | ~~Kalendereintrag automatisch anlegen~~ **und** ~~bestimmten Monteur zuordnen~~ **umgesetzt** (`ASSUMPTIONS.md` #600): Kalender der Monteure im Pool, Abwesenheit sperrt, Zuständiger im Eintrag. **Offen:** Lastverteilung, Benachrichtigung der Person, Live gegen Google | ENG | M | erledigt (Rest P3) | |
 | BPF-09 | Auflösungsleiter: Stufen „Fachsystem“ und „weitere Quelle“ über vorhandene Tools hinaus | ENG | M | P3 | |
 
 ## 6. Amendment 03 – Plattformbetrieb
@@ -107,7 +107,7 @@ Quelle: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM_OPERATIONS_ACCEPTA
 | PLT-04 | Connector-Sperre **beendet laufende Aktionen aktiv** (OPS-15) | ENG | M | P3 | |
 | PLT-05 | **Mandantenspezifische Region/Datenrichtlinie** (OPS-27) | ENG | L | P3 | |
 | PLT-06 | Mandantenlebenszyklus `offboard`/`close` als Abläufe, Support-Historie je Mandant | ENG | M | P2 | `provision` ist seit Oktober vorhanden |
-| PLT-07 | Passwort-Ablauf/-Verlauf, Einladung neuer Betreiber per E-Mail | ENG | S–M | P3 | |
+| PLT-07 | ~~Passwort-Ablauf/-Verlauf~~ **umgesetzt** (`ASSUMPTIONS.md` #602). **Offen:** Einladung neuer Betreiber per E-Mail | ENG | S–M | erledigt (Rest P3) | |
 | PLT-08 | **Zweiter echter KI-Anbieter** (Anthropic/OpenAI sind registriert, ein weiterer echter Aufruf fehlt) | EXT | M | P3 | |
 | PLT-09 | ~~BYOK-Adapter senden `reasoning_effort` nicht mit~~ **bereits umgesetzt**: der OpenAI-Adapter der Registry übergibt `OPENAI_REASONING_EFFORT` (geprüft 2026-10-14); der Punkt war veraltet | ENG | S | erledigt | |
 

@@ -1,4 +1,5 @@
 import type { IntakeChannel } from '@orbit/domain';
+import type { AttachmentText } from '../documents/attachment-text';
 
 /**
  * Channel Event Runtime — the normalized, channel-independent root object
@@ -23,6 +24,8 @@ export interface AttachmentReference {
   fileName: string;
   mimeType: string;
   contentBase64: string;
+  /** Gelesener Textauszug des Anhangs (BPF-02); wird erst vor der Triage ergänzt, nie vom Kanal geliefert. */
+  textExcerpt?: AttachmentText;
 }
 
 export interface NormalizedIntakeEvent {

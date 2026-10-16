@@ -25,3 +25,4 @@ export * from './staff-routing';
 export * from './onboarding';
 export * from './file-signature';
 export * from './api-keys';
+export * from './password-policy';

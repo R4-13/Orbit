@@ -66,6 +66,7 @@ const GROUPS: AdminGroup[] = [
     title: 'Daten & Betrieb',
     purpose: 'Aufbewahrungsfristen, Datenexport und vorhandene Betriebsfunktionen.',
     links: [
+      { href: '/admin/interventions', label: 'Wo greifen Menschen ein?', permission: PERMISSIONS.AUDIT_READ },
       { href: '/admin/retention', label: 'Datenaufbewahrung', permission: PERMISSIONS.POLICY_MANAGE },
       { href: '/admin/settings', label: 'Datenexport & Löschung', permission: PERMISSIONS.TENANT_MANAGE },
     ],

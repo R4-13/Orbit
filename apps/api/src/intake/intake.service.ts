@@ -23,6 +23,7 @@ import { WorkflowRunnerService } from '../workflows/workflow-runner.service';
 import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 import { ExecutionEvidenceService } from './execution-evidence.service';
+import { AttachmentTextService } from '../documents/attachment-text.service';
 import { SUBMIT_TRIAGE_TOOL, SemanticTriageService, type TriageOutcome } from './semantic-triage.service';
 import { deriveAppliedRelevance, routeForCategory, type DomainRoute } from './triage-decision';
 
@@ -118,6 +119,7 @@ export class IntakeService {
     private readonly blueprints: BlueprintRegistryService,
     private readonly orchestrator: OrchestratorService,
     private readonly adHoc: AdHocIntakeService,
+    private readonly attachmentTexts: AttachmentTextService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -179,7 +181,9 @@ export class IntakeService {
     if (intake.decision?.status !== 'PENDING_TRIAGE') {
       throw new ValidationFailedError('IntakeEvent is not waiting for triage.', { intakeEventId, status: intake.decision?.status });
     }
-    const documents = await scoped.document.findMany({ where: { id: { in: intake.documentIds } } });
+    const stored = await scoped.document.findMany({ where: { id: { in: intake.documentIds } } });
+    // In der gespeicherten Reihenfolge, damit Anhang und Textauszug zueinander passen.
+    const documents = intake.documentIds.map((id) => stored.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => d !== undefined);
     const sender = (intake.senderRef ?? {}) as { address?: string; displayName?: string };
     const event: NormalizedIntakeEvent = {
       tenantId,
@@ -207,6 +211,18 @@ export class IntakeService {
         documentIds: intake.documentIds,
       }),
     );
+  }
+
+  /** Ergänzt die Anhänge um ihren Textauszug (BPF-02). Ein Fehler beim Lesen hält den Eingang nie auf. */
+  private async withAttachmentText(tenantId: string, event: NormalizedIntakeEvent, documentIds: readonly string[]): Promise<NormalizedIntakeEvent> {
+    const attachments = event.attachments ?? [];
+    if (attachments.length === 0 || documentIds.length === 0) return event;
+    try {
+      const excerpts = await this.attachmentTexts.forDocuments(tenantId, documentIds);
+      return { ...event, attachments: attachments.map((a, i) => ({ ...a, textExcerpt: excerpts[i]?.result })) };
+    } catch {
+      return event;
+    }
   }
 
   private async persistIntake(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<PersistedIntake> {
@@ -346,7 +362,7 @@ export class IntakeService {
     const continued = await this.continueCorrelatedCase(tenantId, actorUserId, event, persisted);
     if (continued) return continued;
 
-    const outcome = await this.triage.triage(tenantId, actorUserId, event);
+    const outcome = await this.triage.triage(tenantId, actorUserId, await this.withAttachmentText(tenantId, event, persisted.documentIds));
     const hints = event.hints ? ({ ...event.hints } as Prisma.InputJsonValue) : undefined;
     const executionJson = outcome.execution as unknown as Prisma.InputJsonValue;
 

@@ -1,0 +1,5067 @@
+{
+  "generatedAt": "2026-10-16T09:21:33.155Z",
+  "model": "openai/gpt-6-luna",
+  "promptVersion": "triage-prompt/5",
+  "set": "holdout",
+  "repeats": 3,
+  "metrics": {
+    "cases": 80,
+    "runs": 240,
+    "passRate": 0.9666666666666667,
+    "accuracy": {
+      "relevance": {
+        "checked": 240,
+        "ok": 232,
+        "rate": 0.9666666666666667
+      },
+      "category": {
+        "checked": 108,
+        "ok": 108,
+        "rate": 1
+      },
+      "urgency": {
+        "checked": 240,
+        "ok": 240,
+        "rate": 1
+      },
+      "relation": {
+        "checked": 27,
+        "ok": 27,
+        "rate": 1
+      },
+      "multipleIntents": {
+        "checked": 3,
+        "ok": 3,
+        "rate": 1
+      }
+    },
+    "emergencyRecall": 1,
+    "falseAlarmRate": 0,
+    "missedBusinessRate": 0.005376344086021506,
+    "consistency": 0.8375,
+    "routingConsistency": 0.9625,
+    "failedRuns": 0,
+    "latencyMs": {
+      "p50": 6941,
+      "p95": 8974
+    }
+  },
+  "verdict": {
+    "ok": false,
+    "failures": [
+      "Konsistenz 83.8 % < 85.0 %"
+    ]
+  },
+  "regressions": [],
+  "results": [
+    {
+      "id": "W01",
+      "label": "Angebotsbitte Heizkörpertausch mit Maßen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "NEW"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8457
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8246
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7849
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W02",
+      "label": "Angebotsbitte Badsanierung Mehrfamilienhaus",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9208
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 12855
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7748
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W03",
+      "label": "Wartungsvertrag erfragen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6734
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8811
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6865
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W04",
+      "label": "Erreichbarkeit an Samstagen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8338
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6510
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6722
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W05",
+      "label": "Frage nach Arbeitsgebiet Bergisch Gladbach",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY",
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6801
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6381
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6157
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W06",
+      "label": "Nachfrage zum Stand der Wartung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY",
+          "UNKNOWN"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6580
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5261
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6688
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W07",
+      "label": "Bestätigung eines Termins durch den Kunden",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7996
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6860
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5615
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W08",
+      "label": "Zusatzinformation zu offenem Angebot",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6976
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6360
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6843
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W09",
+      "label": "Notfall: Rauch aus dem Heizungsraum",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8220
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6364
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7416
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W10",
+      "label": "Notfall: Heizung ausgefallen bei Minusgraden, Seniorin",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "HIGH_OR_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6847
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7413
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7764
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W11",
+      "label": "Notfall: Wasser läuft durch die Decke",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7117
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7664
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6077
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W12",
+      "label": "Notfall auf Englisch: Gasgeruch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5791
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6151
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6250
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W13",
+      "label": "Verstopfter Abfluss, störend aber nicht eilig",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 9215
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7021
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6767
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W14",
+      "label": "Großbuchstaben, aber Terminwunsch ohne Gefahr",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7003
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7751
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 7488
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W15",
+      "label": "Warmwasser ausgefallen, Familie",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8006
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7172
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7236
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W16",
+      "label": "Beschwerde: Rechnung zu hoch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7235
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6087
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6793
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W17",
+      "label": "Beschwerde: Schmutz nach der Arbeit",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7826
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6839
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 3,
+            "latencyMs": 9008
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W18",
+      "label": "Beschwerde: Problem tritt nach Reparatur wieder auf",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6732
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8264
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7686
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W19",
+      "label": "Beschwerde mit Bewertungsdrohung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6691
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7591
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6792
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W20",
+      "label": "Bewerbung als Anlagenmechaniker mit Anhang",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7442
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7421
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6220
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W21",
+      "label": "Anfrage nach einem Praktikumsplatz",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7106
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5657
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5919
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W22",
+      "label": "Bewerbung auf Polnisch/Deutsch gemischt",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "categories": [
+          "APPLICATION",
+          "UNKNOWN"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7197
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7542
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 8137
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W23",
+      "label": "Eingangsrechnung mit Rechnungsnummer",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7655
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7776
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6658
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W24",
+      "label": "Mahnung eines Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6963
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7028
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6692
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W25",
+      "label": "Rechnung des Steuerberaters",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "INVOICE_RECEIVED"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6348
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7431
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7098
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W26",
+      "label": "Persönliches Angebot eines bekannten Lieferanten",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "SUPPLIER_OFFER"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8798
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 10223
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8935
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W27",
+      "label": "Neue Lieferantenvorstellung mit Bitte um Termin",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "categories": [
+          "SUPPLIER_OFFER",
+          "SALES_INQUIRY",
+          "NEWSLETTER_OR_MARKETING",
+          "UNKNOWN"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7871
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7391
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7841
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W28",
+      "label": "Rundmail eines Herstellers: Herbstaktion",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "SUPPLIER_OFFER"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7348
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6622
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7284
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W29",
+      "label": "Newsletter eines Fachverbands",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6397
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6338
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6818
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W30",
+      "label": "Software-Werbung",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "SPAM"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8064
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8979
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5909
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W31",
+      "label": "Phishing: Zahlung ausstehend",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6765
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6480
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6611
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W32",
+      "label": "Chef-Betrug: dringende Überweisung",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED",
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7897
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED",
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7495
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED",
+              "IDENTITY_MISMATCH"
+            ],
+            "intentCount": 2,
+            "latencyMs": 9434
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W33",
+      "label": "Eingeschleuste Anweisung im Rechnungsanhang",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6415
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7315
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "INVOICE_RECEIVED",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6113
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W34",
+      "label": "Reine Rollen-Umschreibung (Injection ohne Anliegen)",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 4367
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 4073
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PROMPT_INJECTION_SUSPECTED"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6184
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W35",
+      "label": "Private Nachricht an die Firmenadresse",
+      "expect": {
+        "relevance": "NOT_BUSINESS",
+        "categories": [
+          "PRIVATE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 4232
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 4405
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 0,
+            "latencyMs": 3488
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W36",
+      "label": "Automatische Abwesenheit",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6742
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 8683
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7345
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "W37",
+      "label": "Zustellfehler (Bounce)",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 5828
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 5468
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 4755
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W38",
+      "label": "Versandbestätigung Großhandel",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6690
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7712
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6940
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "W39",
+      "label": "Terminbestätigung einer Werkstatt (automatisch)",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 7241
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 6576
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [
+              "AUTO_RESPONDER"
+            ],
+            "intentCount": 0,
+            "latencyMs": 9763
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W40",
+      "label": "Umfrage-Einladung",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 20583
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 21548
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 23024
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W41",
+      "label": "Anfrage auf Französisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 12625
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8805
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8690
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W42",
+      "label": "Anfrage auf Italienisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 8555
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7546
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6508
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W43",
+      "label": "Anfrage auf Spanisch",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 6005
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5897
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "UNSUPPORTED_LANGUAGE"
+            ],
+            "intentCount": 1,
+            "latencyMs": 5653
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W44",
+      "label": "Englische Statusfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5706
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5656
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6344
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W45",
+      "label": "Mehrere Anliegen: Rechnung, Termin, Angebot",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "multipleIntents": true
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 3,
+            "latencyMs": 7153
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 3,
+            "latencyMs": 7683
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [
+              "MULTIPLE_INTENTS"
+            ],
+            "intentCount": 3,
+            "latencyMs": 8219
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "multipleIntents": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W46",
+      "label": "Nur ein Wort: Angebot",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 4411
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 4077
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 2904
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W47",
+      "label": "Weitergeleitete Mail ohne Kommentar",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7028
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7579
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7382
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W48",
+      "label": "Einladung zur Messe als Aussteller",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5784
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6212
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5365
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W49",
+      "label": "Bescheid vom Finanzamt mit Frist",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6137
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7510
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7027
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W50",
+      "label": "Versicherung: Schadenmeldung Bearbeitung",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7067
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7534
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8063
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W51",
+      "label": "Zahlungsbestätigung eines Kunden",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6414
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5731
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7052
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W52",
+      "label": "Kunde will Termin stornieren",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 5379
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6804
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 5768
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W53",
+      "label": "Kurzfristiger Termin morgen (Zeitdruck, kein Notfall)",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7665
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5735
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7988
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W54",
+      "label": "Verdacht auf Legionellen, Frist des Gesundheitsamts",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "HIGH_OR_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7034
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8084
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 8305
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W55",
+      "label": "Kunde bedankt sich",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5400
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5410
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "LOW",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5795
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W56",
+      "label": "Anfrage, die Elektroarbeiten verlangt",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY",
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6552
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7297
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6934
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W57",
+      "label": "Anfrage außerhalb des Einsatzgebiets",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY",
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6311
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6448
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6644
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W58",
+      "label": "Architekt fragt nach Zusammenarbeit",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SALES_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7199
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SALES_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7445
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SALES_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7227
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W59",
+      "label": "Unterauftrag von einem anderen Handwerker",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7433
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5736
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6621
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W60",
+      "label": "Vermieter meldet Mieter-Beschwerde",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6407
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "UNCERTAIN",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7497
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6261
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W61",
+      "label": "Lieferant meldet Preiserhöhung",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6309
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6824
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5962
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        }
+      ]
+    },
+    {
+      "id": "W62",
+      "label": "Lieferbestätigung mit Rückfrage",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7219
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7661
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "HIGH",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7067
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W63",
+      "label": "Persönliches Angebot Leasing, mit Bezug auf den Betrieb",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "SUPPLIER_OFFER"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6796
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7711
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "SUPPLIER_OFFER",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7624
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W64",
+      "label": "Kaltakquise Strom-Anbieter",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "SUPPLIER_OFFER",
+          "SPAM"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5635
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5811
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5681
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W65",
+      "label": "Anfrage zu Förderung Wärmepumpe",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "SALES_INQUIRY",
+          "REQUEST_FOR_QUOTE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5603
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 2,
+            "latencyMs": 6392
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6667
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W66",
+      "label": "Rückfrage des Kunden zu Foto-Anforderung",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7096
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7216
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "REQUEST_FOR_QUOTE",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6321
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W67",
+      "label": "Presseanfrage",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7028
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7208
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7355
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W68",
+      "label": "Rundmail der Kommune (Baustelle, Sperrung)",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7426
+          },
+          "checks": {
+            "relevance": false,
+            "urgency": true
+          },
+          "pass": false
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7512
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7449
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W69",
+      "label": "Kundenfrage zu Garantie (kein Vorwurf)",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "GENERAL_INQUIRY",
+          "COMPLAINT_OR_SERVICE"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5782
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6873
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6778
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W70",
+      "label": "Doppelte Mail des Kunden (Nachhaken)",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL",
+        "relation": "CONTINUATION"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6307
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6911
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "CONTINUATION",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6080
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true,
+            "relation": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W71",
+      "label": "Anfrage mit Bitte um Rückruf, ohne Inhalt",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6244
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5253
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5992
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W72",
+      "label": "Vorsorge: Boiler tropft leicht, Wasser aufgefangen",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8570
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8148
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7581
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W73",
+      "label": "Stromausfall in der Heizungsanlage mit Frostgefahr im Gewerbe",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "urgency": "HIGH_OR_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8974
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "CRITICAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8574
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "COMPLAINT_OR_SERVICE",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6974
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W74",
+      "label": "Marketing mit persönlicher Anrede (Massenserie)",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "categories": [
+          "NEWSLETTER_OR_MARKETING",
+          "SUPPLIER_OFFER",
+          "SPAM"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5639
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5405
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "NON_ACTIONABLE",
+            "category": "NEWSLETTER_OR_MARKETING",
+            "urgency": "LOW",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6941
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W75",
+      "label": "Bewerbung ohne Text, nur Anhang",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "categories": [
+          "APPLICATION",
+          "UNKNOWN"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6181
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6326
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6756
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W76",
+      "label": "Ausbildungsanfrage eines Elternteils",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "APPLICATION",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6197
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5954
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "APPLICATION",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7134
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W77",
+      "label": "Lieferant bittet um Zahlungsfreigabe-Bestätigung per Link",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7162
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7321
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "UNKNOWN_REQUIRES_REVIEW",
+            "category": "SPAM",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [
+              "PHISHING_SUSPECTED"
+            ],
+            "intentCount": 1,
+            "latencyMs": 7700
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W78",
+      "label": "Anfrage zur Kompatibilität mit Smart-Home",
+      "expect": {
+        "relevance": "BUSINESS_ACTIONABLE",
+        "categories": [
+          "REQUEST_FOR_QUOTE",
+          "SALES_INQUIRY",
+          "GENERAL_INQUIRY"
+        ],
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7673
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7408
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "GENERAL_INQUIRY",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6729
+          },
+          "checks": {
+            "relevance": true,
+            "category": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W79",
+      "label": "Kunde schreibt aus Versehen an falsche Firma",
+      "expect": {
+        "relevance": "NOT_BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 6251
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5446
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "PRIVATE_PERSONAL",
+            "category": "PRIVATE",
+            "urgency": "NORMAL",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 5086
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "W80",
+      "label": "Aufforderung zur Bestätigung des Datenschutzes (Pflichtmail Kunde)",
+      "expect": {
+        "relevance": "BUSINESS_OR_REVIEW",
+        "urgency": "NOT_CRITICAL"
+      },
+      "runs": [
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 8014
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7356
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        },
+        {
+          "observed": {
+            "appliedRelevance": "BUSINESS_ACTIONABLE",
+            "category": "UNKNOWN",
+            "urgency": "HIGH",
+            "relation": "NEW",
+            "riskFlags": [],
+            "intentCount": 1,
+            "latencyMs": 7971
+          },
+          "checks": {
+            "relevance": true,
+            "urgency": true
+          },
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

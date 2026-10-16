@@ -318,6 +318,10 @@ describe('Platform security boundary (e2e)', () => {
       await expect(auth.login(person.email, password)).rejects.toThrow();
       await expect(auth.login(person.email, newPassword)).resolves.toBeTruthy();
 
+      // Verlauf (PLT-07): das abgelöste Passwort darf nicht wieder vergeben werden.
+      const reuse = await change({ currentPassword: newPassword, newPassword: password }).expect(400);
+      expect(JSON.stringify(reuse.body)).toContain('früher schon verwendet');
+
       // Audit: der Wechsel steht drin, kein Passwort.
       const rows = await prisma.withPlatformScope((tx) => tx.auditLog.findMany({ where: { domain: 'PLATFORM', eventType: 'PLATFORM_PASSWORD_CHANGED', entityId: person.id } }));
       expect(rows).toHaveLength(1);

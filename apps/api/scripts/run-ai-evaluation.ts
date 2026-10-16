@@ -3,11 +3,13 @@
  * verändert aber nichts (kein Eingangsereignis, kein Vorgang, keine Mail). Für den Lauf wird ein Wegwerf-Betrieb mit Profil angelegt und danach gelöscht.
  *
  *   set -a && source .env && source .env.llm.local && set +a
- *   pnpm --filter @orbit/api exec ts-node scripts/run-ai-evaluation.ts [--set dev|holdout|all] [--repeats 3] [--out report.json] [--baseline frueherer-report.json] [--no-fail]
+ *   pnpm --filter @orbit/api exec ts-node scripts/run-ai-evaluation.ts [--set dev|v1|tuning|holdout|all] [--repeats 3] [--out report.json] [--baseline frueherer-report.json] [--no-fail]
  *
- * Zwei Sätze (siehe docs/evaluation/README.md):
+ * Sätze (siehe docs/evaluation/README.md):
  *   - dev:     `fixtures/evaluation/triage-catalogue.json` – darf zum Verbessern der Anweisung verwendet werden.
- *   - holdout: `fixtures/evaluation/triage-holdout-v1.json` – versiegelt, nie zum Verbessern verwendet; ein verändertes Siegel wird gemeldet.
+ *   - v1:      `fixtures/evaluation/triage-holdout-v1.json` – seit Oktober 2026 verbraucht (zweimal ausgewertet), gilt als Entwicklungsmaterial.
+ *   - holdout: `fixtures/evaluation/triage-holdout-v2.json` – versiegelt, nie zum Verbessern verwendet; ein verändertes Siegel wird gemeldet.
+ *   - tuning = dev + v1, all = alles.
  *
  * Exitcode 2, wenn ein Gütekriterium (`fixtures/evaluation/thresholds.json`) verfehlt wird oder sich gegenüber `--baseline` etwas verschlechtert (außer mit `--no-fail`).
  */
@@ -43,15 +45,23 @@ function arg(name: string, fallback?: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : fallback;
 }
 
+const SEALED = { name: 'holdout-v2', file: 'triage-holdout-v2' };
+
+function readCases(file: string): { cases: EvaluationCase[]; text: string } {
+  const text = readFileSync(join(FIXTURES, `${file}.json`), 'utf8');
+  return { cases: (JSON.parse(text) as { cases: EvaluationCase[] }).cases, text };
+}
+
 function loadCases(set: string): { cases: EvaluationCase[]; sealWarning?: string } {
   const out: EvaluationCase[] = [];
   let sealWarning: string | undefined;
-  if (set === 'dev' || set === 'all') out.push(...(JSON.parse(readFileSync(join(FIXTURES, 'triage-catalogue.json'), 'utf8')) as { cases: EvaluationCase[] }).cases);
+  if (['dev', 'tuning', 'all'].includes(set)) out.push(...readCases('triage-catalogue').cases);
+  if (['v1', 'tuning', 'all'].includes(set)) out.push(...readCases('triage-holdout-v1').cases);
   if (set === 'holdout' || set === 'all') {
-    const text = readFileSync(join(FIXTURES, 'triage-holdout-v1.json'), 'utf8');
-    const sealed = readFileSync(join(FIXTURES, 'triage-holdout-v1.sha256'), 'utf8').trim();
-    if (sealOf(text) !== sealed) sealWarning = 'ACHTUNG: Der versiegelte Prüfsatz (holdout-v1) wurde nach dem ersten Lauf verändert – die Ergebnisse sind kein unabhängiger Nachweis mehr. Neuen Satz (holdout-v2) anlegen.';
-    out.push(...(JSON.parse(text) as { cases: EvaluationCase[] }).cases);
+    const { cases, text } = readCases(SEALED.file);
+    const sealed = readFileSync(join(FIXTURES, `${SEALED.file}.sha256`), 'utf8').trim();
+    if (sealOf(text) !== sealed) sealWarning = `ACHTUNG: Der versiegelte Prüfsatz (${SEALED.name}) wurde nach dem ersten Lauf verändert – die Ergebnisse sind kein unabhängiger Nachweis mehr. Neuen Satz anlegen.`;
+    out.push(...cases);
   }
   const problems = catalogueProblems(out);
   if (problems.length > 0) throw new Error(`Katalog fehlerhaft: ${problems.join('; ')}`);
@@ -60,7 +70,7 @@ function loadCases(set: string): { cases: EvaluationCase[]; sealWarning?: string
 
 async function main(): Promise<void> {
   const set = arg('set', 'all') as string;
-  if (!['dev', 'holdout', 'all'].includes(set)) throw new Error('--set muss dev, holdout oder all sein.');
+  if (!['dev', 'v1', 'tuning', 'holdout', 'all'].includes(set)) throw new Error('--set muss dev, v1, tuning, holdout oder all sein.');
   const repeats = Math.max(1, Number(arg('repeats', '1')));
   const { cases, sealWarning } = loadCases(set);
   const thresholds = JSON.parse(readFileSync(join(FIXTURES, 'thresholds.json'), 'utf8')) as Thresholds;
