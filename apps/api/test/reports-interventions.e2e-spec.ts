@@ -42,7 +42,7 @@ describe('Bericht „Wo greifen Menschen ein?“ (e2e)', () => {
     for (let i = 0; i < 6; i += 1) await db.approval.create({ data: { tenantId: a.id, entityType: 'SUPPLIER', entityId: randomUUID(), policyAction: 'supplier.create', status: i < 4 ? 'REJECTED' : 'APPROVED', decidedAt: new Date() } });
 
     const report = (await api().get('/api/v1/reports/interventions?days=7').set(bearer(a.token)).expect(200)).body;
-    expect(report.cases).toMatchObject({ total: 5, automated: 2, withHuman: 3 });
+    expect(report.cases).toMatchObject({ total: 5, automated: 2, withHuman: 3, running: 0, automationRate: 0.4 });
     expect(report.attention).toMatchObject({ total: 3, medianReactionMinutes: 30 });
     expect(report.approvals).toMatchObject({ total: 6, approved: 2, rejected: 4 });
     expect(report.topReasons[0]).toEqual({ reason: 'Schritt #: Eingabe … fehlt', count: 3 });

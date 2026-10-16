@@ -74,8 +74,8 @@ export default function InterventionsPage() {
           {data.truncated ? <p className="text-sm text-amber-700">Sehr viele Einträge: der Bericht umfasst nur die neuesten.</p> : null}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Figure label="Vorgänge" value={String(data.cases.total)} hint={`in den letzten ${data.days} Tagen`} />
-            <Figure label="Ganz automatisch erledigt" value={percent(data.cases.automationRate)} hint={`${data.cases.automated} von ${data.cases.total}`} />
-            <Figure label="Mit Person" value={String(data.cases.withHuman)} hint="Prüfung, Freigabe, Fehler oder Meldung" />
+            <Figure label="Ganz automatisch erledigt" value={percent(data.cases.automationRate)} hint={`${data.cases.automated} von ${data.cases.automated + data.cases.withHuman} entschiedenen Vorgängen`} />
+            <Figure label="Mit Person" value={String(data.cases.withHuman)} hint={`Prüfung, Freigabe, Fehler oder Meldung; ${data.cases.running} laufen noch`} />
             <Figure label="Übernahme einer Meldung" value={duration(data.attention.medianReactionMinutes)} hint={`Median, ${data.attention.open} noch offen`} />
           </div>
 

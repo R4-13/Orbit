@@ -44,7 +44,7 @@ export interface InterventionSuggestion {
 
 export interface InterventionReport {
   days: number;
-  cases: { total: number; automated: number; withHuman: number; automationRate: number | null; byType: Array<{ type: string; total: number; withHuman: number }> };
+  cases: { total: number; automated: number; withHuman: number; running: number; automationRate: number | null; byType: Array<{ type: string; total: number; withHuman: number }> };
   attention: { total: number; open: number; byKind: Array<{ kind: string; count: number }>; medianReactionMinutes: number | null };
   approvals: { total: number; approved: number; rejected: number; pending: number; byAction: Array<{ action: string; approved: number; rejected: number; pending: number; rejectionRate: number | null }> };
   topReasons: Array<{ reason: string; count: number }>;
@@ -168,7 +168,8 @@ export function analyseInterventions(input: InterventionInput): InterventionRepo
   const rejected = input.approvals.filter((a) => a.status === 'REJECTED').length;
   return {
     days: input.days,
-    cases: { total: input.cases.length, automated, withHuman, automationRate: rate(automated, input.cases.length), byType: [...byType.entries()].map(([type, v]) => ({ type, ...v })).sort((a, b) => b.total - a.total || a.type.localeCompare(b.type)) },
+    // Die Quote bezieht sich nur auf Vorgänge, bei denen sich schon zeigt, wer sie erledigt hat; laufende ohne Meldung zählen weder dafür noch dagegen.
+    cases: { total: input.cases.length, automated, withHuman, running: input.cases.length - automated - withHuman, automationRate: rate(automated, automated + withHuman), byType: [...byType.entries()].map(([type, v]) => ({ type, ...v })).sort((a, b) => b.total - a.total || a.type.localeCompare(b.type)) },
     attention: { total: input.attention.length, open: input.attention.filter((a) => a.state === 'OPEN').length, byKind: sortedCounts(kinds).map(([kind, count]) => ({ kind, count })), medianReactionMinutes: median(reactions) },
     approvals: { total: input.approvals.length, approved, rejected, pending: input.approvals.length - approved - rejected, byAction },
     topReasons,

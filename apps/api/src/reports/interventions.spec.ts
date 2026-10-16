@@ -20,8 +20,8 @@ describe('Bericht „Wo greifen Menschen ein?“', () => {
       cases: [c('a', 'COMPLETED'), c('b', 'COMPLETED'), c('m', 'MANUAL_REVIEW', ['Prüfung nötig']), c('w', 'WAITING_FOR_APPROVAL'), c('x', 'COMPLETED'), c('o', 'IN_PROGRESS')],
       attention: [att('x', 'GENERAL', 10)],
     });
-    expect(r.cases).toMatchObject({ total: 6, automated: 2, withHuman: 3 });
-    expect(r.cases.automationRate).toBeCloseTo(2 / 6);
+    expect(r.cases).toMatchObject({ total: 6, automated: 2, withHuman: 3, running: 1 });
+    expect(r.cases.automationRate).toBeCloseTo(2 / 5); // der laufende Vorgang ohne Meldung zählt nicht mit
     expect(r.cases.byType).toEqual([{ type: 'SALES', total: 6, withHuman: 3 }]);
   });
 
