@@ -54,7 +54,7 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-11 | ~~Dependency-Scanning~~ **in der CI** (`pnpm audit`, Dependabot); 33 → 4 Funde (`SECURITY.md`) | ENG | S | erledigt | 4 verbleibende Funde: Entwicklungswerkzeuge, begründet |
 | MST-12 | CI-Pipeline auf einem **echten GitHub-Runner** verifizieren | EXT | S | P2 | Erweiterungen nur gegen lokales Docker geprüft |
 | MST-13 | ~~RLS für Tabellen ohne `tenant_id`~~ **umgesetzt** (`ASSUMPTIONS.md` #578, `SECURITY.md`) | ENG | M | erledigt | |
-| MST-14 | Rechtevergabe nach `pnpm db:reset` auf wiederverwendetem Container automatisieren | ENG | S | P3 | `LOCAL_DEVELOPMENT.md` |
+| MST-14 | ~~Rechtevergabe nach `pnpm db:reset` automatisieren~~ **umgesetzt** (`ASSUMPTIONS.md` #607; mit Wegwerf-Datenbank geprüft, nicht mit dem echten Reset) | ENG | S | erledigt | `LOCAL_DEVELOPMENT.md` |
 | MST-15 | Integrationstests für **Queue + Worker** (BullMQ mit Redis) über das Vorhandene hinaus | ENG | M | P3 | |
 | MST-16 | Dokument-Upload gegen echtes MinIO durchgängig live nachweisen | MAN | S | P3 | |
 

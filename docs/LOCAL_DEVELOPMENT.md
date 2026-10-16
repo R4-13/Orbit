@@ -71,13 +71,13 @@ beim allerersten Start eines **frischen** Postgres-Volumes
   **löscht alle lokalen Daten**) oder die Rolle manuell nachziehen (SQL
   aus `docker/postgres/10-init-app-role.sh`, gegen die laufende Instanz
   per `psql`/`docker exec` ausgeführt).
-- `pnpm db:reset` (`prisma migrate reset --force`) legt zwar die
-  Datenbank/das Schema neu an, aber die Rolle selbst (ein Cluster-Objekt)
-  bleibt erhalten — die `ALTER DEFAULT PRIVILEGES`-Regel aus dem
-  Init-Skript ist danach aber weg (sie hängt am `public`-Schema, das
-  `migrate reset` neu erstellt), wodurch neu angelegte Tabellen nicht mehr
-  automatisch für `orbit_app` freigegeben sind. Siehe `docs/ASSUMPTIONS.md`
-  #93 für den Workaround.
+- `pnpm db:reset` (`prisma migrate reset --force`) legt die Datenbank/das
+  Schema neu an; die Rolle selbst (ein Cluster-Objekt) bleibt erhalten, die
+  `ALTER DEFAULT PRIVILEGES`-Regel aus dem Init-Skript ist danach aber weg
+  (sie hängt am `public`-Schema). Deshalb führt `pnpm db:reset` im Anschluss
+  `packages/domain/prisma/post-reset-grants.sql` aus (MST-14, idempotent),
+  das die Rechte für `orbit_app` neu setzt – kein manueller Schritt mehr.
+  Siehe `docs/ASSUMPTIONS.md` #93 und #607.
 
 ## Automatisierte Tests
 
