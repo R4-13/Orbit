@@ -196,6 +196,8 @@ export interface PlatformPrincipal {
   environment: string;
   /** Der Zugang muss das Passwort ändern, bevor irgendetwas anderes erlaubt ist (Zurücksetzen durch den Owner, Startpasswort). */
   passwordChangeRequired: boolean;
+  /** Der Zugang hat einen zweiten Faktor (TOTP) eingerichtet (PLT-02). */
+  mfaEnabled?: boolean;
 }
 
 /** Plattform-Audit-Ereignistypen (Amendment 03 §19.1). Dieselbe Audit-Tabelle wie die Mandanten, `domain = PLATFORM`. */
@@ -209,6 +211,9 @@ export const PLATFORM_AUDIT_EVENT_TYPES = [
   'PLATFORM_LOGIN_FAILED',
   'PLATFORM_LOGOUT',
   'PLATFORM_STEP_UP',
+  'PLATFORM_MFA_ENABLED',
+  'PLATFORM_MFA_DISABLED',
+  'PLATFORM_MFA_RECOVERY_USED',
   'PLATFORM_PASSWORD_CHANGED',
   'PLATFORM_PASSWORD_RESET',
   'PLATFORM_RUNTIME_STATE_CHANGED',

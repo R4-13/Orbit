@@ -6,6 +6,8 @@ import { PlatformAuditModule } from './audit/platform-audit.module';
 import { PlatformAiController } from './ai/platform-ai.controller';
 import { PlatformConnectorsController, PlatformFeaturesController, PlatformKillSwitchController, PlatformTenantLifecycleController } from './control/platform-control.controller';
 import { PlatformAuthService } from './auth/platform-auth.service';
+import { PlatformMfaService } from './auth/platform-mfa.service';
+import { SecurityModule } from '../security/security.module';
 import { PlatformAuthGuard, PlatformScopeGuard } from './auth/platform-guards';
 import { PlatformDiagnosticsService } from './diagnostics/platform-diagnostics.service';
 import { PlatformIdentityService } from './identity/platform-identity.service';
@@ -24,9 +26,9 @@ import { PlatformTenantsService } from './tenants/platform-tenants.service';
  * Phase OPS-1: Identität, Rollen/Scopes, Sitzungen, Step-up, Audit, Mandantenregister (nur lesend). Weitere Funktionsbereiche folgen je Phase.
  */
 @Module({
-  imports: [JwtModule.register({}), PlatformAuditModule, AiGovernanceModule, ProcessModule, QueueModule, TenantsModule],
+  imports: [JwtModule.register({}), SecurityModule, PlatformAuditModule, AiGovernanceModule, ProcessModule, QueueModule, TenantsModule],
   controllers: [PlatformAuthController, PlatformController, PlatformIdentityController, PlatformAiController, PlatformFeaturesController, PlatformKillSwitchController, PlatformConnectorsController, PlatformTenantLifecycleController, PlatformSupportController],
-  providers: [PlatformAuthService, PlatformRuntimeService, PlatformRuntimeMonitorService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
+  providers: [PlatformAuthService, PlatformMfaService, PlatformRuntimeService, PlatformRuntimeMonitorService, PlatformDiagnosticsService, PlatformSupportService, PlatformIdentityService, PlatformTenantsService, PlatformAuthGuard, PlatformScopeGuard],
   exports: [PlatformAuditModule, PlatformAuthService, PlatformAuthGuard, PlatformScopeGuard],
 })
 export class PlatformModule {}

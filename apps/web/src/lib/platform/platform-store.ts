@@ -16,6 +16,8 @@ export interface PlatformPrincipalView {
   expiresAt: string;
   /** Der Zugang muss zuerst das Passwort ändern; bis dahin ist nur „Mein Zugang“ erreichbar. */
   passwordChangeRequired: boolean;
+  /** Der Zugang hat einen zweiten Faktor (Authenticator-App) eingerichtet. */
+  mfaEnabled?: boolean;
 }
 
 export interface StoredPlatformAuth {

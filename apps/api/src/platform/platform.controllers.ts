@@ -8,6 +8,7 @@ import type { OrchestrationDiagnosticProjection } from '@orbit/shared';
 import { AuthenticationExpiredError, PLATFORM_ROLES, PLATFORM_SCOPES, PermissionDeniedError, type PlatformPrincipal, type PlatformRole, type RuntimeHealth, type WorkBacklog } from '@orbit/shared';
 import { PlatformAuditService, type PlatformAuditEntry } from './audit/platform-audit.service';
 import { PlatformAuthService, type PlatformTokens } from './auth/platform-auth.service';
+import { PlatformMfaService } from './auth/platform-mfa.service';
 import { AllowWhilePasswordChangePending, CurrentPlatformPrincipal, PlatformAuthGuard, PlatformScopeGuard, RequirePlatformScope, RequireStepUp } from './auth/platform-guards';
 import {
   CreatePlatformIdentityDto,
@@ -17,6 +18,9 @@ import {
   PlatformAuditQueryDto,
   PlatformChangePasswordDto,
   PlatformLoginDto,
+  PlatformMfaDisableDto,
+  PlatformMfaEnableDto,
+  PlatformMfaSetupDto,
   PlatformRefreshDto,
   PlatformStepUpDto,
   ProvisionTenantDto,
@@ -35,6 +39,7 @@ const PLATFORM_AUTH_THROTTLE = { default: { limit: Number(process.env.PLATFORM_A
 export class PlatformAuthController {
   constructor(
     private readonly auth: PlatformAuthService,
+    private readonly mfa: PlatformMfaService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
   ) {}
 
@@ -49,7 +54,7 @@ export class PlatformAuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle(PLATFORM_AUTH_THROTTLE)
   async login(@Body() dto: PlatformLoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response): Promise<PlatformTokens> {
-    return this.deliver(await this.auth.login(dto.email, dto.password), request, response);
+    return this.deliver(await this.auth.login(dto.email, dto.password, dto.mfaCode), request, response);
   }
 
   @Post('refresh')
@@ -92,7 +97,36 @@ export class PlatformAuthController {
   @Throttle(PLATFORM_AUTH_THROTTLE)
   @UseGuards(PlatformAuthGuard)
   stepUp(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformStepUpDto) {
-    return this.auth.stepUp(principal, dto.password);
+    return this.auth.stepUp(principal, dto.password, dto.mfaCode);
+  }
+
+  /** Zweiter Faktor (PLT-02): Einrichtung beginnen – verlangt das Passwort, zeigt das Geheimnis einmal. */
+  @Post('mfa/setup')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  @UseGuards(PlatformAuthGuard)
+  async mfaSetup(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformMfaSetupDto) {
+    await this.auth.assertPassword(principal, dto.password, 'mfa setup password mismatch');
+    return this.mfa.beginSetup(principal);
+  }
+
+  /** Einrichtung mit dem ersten Code bestätigen; die Wiederherstellungscodes werden einmal ausgegeben. */
+  @Post('mfa/enable')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  @UseGuards(PlatformAuthGuard)
+  mfaEnable(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformMfaEnableDto) {
+    return this.mfa.enable(principal, dto.code);
+  }
+
+  /** Zweiten Faktor abschalten: Passwort und aktueller Code (oder Wiederherstellungscode). */
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(PLATFORM_AUTH_THROTTLE)
+  @UseGuards(PlatformAuthGuard)
+  async mfaDisable(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Body() dto: PlatformMfaDisableDto): Promise<void> {
+    await this.auth.assertPassword(principal, dto.password, 'mfa disable password mismatch');
+    await this.mfa.disable(principal, dto.code);
   }
 }
 
@@ -245,6 +279,14 @@ export class PlatformIdentityController {
   @RequireStepUp()
   resetPassword(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: ResetPlatformPasswordDto) {
     return this.identities.resetPassword(principal, id, dto.reason);
+  }
+
+  /** Zweiten Faktor einer Person zurücksetzen (verloren): Sitzungen enden, die Person richtet ihn neu ein. */
+  @Post(':id/reset-mfa')
+  @HttpCode(HttpStatus.OK)
+  @RequireStepUp()
+  resetMfa(@CurrentPlatformPrincipal() principal: PlatformPrincipal, @Param('id') id: string, @Body() dto: ResetPlatformPasswordDto) {
+    return this.identities.resetMfa(principal, id, dto.reason);
   }
 
   @Post(':id/disable')

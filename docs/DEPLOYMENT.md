@@ -247,3 +247,7 @@ Kundendatenbank mit demselben Slug würde deren Daten löschen (kollidiert
 aber nur bei identischem Tenant-`slug` "musterwerk", ist also in der
 Praxis unwahrscheinlich, aber nicht durch einen expliziten Code-Schutz
 verhindert).
+
+### Zweiter Faktor der Plattformzugänge
+
+Betreiberzugänge können unter „Mein Zugang“ einen Authenticator (TOTP) einrichten (siehe `docs/ASSUMPTIONS.md` #608). Das Geheimnis wird mit dem Credential-Schlüssel (`CREDENTIAL_ENCRYPTION_KEY`) verschlüsselt; `scripts/rotate-credential-key.ts` schreibt es bei einer Rotation mit um. Empfehlung: für jeden Owner und Operator einrichten.

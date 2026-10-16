@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
     const report = await rotateCredentialKey(app.get(PrismaService), oldKey, newKey, { dryRun });
-    console.log(`${dryRun ? 'Probelauf – nichts geschrieben' : 'Rotiert'}: ${report.integrationSecrets} Anbindungs-Zugangsdaten, ${report.platformSecrets} Plattform-Geheimnisse, ${report.aiProviderConnections} KI-Zugänge.`);
+    console.log(`${dryRun ? 'Probelauf – nichts geschrieben' : 'Rotiert'}: ${report.integrationSecrets} Anbindungs-Zugangsdaten, ${report.platformSecrets} Plattform-Geheimnisse, ${report.mfaSecrets} Geheimnisse zweiter Faktoren, ${report.aiProviderConnections} KI-Zugänge.`);
     if (!dryRun) console.log('Jetzt CREDENTIAL_ENCRYPTION_KEY auf den neuen Wert setzen und API und Worker neu starten.');
   } finally {
     await app.close();

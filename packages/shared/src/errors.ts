@@ -128,6 +128,13 @@ export class PasswordChangeRequiredError extends OrbitError {
   readonly retryable = false;
 }
 
+/** Das Passwort stimmt, aber der Zugang verlangt einen zweiten Faktor (Code der Authenticator-App oder Wiederherstellungscode). */
+export class MfaRequiredError extends OrbitError {
+  readonly code = 'MFA_REQUIRED';
+  readonly httpStatus = 401;
+  readonly retryable = false;
+}
+
 /** Amendment 03 §3: die Plattformdomäne ist nicht konfiguriert (kein `PLATFORM_JWT_SECRET`) und daher ausgeschaltet. */
 export class PlatformNotConfiguredError extends OrbitError {
   readonly code = 'PLATFORM_NOT_CONFIGURED';

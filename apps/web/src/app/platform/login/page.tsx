@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, Input, Label } from '@orbit/ui';
-import { PlatformApiError } from '../../../lib/platform/platform-client';
+import { PlatformApiError, isMfaRequired } from '../../../lib/platform/platform-client';
 import { usePlatformAuth } from '../../../lib/platform/platform-auth';
 
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT';
@@ -13,6 +13,8 @@ export default function PlatformLoginPage() {
   const { login } = usePlatformAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [needsCode, setNeedsCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -21,10 +23,15 @@ export default function PlatformLoginPage() {
     setError(null);
     setBusy(true);
     try {
-      await login(email, password);
+      await login(email, password, needsCode ? mfaCode.trim() : undefined);
       router.replace('/platform');
     } catch (err) {
-      if (err instanceof PlatformApiError && err.status === 401) setError('E-Mail-Adresse oder Passwort ist nicht korrekt.');
+      if (isMfaRequired(err)) {
+        // Das Passwort stimmt; der Zugang hat einen zweiten Faktor – nach dem Code fragen statt eine Fehlermeldung zu zeigen.
+        setNeedsCode(true);
+        setError(null);
+      } else if (err instanceof PlatformApiError && err.status === 401 && needsCode) setError('Der Code ist nicht korrekt oder bereits benutzt.');
+      else if (err instanceof PlatformApiError && err.status === 401) setError('E-Mail-Adresse oder Passwort ist nicht korrekt.');
       else if (err instanceof PlatformApiError && err.status === 429) setError('Zu viele Versuche. Bitte warten Sie einige Minuten.');
       else if (err instanceof PlatformApiError && err.code === 'PLATFORM_NOT_CONFIGURED') setError('Der Plattformbetrieb ist in dieser Umgebung nicht eingerichtet.');
       else setError('Anmeldung ist gerade nicht möglich. Bitte später erneut versuchen.');
@@ -48,6 +55,13 @@ export default function PlatformLoginPage() {
               <Label htmlFor="platform-password">Passwort</Label>
               <Input id="platform-password" name="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
+            {needsCode ? (
+              <div>
+                <Label htmlFor="platform-mfa">Code der Authenticator-App</Label>
+                <Input id="platform-mfa" name="mfaCode" inputMode="numeric" autoComplete="one-time-code" required autoFocus value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} />
+                <p className="mt-1 text-xs text-slate-500">6-stelliger Code aus Ihrer App – oder ein Wiederherstellungscode.</p>
+              </div>
+            ) : null}
             {error ? (
               <p role="alert" className="text-sm text-red-700">
                 {error}

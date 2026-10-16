@@ -9,7 +9,7 @@ interface PlatformAuthValue {
   principal: PlatformPrincipalView | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, mfaCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   hasScope: (scope: string) => boolean;
   /** Führt eine kritische Aktion aus; verlangt der Server eine erneute Passwortprüfung, fragt ein Dialog danach und wiederholt die Aktion genau einmal. */
@@ -34,7 +34,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = useCallback((email: string, password: string) => platformLogin(email, password), []);
+  const login = useCallback((email: string, password: string, mfaCode?: string) => platformLogin(email, password, mfaCode), []);
   const logout = useCallback(() => platformLogout(), []);
   const hasScope = useCallback((scope: string) => auth?.principal.platformScopes.includes(scope) ?? false, [auth]);
 
@@ -65,8 +65,9 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       {children}
       <StepUpDialog
         open={stepUpOpen}
-        onSubmit={async (password) => {
-          await platformStepUp(password);
+        needsCode={auth?.principal.mfaEnabled === true}
+        onSubmit={async (password, code) => {
+          await platformStepUp(password, code);
           setStepUpOpen(false);
           pending.current?.resolve();
           pending.current = null;

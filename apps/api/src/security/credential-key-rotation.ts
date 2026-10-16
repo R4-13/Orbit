@@ -28,6 +28,8 @@ export interface RotationReport {
   integrationSecrets: number;
   platformSecrets: number;
   aiProviderConnections: number;
+  /** Geheimnisse der zweiten Faktoren von Plattformzugängen (PLT-02). */
+  mfaSecrets: number;
   dryRun: boolean;
 }
 
@@ -39,7 +41,7 @@ export interface RotationReport {
  */
 export async function rotateCredentialKey(prisma: PrismaService, oldKey: Buffer, newKey: Buffer, options: { dryRun: boolean }): Promise<RotationReport> {
   return prisma.withRlsBypass(async (tx) => {
-    const report: RotationReport = { integrationSecrets: 0, platformSecrets: 0, aiProviderConnections: 0, dryRun: options.dryRun };
+    const report: RotationReport = { integrationSecrets: 0, platformSecrets: 0, aiProviderConnections: 0, mfaSecrets: 0, dryRun: options.dryRun };
     for (const row of await tx.integrationCredentialSecret.findMany({ select: { id: true, encryptedValue: true } })) {
       const next = reencrypt(row.encryptedValue, oldKey, newKey);
       if (!options.dryRun) await tx.integrationCredentialSecret.update({ where: { id: row.id }, data: { encryptedValue: new Uint8Array(next) } });
@@ -55,6 +57,12 @@ export async function rotateCredentialKey(prisma: PrismaService, oldKey: Buffer,
       const next = reencrypt(row.encryptedCredentials, oldKey, newKey);
       if (!options.dryRun) await tx.aIProviderConnection.update({ where: { id: row.id }, data: { encryptedCredentials: new Uint8Array(next) } });
       report.aiProviderConnections += 1;
+    }
+    for (const row of await tx.platformUser.findMany({ where: { mfaSecretEnc: { not: null } }, select: { id: true, mfaSecretEnc: true } })) {
+      if (!row.mfaSecretEnc) continue;
+      const next = reencrypt(row.mfaSecretEnc, oldKey, newKey);
+      if (!options.dryRun) await tx.platformUser.update({ where: { id: row.id }, data: { mfaSecretEnc: new Uint8Array(next) } });
+      report.mfaSecrets += 1;
     }
     return report;
   });

@@ -3,6 +3,12 @@ import { Type } from 'class-transformer';
 import { AUTOMATION_PRESET_KEYS } from '@orbit/shared';
 
 export class PlatformLoginDto {
+  /** Zweiter Faktor, falls der Zugang einen eingerichtet hat (6-stelliger Code oder Wiederherstellungscode). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  mfaCode?: string;
+
   @IsEmail()
   email!: string;
 
@@ -34,6 +40,11 @@ export class PlatformChangePasswordDto {
 }
 
 export class PlatformStepUpDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  mfaCode?: string;
+
   @IsString()
   @MinLength(1)
   @MaxLength(512)
@@ -184,4 +195,30 @@ export class ProvisionTenantDto {
   @MinLength(5)
   @MaxLength(500)
   reason!: string;
+}
+
+export class PlatformMfaSetupDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  password!: string;
+}
+
+export class PlatformMfaEnableDto {
+  @IsString()
+  @MinLength(6)
+  @MaxLength(32)
+  code!: string;
+}
+
+export class PlatformMfaDisableDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(512)
+  password!: string;
+
+  @IsString()
+  @MinLength(6)
+  @MaxLength(32)
+  code!: string;
 }

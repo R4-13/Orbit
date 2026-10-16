@@ -68,14 +68,14 @@ describe('PlatformIdentityService – Schutz des letzten Owners (Amendment 03 §
 
 describe('PlatformAuthService – ohne PLATFORM_JWT_SECRET ist die Domäne aus', () => {
   it('assertEnabled wirft PlatformNotConfiguredError (kein Standard-Secret)', () => {
-    const service = new PlatformAuthService({} as never, {} as never, {} as never, { PLATFORM_JWT_SECRET: undefined } as never);
+    const service = new PlatformAuthService({} as never, {} as never, {} as never, { PLATFORM_JWT_SECRET: undefined } as never, {} as never);
     expect(service.enabled).toBe(false);
     expect(() => service.assertEnabled()).toThrow(PlatformNotConfiguredError);
   });
 
   it('login/refresh scheitern vor jedem Datenbankzugriff', async () => {
     const prisma = { withPlatformScope: jest.fn() };
-    const service = new PlatformAuthService(prisma as never, {} as never, {} as never, { PLATFORM_JWT_SECRET: undefined } as never);
+    const service = new PlatformAuthService(prisma as never, {} as never, {} as never, { PLATFORM_JWT_SECRET: undefined } as never, {} as never);
     await expect(service.login('a@b.example', 'x')).rejects.toBeInstanceOf(PlatformNotConfiguredError);
     await expect(service.refresh('x'.repeat(20))).rejects.toBeInstanceOf(PlatformNotConfiguredError);
     await expect(service.authenticate('token')).rejects.toBeInstanceOf(PlatformNotConfiguredError);

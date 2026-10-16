@@ -35,7 +35,8 @@ describe('Schlüsselrotation (TEC-08)', () => {
 
   describe('rotateCredentialKey', () => {
     /** Ein Speicher-Double mit den drei Tabellen; `withRlsBypass` führt die Funktion unmittelbar aus (die Atomarität liefert die Datenbank-Transaktion). */
-    function fakeDb(rows: { integration: Buffer[]; platform: Buffer[]; ai: Array<Buffer | null> }) {
+    function fakeDb(rows: { integration: Buffer[]; platform: Buffer[]; ai: Array<Buffer | null>; mfa?: Buffer[] }) {
+      rows.mfa ??= [];
       const writes: string[] = [];
       const table = (name: string, list: Array<Buffer | null>, column: string) => ({
         findMany: jest.fn(async () => list.map((value, index) => ({ id: `${name}-${index}`, [column]: value }))),
@@ -48,22 +49,23 @@ describe('Schlüsselrotation (TEC-08)', () => {
         integrationCredentialSecret: table('integration', rows.integration, 'encryptedValue'),
         platformSecret: table('platform', rows.platform, 'encryptedValue'),
         aIProviderConnection: table('ai', rows.ai, 'encryptedCredentials'),
+        platformUser: table('mfa', rows.mfa, 'mfaSecretEnc'),
       };
       const prisma = { withRlsBypass: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx) } as unknown as PrismaService;
       return { prisma, writes, rows };
     }
 
-    it('schreibt alle drei Tabellen neu; der Probelauf schreibt nichts', async () => {
-      const make = () => ({ integration: [serviceFor(oldKey).encrypt('a'), serviceFor(oldKey).encrypt('b')], platform: [serviceFor(oldKey).encrypt('c')], ai: [serviceFor(oldKey).encrypt('d'), null] });
+    it('schreibt alle vier Tabellen neu (auch die zweiten Faktoren der Plattformzugänge); der Probelauf schreibt nichts', async () => {
+      const make = () => ({ integration: [serviceFor(oldKey).encrypt('a'), serviceFor(oldKey).encrypt('b')], platform: [serviceFor(oldKey).encrypt('c')], ai: [serviceFor(oldKey).encrypt('d'), null], mfa: [serviceFor(oldKey).encrypt('JBSWY3DPEHPK3PXP')] });
       const dry = fakeDb(make());
-      expect(await rotateCredentialKey(dry.prisma, oldKey, newKey, { dryRun: true })).toEqual({ integrationSecrets: 2, platformSecrets: 1, aiProviderConnections: 1, dryRun: true });
+      expect(await rotateCredentialKey(dry.prisma, oldKey, newKey, { dryRun: true })).toEqual({ integrationSecrets: 2, platformSecrets: 1, aiProviderConnections: 1, mfaSecrets: 1, dryRun: true });
       expect(dry.writes).toEqual([]);
 
       const real = fakeDb(make());
-      expect(await rotateCredentialKey(real.prisma, oldKey, newKey, { dryRun: false })).toMatchObject({ integrationSecrets: 2, platformSecrets: 1, aiProviderConnections: 1 });
-      expect(real.writes).toHaveLength(4);
+      expect(await rotateCredentialKey(real.prisma, oldKey, newKey, { dryRun: false })).toMatchObject({ integrationSecrets: 2, platformSecrets: 1, aiProviderConnections: 1, mfaSecrets: 1 });
+      expect(real.writes).toHaveLength(5);
       const target = serviceFor(newKey);
-      expect([target.decrypt(real.rows.integration[0]!), target.decrypt(real.rows.integration[1]!), target.decrypt(real.rows.platform[0]!), target.decrypt(real.rows.ai[0]!)]).toEqual(['a', 'b', 'c', 'd']);
+      expect([target.decrypt(real.rows.integration[0]!), target.decrypt(real.rows.integration[1]!), target.decrypt(real.rows.platform[0]!), target.decrypt(real.rows.ai[0]!), target.decrypt(real.rows.mfa![0]!)]).toEqual(['a', 'b', 'c', 'd', 'JBSWY3DPEHPK3PXP']);
     });
 
     it('ein nicht lesbarer Wert bricht den Lauf ab (die Transaktion verwirft dann alles)', async () => {

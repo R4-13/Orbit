@@ -96,6 +96,18 @@ export class PlatformIdentityService {
     return { temporaryPassword, revokedSessions };
   }
 
+  /** Setzt den zweiten Faktor einer Person zurück (Authenticator verloren, keine Wiederherstellungscodes mehr): Sitzungen enden, die Person richtet ihn neu ein (PLT-02). */
+  async resetMfa(actor: PlatformPrincipal, targetUserId: string, reason: string): Promise<{ revokedSessions: number }> {
+    if (targetUserId === actor.userId) throw new ValidationFailedError('Den eigenen zweiten Faktor deaktivieren Sie unter „Mein Zugang“.');
+    const target = await this.prisma.withPlatformScope((tx) => tx.platformUser.findUnique({ where: { id: targetUserId } }));
+    if (!target) throw new NotFoundError('Plattformidentität nicht gefunden.');
+    if (!target.mfaEnabledAt) throw new ValidationFailedError('Für diese Person ist kein zweiter Faktor eingerichtet.');
+    await this.prisma.withPlatformScope((tx) => tx.platformUser.update({ where: { id: targetUserId }, data: { mfaSecretEnc: null, mfaEnabledAt: null, mfaLastStep: null, mfaRecoveryHashes: [] } }));
+    const revokedSessions = await this.auth.revokeAllSessions(targetUserId, 'MFA_RESET');
+    await this.audit.record({ eventType: 'PLATFORM_MFA_DISABLED', actor: { userId: actor.userId, roles: actor.platformRoles }, targetType: 'PlatformUser', targetId: targetUserId, reason, extra: { revokedSessions, byOwner: true } });
+    return { revokedSessions };
+  }
+
   /** Setzt die aktiven Rollen exakt auf `roles` (Hinzufügen und Entziehen in einer Transaktion, mit Vorher/Nachher im Audit). */
   async setRoles(actor: PlatformPrincipal, targetUserId: string, input: { roles: string[]; reason: string }): Promise<PlatformIdentityView> {
     const roles = this.validateRoles(input.roles);

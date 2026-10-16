@@ -102,7 +102,7 @@ Quelle: [`PLATFORM_OPERATIONS_ACCEPTANCE_REPORT.md`](PLATFORM_OPERATIONS_ACCEPTA
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
 | PLT-01 | **Plattform-UI vervollständigen:** KI-Anbieter/Modelle/Profilentwürfe/Plattformverbindungen anlegen, Flag-Ausnahmen, Zugriff auf Vorgangsinhalt per Support-Sitzung | ENG | M | P2 | heute teils nur per API |
-| PLT-02 | **MFA/WebAuthn** statt Passwort-Re-Auth als Step-up | ENG | L | P2 | |
+| PLT-02 | **MFA** statt Passwort-Re-Auth als Step-up: ~~TOTP (Authenticator-App) mit Wiederherstellungscodes~~ **umgesetzt** (`ASSUMPTIONS.md` #608). **Offen:** WebAuthn/Passkeys, Pflicht zum Faktor, QR-Code, MFA für Mandantenkonten | ENG | L | erledigt (Rest P3) | |
 | PLT-03 | **Aktive periodische Health-Prüfung** der KI-Anbieter (OPS-12) | ENG | S–M | P3 | würde bezahlte Aufrufe auslösen → Kostenabwägung |
 | PLT-04 | Connector-Sperre **beendet laufende Aktionen aktiv** (OPS-15) | ENG | M | P3 | |
 | PLT-05 | **Mandantenspezifische Region/Datenrichtlinie** (OPS-27) | ENG | L | P3 | |

@@ -2282,6 +2282,13 @@ model PlatformUser {
   passwordChangeRequired  Boolean            @default(false) @map("password_change_required")
   passwordChangedAt       DateTime?          @map("password_changed_at")
   passwordHistory         String[]           @default([]) @map("password_history")
+  /// Zweiter Faktor (TOTP, RFC 6238, PLT-02): das Geheimnis liegt verschlüsselt (AES-256-GCM wie die Tresore), nie im Klartext; erst mit `mfaEnabledAt` gilt es.
+  mfaSecretEnc            Bytes?             @map("mfa_secret_enc")
+  mfaEnabledAt            DateTime?          @map("mfa_enabled_at")
+  /// Zeitschritt des zuletzt akzeptierten Codes: derselbe Code gilt nie zweimal.
+  mfaLastStep             Int?               @map("mfa_last_step")
+  /// SHA-256 der noch gültigen Wiederherstellungscodes (jeder gilt einmal).
+  mfaRecoveryHashes       String[]           @default([]) @map("mfa_recovery_hashes")
   createdByPlatformUserId String?            @map("created_by_platform_user_id")
   createdAt               DateTime           @default(now()) @map("created_at")
   updatedAt               DateTime           @updatedAt @map("updated_at")

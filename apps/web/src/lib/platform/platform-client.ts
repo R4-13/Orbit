@@ -14,6 +14,8 @@ export class PlatformApiError extends Error {
   }
 }
 
+export const isMfaRequired = (error: unknown): boolean => error instanceof PlatformApiError && error.code === 'MFA_REQUIRED';
+
 export const isStepUpRequired = (error: unknown): boolean => error instanceof PlatformApiError && error.code === 'STEP_UP_REQUIRED';
 
 /** Im Cookie-Modus bleibt `refreshToken` leer: das Token kommt nie in den Antwortkörper, sondern nur als httpOnly-Cookie. */
@@ -110,8 +112,8 @@ export async function platformDownload(path: string): Promise<{ filename: string
   return { filename, text: await response.text() };
 }
 
-export async function platformLogin(email: string, password: string): Promise<void> {
-  const response = await rawFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+export async function platformLogin(email: string, password: string, mfaCode?: string): Promise<void> {
+  const response = await rawFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, ...(mfaCode ? { mfaCode } : {}) }) });
   if (!response.ok) throw await toError(response);
   const data = (await response.json()) as PlatformTokensResponse;
   setStoredPlatformAuth({ accessToken: data.accessToken, principal: data.principal });
@@ -126,8 +128,14 @@ export async function platformLogout(): Promise<void> {
   setStoredPlatformAuth(null);
 }
 
-export async function platformStepUp(password: string): Promise<void> {
-  await platformFetch<{ stepUpUntil: string }>('/auth/step-up', { method: 'POST', body: JSON.stringify({ password }) });
+export async function platformStepUp(password: string, mfaCode?: string): Promise<void> {
+  await platformFetch<{ stepUpUntil: string }>('/auth/step-up', { method: 'POST', body: JSON.stringify({ password, ...(mfaCode ? { mfaCode } : {}) }) });
 }
+
+/** Zweiter Faktor (PLT-02): Einrichtung beginnen – das Geheimnis wird nur in dieser Antwort ausgegeben. */
+export const platformMfaSetup = (password: string) => platformFetch<{ secret: string; otpauthUri: string }>('/auth/mfa/setup', { method: 'POST', body: JSON.stringify({ password }) });
+/** Mit dem ersten Code bestätigen; die Wiederherstellungscodes werden nur hier ausgegeben. */
+export const platformMfaEnable = (code: string) => platformFetch<{ recoveryCodes: string[] }>('/auth/mfa/enable', { method: 'POST', body: JSON.stringify({ code }) });
+export const platformMfaDisable = (password: string, code: string) => platformFetch<void>('/auth/mfa/disable', { method: 'POST', body: JSON.stringify({ password, code }) });
 
 export const platformErrorMessage = (error: unknown, fallback: string): string => (error instanceof PlatformApiError ? error.message : fallback);

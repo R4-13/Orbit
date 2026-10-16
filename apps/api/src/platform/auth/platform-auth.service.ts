@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import type { OrbitEnv } from '@orbit/config';
 import {
   AuthenticationExpiredError,
+  MfaRequiredError,
   PLATFORM_MIN_PASSWORD_LENGTH,
   PlatformNotConfiguredError,
   ValidationFailedError,
@@ -19,6 +20,7 @@ import {
 import { ORBIT_ENV } from '../../config/env.token';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PlatformAuditService } from '../audit/platform-audit.service';
+import { PlatformMfaService } from './platform-mfa.service';
 import { PLATFORM_AUDIENCE, PLATFORM_ISSUER, type PlatformJwtPayload } from './platform-auth.types';
 
 export interface PlatformTokens {
@@ -31,6 +33,7 @@ export interface PlatformTokens {
 interface SessionShape {
   id: string;
   stepUpUntil: Date | null;
+  assurance?: string;
 }
 
 function sha256(value: string): string {
@@ -53,6 +56,7 @@ export class PlatformAuthService {
     private readonly jwt: JwtService,
     private readonly audit: PlatformAuditService,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
+    private readonly mfa: PlatformMfaService,
   ) {}
 
   /** Startpasswort/Zurücksetzung oder ein abgelaufenes Passwort (PLT-07): bis zum Wechsel sind nur Passwortwechsel, Abmelden und die eigene Kontoabfrage erlaubt. */
@@ -74,7 +78,7 @@ export class PlatformAuthService {
     return argon2.verify(hash ?? (await this.dummyHash), password).catch(() => false);
   }
 
-  async login(email: string, password: string): Promise<PlatformTokens> {
+  async login(email: string, password: string, mfaCode?: string): Promise<PlatformTokens> {
     this.assertEnabled();
     const normalized = email.trim().toLowerCase();
     const user = await this.prisma.withPlatformScope((tx) =>
@@ -93,6 +97,18 @@ export class PlatformAuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
+    // Zweiter Faktor (PLT-02): das Passwort allein genügt nicht. Ohne Code kommt eine eindeutige Antwort (die Oberfläche fragt dann nach dem Code); ein falscher Code zählt wie
+    // ein falsches Passwort.
+    let assurance: 'PASSWORD' | 'MFA' = 'PASSWORD';
+    if (user.mfaEnabledAt) {
+      if (!mfaCode?.trim()) throw new MfaRequiredError('Bitte geben Sie den Code Ihrer Authenticator-App ein.');
+      if (!(await this.mfa.verify(user.id, mfaCode))) {
+        await this.audit.record({ eventType: 'PLATFORM_LOGIN_FAILED', targetType: 'PlatformUser', targetId: user.id, extra: { emailHash: sha256(normalized), cause: 'mfa' } });
+        throw new UnauthorizedException('Invalid credentials.');
+      }
+      assurance = 'MFA';
+    }
+
     const refreshToken = randomBytes(32).toString('hex');
     const session = await this.prisma.withPlatformScope(async (tx) => {
       await tx.platformUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -100,14 +116,14 @@ export class PlatformAuthService {
         data: {
           platformUserId: user.id,
           refreshTokenHash: sha256(refreshToken),
-          assurance: 'PASSWORD',
+          assurance,
           environment: this.env.ORBIT_ENVIRONMENT,
           expiresAt: new Date(Date.now() + this.env.PLATFORM_SESSION_MAX_HOURS * 3_600_000),
         },
       });
     });
     await this.audit.record({ eventType: 'PLATFORM_LOGIN', actor: { userId: user.id, roles }, targetType: 'PlatformSession', targetId: session.id });
-    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken, this.mustChangePassword(user));
+    return this.issue(user.id, user.email, user.displayName, roles, session, refreshToken, this.mustChangePassword(user), Boolean(user.mfaEnabledAt));
   }
 
   async refresh(rawRefreshToken: string): Promise<PlatformTokens> {
@@ -131,7 +147,7 @@ export class PlatformAuthService {
     if (!claimed) throw new AuthenticationExpiredError('Refresh token is invalid, revoked or expired.');
     const roles = claimed.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new AuthenticationExpiredError('No platform role assigned.');
-    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next, this.mustChangePassword(claimed.user));
+    return this.issue(claimed.user.id, claimed.user.email, claimed.user.displayName, roles, claimed, next, this.mustChangePassword(claimed.user), Boolean(claimed.user.mfaEnabledAt));
   }
 
   async logout(principal: PlatformPrincipal): Promise<void> {
@@ -176,18 +192,40 @@ export class PlatformAuthService {
     return { revokedOtherSessions: revoked };
   }
 
-  /** Erneute Passwortprüfung → zeitlich begrenztes Erhöhungsfenster für kritische Operationen. */
-  async stepUp(principal: PlatformPrincipal, password: string): Promise<{ stepUpUntil: string; authenticationAssurance: 'PASSWORD_STEP_UP' }> {
+  /** Prüft das Passwort der angemeldeten Person erneut (für MFA-Einrichtung und -Deaktivierung); bei Fehlschlag Audit und 401. */
+  async assertPassword(principal: PlatformPrincipal, password: string, reason: string): Promise<void> {
     const user = await this.prisma.withPlatformScope((tx) => tx.platformUser.findUnique({ where: { id: principal.userId } }));
     const valid = await this.verifyPassword(user?.passwordHash, password);
     if (!user || !valid || user.status !== 'ACTIVE') {
-      await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId, reason: 'step-up password check failed' });
+      await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformUser', targetId: principal.userId, reason });
       throw new UnauthorizedException('Invalid credentials.');
     }
+  }
+
+  /**
+   * Erneute Prüfung → zeitlich begrenztes Erhöhungsfenster für kritische Operationen. Ohne zweiten Faktor genügt das Passwort; hat der Zugang einen, verlangt das Fenster
+   * zusätzlich den aktuellen Code (Sicherheitsstufe `MFA`).
+   */
+  async stepUp(principal: PlatformPrincipal, password: string, mfaCode?: string): Promise<{ stepUpUntil: string; authenticationAssurance: 'PASSWORD_STEP_UP' | 'MFA' }> {
+    const user = await this.prisma.withPlatformScope((tx) => tx.platformUser.findUnique({ where: { id: principal.userId } }));
+    const valid = await this.verifyPassword(user?.passwordHash, password);
+    if (!user || !valid || user.status !== 'ACTIVE') {
+      await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId, reason: 'step-up password mismatch' });
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+    let assurance: 'PASSWORD_STEP_UP' | 'MFA' = 'PASSWORD_STEP_UP';
+    if (user.mfaEnabledAt) {
+      if (!mfaCode?.trim()) throw new MfaRequiredError('Bitte geben Sie zusätzlich den Code Ihrer Authenticator-App ein.');
+      if (!(await this.mfa.verify(user.id, mfaCode))) {
+        await this.audit.record({ eventType: 'PLATFORM_ACCESS_DENIED', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId, reason: 'step-up mfa mismatch' });
+        throw new UnauthorizedException('Invalid credentials.');
+      }
+      assurance = 'MFA';
+    }
     const until = new Date(Date.now() + this.env.PLATFORM_STEP_UP_MINUTES * 60_000);
-    await this.prisma.withPlatformScope((tx) => tx.platformSession.update({ where: { id: principal.sessionId }, data: { stepUpUntil: until, assurance: 'PASSWORD_STEP_UP' } }));
-    await this.audit.record({ eventType: 'PLATFORM_STEP_UP', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId, extra: { until: until.toISOString() } });
-    return { stepUpUntil: until.toISOString(), authenticationAssurance: 'PASSWORD_STEP_UP' };
+    await this.prisma.withPlatformScope((tx) => tx.platformSession.update({ where: { id: principal.sessionId }, data: { stepUpUntil: until, assurance } }));
+    await this.audit.record({ eventType: 'PLATFORM_STEP_UP', actor: { userId: principal.userId, roles: principal.platformRoles }, targetType: 'PlatformSession', targetId: principal.sessionId, extra: { until: until.toISOString(), assurance } });
+    return { stepUpUntil: until.toISOString(), authenticationAssurance: assurance };
   }
 
   /** Widerruft alle Sitzungen einer Identität (z. B. beim Deaktivieren oder bei Rollenentzug). */
@@ -229,10 +267,10 @@ export class PlatformAuthService {
     }
     const roles = session.user.roleAssignments.map((a) => a.role).filter(isPlatformRole);
     if (roles.length === 0) throw new UnauthorizedException('No platform role assigned.');
-    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload, this.mustChangePassword(session.user));
+    return this.toPrincipal(session.user.id, session.user.email, session.user.displayName, roles, session, payload, this.mustChangePassword(session.user), Boolean(session.user.mfaEnabledAt));
   }
 
-  private issue(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, rawRefresh: string, passwordChangeRequired: boolean): PlatformTokens {
+  private issue(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, rawRefresh: string, passwordChangeRequired: boolean, mfaEnabled: boolean): PlatformTokens {
     const secret = this.assertEnabled();
     const payload: PlatformJwtPayload = { sub: userId, sid: session.id, dom: 'PLATFORM', env: this.env.ORBIT_ENVIRONMENT };
     const accessToken = this.jwt.sign(payload, { secret, audience: PLATFORM_AUDIENCE, issuer: PLATFORM_ISSUER, expiresIn: this.env.PLATFORM_ACCESS_TTL });
@@ -240,11 +278,11 @@ export class PlatformAuthService {
       accessToken,
       refreshToken: rawRefresh,
       expiresIn: Math.floor(parseDurationToMs(this.env.PLATFORM_ACCESS_TTL) / 1000),
-      principal: this.toPrincipal(userId, email, displayName, roles, session, payload, passwordChangeRequired),
+      principal: this.toPrincipal(userId, email, displayName, roles, session, payload, passwordChangeRequired, mfaEnabled),
     };
   }
 
-  private toPrincipal(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, payload: PlatformJwtPayload & { iat?: number; exp?: number }, passwordChangeRequired: boolean): PlatformPrincipal {
+  private toPrincipal(userId: string, email: string, displayName: string, roles: PlatformRole[], session: SessionShape, payload: PlatformJwtPayload & { iat?: number; exp?: number }, passwordChangeRequired: boolean, mfaEnabled = false): PlatformPrincipal {
     const stepUpActive = Boolean(session.stepUpUntil && session.stepUpUntil.getTime() > Date.now());
     const issuedAt = payload.iat ? new Date(payload.iat * 1000) : new Date();
     const expiresAt = payload.exp ? new Date(payload.exp * 1000) : new Date(Date.now() + parseDurationToMs(this.env.PLATFORM_ACCESS_TTL));
@@ -254,13 +292,14 @@ export class PlatformAuthService {
       displayName,
       platformRoles: roles,
       platformScopes: scopesForRoles(roles),
-      authenticationAssurance: stepUpActive ? 'PASSWORD_STEP_UP' : 'PASSWORD',
+      authenticationAssurance: session.assurance === 'MFA' ? 'MFA' : stepUpActive ? 'PASSWORD_STEP_UP' : 'PASSWORD',
       stepUpUntil: stepUpActive && session.stepUpUntil ? session.stepUpUntil.toISOString() : undefined,
       sessionId: session.id,
       issuedAt: issuedAt.toISOString(),
       expiresAt: expiresAt.toISOString(),
       environment: this.env.ORBIT_ENVIRONMENT,
       passwordChangeRequired,
+      mfaEnabled,
     };
   }
 }
