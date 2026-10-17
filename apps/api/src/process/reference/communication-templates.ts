@@ -59,7 +59,8 @@ export function clarificationBody(input: {
   const followUp = (input.previousRounds ?? 0) > 0;
   const intro = followUp ? 'vielen Dank für Ihre Antwort.' : `vielen Dank für Ihre Anfrage${input.originalSubject ? ` „${input.originalSubject}“` : ''}.`;
   const out: string[] = ['Guten Tag,', '', intro];
-  if (input.summary && !followUp) out.push(`Wir haben sie so verstanden: ${input.summary}`);
+  // Bei einer Übergabe steht die KI-Zusammenfassung nur intern (CRM): sie ist in der dritten Person geschrieben und kann Aussagen des Betriebs aus dem Profil enthalten, die nicht in eine Nachricht an die Kundschaft gehören.
+  if (input.summary && !followUp && intent !== 'HANDOFF') out.push(`Wir haben sie so verstanden: ${input.summary}`);
   out.push('');
   if (lines.length > 0) {
     const why = intent === 'HANDOFF' ? 'Damit wir Ihre Anfrage gut vorbereiten können' : 'Damit wir Ihnen ein passendes Angebot erstellen können';
@@ -114,12 +115,16 @@ const closing = (companyName: string, lang: ReplyLanguage = 'de'): string[] => [
  * Eingangsbestätigung. Sie sagt nur, was stimmt: die Nachricht ist angekommen und wird bearbeitet. Bei einem Notfall kommt hinzu, dass sie als dringend eingestuft und
  * sofort weitergeleitet wurde – und der Hinweis auf den Notruf bei Gefahr für Personen. Es werden keine Zeiten, Preise oder Leistungen zugesagt.
  */
+/** Betreff ohne „Re:“/„AW:“-Vorsätze, wenn er in einem Satz zitiert wird. */
+export const quotableSubject = (subject?: string | null): string => (subject ?? '').replace(/^\s*((re|aw|fw|fwd|wg)\s*:\s*)+/i, '').trim();
+
 export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean; lang?: ReplyLanguage; name?: string }): string {
   const lang = input.lang ?? 'de';
+  const subject = quotableSubject(input.originalSubject);
   if (lang === 'en') {
     return [
       ...greeting('en', input.name),
-      `thank you for your message${input.originalSubject ? ` regarding "${input.originalSubject}"` : ''}. We have received it.`,
+      `thank you for your message${subject ? ` regarding "${subject}"` : ''}. We have received it.`,
       ...(input.emergency
         ? ['We have classed it as urgent and are passing it on to the person responsible right away.', 'If anyone is in immediate danger, please call the emergency number 112 straight away.']
         : ['We will look into it and get back to you.']),
@@ -127,7 +132,7 @@ export function acknowledgementBody(input: { originalSubject?: string | null; co
       ...closing(input.companyName, lang),
     ].join('\n');
   }
-  const about = input.originalSubject ? ` zu „${input.originalSubject}“` : '';
+  const about = subject ? ` zu „${subject}“` : '';
   return [
     ...greeting('de', input.name),
     `vielen Dank für Ihre Nachricht${about}. Sie ist bei uns eingegangen.`,

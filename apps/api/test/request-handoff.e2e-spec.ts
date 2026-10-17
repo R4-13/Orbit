@@ -128,6 +128,7 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     expect(sent[0]!.bodyText).toContain('Damit wir Ihre Anfrage gut vorbereiten können');
     expect(sent[0]!.bodyText).not.toMatch(/Angebot/);
     expect(sent[0]!.bodyText).not.toContain('Wohnfläche?'); // schon bekannte Angaben werden nicht erfragt
+    expect(sent[0]!.bodyText).not.toContain('so verstanden'); // die KI-Zusammenfassung bleibt intern (CRM)
     expect(await nodeState(tenantId, caseId, 'wait1')).toBe('WAITING');
 
     seedExtraction([{ key: 'ai.hot_water', value: 'ja', evidence: 'auch das Warmwasser' }]);
@@ -140,6 +141,7 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     expect(await nodeState(tenantId, caseId, 'notify')).toBe('SUCCEEDED');
     expect(sent).toHaveLength(2);
     expect(sent[1]!.bodyText).toContain('Sie ist bei uns eingegangen');
+    expect(sent[1]!.bodyText).toContain('zu „Wärmepumpe“'); // ohne „Re:“
 
     const lead = await prisma.forTenantId(tenantId).lead.findFirstOrThrow({ where: { caseId } });
     expect(lead.notes).toContain('Kundschaft: Tom Kunde <tom@kunde.example>');

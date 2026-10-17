@@ -107,6 +107,21 @@ describe('Rückfrage-Nachricht', () => {
     expect(body).toContain('- Donnerstag, 15.10.2026, 09:00–10:30 Uhr');
   });
 
+  it('bei einer Übergabe steht die KI-Zusammenfassung nicht in der Nachricht an die Kundschaft, und es ist nie von einem Angebot die Rede', () => {
+    const body = clarificationBody({
+      originalSubject: 'Badsanierung',
+      questions,
+      companyName: 'Musterwerk GmbH',
+      summary: 'Tom bittet um ein Angebot. Der Betrieb nennt keine Preise vorab.',
+      appointment: { kind: 'SITE_VISIT', slots: [] },
+      intent: 'HANDOFF',
+    });
+    expect(body).not.toContain('so verstanden');
+    expect(body).not.toContain('Der Betrieb nennt');
+    expect(body).not.toMatch(/Angebot/);
+    expect(body).toContain('Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:');
+  });
+
   it('ohne bekannte freie Zeiten bittet die Nachricht um Terminwünsche, statt Zeiten zu erfinden', () => {
     const site = clarificationBody({ questions: [], companyName: 'M', appointment: { kind: 'SITE_VISIT', slots: [] } });
     expect(site).toContain('Bitte nennen Sie uns zwei bis drei Zeiträume');
@@ -129,6 +144,13 @@ describe('Betriebsprofil in der Analyse-Anweisung', () => {
 import { acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, caseStatusPhrase, informationBody, statusUpdateBody } from './communication-templates';
 
 describe('Weitere Mitteilungen', () => {
+  it('die Eingangsbestätigung zitiert den Betreff ohne „Re:“/„AW:“', () => {
+    expect(acknowledgementBody({ originalSubject: 'Re: Badsanierung – bitte um Angebot', companyName: 'M' })).toContain('Nachricht zu „Badsanierung – bitte um Angebot“.');
+    expect(acknowledgementBody({ originalSubject: 'AW: RE: Heizung', companyName: 'M' })).toContain('zu „Heizung“');
+    expect(acknowledgementBody({ originalSubject: 'Re: Heating', companyName: 'M', lang: 'en' })).toContain('regarding "Heating"');
+    expect(acknowledgementBody({ originalSubject: 'Rechnung 5', companyName: 'M' })).toContain('zu „Rechnung 5“'); // „Re“ am Wortanfang ohne Doppelpunkt bleibt
+  });
+
   it('die Eingangsbestätigung sagt nur, was stimmt; bei einem Notfall kommt der Hinweis auf den Notruf dazu', () => {
     const normal = acknowledgementBody({ originalSubject: 'Heizung', companyName: 'Muster GmbH' });
     expect(normal).toContain('Sie ist bei uns eingegangen.');
