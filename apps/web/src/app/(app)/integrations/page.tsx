@@ -226,6 +226,17 @@ function SetupWizard({ connector, onClose, canSend }: { connector: ConnectorMeta
       {step === 'credentials' ? (
         <div className="space-y-3 text-sm text-slate-800">
           <p>Diese Angaben werden verschlüsselt gespeichert und nie wieder angezeigt. Geben Sie sie nur hier ein – nie im Chat mit Sonde.</p>
+          {connector.id === 'HUBSPOT' ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-700">
+              <p className="font-medium text-slate-900">So erhalten Sie den Service-Schlüssel</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-5">
+                <li>In HubSpot unter „Entwicklung“, „Schlüssel“ einen <strong>Service-Schlüssel</strong> anlegen (Super-Admin oder Recht „Entwicklerwerkzeuge“).</li>
+                <li>Berechtigungen wählen: <strong>Kontakte, Unternehmen und Deals</strong>, jeweils lesen und schreiben – mehr nicht.</li>
+                <li>Den Schlüssel sofort kopieren (er wird nur einmal angezeigt) und hier einfügen. ORBIT prüft ihn vor dem Speichern.</li>
+              </ol>
+              <p className="mt-2">Der Schlüssel gilt für genau einen HubSpot-Account. Bestehende Kontakte in HubSpot verändert ORBIT nicht; neue Anfragen erscheinen dort als Deal in der ersten Phase Ihrer Pipeline.</p>
+            </div>
+          ) : null}
           {connector.requiredFields.map((field) => (
             <div key={field.key}>
               <Label htmlFor={`${connector.id}-${field.key}`}>{field.label}</Label>
@@ -271,8 +282,17 @@ function DisconnectDialog({ connector, onClose }: { connector: ConnectorMetadata
       }
     >
       <div className="space-y-3 text-sm text-slate-800">
-        <p>Danach liest ORBIT keine neuen Nachrichten mehr aus diesem Konto und kann darüber nichts senden. Neue Anfragen werden nicht mehr automatisch erkannt.</p>
-        <p>Bereits angelegte Vorgänge, Entwürfe und Nachweise bleiben erhalten und nachvollziehbar.</p>
+        {connector.category === 'crm' ? (
+          <>
+            <p>Danach gleicht ORBIT keine Kontakte mehr ab und legt in {connector.name} nichts mehr an. Neue Kontakte und Anfragen landen wieder nur in ORBIT.</p>
+            <p>Was bereits in {connector.name} angelegt wurde, bleibt dort bestehen; der gespeicherte Schlüssel wird in ORBIT gelöscht (in {connector.name} können Sie ihn zusätzlich widerrufen).</p>
+          </>
+        ) : (
+          <>
+            <p>Danach liest ORBIT keine neuen Nachrichten mehr aus diesem Konto und kann darüber nichts senden. Neue Anfragen werden nicht mehr automatisch erkannt.</p>
+            <p>Bereits angelegte Vorgänge, Entwürfe und Nachweise bleiben erhalten und nachvollziehbar.</p>
+          </>
+        )}
         {error ? <Notice tone="danger">{error}</Notice> : null}
       </div>
     </Modal>

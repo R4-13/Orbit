@@ -9,7 +9,10 @@ import {
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
+import { HubSpotService } from './hubspot.service';
 import { PersistentMockCrmConnector } from './persistent-mock-crm.connector';
+import { TenantRoutedCrmConnector } from './tenant-routed-crm.connector';
+import { SecurityModule } from '../security/security.module';
 import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, OCR_PROVIDER } from './connectors.tokens';
 
 /**
@@ -21,7 +24,9 @@ import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, O
  */
 @Global()
 @Module({
+  imports: [SecurityModule],
   providers: [
+    HubSpotService,
     {
       provide: FINANCE_CONNECTOR,
       inject: [ORBIT_ENV],
@@ -48,14 +53,15 @@ import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, O
     },
     {
       provide: CRM_CONNECTOR,
-      inject: [ORBIT_ENV, PrismaService],
-      useFactory: (env: OrbitEnv, prisma: PrismaService) => {
+      inject: [ORBIT_ENV, PrismaService, HubSpotService],
+      useFactory: (env: OrbitEnv, prisma: PrismaService, hubspot: HubSpotService) => {
         if (env.CRM_CONNECTOR !== 'mock') {
           throw new IntegrationUnavailableError(
             `CrmConnector "${env.CRM_CONNECTOR}" is not implemented yet — see docs/INTEGRATIONS.md.`,
           );
         }
-        return new PersistentMockCrmConnector(prisma);
+        // Je Betrieb: mit verbundenem HubSpot dorthin, sonst die gekennzeichnete Test-Ablage.
+        return new TenantRoutedCrmConnector(new PersistentMockCrmConnector(prisma), hubspot, prisma);
       },
     },
     {
@@ -83,6 +89,6 @@ import { CALENDAR_CONNECTOR, CRM_CONNECTOR, FINANCE_CONNECTOR, MAIL_CONNECTOR, O
       },
     },
   ],
-  exports: [FINANCE_CONNECTOR, OCR_PROVIDER, CRM_CONNECTOR, CALENDAR_CONNECTOR, MAIL_CONNECTOR],
+  exports: [FINANCE_CONNECTOR, OCR_PROVIDER, CRM_CONNECTOR, CALENDAR_CONNECTOR, MAIL_CONNECTOR, HubSpotService],
 })
 export class ConnectorsModule {}

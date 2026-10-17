@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { AuthenticatedUser } from '../auth/types';
 import { AuditService } from '../audit/audit.service';
+import { HubSpotService, describeAccess } from '../connectors/hubspot.service';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { TasksService } from '../tasks/tasks.service';
 import { ConnectorRequestDto } from './dto/connector-request.dto';
@@ -31,6 +32,7 @@ export class IntegrationsController {
     private readonly audit: AuditService,
     private readonly tasks: TasksService,
     private readonly platformControl: PlatformControlService,
+    private readonly hubspot: HubSpotService,
   ) {}
 
   /** Plattformsperre eines Connectors (Amendment 03 §13.3): keine neuen Verbindungen, mit verständlicher Meldung. */
@@ -80,6 +82,14 @@ export class IntegrationsController {
     @Body() dto: UpsertIntegrationCredentialsDto,
   ) {
     await this.assertConnectorOpen(connectorType);
+    if (connectorType === 'HUBSPOT') {
+      // Der Schlüssel wird geprüft, **bevor** er gespeichert wird: ein ungültiger oder zu schwacher Schlüssel macht die Verbindung nie „verbunden“.
+      const key = dto.credentials.serviceKey;
+      if (typeof key !== 'string' || key.trim().length < 10) throw new BadRequestException('Bitte den Service-Schlüssel aus HubSpot eintragen.');
+      const report = await this.hubspot.verifyKey(key);
+      if (!report.ok) throw new BadRequestException(describeAccess(report));
+      return this.integrationsService.upsertCredentials(user.tenantId, user.id, connectorType, { serviceKey: key.trim() }, dto.config);
+    }
     return this.integrationsService.upsertCredentials(user.tenantId, user.id, connectorType, dto.credentials, dto.config);
   }
 
@@ -111,6 +121,10 @@ export class IntegrationsController {
     @Param('connectorType', new ParseEnumPipe(IntegrationConnectorType)) connectorType: IntegrationConnectorType,
   ) {
     this.assertOAuthCapable(connectorType, 'Verbindungstest');
+    if (connectorType === 'HUBSPOT') {
+      const { ok, message } = await this.hubspot.test(user.tenantId);
+      return { ok, message };
+    }
     const ok = await this.gmailConnector.testConnection(user.tenantId);
     return { ok };
   }

@@ -39,14 +39,14 @@ describe('Integrations / credential storage (e2e)', () => {
     // Integration rows that reference them, so no orphaned secret rows accumulate
     // in the shared demo tenant across repeated local/CI runs.
     const leftover = await scoped.integration.findMany({
-      where: { connectorType: { in: ['DATEV', 'HUBSPOT'] }, credentialReference: { not: null } },
+      where: { connectorType: { in: ['DATEV', 'HUBSPOT', 'LEXWARE'] }, credentialReference: { not: null } },
       select: { credentialReference: true },
     });
     const referenceIds = leftover.map((row) => row.credentialReference).filter((id): id is string => id !== null);
     if (referenceIds.length > 0) {
       await scoped.integrationCredentialSecret.deleteMany({ where: { id: { in: referenceIds } } });
     }
-    await scoped.integration.deleteMany({ where: { connectorType: { in: ['DATEV', 'HUBSPOT'] } } });
+    await scoped.integration.deleteMany({ where: { connectorType: { in: ['DATEV', 'HUBSPOT', 'LEXWARE'] } } });
   });
 
   afterAll(async () => {
@@ -109,19 +109,19 @@ describe('Integrations / credential storage (e2e)', () => {
 
   it('overwrites previously stored credentials on a second PUT (upsert)', async () => {
     await request(app.getHttpServer())
-      .put('/api/v1/integrations/HUBSPOT/credentials')
+      .put('/api/v1/integrations/LEXWARE/credentials')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ credentials: { apiKey: 'first-key' } })
       .expect(200);
-    const firstRow = await scoped.integration.findFirstOrThrow({ where: { connectorType: 'HUBSPOT' } });
+    const firstRow = await scoped.integration.findFirstOrThrow({ where: { connectorType: 'LEXWARE' } });
     const firstSecret = await scoped.integrationCredentialSecret.findUniqueOrThrow({ where: { id: firstRow.credentialReference! } });
 
     await request(app.getHttpServer())
-      .put('/api/v1/integrations/HUBSPOT/credentials')
+      .put('/api/v1/integrations/LEXWARE/credentials')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ credentials: { apiKey: 'rotated-key' } })
       .expect(200);
-    const secondRow = await scoped.integration.findFirstOrThrow({ where: { connectorType: 'HUBSPOT' } });
+    const secondRow = await scoped.integration.findFirstOrThrow({ where: { connectorType: 'LEXWARE' } });
     const secondSecret = await scoped.integrationCredentialSecret.findUniqueOrThrow({ where: { id: secondRow.credentialReference! } });
 
     expect(secondRow.id).toBe(firstRow.id); // same Integration row updated, not a duplicate
@@ -151,7 +151,7 @@ describe('Integrations / credential storage (e2e)', () => {
     await expect(scoped.integrationCredentialSecret.findUnique({ where: { id: secretReference } })).resolves.toBeNull();
 
     await request(app.getHttpServer())
-      .delete('/api/v1/integrations/HUBSPOT')
+      .delete('/api/v1/integrations/LEXWARE')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(404);
   });
@@ -264,12 +264,12 @@ describe('Integrations / credential storage (e2e)', () => {
    */
   it("enforces RLS on IntegrationCredentialSecret: a second tenant's scoped client cannot see tenant A's vault row", async () => {
     const created = await request(app.getHttpServer())
-      .put('/api/v1/integrations/HUBSPOT/credentials')
+      .put('/api/v1/integrations/LEXWARE/credentials')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ credentials: { apiKey: 'tenant-a-secret' } })
       .expect(200);
     const row = await scoped.integration.findUniqueOrThrow({
-      where: { tenantId_connectorType: { tenantId, connectorType: 'HUBSPOT' } },
+      where: { tenantId_connectorType: { tenantId, connectorType: 'LEXWARE' } },
     });
     expect(created.body.hasCredentials).toBe(true);
 

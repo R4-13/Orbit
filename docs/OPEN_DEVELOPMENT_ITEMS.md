@@ -29,7 +29,7 @@ Kundenstamm-Prüfung ebenfalls. Offen:
 | AUT-06 | Zustellkanäle **Teams, WhatsApp, SMS, Anruf** für Mitarbeitermeldungen | EXT | L je Kanal | P2 | als Wunsch bereits erfasst; Zustellung heute ehrlich per E-Mail |
 | AUT-07 | ~~Antworten in der Sprache der Kundschaft~~ **umgesetzt für Deutsch/Englisch** bei Bestätigung, Statusauskunft, Anhang anfordern, Auskunft, Terminbestätigung (`ASSUMPTIONS.md` #571). **Offen:** Rückfragen und Angebotsversand, weitere Sprachen | ENG | S | P3 | |
 | AUT-08 | Kundenstamm: persönliche Anrede ~~umgesetzt~~ (`ASSUMPTIONS.md` #588). **Offen:** Konditionen und bekannte Adresse im Ablauf nutzen, Abgleich auch über Name/Firma/Domain (mit Vorsicht gegen falsche Treffer) | ENG | M | P2 | |
-| AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: HubSpot (größere Betriebe), Lexware/DATEV (kleinere) – Port `CustomerDirectory` ist vorbereitet | EXT | L je Adapter | P2 | Client-ID/Secret bzw. Partner-Registrierung nötig |
+| AUT-09 | **Echte CRM-/ERP-Adapter** für das Kundenverzeichnis: ~~HubSpot~~ **umgesetzt** (Service-Schlüssel, `ASSUMPTIONS.md` #609, LIVE TESTED gegen einen Testaccount). **Offen:** Lexware/DATEV (Partner-Registrierung nötig), HubSpot über OAuth für viele Kundenaccounts | EXT | L je Adapter | P2 | |
 | AUT-10 | **Betriebsprofil KI-gestützt einrichten** ~~aus eingefügtem Text~~ und ~~aus einer Datei (PDF mit Textebene, Word, Text)~~ umgesetzt (`ASSUMPTIONS.md` #581, #603). **Offen:** Preis- und Terminregeln, Terminlängen im Profil; Nachweis mit echtem Modell | ENG | M | P2 | |
 | AUT-11 | ~~Lernen: „Wo greifen Menschen ein?“~~ **umgesetzt** als Bericht mit belegten Vorschlägen (`ASSUMPTIONS.md` #601, Seite `/admin/interventions`). **Entschieden:** keine zweite automatische Rückfrage-Runde (`maxAutoQuestions: 1`). **Offen:** Vorschläge aus einzelnen Korrekturen (Textänderungen an Entwürfen) | ENG | M | erledigt (Rest P3) | |
 | AUT-12 | **Dienstzugang** ~~Zugriffsschlüssel mit enger Berechtigung für `PUT /staff/sync`~~ umgesetzt (`ASSUMPTIONS.md` #583). **Offen:** Adapter zu Personalsystemen (Personio, DATEV HR, Entra ID) | EXT | L | P3 | |
@@ -46,7 +46,7 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-03 | **Echte OCR** (statt Mock) | ENG / EXT | M–L | P2 | Tesseract lokal oder Cloud-Dienst |
 | MST-04 | Finanzsysteme **DATEV, Lexware** (Lieferantenstamm, Buchungsübertragung) | EXT | L je System | P2 | Partner-/OAuth-Registrierung (`DATEV_INTEGRATION.md`) |
 | MST-05 | **Microsoft 365** (Mail, Kalender) und **Google Calendar Schreiben** | EXT | L / M | P2 | Client-IDs und Zustimmung |
-| MST-06 | **HubSpot** als CRM-Anbindung | EXT | L | P2 | siehe AUT-09 |
+| MST-06 | ~~HubSpot als CRM-Anbindung~~ **umgesetzt** mit Service-Schlüssel (siehe AUT-09); OAuth für viele Kundenaccounts offen | ENG / EXT | L | erledigt (Rest P3) | |
 | MST-07 | ~~CSRF-Konzept~~ **dokumentiert** (`SECURITY.md` §6a) | ENG | S | erledigt | |
 | MST-08 | ~~Allgemeine API-Idempotenzschlüssel~~ **umgesetzt** (`Idempotency-Key`, `ASSUMPTIONS.md` #573). **Offen:** die Oberfläche sendet noch keine Schlüssel (Doppelklick-Schutz im Client) | ENG | S | P3 | |
 | MST-09 | ~~Upload-Prüfung auf Bytes~~ **umgesetzt** (Größe + Magic Bytes, `ASSUMPTIONS.md` #574). **Offen:** Virenscan (ClamAV o. Ä.), Prüfung des Inhalts von Office-Dateien | ENG / EXT | M | P2 | `SECURITY.md` §5 |

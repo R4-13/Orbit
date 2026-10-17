@@ -3,6 +3,7 @@ import type { OrbitEnv } from '@orbit/config';
 import { AiProviderUnavailableError, type ExecutionComponentEvidence, type ExecutionEvidenceSnapshot } from '@orbit/shared';
 import { ORBIT_ENV } from '../config/env.token';
 import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
+import { HubSpotService } from '../connectors/hubspot.service';
 
 function component(provider: string): ExecutionComponentEvidence {
   // Every provider whose name contains "mock" is a simulation; anything else talked to a real system.
@@ -20,6 +21,7 @@ export class ExecutionEvidenceService {
   constructor(
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
     private readonly aiProviders: AiProviderResolverService,
+    private readonly hubspot: HubSpotService,
   ) {}
 
   async capture(tenantId: string, input: { channelProvider: string; simulatedChannel: boolean }): Promise<ExecutionEvidenceSnapshot> {
@@ -36,7 +38,8 @@ export class ExecutionEvidenceService {
       channel: input.simulatedChannel ? { provider: input.channelProvider, mode: 'SIMULATED' } : { provider: input.channelProvider, mode: 'LIVE' },
       ai: aiProvider === 'nicht verfügbar' ? { provider: aiProvider, mode: 'LIVE' } : component(aiProvider),
       // CRM_CONNECTOR=mock is wired to PersistentMockCrmConnector ('mock-persistent') — still a test SoR.
-      crm: component(this.env.CRM_CONNECTOR === 'mock' ? 'mock-persistent' : this.env.CRM_CONNECTOR),
+      // Mit verbundenem HubSpot geht das CRM dieses Betriebs wirklich dorthin (LIVE), sonst gilt die eingestellte Vorgabe.
+      crm: (await this.hubspot.isConnected(tenantId).catch(() => false)) ? { provider: 'hubspot', mode: 'LIVE' } : component(this.env.CRM_CONNECTOR === 'mock' ? 'mock-persistent' : this.env.CRM_CONNECTOR),
       ocr: component(this.env.OCR_PROVIDER),
     };
   }

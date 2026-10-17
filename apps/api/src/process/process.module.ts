@@ -28,7 +28,7 @@ import { AdHocIntakeService } from './ad-hoc-intake.service';
 import { AssistProcessTools } from './reference/assist.tools';
 import { LeadsModule } from '../leads/leads.module';
 import { OrganizationModule } from '../organization/organization.module';
-import { CUSTOMER_DIRECTORIES, OrbitContactsDirectory } from './customer/customer-directory';
+import { CUSTOMER_DIRECTORIES, HubSpotCustomerDirectory, OrbitContactsDirectory } from './customer/customer-directory';
 import { CustomerRecordService } from './customer/customer-record.service';
 import { ContactsModule } from '../contacts/contacts.module';
 import { TasksModule } from '../tasks/tasks.module';
@@ -75,7 +75,8 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     HumanInteractionService,
     OrbitContactsDirectory,
     // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.
-    { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory) => [orbit], inject: [OrbitContactsDirectory] },
+    { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory, hubspot: HubSpotCustomerDirectory) => [orbit, hubspot], inject: [OrbitContactsDirectory, HubSpotCustomerDirectory] },
+    HubSpotCustomerDirectory,
     CustomerRecordService,
   ],
   exports: [

@@ -69,10 +69,16 @@ export class CustomerRecordService {
     orbitContacts.useContacts(contacts);
   }
 
+  /** Die Verzeichnisse, die für diesen Betrieb gelten (z. B. HubSpot nur mit eingerichteter Anbindung). */
+  private async applicable(tenantId: string): Promise<CustomerDirectory[]> {
+    const flags = await Promise.all(this.directories.map((d) => (d.appliesTo ? d.appliesTo(tenantId).catch(() => true) : Promise.resolve(true))));
+    return this.directories.filter((_, index) => flags[index]);
+  }
+
   /** Fragt alle Verzeichnisse und fasst zusammen. */
   async check(tenantId: string, email: string): Promise<CustomerCheck> {
     const systems: SystemAnswer[] = [];
-    for (const directory of this.directories) {
+    for (const directory of await this.applicable(tenantId)) {
       let answer: SystemAnswer;
       try {
         const result = await directory.lookup({ tenantId, email });
@@ -167,8 +173,9 @@ export class CustomerRecordService {
   // ── intern ────────────────────────────────────────────────────────────────
 
   private async tryCreate(tenantId: string, email: string, displayName?: string | null): Promise<{ match?: CustomerMatch; systemKey?: string; reason: string }> {
-    const writable = this.directories.filter((d) => d.canCreate && d.create);
-    if (writable.length === 0 || writable.length !== this.directories.length) {
+    const directories = await this.applicable(tenantId);
+    const writable = directories.filter((d) => d.canCreate && d.create);
+    if (writable.length === 0 || writable.length !== directories.length) {
       return { reason: 'Der Kundenstamm wird in einem angebundenen System geführt, in das ORBIT nicht selbst schreibt. Bitte den Kunden dort anlegen.' };
     }
     if ((await this.policy.resolveMode(tenantId, 'crm.contact.manage')) !== 'AUTONOMOUS') {

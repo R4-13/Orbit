@@ -251,3 +251,7 @@ verhindert).
 ### Zweiter Faktor der Plattformzugänge
 
 Betreiberzugänge können unter „Mein Zugang“ einen Authenticator (TOTP) einrichten (siehe `docs/ASSUMPTIONS.md` #608). Das Geheimnis wird mit dem Credential-Schlüssel (`CREDENTIAL_ENCRYPTION_KEY`) verschlüsselt; `scripts/rotate-credential-key.ts` schreibt es bei einer Rotation mit um. Empfehlung: für jeden Owner und Operator einrichten.
+
+### Build-Kennung im Nachweis
+
+Damit der Nachweis einer Verbindung („Build nicht erfasst“) die Programmversion nennt, die Images mit der Kennung bauen: `ORBIT_BUILD_COMMIT=$(git rev-parse --short HEAD) docker compose build api worker`.

@@ -12,6 +12,7 @@ export * from './calendar/mock-calendar-connector';
 export * from './customer-directory/types';
 export * from './crm/types';
 export * from './crm/mock-crm-connector';
+export * from './crm/hubspot-crm-connector';
 export * from './telephony/types';
 export * from './telephony/mock-telephony-connector';
 export * from './ocr/types';

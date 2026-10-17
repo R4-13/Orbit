@@ -41,6 +41,8 @@ export interface CustomerDirectory {
   readonly label: string;
   /** Whether ORBIT may write a new customer into this system by itself (otherwise a human is asked to create it there). */
   readonly canCreate: boolean;
+  /** Gilt dieses Verzeichnis für den Betrieb (z. B. nur mit eingerichteter Anbindung)? Fehlt die Methode, gilt es für alle. */
+  appliesTo?(tenantId: string): Promise<boolean>;
   lookup(query: CustomerLookupQuery): Promise<CustomerLookupResult>;
   create?(input: CreateCustomerInput): Promise<CustomerMatch>;
 }
