@@ -20,6 +20,15 @@
       "erwartung": "Angebotsanfrage; Preis wird nicht genannt (keine Grundlage), Terminvorschläge oder Rückfrage."
     },
     {
+      "id": "angebot-heizung-knapp",
+      "art": "anfrage",
+      "titel": "Knappe Angebotsanfrage Heizung (viele Rückfragen nötig)",
+      "absender": "Tom Orbit",
+      "betreff": "Neue Heizung - Angebot",
+      "text": "Hallo,\n\nwir brauchen eine neue Heizung für unser Haus. Bitte schicken Sie uns ein Angebot.\n\nTom Orbit",
+      "erwartung": "Mehrere Rückfragen (Haus, Alter und Art der Heizung, Wohnfläche …), höchstens drei Runden; danach Übergabe mit offenen Punkten an einen Menschen. Kein Preis."
+    },
+    {
       "id": "preisfrage-heizkoerper",
       "art": "anfrage",
       "titel": "Kurze Preisfrage",
