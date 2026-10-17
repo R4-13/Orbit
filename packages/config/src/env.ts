@@ -175,6 +175,8 @@ export const envSchema = z.object({
 
   // CRM connectors
   CRM_CONNECTOR: z.enum(['mock', 'hubspot']).default('mock'),
+  /** Service-Schlüssel eines einzelnen HubSpot-Accounts (Bearer-Token für die CRM-Schnittstelle); leer = nicht eingerichtet. */
+  HUBSPOT_SERVICE_KEY: z.string().optional().default(''),
   HUBSPOT_CLIENT_ID: z.string().optional().default(''),
   HUBSPOT_CLIENT_SECRET: z.string().optional().default(''),
   HUBSPOT_REDIRECT_URI: z.string().optional().default(''),
