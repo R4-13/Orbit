@@ -10,7 +10,7 @@ import { parseEnv, readConfig, saveEnvValue, loadEnv, missing } from '../lib/env
 import { createGmail } from '../lib/gmail.mjs';
 import { buildAuthUrl, createTokenSource } from '../lib/google-auth.mjs';
 import { SendLedger, assertAllowedRecipient, bareAddress, stopRequested } from '../lib/guards.mjs';
-import { buildMessage, encodeHeader, toRaw } from '../lib/mime.mjs';
+import { buildMessage, encodeHeader, replyHeaders, replySubject, toRaw } from '../lib/mime.mjs';
 import { buildPdf } from '../lib/pdf.mjs';
 import { loadScenarios, render, select } from '../lib/scenarios.mjs';
 
@@ -32,6 +32,18 @@ test('Mail: Umlaute im Betreff werden kodiert, der Text ist UTF-8, der Anhang st
   assert.match(withFile, /Content-Type: multipart\/mixed; boundary="sim-/);
   assert.match(withFile, /Content-Disposition: attachment; filename="Rechnung\.pdf"/);
   assert.equal(Buffer.from(toRaw(plain), 'base64url').toString('utf8'), plain);
+});
+
+test('Antwort: Bezug auf die beantwortete Nachricht (In-Reply-To, References-Kette) und Betreff mit „Re:“', () => {
+  assert.deepEqual(replyHeaders({ messageId: '<b@x>', references: '<a@x>' }), { 'In-Reply-To': '<b@x>', References: '<a@x> <b@x>' });
+  assert.deepEqual(replyHeaders({ messageId: '<b@x>', references: '' }), { 'In-Reply-To': '<b@x>', References: '<b@x>' });
+  assert.deepEqual(replyHeaders({ messageId: '', references: '' }), {});
+  assert.equal(replySubject('Wärmepumpe'), 'Re: Wärmepumpe');
+  assert.equal(replySubject('Re: Wärmepumpe'), 'Re: Wärmepumpe');
+  assert.equal(replySubject('AW: Frage'), 'AW: Frage');
+  assert.equal(replySubject('  '), 'Re: Ihre Nachricht');
+  const mail = buildMessage({ from: { address: 'tom@example.com' }, to: 'a@example.com', subject: 'Re: x', text: 'y', headers: replyHeaders({ messageId: '<b@x>', references: '' }) });
+  assert.ok(mail.includes('\r\nIn-Reply-To: <b@x>\r\n'));
 });
 
 test('PDF: gültiger Aufbau mit lesbarer Textebene', () => {
@@ -154,6 +166,8 @@ test('Gmail: Senden, Etikett anlegen oder wiederfinden, Auflisten mit Seiten, Pa
   const gmail = createGmail({ getToken: async () => 'tok', fetchImpl });
   assert.deepEqual(await gmail.send('RAW'), { id: 'm1' });
   assert.deepEqual(calls[0], { method: 'POST', path: '/messages/send', body: { raw: 'RAW' }, auth: 'Bearer tok' });
+  await gmail.send('RAW2', 'thread-7'); // Antwort im selben Faden
+  assert.deepEqual(calls[1]?.body, { raw: 'RAW2', threadId: 'thread-7' });
   assert.equal(await gmail.ensureLabel('ORBIT-Simulation'), 'L9'); // neu angelegt
   labelExists = true;
   assert.equal(await gmail.ensureLabel('ORBIT-Simulation'), 'L1'); // vorhanden
@@ -171,10 +185,10 @@ test('Gmail: der Posteingang wird nur gelesen (Absender, Betreff, Datum, Anfang)
     const path = String(url).replace('https://gmail.googleapis.com/gmail/v1/users/me', '');
     calls.push(`${init.method} ${path}`);
     if (path.startsWith('/messages?labelIds=INBOX')) return json(200, { messages: [{ id: 'x1' }] });
-    return json(200, { snippet: 'Guten Tag …', payload: { headers: [{ name: 'From', value: 'handwerkernull@gmail.com' }, { name: 'Subject', value: 'Re: Frage' }, { name: 'Date', value: 'Sat, 17 Oct 2026 14:04:00 +0000' }] } });
+    return json(200, { threadId: 't9', snippet: 'Guten Tag …', payload: { headers: [{ name: 'From', value: 'handwerkernull@gmail.com' }, { name: 'Subject', value: 'Re: Frage' }, { name: 'Date', value: 'Sat, 17 Oct 2026 14:04:00 +0000' }, { name: 'Message-ID', value: '<abc@mail.gmail.com>' }, { name: 'References', value: '<first@x>' }] } });
   };
   const rows = await createGmail({ getToken: async () => 'tok', fetchImpl }).recentInbox(5);
-  assert.deepEqual(rows, [{ id: 'x1', from: 'handwerkernull@gmail.com', subject: 'Re: Frage', date: 'Sat, 17 Oct 2026 14:04:00 +0000', snippet: 'Guten Tag …' }]);
+  assert.deepEqual(rows, [{ id: 'x1', threadId: 't9', messageId: '<abc@mail.gmail.com>', references: '<first@x>', from: 'handwerkernull@gmail.com', subject: 'Re: Frage', date: 'Sat, 17 Oct 2026 14:04:00 +0000', snippet: 'Guten Tag …' }]);
   assert.ok(calls.every((c) => c.startsWith('GET ')), 'nur lesende Aufrufe');
 });
 
@@ -215,4 +229,13 @@ test('Befehlszeile: „lauf“ ohne --senden und mehr als erlaubt je Aufruf', ()
   const many = run(['senden', '--anzahl', '500', '--abstand', '0'], env);
   assert.equal(many.status, 0);
   assert.equal((many.stdout.match(/^• /gm) ?? []).length, 20); // höchstens 20 je Aufruf
+});
+
+test('Befehlszeile: „antworten“ braucht einen Text, sendet nie ohne Zugang und nie ohne erlaubten Empfänger', () => {
+  const env = { SIM_FROM: 'tom@example.com', SIM_ALLOWED_RECIPIENTS: 'handwerkernull@gmail.com' };
+  assert.match(run(['antworten'], env).stderr, /Antworttext/);
+  const noToken = run(['antworten', '--text', 'Ja, bitte.'], env);
+  assert.notEqual(noToken.status, 0);
+  assert.match(noToken.stderr, /SIM_REFRESH_TOKEN/);
+  assert.match(run(['antworten', '--text', 'Ja.'], { SIM_FROM: 'tom@example.com' }).stderr, /SIM_ALLOWED_RECIPIENTS/);
 });

@@ -5,6 +5,7 @@ import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailable
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../../agent/agent.tokens';
 import { AiProviderResolverService } from '../../ai-providers/ai-provider-resolver.service';
+import { ContactsService } from '../../contacts/contacts.service';
 import { GmailConnectorService, GmailSendOutcomeUnknownError } from '../../integrations/gmail-connector.service';
 import { LeadsService } from '../../leads/leads.service';
 import { AttentionService } from '../../organization/attention.service';
@@ -12,15 +13,21 @@ import { ProfileContextService } from '../../organization/profile-context.servic
 import { PolicyEnforcementService } from '../../policy/policy-enforcement.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
+import { CaseFactsService } from '../case-facts.service';
+import { CustomerRecordService, splitDisplayName } from '../customer/customer-record.service';
 import { APPOINTMENT_LABELS, type AppointmentKind } from './appointment-slots';
 import { buildCalendarPool, pickCalendar, type PoolCalendar } from './calendar-pool';
-import { isSafeCustomerText } from './request-analysis';
+import { buildHandoffSummary } from './handoff-summary';
+import { APPOINTMENT_AGREED_KEY, isSafeCustomerText } from './request-analysis';
+import { RequestAnalysisService } from './request-analysis.service';
 
 const SUBMIT_KNOWLEDGE_TOOL = 'submit_knowledge_answer';
 const SUBMIT_SLOT_TOOL = 'submit_slot_choice';
 const MAX_TEXT_CHARS = 6_000;
 /** Unterhalb dieser Sicherheit wird nicht geantwortet: lieber ein Mensch als eine unsichere Auskunft im Namen des Betriebs. */
 const MIN_ANSWER_CONFIDENCE = 0.7;
+/** Länge der Übergabe-Zusammenfassung im CRM (HubSpot-Deal: Beschreibung). */
+const HANDOFF_MAX_CHARS = 2000;
 
 const normalize = (text: string): string => text.toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -57,6 +64,10 @@ export class AssistProcessTools implements OnModuleInit {
     private readonly leads: LeadsService,
     private readonly attention: AttentionService,
     private readonly caseEvents: CaseEventsService,
+    private readonly caseFacts: CaseFactsService,
+    private readonly analysis: RequestAnalysisService,
+    private readonly customers: CustomerRecordService,
+    private readonly contacts: ContactsService,
   ) {}
 
   onModuleInit(): void {
@@ -155,27 +166,78 @@ ${profile}`);
     };
   }
 
-  // ── Interessent anlegen ────────────────────────────────────────────────────
+  // ── Interessent anlegen / Übergabe an das CRM ──────────────────────────────
+
+  /**
+   * Der Kontakt in ORBIT, an dem der Interessent hängt. Liegt der Kundeneintrag in einem angebundenen System (z. B. HubSpot) und noch nicht in ORBIT, wird er dort mit den
+   * Angaben des führenden Systems gespiegelt – nichts wird erfunden: ohne erkennbaren Vor- und Nachnamen legt ORBIT nichts an.
+   */
+  private async orbitContactFor(tenantId: string, caseId: string): Promise<{ id: string; name: string; email: string }> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const watch = await scoped.customerRecordWatch.findUnique({ where: { caseId } });
+    if (!watch || watch.status !== 'FOUND' || !watch.externalId) {
+      throw new ToolFailedError('Es gibt noch keinen Kontakt im Kundenstamm; ohne ihn wird kein Interessent angelegt.', { errorCode: 'NO_CONTACT' });
+    }
+    if (watch.system === 'ORBIT_CONTACTS') {
+      const contact = await scoped.contact.findUnique({ where: { id: watch.externalId } });
+      if (!contact) throw new ToolFailedError('Der Kontakt im Kundenstamm wurde nicht gefunden.', { errorCode: 'NO_CONTACT' });
+      return { id: contact.id, name: `${contact.firstName} ${contact.lastName}`.trim(), email: contact.email ?? watch.email };
+    }
+    const mirrored = await scoped.contact.findFirst({ where: { email: { equals: watch.email, mode: 'insensitive' } } });
+    if (mirrored) return { id: mirrored.id, name: `${mirrored.firstName} ${mirrored.lastName}`.trim(), email: mirrored.email ?? watch.email };
+    const known = await this.customers.check(tenantId, watch.email);
+    const name = splitDisplayName(known.match?.displayName) ?? splitDisplayName(watch.displayName);
+    if (!name) throw new ToolFailedError('Der Kunde steht in einem angebundenen System, aber sein Name ist nicht eindeutig erkennbar; ORBIT legt keinen Kontakt mit geratenem Namen an.', { errorCode: 'NO_CONTACT' });
+    const created = await this.contacts.upsert(tenantId, undefined, { email: watch.email, firstName: name.firstName, lastName: name.lastName }, 'AGENT');
+    return { id: created.id, name: `${created.firstName} ${created.lastName}`.trim(), email: created.email ?? watch.email };
+  }
+
+  /** Die Übergabe-Zusammenfassung aus dem, was der Vorgang tatsächlich festgehalten hat (Analyse, bestätigte Angaben, Termin). */
+  private async handoffFor(tenantId: string, caseId: string, customer: { name: string; email: string }, note?: string) {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const caseRow = await scoped.case.findUnique({ where: { id: caseId }, select: { title: true } });
+    const first = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
+    const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }));
+    const analysis = await this.analysis.latest(tenantId, caseId);
+    const facts = (await this.caseFacts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => ({ key: f.key, value: f.value }));
+    const booked = await scoped.caseEvent.findFirst({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_BOOKED }, orderBy: { sequence: 'desc' } });
+    const bookedPayload = booked?.payload as { kind?: string; start?: string; assignee?: { name?: string } } | null | undefined;
+    const proposed = await scoped.caseEvent.findFirst({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED }, orderBy: { sequence: 'desc' } });
+    const proposedSlots = (proposed?.payload as { slots?: unknown[] } | null | undefined)?.slots?.length ?? 0;
+    const agreed = facts.find((f) => f.key === APPOINTMENT_AGREED_KEY)?.value;
+    const summary = buildHandoffSummary({
+      customer: { name: customer.name || undefined, email: customer.email },
+      title: caseRow?.title ?? 'Anfrage',
+      receivedAt: first?.createdAt ?? new Date(),
+      timeZone: tenantRow?.timezone || 'Europe/Berlin',
+      analysis,
+      facts,
+      appointment: {
+        ...(bookedPayload?.kind && bookedPayload.start ? { booked: { kind: bookedPayload.kind, start: bookedPayload.start, ...(bookedPayload.assignee?.name ? { assignee: bookedPayload.assignee.name } : {}) } } : {}),
+        ...(typeof agreed === 'string' && agreed.trim() ? { agreed } : {}),
+        proposedSlots,
+      },
+    });
+    const extra = note?.trim() ? `\n\nHinweis: ${note.trim()}` : '';
+    const subject = analysis?.requestType ? `Anfrage ${analysis.requestType}` : (caseRow?.title ?? 'Anfrage');
+    return { summary, text: `${summary.text}${extra}`.slice(0, HANDOFF_MAX_CHARS), title: `${subject}${customer.name ? ` – ${customer.name}` : ''}`.slice(0, 150) };
+  }
 
   private createLeadForCase(): ToolDefinition {
     const schema = z.object({ note: z.string().max(300).optional(), purpose: z.string().optional() });
     return {
       name: 'create_lead_for_case',
-      description: 'Legt zum Kontakt dieses Vorgangs einen Interessenten mit Folgeaufgabe an (einmal je Vorgang).',
+      description: 'Übergibt die Anfrage an das CRM: legt zum Kontakt dieses Vorgangs einen Interessenten mit Folgeaufgabe an, mit einer Zusammenfassung aller bekannten Angaben und des Termins (einmal je Vorgang).',
       inputSchema: schema,
       policyAction: 'lead.create',
       execute: async (input: z.infer<typeof schema>, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
-        const scoped = this.prisma.forTenantId(ctx.tenantId);
-        const existing = await scoped.lead.findFirst({ where: { caseId } });
+        const existing = await this.prisma.forTenantId(ctx.tenantId).lead.findFirst({ where: { caseId } });
         if (existing) return { leadId: existing.id, reused: true, executionMode: 'LIVE' };
-        const watch = await scoped.customerRecordWatch.findUnique({ where: { caseId } });
-        // Der Interessent hängt an einem Kontakt in ORBIT; liegt der Kundeneintrag in einem anderen System, legt ein Mensch ihn dort an.
-        if (!watch || watch.status !== 'FOUND' || watch.system !== 'ORBIT_CONTACTS' || !watch.externalId) {
-          throw new ToolFailedError('Es gibt noch keinen Kontakt im Kundenstamm; ohne ihn wird kein Interessent angelegt.', { errorCode: 'NO_CONTACT' });
-        }
-        const lead = await this.leads.create(ctx.tenantId, undefined, { contactId: watch.externalId, source: 'EMAIL', notes: input.note?.trim() || undefined, caseId }, 'AGENT');
-        return { leadId: lead.id, reused: false, executionMode: 'LIVE' };
+        const contact = await this.orbitContactFor(ctx.tenantId, caseId);
+        const handoff = await this.handoffFor(ctx.tenantId, caseId, contact, input.note);
+        const lead = await this.leads.create(ctx.tenantId, undefined, { contactId: contact.id, source: 'EMAIL', title: handoff.title, notes: handoff.text, caseId }, 'AGENT');
+        return { leadId: lead.id, reused: false, known: handoff.summary.known.length, open: handoff.summary.open.length, executionMode: 'LIVE' };
       },
     };
   }

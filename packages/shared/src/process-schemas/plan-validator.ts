@@ -94,6 +94,16 @@ export function isForbiddenLiteralKey(key: string): boolean {
 
 const DEFAULT_WAIT_TIMEOUT_HINT = 'Ein WAIT_EVENT-Knoten braucht eine Frist (timeout) oder eine Blueprint-Wait-Regel mit Timeout-Policy.';
 
+/**
+ * Ein Schritt, dessen Vorbedingung ausdrücklich verlangt, dass seine eigene Fähigkeit verfügbar ist (`capabilityAvailable`), ist für Betriebe ohne diese Fähigkeit kein Fehler:
+ * er wird dort zur Laufzeit übersprungen. So bleibt ein Ablauf für verschieden ausgestattete Betriebe (z. B. mit und ohne Kalender) derselbe, ohne dass sich jemand etwas ausdenkt.
+ * Nur eine Bedingung auf oberster Ebene bzw. in einem `all` zählt – in `any`/`not` wäre die Fähigkeit nicht zwingend vorausgesetzt.
+ */
+function guardedByAvailability(node: PlanNode, capabilityKey: string): boolean {
+  const demands = (expr: Expr): boolean => ('capabilityAvailable' in expr ? expr.capabilityAvailable === capabilityKey : 'all' in expr ? expr.all.some(demands) : false);
+  return node.preconditions.some(demands);
+}
+
 function incoming(edges: PlanEdge[]): Map<string, PlanEdge[]> {
   const map = new Map<string, PlanEdge[]>();
   for (const edge of edges) map.set(edge.target, [...(map.get(edge.target) ?? []), edge]);
@@ -261,13 +271,15 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   }
 
   // ── 5. Required information and source trust for executable steps ─────────
+  const producedFacts = new Set<string>();
+  for (const node of nodes) for (const key of (node.capability ? ctx.capabilities.get(node.capability.key) : undefined)?.contract?.producesFacts ?? []) producedFacts.add(key);
   for (const node of nodes) {
     const cap = node.capability ? ctx.capabilities.get(node.capability.key) : undefined;
     if (node.type === 'ACTION' && !node.capability) add({ code: 'ACTION_WITHOUT_CAPABILITY', check: 5, nodeId: node.id, message: `Aktion "${node.id}" nennt keine Fähigkeit.` });
     for (const [name, operand] of Object.entries(node.inputs)) {
       if (!('fact' in operand)) continue;
       const known = ctx.knownFactKeys.has(operand.fact);
-      const collectable = ctx.collectableFactKeys.has(operand.fact);
+      const collectable = ctx.collectableFactKeys.has(operand.fact) || producedFacts.has(operand.fact);
       if (known || collectable) continue;
       const external = cap?.sideEffect === 'EXTERNAL_WRITE';
       add({
@@ -282,8 +294,6 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
 
   // ── 5b. Strenge Bindungen (nur frei geplante Abläufe) ─────────────────────
   if (ctx.strictBindings) {
-    const producedFacts = new Set<string>();
-    for (const node of nodes) for (const key of (node.capability ? ctx.capabilities.get(node.capability.key) : undefined)?.contract?.producesFacts ?? []) producedFacts.add(key);
     for (const node of nodes) {
       if (!node.capability) {
         // Ein Schritt ohne Fähigkeit führt nichts aus und liefert nichts: seine Ausgabe zu lesen ist erfunden.
@@ -332,7 +342,8 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     const cap = ctx.capabilities.get(node.capability.key);
     if (!cap) continue;
     const exec = ctx.executability.get(cap.key);
-    if (!exec || !exec.executable) {
+    const guarded = guardedByAvailability(node, cap.key);
+    if ((!exec || !exec.executable) && !guarded) {
       add({
         code: 'CAPABILITY_NOT_EXECUTABLE',
         check: 6,
@@ -347,7 +358,7 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     const action = purpose && cap.policyActionByPurpose?.[purpose] ? cap.policyActionByPurpose[purpose] : cap.policyAction;
     const mode = ctx.policyModes.get(action);
     if (mode === undefined) add({ code: 'POLICY_UNMAPPED', check: 6, nodeId: node.id, message: `Für die Policy-Aktion "${action}" gibt es keine Konfiguration.` });
-    else if (mode === 'DISABLED') add({ code: 'POLICY_DISABLED', check: 6, nodeId: node.id, message: `Die Policy-Aktion "${action}" ist deaktiviert.` });
+    else if (mode === 'DISABLED' && !guarded) add({ code: 'POLICY_DISABLED', check: 6, nodeId: node.id, message: `Die Policy-Aktion "${action}" ist deaktiviert.` });
   }
 
   // ── 7. No invented prices, recipients, identities or action parameters ────

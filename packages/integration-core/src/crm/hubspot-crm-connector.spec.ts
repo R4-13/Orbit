@@ -101,6 +101,17 @@ describe('HubSpotCrmConnector – Unternehmen, Deals, Notizen', () => {
     expect(calls.filter((c) => c.path === '/crm/v3/pipelines/deals')).toHaveLength(1); // die Pipeline wird kurz gemerkt
   });
 
+  it('die Bezeichnung der Anfrage wird der Name des Deals (gekürzt), sonst der Eingangskanal', async () => {
+    const { calls, fetchImpl } = fakeHubSpot([route('POST', '/crm/v3/objects/deals', () => ({ status: 201, body: { id: '1' } })), route('PUT', '/crm/v4/', () => ({ status: 200 }))]);
+    const hub = connector(fetchImpl, { dealSettingsFor: async () => ({ pipeline: 'p', stage: 's' }) });
+    await hub.createLead({ tenantId: 't1', contactExternalId: '5', source: 'EMAIL', title: `  Anfrage Wärmepumpe – Tom Orbit${'x'.repeat(300)}` });
+    await hub.createLead({ tenantId: 't1', contactExternalId: '5', source: 'EMAIL', title: '   ' });
+    const names = calls.filter((c) => c.path === '/crm/v3/objects/deals').map((c) => (c.body as { properties: { dealname: string } }).properties.dealname);
+    expect(names[0]).toMatch(/^Anfrage Wärmepumpe – Tom Orbit/);
+    expect(names[0]).toHaveLength(200);
+    expect(names[1]).toBe('Anfrage (EMAIL)');
+  });
+
   it('die Einstellung des Betriebs für Pipeline und Phase hat Vorrang (ohne Abfrage der Pipelines)', async () => {
     const { calls, fetchImpl } = fakeHubSpot([route('POST', '/crm/v3/objects/deals', () => ({ status: 201, body: { id: '1' } })), route('PUT', '/crm/v4/', () => ({ status: 200 }))]);
     await connector(fetchImpl, { dealSettingsFor: async () => ({ pipeline: 'p9', stage: 's3' }) }).createLead({ tenantId: 't1', contactExternalId: '5', source: 'PHONE' });

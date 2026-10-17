@@ -38,7 +38,8 @@ export const LIMIT_DEFAULTS: Readonly<EffectiveLimits> = {
 export const LIMIT_CEILINGS: Readonly<EffectiveLimits> = {
   maxSteps: 30,
   maxExternalActions: 6,
-  maxAutoQuestions: 2,
+  /** Höchstens drei Klärungsrunden mit der Kundschaft; danach übernimmt ein Mensch (der Standard bleibt bei zwei). */
+  maxAutoQuestions: 3,
   maxReplans: 20,
   maxActionsPerCase: 50,
   maxConsecutiveCapabilityFailures: 10,

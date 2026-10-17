@@ -14,7 +14,7 @@ und keinen Prompt.
 | `triggers[]` | `communication.received` |
 | `intentHints[]` | Triage-Kategorien, die diesen Prozess starten (Hinweis, nicht Entscheidung) |
 | `requiredFacts[]` | `{key, type, question?, validation?, when?}` – Typen aus der Fakt-Typ-Registry (`email`, `string`, `number`, `money`, …) |
-| `dynamicRequirements` | Capability, die zusätzliche Anforderungen aus freigegebenen Regeln ermittelt |
+| `dynamicRequirements` | Capability, die zusätzliche Anforderungen aus freigegebenen Regeln ermittelt; `outcome`: `QUOTE` (Standard, Angebot durch ORBIT) oder `HANDOFF` (Übergabe an CRM/Person: erfragt wird nur, was dafür nötig ist; `ASSUMPTIONS.md` #610) |
 | `allowedCapabilities[]` | Schlüssel aus dem Capability-Katalog; der Planer darf nichts anderes verwenden |
 | `maxAutonomy` | Obergrenze; die wirksame Policy kann nur strenger sein |
 | `planMode` | `FIXED` (Referenzgraph unverändert), `CONSTRAINED_ADAPTIVE` (KI darf bei Neuplanung anpassen, Referenzgraph als Rückfall), `AD_HOC` (KI plant, Mensch bestätigt vor jeder Ausführung) |

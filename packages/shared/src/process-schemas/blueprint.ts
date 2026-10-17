@@ -90,7 +90,17 @@ export const BlueprintDefinitionSchema = z
     triggers: z.array(z.object({ type: z.literal('communication.received'), direction: z.enum(['INBOUND', 'OUTBOUND']).optional() }).strict()).min(1).max(5),
     intentHints: z.array(z.string().min(1).max(120)).max(20).default([]),
     requiredFacts: z.array(RequiredFactSchema).max(50).default([]),
-    dynamicRequirements: z.object({ resolverCapability: z.string().min(1).max(120) }).strict().optional(),
+    dynamicRequirements: z
+      .object({
+        resolverCapability: z.string().min(1).max(120),
+        /**
+         * Wozu die Angaben gesammelt werden: `QUOTE` (Standard) – für ein Angebot, das ORBIT selbst erstellt (Preis, Menge, Ergebnis eines Vor-Ort-Termins); `HANDOFF` – für die
+         * Übergabe an ein nachgelagertes System oder eine Person (CRM, Angebotsprogramm, Sachbearbeitung): erfragt wird, was dafür nötig ist, nicht mehr.
+         */
+        outcome: z.enum(['QUOTE', 'HANDOFF']).optional(),
+      })
+      .strict()
+      .optional(),
     allowedCapabilities: z.array(z.string().min(1).max(120)).min(1).max(40),
     /** Highest autonomy this process may ever reach; the effective policy can only be stricter (§14.2). */
     maxAutonomy: z.enum(['DISABLED', 'SUGGEST_ONLY', 'REQUIRE_APPROVAL', 'AUTONOMOUS']).optional(),

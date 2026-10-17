@@ -1,0 +1,863 @@
+{
+  "schemaVersion": "1.0",
+  "key": "REQUEST_FOR_QUOTE",
+  "version": "2.0.0",
+  "status": "DRAFT",
+  "title": "Anfrage aufnehmen und übergeben",
+  "description": "Anfrage prüfen, Angaben in bis zu drei Klärungsrunden erfragen, einen Termin vereinbaren (wenn ein Kalender angebunden ist) und die Anfrage mit einer Zusammenfassung an das CRM übergeben. ORBIT erstellt kein Angebot und nennt keinen Preis; das übernimmt die zuständige Person im Angebotssystem. Schritte, die ein nicht angebundenes System brauchen, entfallen für den Betrieb von selbst.",
+  "goals": [
+    "request.handed_over"
+  ],
+  "triggers": [
+    {
+      "type": "communication.received",
+      "direction": "INBOUND"
+    }
+  ],
+  "intentHints": [
+    "REQUEST_FOR_QUOTE"
+  ],
+  "requiredFacts": [
+    {
+      "key": "contact.email",
+      "type": "email",
+      "validation": "verified_reply_target",
+      "question": "Unter welcher E-Mail-Adresse erreichen wir Sie?"
+    }
+  ],
+  "dynamicRequirements": {
+    "resolverCapability": "requirements.resolve",
+    "outcome": "HANDOFF"
+  },
+  "allowedCapabilities": [
+    "context.lookup",
+    "facts.extract_from_message",
+    "requirements.resolve",
+    "communication.draft",
+    "email.send",
+    "calendar.book",
+    "crm.lead.create",
+    "staff.notify"
+  ],
+  "maxAutonomy": "REQUIRE_APPROVAL",
+  "planMode": "CONSTRAINED_ADAPTIVE",
+  "referenceGraph": {
+    "nodes": [
+      {
+        "id": "interpret",
+        "type": "INTERPRET",
+        "title": "Anfrage verstehen"
+      },
+      {
+        "id": "context",
+        "type": "RESOLVE_CONTEXT",
+        "title": "Absender und Vorgeschichte prüfen",
+        "capability": {
+          "key": "context.lookup"
+        }
+      },
+      {
+        "id": "extract",
+        "type": "PREPARE",
+        "title": "Angaben aus der Anfrage entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        }
+      },
+      {
+        "id": "reqs",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Fehlende Angaben ermitteln",
+        "capability": {
+          "key": "requirements.resolve"
+        }
+      },
+      {
+        "id": "ask1_draft",
+        "type": "PREPARE",
+        "title": "Rückfrage vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "missing": {
+            "stepOutput": {
+              "node": "reqs",
+              "path": "missing"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ask1",
+        "type": "ACTION",
+        "title": "Rückfrage senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "ask1_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "wait1",
+        "type": "WAIT_EVENT",
+        "title": "Auf Antwort warten",
+        "config": {
+          "eventType": "communication.received"
+        },
+        "timeout": {
+          "hours": 72,
+          "policyRef": "default-72h"
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "optional": true,
+        "onFailure": "SKIP"
+      },
+      {
+        "id": "extract2",
+        "type": "PREPARE",
+        "title": "Angaben aus der Antwort entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait1",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "reqs2",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Angaben erneut prüfen",
+        "capability": {
+          "key": "requirements.resolve"
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait1",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "ask2_draft",
+        "type": "PREPARE",
+        "title": "Rückfrage 2 vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "missing": {
+            "stepOutput": {
+              "node": "reqs2",
+              "path": "missing"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs2",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ask2",
+        "type": "ACTION",
+        "title": "Rückfrage 2 senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "ask2_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs2",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "wait2",
+        "type": "WAIT_EVENT",
+        "title": "Auf Antwort warten",
+        "config": {
+          "eventType": "communication.received"
+        },
+        "timeout": {
+          "hours": 72,
+          "policyRef": "default-72h"
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs2",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "optional": true,
+        "onFailure": "SKIP"
+      },
+      {
+        "id": "extract3",
+        "type": "PREPARE",
+        "title": "Angaben aus der Antwort entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait2",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "reqs3",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Angaben erneut prüfen",
+        "capability": {
+          "key": "requirements.resolve"
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait2",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "ask3_draft",
+        "type": "PREPARE",
+        "title": "Rückfrage 3 vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "missing": {
+            "stepOutput": {
+              "node": "reqs3",
+              "path": "missing"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs3",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "ask3",
+        "type": "ACTION",
+        "title": "Rückfrage 3 senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "CLARIFICATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "ask3_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs3",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "wait3",
+        "type": "WAIT_EVENT",
+        "title": "Auf Antwort warten",
+        "config": {
+          "eventType": "communication.received"
+        },
+        "timeout": {
+          "hours": 72,
+          "policyRef": "default-72h"
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "reqs3",
+                  "path": "complete"
+                }
+              },
+              {
+                "literal": false
+              }
+            ]
+          }
+        ],
+        "optional": true,
+        "onFailure": "SKIP"
+      },
+      {
+        "id": "extract4",
+        "type": "PREPARE",
+        "title": "Angaben aus der Antwort entnehmen",
+        "capability": {
+          "key": "facts.extract_from_message"
+        },
+        "inputs": {
+          "messageId": {
+            "sourceRef": "inbound.latestMessageId"
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait3",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "reqs4",
+        "type": "EVALUATE_REQUIREMENTS",
+        "title": "Angaben erneut prüfen",
+        "capability": {
+          "key": "requirements.resolve"
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "wait3",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "book",
+        "type": "ACTION",
+        "title": "Gewählten Termin im Kalender buchen",
+        "capability": {
+          "key": "calendar.book"
+        },
+        "inputs": {
+          "choice": {
+            "fact": "appointment.agreed"
+          }
+        },
+        "preconditions": [
+          {
+            "all": [
+              {
+                "capabilityAvailable": "calendar.book"
+              },
+              {
+                "exists": {
+                  "fact": "appointment.agreed"
+                }
+              }
+            ]
+          }
+        ],
+        "optional": true,
+        "onFailure": "SKIP"
+      },
+      {
+        "id": "confirm_draft",
+        "type": "PREPARE",
+        "title": "Terminbestätigung vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "APPOINTMENT_CONFIRMATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "start": {
+            "stepOutput": {
+              "node": "book",
+              "path": "start"
+            }
+          },
+          "end": {
+            "stepOutput": {
+              "node": "book",
+              "path": "end"
+            }
+          },
+          "kind": {
+            "stepOutput": {
+              "node": "book",
+              "path": "kind"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "book",
+                "path": "eventId"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "confirm",
+        "type": "ACTION",
+        "title": "Terminbestätigung senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "APPOINTMENT_CONFIRMATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "confirm_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "book",
+                "path": "eventId"
+              }
+            }
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "lead",
+        "type": "ACTION",
+        "title": "Anfrage an das CRM übergeben",
+        "capability": {
+          "key": "crm.lead.create"
+        },
+        "config": {
+          "purpose": "CRM_HANDOFF"
+        },
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "notify",
+        "type": "ACTION",
+        "title": "Zuständige Person informieren",
+        "capability": {
+          "key": "staff.notify"
+        },
+        "inputs": {
+          "message": {
+            "literal": "Eine Anfrage wurde aufgenommen und an das CRM übergeben. Bitte prüfen und die nächsten Schritte einleiten (Angebot, Termin)."
+          }
+        },
+        "optional": true,
+        "onFailure": "SKIP"
+      },
+      {
+        "id": "ack_draft",
+        "type": "PREPARE",
+        "title": "Eingangsbestätigung vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "ACKNOWLEDGEMENT"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          }
+        },
+        "preconditions": [
+          {
+            "not": {
+              "exists": {
+                "stepOutput": {
+                  "node": "book",
+                  "path": "eventId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "ack",
+        "type": "ACTION",
+        "title": "Eingangsbestätigung senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "ACKNOWLEDGEMENT"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "ack_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "not": {
+              "exists": {
+                "stepOutput": {
+                  "node": "book",
+                  "path": "eventId"
+                }
+              }
+            }
+          }
+        ],
+        "onFailure": "REVIEW"
+      },
+      {
+        "id": "done",
+        "type": "COMPLETE",
+        "title": "Abschluss prüfen"
+      }
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "interpret",
+        "target": "context"
+      },
+      {
+        "id": "e2",
+        "source": "context",
+        "target": "extract"
+      },
+      {
+        "id": "e3",
+        "source": "extract",
+        "target": "reqs"
+      },
+      {
+        "id": "e4",
+        "source": "reqs",
+        "target": "ask1_draft"
+      },
+      {
+        "id": "e5",
+        "source": "ask1_draft",
+        "target": "ask1"
+      },
+      {
+        "id": "e6",
+        "source": "ask1",
+        "target": "wait1"
+      },
+      {
+        "id": "e7",
+        "source": "wait1",
+        "target": "extract2"
+      },
+      {
+        "id": "e8",
+        "source": "extract2",
+        "target": "reqs2"
+      },
+      {
+        "id": "e9",
+        "source": "reqs2",
+        "target": "ask2_draft"
+      },
+      {
+        "id": "e10",
+        "source": "ask2_draft",
+        "target": "ask2"
+      },
+      {
+        "id": "e11",
+        "source": "ask2",
+        "target": "wait2"
+      },
+      {
+        "id": "e12",
+        "source": "wait2",
+        "target": "extract3"
+      },
+      {
+        "id": "e13",
+        "source": "extract3",
+        "target": "reqs3"
+      },
+      {
+        "id": "e14",
+        "source": "reqs3",
+        "target": "ask3_draft"
+      },
+      {
+        "id": "e15",
+        "source": "ask3_draft",
+        "target": "ask3"
+      },
+      {
+        "id": "e16",
+        "source": "ask3",
+        "target": "wait3"
+      },
+      {
+        "id": "e17",
+        "source": "wait3",
+        "target": "extract4"
+      },
+      {
+        "id": "e18",
+        "source": "extract4",
+        "target": "reqs4"
+      },
+      {
+        "id": "e19",
+        "source": "reqs4",
+        "target": "book"
+      },
+      {
+        "id": "e20",
+        "source": "book",
+        "target": "confirm_draft"
+      },
+      {
+        "id": "e21",
+        "source": "confirm_draft",
+        "target": "confirm"
+      },
+      {
+        "id": "e22",
+        "source": "confirm",
+        "target": "lead"
+      },
+      {
+        "id": "e23",
+        "source": "lead",
+        "target": "notify"
+      },
+      {
+        "id": "e24",
+        "source": "notify",
+        "target": "ack_draft"
+      },
+      {
+        "id": "e25",
+        "source": "ack_draft",
+        "target": "ack"
+      },
+      {
+        "id": "e26",
+        "source": "ack",
+        "target": "done"
+      }
+    ]
+  },
+  "constraints": {
+    "forbid_unverified_prices": true,
+    "require_policy_before_writes": true,
+    "prevent_duplicate_deliveries": true,
+    "require_human_resolution_for_fact_conflicts": true
+  },
+  "limits": {
+    "maxReplans": 3,
+    "maxSteps": 40,
+    "maxAutoQuestions": 3,
+    "maxRuntimeHours": 720
+  },
+  "waitRules": [
+    {
+      "eventType": "communication.received",
+      "correlation": "SAME_CASE",
+      "timeoutPolicyRef": "default-72h"
+    }
+  ],
+  "completionCriteria": {
+    "receiptConfirmed": {
+      "purpose": "CRM_HANDOFF"
+    }
+  },
+  "metadata": {
+    "owner": "fixtures",
+    "note": "Übergabe statt Angebot; Schritte mit capabilityAvailable entfallen bei Betrieben ohne die jeweilige Anbindung. Alle Inhalte sind Daten, keine Engine-Logik."
+  }
+}

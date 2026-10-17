@@ -17,17 +17,21 @@ export interface ClarificationAppointment {
   slots: string[];
 }
 
-function appointmentBlock(appointment: ClarificationAppointment): string[] {
+/** Wozu gefragt wird: für ein Angebot, das ORBIT selbst erstellt (`QUOTE`), oder um die Anfrage an die zuständige Person zu übergeben (`HANDOFF`, kein Wort über ein Angebot). */
+export type ClarificationIntent = 'QUOTE' | 'HANDOFF';
+
+function appointmentBlock(appointment: ClarificationAppointment, intent: ClarificationIntent): string[] {
   const minutes = APPOINTMENT_DURATION_MINUTES[appointment.kind];
+  const reliable = intent === 'HANDOFF' ? 'eine verlässliche Einschätzung' : 'ein verlässliches Angebot';
   if (appointment.kind === 'SITE_VISIT') {
     if (appointment.slots.length > 0) {
       return [
-        `Für ein verlässliches Angebot schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Folgende Termine hätten wir frei:`,
+        `Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Folgende Termine hätten wir frei:`,
         ...appointment.slots.map((slot) => `- ${slot}`),
         'Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.',
       ];
     }
-    return [`Für ein verlässliches Angebot schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Bitte nennen Sie uns zwei bis drei Zeiträume (Wochentag und Uhrzeit), zu denen ein Termin bei Ihnen passt.`];
+    return [`Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Bitte nennen Sie uns zwei bis drei Zeiträume (Wochentag und Uhrzeit), zu denen ein Termin bei Ihnen passt.`];
   }
   if (appointment.slots.length > 0) {
     return [
@@ -46,16 +50,22 @@ export function clarificationBody(input: {
   /** Ein Satz, wie die Anfrage verstanden wurde (nur unbedenklicher Text). */
   summary?: string;
   appointment?: ClarificationAppointment;
+  intent?: ClarificationIntent;
+  /** Wie viele Rückfragen die Kundschaft in diesem Vorgang schon bekommen hat (ab der zweiten wird für die Antwort gedankt statt die Anfrage noch einmal zusammenzufassen). */
+  previousRounds?: number;
 }): string {
   const lines = input.questions.map((q, index) => `${index + 1}. ${q.question}`);
-  const intro = `vielen Dank für Ihre Anfrage${input.originalSubject ? ` „${input.originalSubject}“` : ''}.`;
+  const intent = input.intent ?? 'QUOTE';
+  const followUp = (input.previousRounds ?? 0) > 0;
+  const intro = followUp ? 'vielen Dank für Ihre Antwort.' : `vielen Dank für Ihre Anfrage${input.originalSubject ? ` „${input.originalSubject}“` : ''}.`;
   const out: string[] = ['Guten Tag,', '', intro];
-  if (input.summary) out.push(`Wir haben sie so verstanden: ${input.summary}`);
+  if (input.summary && !followUp) out.push(`Wir haben sie so verstanden: ${input.summary}`);
   out.push('');
   if (lines.length > 0) {
-    out.push('Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben:', '', ...lines, '');
+    const why = intent === 'HANDOFF' ? 'Damit wir Ihre Anfrage gut vorbereiten können' : 'Damit wir Ihnen ein passendes Angebot erstellen können';
+    out.push(`${why}, ${followUp ? 'fehlen uns noch' : 'benötigen wir noch'} folgende Angaben:`, '', ...lines, '');
   }
-  if (input.appointment) out.push(...appointmentBlock(input.appointment), '');
+  if (input.appointment) out.push(...appointmentBlock(input.appointment, intent), '');
   out.push('Sie können einfach auf diese E-Mail antworten.', '', 'Mit freundlichen Grüßen', input.companyName);
   return out.join('\n');
 }

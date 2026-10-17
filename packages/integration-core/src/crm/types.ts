@@ -42,6 +42,8 @@ export interface CreateLeadInput extends CrmCallContext {
   contactExternalId: string;
   companyExternalId?: string;
   source: string;
+  /** Bezeichnung der Anfrage im CRM (z. B. „Anfrage Wärmepumpe – Tom Orbit“); ohne Angabe nennt der Adapter nur den Eingangskanal. */
+  title?: string;
   notes?: string;
 }
 

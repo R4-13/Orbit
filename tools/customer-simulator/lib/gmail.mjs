@@ -18,8 +18,11 @@ export function createGmail({ getToken, fetchImpl = fetch }) {
   return {
     /** Wem gehört das Konto, für das der Zugang gilt? */
     profile: () => call('GET', '/profile'),
-    /** @param {string} raw die Nachricht als URL-sicheres Base64 */
-    send: (raw) => call('POST', '/messages/send', { raw }),
+    /**
+     * @param {string} raw die Nachricht als URL-sicheres Base64
+     * @param {string} [threadId] Gmail-Faden, in den die Nachricht gehört (für Antworten)
+     */
+    send: (raw, threadId) => call('POST', '/messages/send', { raw, ...(threadId ? { threadId } : {}) }),
     async ensureLabel(name) {
       const existing = (await call('GET', '/labels')).labels?.find((label) => label.name === name);
       if (existing) return existing.id;
@@ -42,9 +45,9 @@ export function createGmail({ getToken, fetchImpl = fetch }) {
       const page = await call('GET', `/messages?labelIds=INBOX&maxResults=${Math.min(Math.max(limit, 1), 50)}`);
       const rows = [];
       for (const { id } of page.messages ?? []) {
-        const message = await call('GET', `/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+        const message = await call('GET', `/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date&metadataHeaders=Message-ID&metadataHeaders=References`);
         const header = (name) => message.payload?.headers?.find((h) => h.name.toLowerCase() === name)?.value ?? '';
-        rows.push({ id, from: header('from'), subject: header('subject'), date: header('date'), snippet: message.snippet ?? '' });
+        rows.push({ id, threadId: message.threadId ?? '', messageId: header('message-id'), references: header('references'), from: header('from'), subject: header('subject'), date: header('date'), snippet: message.snippet ?? '' });
       }
       return rows;
     },

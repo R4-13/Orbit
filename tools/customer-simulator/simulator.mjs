@@ -3,13 +3,14 @@
 // Einstellungen des Projekts und verändert nichts außerhalb dieses Ordners (und Toms Postfach). Anleitung: README.md.
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { loadEnv, missing, readConfig, saveEnvValue } from './lib/env.mjs';
 import { createGmail } from './lib/gmail.mjs';
 import { authorize, createTokenSource } from './lib/google-auth.mjs';
 import { SendLedger, assertAllowedRecipient, stopRequested } from './lib/guards.mjs';
-import { buildMessage, toRaw } from './lib/mime.mjs';
+import { buildMessage, replyHeaders, replySubject, toRaw } from './lib/mime.mjs';
 import { loadScenarios, render, select } from './lib/scenarios.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,8 @@ const HELP = `Kunden-Simulator (Testwerkzeug)
   node simulator.mjs lauf   [Auswahl] --alle-minuten 10 [--stunden 2] --senden
                                                    regelmäßig zufällige Anfragen schicken
   node simulator.mjs posteingang [--anzahl 5]      Toms neueste empfangene Mails ansehen (nur lesen)
+  node simulator.mjs antworten --text "…" [--nr 1] [--senden]
+                                                   Tom antwortet im selben Faden auf eine empfangene Mail (Probelauf ohne --senden)
   node simulator.mjs aufraeumen [--senden]         von diesem Werkzeug gesendete Mails in Toms Postfach in den Papierkorb legen
 
 Auswahl:  --szenario <Kennung> | --art <Art>   (ohne Angabe: zufällig)      --anzahl N (höchstens ${MAX_PER_COMMAND})
@@ -189,6 +192,40 @@ async function commandInbox(values) {
   Anfang:  ${row.snippet.slice(0, 200)}`);
 }
 
+/** Tom antwortet auf eine empfangene Mail (die neueste, oder --nr N) – im selben Gmail-Faden, mit Bezug auf deren Message-ID. Der Text kommt von Hand (--text oder --datei). */
+async function commandReply(values) {
+  const { config, ledger } = context();
+  const send = Boolean(values.senden);
+  const text = (values.datei ? readFileSync(values.datei, 'utf8') : values.text ?? '').trim();
+  if (!text) throw new Error('Es fehlt der Antworttext: --text "…" oder --datei <Datei>.');
+  requireConfig(config, ['clientId', 'from', 'allowedRecipients', 'refreshToken']);
+  const gmail = gmailFor(config);
+  await assertAccount(gmail, config);
+  const rows = await gmail.recentInbox(Math.max(Number(values.nr ?? 1), 1));
+  const original = rows[Math.max(Number(values.nr ?? 1), 1) - 1];
+  if (!original) throw new Error('Im Posteingang von Tom gibt es keine Mail, auf die geantwortet werden könnte.');
+  // Geantwortet wird nur an eine erlaubte Adresse – eine Mail von jemand anderem im Posteingang wird nie beantwortet.
+  const recipient = assertAllowedRecipient(original.from, config.allowedRecipients);
+  const subject = replySubject(original.subject);
+  const body = values['ohne-hinweis'] ? text : `${text}
+
+[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.`;
+  say(`• Antwort auf „${original.subject}“ (${original.date})`);
+  say(describe({ fromName: config.from, subject, text: body }, recipient));
+  if (!send) {
+    say('  → Probelauf: nichts gesendet. Zum Senden --senden angeben.');
+    return;
+  }
+  if (stopRequested(STOP_FILE)) throw new Error('Notaus: die Datei STOP existiert. Löschen Sie sie, um wieder zu senden.');
+  ledger.assertRoom({ perHour: config.perHour, perDay: config.perDay });
+  const labelId = await gmail.ensureLabel(config.label);
+  const raw = toRaw(buildMessage({ from: { address: config.from }, to: recipient, subject, text: body, headers: { ...replyHeaders(original), 'X-Orbit-Simulation': `customer-simulator reply ${randomUUID().slice(0, 8)}` } }));
+  const sent = await gmail.send(raw, original.threadId);
+  ledger.record();
+  await gmail.addLabel(sent.id, labelId).catch((error) => say(`  (Etikett nicht gesetzt: ${error.message})`));
+  say(`  → gesendet an ${recipient} (Gmail-Kennung ${sent.id}). Zähler: ${JSON.stringify(ledger.counts())}`);
+}
+
 function commandList(values) {
   const scenarios = loadScenarios(SCENARIOS_FILE).filter((s) => !values.art || s.art === values.art);
   for (const s of scenarios) say(`${s.id.padEnd(24)} ${s.art.padEnd(12)} ${s.titel}${s.anhang ? '  [mit PDF-Anhang]' : ''}`);
@@ -209,7 +246,7 @@ async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({
     args: rest,
-    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' } },
+    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' }, text: { type: 'string' }, datei: { type: 'string' }, nr: { type: 'string' } },
     strict: true,
   });
   switch (command) {
@@ -225,6 +262,8 @@ async function main() {
       return commandSend(values, { loop: true });
     case 'posteingang':
       return commandInbox(values);
+    case 'antworten':
+      return commandReply(values);
     case 'aufraeumen':
       return commandCleanup(values);
     default:

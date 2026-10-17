@@ -12,6 +12,8 @@ export interface CreateLeadInput {
   contactId: string;
   companyId?: string;
   source: LeadSource;
+  /** Bezeichnung im CRM (z. B. Deal-Name in HubSpot). */
+  title?: string;
   notes?: string;
   caseId?: string;
 }
@@ -49,6 +51,7 @@ export class LeadsService {
       contactExternalId: contact.crmExternalId ?? contact.id,
       companyExternalId: input.companyId,
       source: input.source,
+      title: input.title,
       notes: input.notes,
     });
 

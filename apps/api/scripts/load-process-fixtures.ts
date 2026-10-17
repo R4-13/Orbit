@@ -4,7 +4,10 @@
  * already published blueprint version untouched. Touches only the named tenant; never resets or reseeds anything.
  *
  *   set -a && source .env && set +a
- *   pnpm --filter @orbit/api exec ts-node scripts/load-process-fixtures.ts <tenant-slug>
+ *   pnpm --filter @orbit/api exec ts-node scripts/load-process-fixtures.ts <tenant-slug> [blueprint-datei] [--umstellen]
+ *
+ * `blueprint-datei` (Standard: request-for-quote.blueprint.json) wählt die Fassung des Ablaufs, z. B. request-for-quote.handoff.blueprint.json (Anfrage aufnehmen und übergeben).
+ * Ist für den Betrieb schon eine andere Version desselben Ablaufs aktiv, wechselt erst `--umstellen` darauf; laufende Vorgänge behalten ihre Version.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,8 +20,10 @@ import { ReferenceProcessService } from '../src/process/reference/reference-proc
 const FIXTURES = join(__dirname, '../../../fixtures/process');
 
 async function main(): Promise<void> {
-  const slug = process.argv[2];
-  if (!slug) throw new Error('Usage: ts-node scripts/load-process-fixtures.ts <tenant-slug>');
+  const args = process.argv.slice(2);
+  const switchVersion = args.includes('--umstellen');
+  const [slug, file = 'request-for-quote.blueprint.json'] = args.filter((a) => !a.startsWith('--'));
+  if (!slug) throw new Error('Usage: ts-node scripts/load-process-fixtures.ts <tenant-slug> [blueprint-datei] [--umstellen]');
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
   try {
@@ -30,7 +35,7 @@ async function main(): Promise<void> {
     console.log(`Referenzdaten für ${tenant.name}: ${reference.catalogItems} Katalogeinträge, ${reference.requirementRules} Regeln (Test-SoR).`);
 
     const blueprints = app.get(BlueprintRegistryService);
-    const definition = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.blueprint.json'), 'utf8')) as { key: string; version: string };
+    const definition = JSON.parse(readFileSync(join(FIXTURES, file), 'utf8')) as { key: string; version: string };
     const existing = await blueprints.get(tenant.id, definition.key, definition.version).catch(() => undefined);
     if (existing && existing.status !== 'DRAFT') {
       console.log(`Blueprint ${definition.key} ${definition.version} ist bereits ${existing.status} und bleibt unverändert.`);
@@ -40,9 +45,12 @@ async function main(): Promise<void> {
       for (const to of ['VALIDATING', 'TESTING', 'STAGED', 'PUBLISHED'] as const) await blueprints.transition(tenant.id, 'fixture-loader', definition.key, definition.version, to);
       console.log(`Blueprint ${definition.key} ${definition.version} veröffentlicht.`);
     }
-    if (!(await blueprints.getActive(tenant.id, definition.key))) {
+    const active = await blueprints.getActive(tenant.id, definition.key);
+    if (!active || (switchVersion && active.row.version !== definition.version)) {
       await blueprints.activate(tenant.id, 'fixture-loader', definition.key, definition.version);
-      console.log('Blueprint für den Mandanten aktiviert.');
+      console.log(`Blueprint ${definition.version} für den Mandanten aktiviert${active ? ` (vorher ${active.row.version})` : ''}.`);
+    } else if (active.row.version !== definition.version) {
+      console.log(`Aktiv bleibt Version ${active.row.version}; mit --umstellen wechselt der Betrieb auf ${definition.version}.`);
     }
   } finally {
     await app.close();

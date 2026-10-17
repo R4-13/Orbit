@@ -304,6 +304,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
       execute: async (_input, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
         const blueprint = await this.blueprintOfCase(ctx.tenantId, caseId);
+        const handoff = blueprint?.dynamicRequirements?.outcome === 'HANDOFF';
         const sku = (await this.facts.getCurrent(ctx.tenantId, caseId)).find((f) => f.key === 'request.product_sku' && f.status === 'CONFIRMED')?.value;
         const item = typeof sku === 'string' ? await this.reference.findItem(ctx.tenantId, sku) : undefined;
         const rules = item ? await this.reference.rulesForCategory(ctx.tenantId, item.category) : [];
@@ -333,7 +334,8 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           if (appointmentKind) {
             needed.set(APPOINTMENT_AGREED_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Welcher der vorgeschlagenen Termine für den Vor-Ort-Termin passt Ihnen?' : 'Zu welchen Zeiten erreichen wir Sie telefonisch?', valueType: 'string' });
             // Ohne das Ergebnis des Termins (Aufmaß, Befund, Gesprächsergebnis) gibt es kein verlässliches Angebot: eine Person trägt es nach (wird nicht erfragt).
-            needed.set(APPOINTMENT_OUTCOME_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Ergebnis des Vor-Ort-Termins (Aufmaß, Befund)' : 'Ergebnis des Telefonats', valueType: 'string', internal: true });
+            // Bei einer Übergabe ist der Termin selbst der nächste Schritt der Person, die übernimmt – sein Ergebnis gehört nicht zu dem, was vorher vorliegen muss.
+            if (!handoff) needed.set(APPOINTMENT_OUTCOME_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Ergebnis des Vor-Ort-Termins (Aufmaß, Befund)' : 'Ergebnis des Telefonats', valueType: 'string', internal: true });
           }
         }
         const current = await this.facts.getCurrent(ctx.tenantId, caseId);
@@ -415,9 +417,13 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         if (input.purpose === 'CLARIFICATION') {
           if (!input.missing || input.missing.length === 0) throw new ToolFailedError('Es gibt nichts, was die Kundschaft beantworten müsste; die Anfrage braucht eine Prüfung durch einen Mitarbeiter (z. B. Leistung zuordnen, Preis ermitteln).', { errorCode: 'NOTHING_TO_ASK' });
           const analysed = await this.analysis.latest(ctx.tenantId, caseId);
-          const kind = analysed ? appointmentKindOf(analysed.nextStep) : undefined;
+          // Termin nur ansprechen, solange er noch offen ist: hat die Kundschaft schon gewählt, wird in einer weiteren Runde nicht erneut vorgeschlagen.
+          const appointmentOpen = input.missing.some((q) => q.key === APPOINTMENT_AGREED_KEY);
+          const kind = analysed && appointmentOpen ? appointmentKindOf(analysed.nextStep) : undefined;
           // Terminvorschläge nur aus der echten Verfügbarkeit; ohne verbundenen Kalender bittet die Nachricht um Terminwünsche – es werden keine Zeiten erfunden.
           const proposal = kind ? await this.appointments.propose(ctx.tenantId, kind) : undefined;
+          const handoff = (await this.blueprintOfCase(ctx.tenantId, caseId))?.dynamicRequirements?.outcome === 'HANDOFF';
+          const previousRounds = await this.prisma.forTenantId(ctx.tenantId).actionIntent.count({ where: { caseId, status: 'CONFIRMED', capabilityKey: 'email.send', purpose: 'CLARIFICATION' } });
           const questions = input.missing.filter((q) => q.key !== APPOINTMENT_AGREED_KEY);
           bodyText = clarificationBody({
             originalSubject: inbound?.subject,
@@ -425,6 +431,8 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
             companyName,
             summary: analysed?.summary && isSafeCustomerText(analysed.summary).safe ? analysed.summary : undefined,
             appointment: kind && proposal ? { kind, slots: proposal.slots.map((slot) => slot.label) } : undefined,
+            intent: handoff ? 'HANDOFF' : 'QUOTE',
+            previousRounds,
           });
           if (kind && proposal) {
             await this.caseEvents

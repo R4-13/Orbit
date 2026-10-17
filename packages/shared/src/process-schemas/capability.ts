@@ -89,7 +89,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'MEDIUM',
     toolBindings: ['extract_message_facts'],
-    contract: { inputs: [{ name: 'messageId', required: true, hint: 'sourceRef inbound.latestMessageId' }], outputs: ['recorded', 'rejected'], scope: 'BLUEPRINT_ONLY' },
+    contract: { inputs: [{ name: 'messageId', required: true, hint: 'sourceRef inbound.latestMessageId' }], outputs: ['recorded', 'rejected'], producesFacts: ['appointment.agreed'], scope: 'BLUEPRINT_ONLY' },
     idempotencyStrategy: 'NONE',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 60_000,

@@ -176,7 +176,7 @@ export class HubSpotCrmConnector implements CrmConnector {
     const target = await this.dealTarget(token, input.tenantId);
     const deal = await this.request<HubSpotObject>(token, 'POST', '/crm/v3/objects/deals', {
       properties: {
-        dealname: `Anfrage (${input.source})`,
+        dealname: nonEmpty(input.title) ? (input.title as string).trim().slice(0, 200) : `Anfrage (${input.source})`,
         pipeline: target.pipeline,
         dealstage: target.stage,
         ...(nonEmpty(input.notes) ? { description: (input.notes as string).slice(0, 2000) } : {}),

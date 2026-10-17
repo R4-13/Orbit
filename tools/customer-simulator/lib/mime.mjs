@@ -47,3 +47,11 @@ export function buildMessage(mail) {
 export function toRaw(message) {
   return Buffer.from(message, 'utf8').toString('base64url');
 }
+
+/** Bezug einer Antwort: In-Reply-To auf die beantwortete Nachricht, References = bisherige Kette + diese Nachricht. */
+export function replyHeaders(original) {
+  const chain = [original.references, original.messageId].filter(Boolean).join(' ').trim();
+  return { ...(original.messageId ? { 'In-Reply-To': original.messageId } : {}), ...(chain ? { References: chain } : {}) };
+}
+
+export const replySubject = (subject) => (/^(re|aw):/i.test(subject.trim()) ? subject.trim() : `Re: ${subject.trim() || 'Ihre Nachricht'}`);

@@ -112,6 +112,19 @@ describe('validatePlan (§11.3)', () => {
     expect(result.issues.some((i) => i.code === 'BINDING_UNKNOWN_FACT' && i.severity === 'WARNING')).toBe(true);
   });
 
+  it('6: ein Schritt, der seine eigene Verfügbarkeit voraussetzt, ist für Betriebe ohne die Fähigkeit kein Fehler (er entfällt dort)', () => {
+    const without = (ask: Record<string, unknown>) => {
+      const plan = clarificationPlan();
+      plan.nodes[2] = node('ask', 'ACTION', { capability: { key: 'email.send' }, config: { purpose: 'CLARIFICATION' }, inputs: { to: { fact: 'sender.email' }, draft: { stepOutput: { node: 'draft', path: 'draftId' } } }, ...ask });
+      return validatePlan(plan, ctx({ executability: new Map([...executability, ['email.send', { executable: false, reasons: ['nicht angebunden'] }]]) }));
+    };
+    expect(codes(without({ preconditions: [{ capabilityAvailable: 'email.send' }] }))).not.toContain('CAPABILITY_NOT_EXECUTABLE');
+    expect(codes(without({ preconditions: [{ all: [{ exists: { fact: 'sender.email' } }, { capabilityAvailable: 'email.send' }] }] }))).not.toContain('CAPABILITY_NOT_EXECUTABLE');
+    // Eine Bedingung, die die Fähigkeit nicht zwingend verlangt, befreit nicht.
+    expect(codes(without({ preconditions: [{ any: [{ capabilityAvailable: 'email.send' }, { exists: { fact: 'sender.email' } }] }] }))).toContain('CAPABILITY_NOT_EXECUTABLE');
+    expect(codes(without({ preconditions: [{ capabilityAvailable: 'calendar.book' }] }))).toContain('CAPABILITY_NOT_EXECUTABLE');
+  });
+
   it('6: reports non-executable capabilities, missing purpose and disabled policies', () => {
     const notExecutable = ctx({ executability: new Map([...executability, ['email.send', { executable: false, reasons: ['Keine Gmail-Verbindung mit Sendeberechtigung'] }]]) });
     const result = validatePlan(clarificationPlan(), notExecutable);

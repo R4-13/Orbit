@@ -30,6 +30,8 @@ node simulator.mjs senden --szenario notfall-rohrbruch --senden    # wirklich se
 node simulator.mjs senden --art anfrage --anzahl 3 --abstand 30 --senden
 node simulator.mjs lauf --alle-minuten 10 --stunden 2 --senden    # regelmäßig zufällige Anfragen
 node simulator.mjs posteingang --anzahl 5   # Toms neueste empfangene Mails ansehen (nur lesen)
+node simulator.mjs antworten --text "Ja, auch das Warmwasser."   # PROBELAUF: Tom antwortet auf die neueste Mail im selben Faden
+node simulator.mjs antworten --text "…" --nr 2 --senden           # wirklich senden (auf die zweitneueste Mail)
 node simulator.mjs aufraeumen            # Probelauf: wie viele Mails hat das Werkzeug in Toms Postfach?
 node simulator.mjs aufraeumen --senden   # in den Papierkorb legen
 node pruefen-entfernbar.mjs              # ist das Werkzeug restlos entfernbar?
@@ -41,6 +43,7 @@ Ohne `--senden` passiert **nie** etwas außer einer Anzeige. Tests des Werkzeugs
 
 - **Probelauf ist die Vorgabe**; gesendet wird nur mit ausdrücklichem `--senden`.
 - **Nur erlaubte Empfänger:** genau eine Adresse je Mail, und sie muss in `SIM_ALLOWED_RECIPIENTS` stehen; sonst Abbruch (auch im Probelauf). Ist die Liste leer, wird nichts gesendet.
+- **Antworten nur an erlaubte Adressen:** `antworten` beantwortet nur Mails, deren Absender in `SIM_ALLOWED_RECIPIENTS` steht; eine Mail von jemand anderem im Posteingang wird nie beantwortet.
 - **Nur von Toms Konto:** vor dem Senden fragt das Werkzeug Google, zu welchem Konto das Token gehört; weicht es von `SIM_FROM` ab, wird nichts gesendet.
 - **Obergrenzen:** vorgabegemäß 20 Mails je Stunde und 100 je 24 Stunden (`SIM_MAX_PER_HOUR`/`_DAY`), höchstens 20 je Aufruf; die Zähler stehen als reine Zeitstempel in `.state.json`.
 - **Notaus:** existiert im Ordner eine Datei namens `STOP`, wird nichts mehr gesendet (`lauf` endet sofort).
@@ -59,8 +62,8 @@ Alle Mails kommen von derselben Adresse (Tom). ORBIT behandelt wiederholte Mails
 
 ## Was **nicht** gebaut ist
 
-- **Stufe 2:** Tom liest ORBITs Antworten und antwortet selbst (etwa auf Rückfragen). Das braucht ein Modell, das Toms Rolle spielt, und das Recht, Toms Postfach zu lesen.
-  Bisher sendet Tom nur.
+- **Selbstständige Antworten:** `antworten` schickt eine Antwort, die man selbst formuliert (`--text`/`--datei`) – im selben Faden, mit Bezug auf die beantwortete Mail. Dass Tom ORBITs
+  Rückfragen von selbst liest und beantwortet (ein Modell spielt Toms Rolle), ist nicht gebaut.
 - Bewertung der Antworten von ORBIT: das Werkzeug sendet, es prüft nichts. (Die Qualitätsmessung der KI steht im Projekt unter `docs/evaluation/`.)
 
 ## Entwurfsentscheidungen

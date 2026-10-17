@@ -44,7 +44,7 @@ Demo-Katalog. Die Ergebnisse zeigen Muster, keine Statistik.
 6. **Keine Zuordnung zur Person/zum bestehenden Vorgang.** Antworten werden über E-Mail-Verweise (Thread, In-Reply-To) zugeordnet, nicht über Absender und offene Vorgänge. „Wann kommt mein
    Angebot?“ oder „Termin verschieben“ finden ihren Vorgang nicht; im Test entstand sogar ein neuer, sinnloser Angebotsvorgang, der abbrach.
 7. **Sprache.** Antwortet jemand auf Englisch, geht die Rückfrage trotzdem in deutschem Rahmentext hinaus (`communication-templates.ts`); nur die Fragen sind vom Modell.
-8. **Feste Frage-Runde.** Nach einer Rückfrage entscheidet bei Lücken oder Widersprüchen ein Mensch (Blueprint `maxAutoQuestions: 1`).
+8. **Feste Frage-Runden.** Die Angebotsfassung (1.0.0) fragt einmal (`maxAutoQuestions: 1`); die Übergabefassung (2.0.0) bis zu dreimal (Plattformobergrenze 3, `ASSUMPTIONS.md` #610). Danach entscheidet bei Lücken oder Widersprüchen ein Mensch.
 
 ## Zielbild und Vorschlag
 
