@@ -1,4 +1,4 @@
-import { extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
+import { extractDisplayName, extractPlainTextBody, listAttachmentRefs, parseGmailMessageHeaders, type GmailMessage } from './gmail-message-parser';
 
 function base64Url(text: string): string {
   return Buffer.from(text, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -146,5 +146,30 @@ describe('listAttachmentRefs', () => {
   it('returns an empty array for a message with no attachments', () => {
     const message: GmailMessage = { id: 'msg_1', payload: { mimeType: 'text/plain', body: { data: base64Url('x') } } };
     expect(listAttachmentRefs(message)).toEqual([]);
+  });
+});
+
+describe('extractDisplayName', () => {
+  it('liest den Anzeigenamen aus dem From-Kopf (mit und ohne Anführungszeichen)', () => {
+    expect(extractDisplayName('"Tom Orbit" <tomorbit777@gmail.com>')).toBe('Tom Orbit');
+    expect(extractDisplayName('Anna Beispiel <anna@kunde.example>')).toBe('Anna Beispiel');
+    expect(extractDisplayName('"Beispiel, Anna" <anna@kunde.example>')).toBe('Beispiel, Anna');
+  });
+
+  it('dekodiert kodierte Wörter nach RFC 2047 (Base64 und Quoted-Printable, Umlaute)', () => {
+    expect(extractDisplayName(`=?UTF-8?B?${Buffer.from('Jürgen Müller', 'utf8').toString('base64')}?= <j@kunde.example>`)).toBe('Jürgen Müller');
+    expect(extractDisplayName('=?UTF-8?Q?J=C3=BCrgen_M=C3=BCller?= <j@kunde.example>')).toBe('Jürgen Müller');
+  });
+
+  it('liefert keinen Namen, wenn keiner da ist, er nur die Adresse wiederholt oder unbrauchbar ist', () => {
+    expect(extractDisplayName('anna@kunde.example')).toBeUndefined();
+    expect(extractDisplayName('<anna@kunde.example>')).toBeUndefined();
+    expect(extractDisplayName('anna@kunde.example <anna@kunde.example>')).toBeUndefined();
+    expect(extractDisplayName(`"${'x'.repeat(200)}" <a@b.example>`)).toBeUndefined();
+  });
+
+  it('parseGmailMessageHeaders gibt den Namen mit', () => {
+    const parsed = parseGmailMessageHeaders({ id: 'm', payload: { headers: [{ name: 'From', value: '"Tom Orbit" <tomorbit777@gmail.com>' }] } });
+    expect(parsed).toMatchObject({ from: 'tomorbit777@gmail.com', fromName: 'Tom Orbit' });
   });
 });

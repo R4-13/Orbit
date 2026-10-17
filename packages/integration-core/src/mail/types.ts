@@ -15,6 +15,8 @@ export interface InboundEmail {
   /** The mail provider's own message id — used for de-duplication (EmailMessage.providerMessageId). */
   providerMessageId: string;
   from: string;
+  /** Anzeigename aus dem `From`-Kopf, falls vorhanden (nur ein Hinweis, kein Identitätsnachweis). */
+  fromName?: string;
   to: string[];
   subject: string;
   bodyText: string;

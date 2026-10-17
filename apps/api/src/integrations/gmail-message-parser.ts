@@ -32,6 +32,8 @@ export interface GmailMessage {
 
 export interface ParsedGmailHeaders {
   from: string;
+  /** Anzeigename des Absenders aus dem `From`-Kopf („Anna Beispiel“ aus `"Anna Beispiel" <a@b.example>`), falls vorhanden – für die Anlage von Kunden und Anreden. */
+  fromName?: string;
   to: string[];
   subject: string;
   receivedAt: Date;
@@ -80,6 +82,32 @@ function extractEmailAddress(rawHeaderValue: string): string {
   return (angleMatch?.[1] ?? rawHeaderValue).trim();
 }
 
+/** Kodierte Wörter nach RFC 2047 (`=?UTF-8?B?…?=` und `=?UTF-8?Q?…?=`) zurück in Text; alles andere bleibt unverändert. */
+function decodeEncodedWords(value: string): string {
+  return value.replace(/=\?([\w-]+)\?([BbQq])\?([^?]*)\?=/g, (whole, charset: string, encoding: string, text: string) => {
+    try {
+      const label = /^utf-?8$/i.test(charset) ? 'utf-8' : /^iso-8859-1$/i.test(charset) ? 'latin1' : undefined;
+      if (!label) return whole;
+      const bytes = encoding.toUpperCase() === 'B' ? Buffer.from(text, 'base64') : Buffer.from(text.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (_m, hex: string) => String.fromCharCode(parseInt(hex, 16))), 'latin1');
+      return new TextDecoder(label).decode(bytes);
+    } catch {
+      return whole;
+    }
+  });
+}
+
+/**
+ * Der Anzeigename vor der Adresse im `From`-Kopf. Leer, wenn keiner angegeben ist oder er nur die Adresse wiederholt. Der Name stammt vom Absender selbst und ist nur ein Hinweis
+ * (nie ein Identitätsnachweis); er dient der Anlage eines Kontakts und der persönlichen Anrede.
+ */
+export function extractDisplayName(rawHeaderValue: string): string | undefined {
+  const angle = rawHeaderValue.indexOf('<');
+  if (angle < 1) return undefined;
+  const name = decodeEncodedWords(rawHeaderValue.slice(0, angle).trim().replace(/^"(.*)"$/, '$1').replace(/\\(.)/g, '$1')).replace(/\s+/g, ' ').trim();
+  if (!name || name.includes('@') || name.length > 120) return undefined;
+  return name;
+}
+
 function findPlainTextPart(part: GmailMessagePart | undefined): GmailMessagePart | undefined {
   if (!part) return undefined;
   if (part.mimeType === 'text/plain' && part.body?.data) return part;
@@ -104,6 +132,7 @@ export function parseGmailMessageHeaders(message: GmailMessage): ParsedGmailHead
   const toRaw = getHeader(headers, 'To');
   return {
     from: extractEmailAddress(getHeader(headers, 'From')),
+    fromName: extractDisplayName(getHeader(headers, 'From')),
     to: toRaw
       ? toRaw
           .split(',')

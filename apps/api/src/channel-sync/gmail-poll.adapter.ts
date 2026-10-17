@@ -73,7 +73,7 @@ export class GmailPollAdapter implements ChannelPollAdapter {
       provider: 'gmail',
       externalEventId: email.providerMessageId,
       occurredAt: email.receivedAt,
-      sender: { address: email.from },
+      sender: { address: email.from, ...(email.fromName ? { displayName: email.fromName } : {}) },
       recipients: email.to.map((address) => ({ address })),
       subject: email.subject,
       content: email.bodyText,
