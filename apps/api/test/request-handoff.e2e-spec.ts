@@ -189,12 +189,13 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     const tenantId = await newTenant({ calendar: true });
     seedTriage();
     seedExtraction();
-    seedAnalysis({ missingInformation: [], siteVisit: { recommended: true, reason: 'Die Auslegung braucht die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
+    seedAnalysis({ missingInformation: [{ key: 'preferred_visit_times', label: 'Mögliche Besichtigungstermine', question: 'Welche Tage oder Zeitfenster passen Ihnen für eine Besichtigung?' }], siteVisit: { recommended: true, reason: 'Die Auslegung braucht die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
     const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
     const caseId = first.case!.id;
     expect(sent).toHaveLength(1);
     expect(sent[0]!.bodyText).toContain('vor Ort an');
     expect(sent[0]!.bodyText).toContain('eine verlässliche Einschätzung');
+    expect(sent[0]!.bodyText).not.toContain('Welche Tage oder Zeitfenster'); // die Terminzeiten kommen nur als Vorschläge, nicht zusätzlich als Frage
     expect(sent[0]!.bodyText).not.toMatch(/Angebot/);
     const proposed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId, type: 'appointment.proposed' } });
     expect((proposed.payload as { slots: unknown[] }).slots.length).toBeGreaterThan(0);

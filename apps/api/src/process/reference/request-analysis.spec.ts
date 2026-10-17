@@ -1,4 +1,4 @@
-import { AI_FACT_PREFIX, RequestAnalysisSchema, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysis } from './request-analysis';
+import { AI_FACT_PREFIX, RequestAnalysisSchema, isAppointmentSchedulingRequirement, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysis } from './request-analysis';
 import { clarificationBody } from './communication-templates';
 
 const MESSAGE = 'Guten Tag, wir möchten unsere alte Ölheizung im Einfamilienhaus (Baujahr 1985, ca. 140 m²) gegen eine Wärmepumpe tauschen. Bitte um ein Angebot. Viele Grüße, Thomas Meier';
@@ -81,6 +81,33 @@ describe('Anforderungsanalyse', () => {
     expect(RequestAnalysisSchema.safeParse(proposal()).success).toBe(true);
     expect(RequestAnalysisSchema.safeParse(proposal({ missingInformation: [{ key: 'Ungültig Mit Leerzeichen', label: 'x', question: 'Eine ausreichend lange Frage?' }] })).success).toBe(false);
     expect(RequestAnalysisSchema.safeParse({ ...proposal(), nextStep: 'DELETE_EVERYTHING' }).success).toBe(false);
+  });
+});
+
+describe('Terminfragen als zusätzliche Angabe', () => {
+  const base = { requestType: 'Badsanierung', summary: 'Komplettes Bad.', knownDetails: [], siteVisit: { recommended: true, reason: 'Aufmaß' }, nextStep: 'PROPOSE_SITE_VISIT' as const };
+  const missing = [
+    { key: 'preferred_visit_times', label: 'Mögliche Besichtigungstermine', question: 'Welche Tage oder Zeitfenster passen Ihnen für eine Besichtigung?' },
+    { key: 'renovation_period', label: 'Zeitraum der Sanierung', question: 'Für welchen Zeitraum planen Sie die Badsanierung?' },
+  ];
+
+  it('erkennt Fragen nach den Terminzeiten, nicht aber nach dem Zeitraum der Leistung', () => {
+    expect(isAppointmentSchedulingRequirement(missing[0]!)).toBe(true);
+    expect(isAppointmentSchedulingRequirement({ key: 'availability', label: 'Verfügbarkeit' })).toBe(true);
+    expect(isAppointmentSchedulingRequirement({ key: 'phone_availability', label: 'Erreichbarkeit' })).toBe(true);
+    expect(isAppointmentSchedulingRequirement(missing[1]!)).toBe(false);
+    expect(isAppointmentSchedulingRequirement({ key: 'roof_access', label: 'Zugang zum Dach' })).toBe(false);
+  });
+
+  it('mit geplantem Termin wird die Terminfrage nicht zusätzlich verlangt (der Termin wird gesondert vereinbart), die übrigen Fragen bleiben', () => {
+    const result = evaluateAnalysis({ ...base, missingInformation: missing }, 'Wir wollen unser Bad sanieren.', new Set());
+    expect(result.requirements.map((r) => r.key)).toEqual(['ai.renovation_period']);
+    expect(result.rejected).toEqual([{ what: 'Mögliche Besichtigungstermine', reason: 'Der Termin wird gesondert vereinbart' }]);
+  });
+
+  it('ohne Termin bleibt die Frage erhalten (es gibt keine andere Stelle, die sie stellt)', () => {
+    const result = evaluateAnalysis({ ...base, siteVisit: { recommended: false, reason: '' }, nextStep: 'ASK_CUSTOMER', missingInformation: missing }, 'Wir wollen unser Bad sanieren.', new Set());
+    expect(result.requirements.map((r) => r.key)).toEqual(['ai.preferred_visit_times', 'ai.renovation_period']);
   });
 });
 

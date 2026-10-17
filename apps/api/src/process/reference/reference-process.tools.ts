@@ -19,7 +19,7 @@ import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
-import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isSafeCustomerText } from './request-analysis';
+import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isAppointmentSchedulingRequirement, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
@@ -330,7 +330,8 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           if (quantity) needed.set('request.quantity', { ...quantity, question: 'Menge bzw. Umfang für die Preisermittlung festlegen', internal: true });
         }
         if (analysis) {
-          for (const r of analysis.requirements) if (!needed.has(r.key)) needed.set(r.key, { question: r.question, valueType: r.type });
+          // Terminfragen der KI gelten nicht als zusätzliche Angabe, sobald ein Termin gesondert vereinbart wird (auch nicht für eine früher gespeicherte Analyse).
+          for (const r of analysis.requirements) if (!needed.has(r.key) && !(appointmentKind && isAppointmentSchedulingRequirement(r))) needed.set(r.key, { question: r.question, valueType: r.type });
           if (appointmentKind) {
             needed.set(APPOINTMENT_AGREED_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Welcher der vorgeschlagenen Termine für den Vor-Ort-Termin passt Ihnen?' : 'Zu welchen Zeiten erreichen wir Sie telefonisch?', valueType: 'string' });
             // Ohne das Ergebnis des Termins (Aufmaß, Befund, Gesprächsergebnis) gibt es kein verlässliches Angebot: eine Person trägt es nach (wird nicht erfragt).
