@@ -37,6 +37,17 @@ export function createGmail({ getToken, fetchImpl = fetch }) {
       } while (pageToken && ids.length < limit);
       return ids.slice(0, limit);
     },
+    /** Die neuesten Nachrichten im Posteingang (nur Absender, Betreff, Datum und Anfang – nichts wird verändert). */
+    async recentInbox(limit = 10) {
+      const page = await call('GET', `/messages?labelIds=INBOX&maxResults=${Math.min(Math.max(limit, 1), 50)}`);
+      const rows = [];
+      for (const { id } of page.messages ?? []) {
+        const message = await call('GET', `/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+        const header = (name) => message.payload?.headers?.find((h) => h.name.toLowerCase() === name)?.value ?? '';
+        rows.push({ id, from: header('from'), subject: header('subject'), date: header('date'), snippet: message.snippet ?? '' });
+      }
+      return rows;
+    },
     trash: (messageId) => call('POST', `/messages/${encodeURIComponent(messageId)}/trash`),
   };
 }

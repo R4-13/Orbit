@@ -28,6 +28,7 @@ const HELP = `Kunden-Simulator (Testwerkzeug)
   node simulator.mjs senden [Auswahl] [--senden]   Anfragen schicken (ohne --senden nur Probelauf)
   node simulator.mjs lauf   [Auswahl] --alle-minuten 10 [--stunden 2] --senden
                                                    regelmäßig zufällige Anfragen schicken
+  node simulator.mjs posteingang [--anzahl 5]      Toms neueste empfangene Mails ansehen (nur lesen)
   node simulator.mjs aufraeumen [--senden]         von diesem Werkzeug gesendete Mails in Toms Postfach in den Papierkorb legen
 
 Auswahl:  --szenario <Kennung> | --art <Art>   (ohne Angabe: zufällig)      --anzahl N (höchstens ${MAX_PER_COMMAND})
@@ -175,6 +176,19 @@ async function commandAuth(values) {
   say(`\nFertig: Zugang für ${profile.emailAddress} gespeichert (in .env.local, nicht in Git). Probe: node simulator.mjs senden --szenario oeffnungszeiten`);
 }
 
+async function commandInbox(values) {
+  const { config } = context();
+  requireConfig(config, ['clientId', 'from', 'refreshToken']);
+  const gmail = gmailFor(config);
+  await assertAccount(gmail, config);
+  const rows = await gmail.recentInbox(Number(values.anzahl ?? 5));
+  if (rows.length === 0) say('Der Posteingang von Tom ist leer.');
+  for (const row of rows) say(`• ${row.date}
+  Von:     ${row.from}
+  Betreff: ${row.subject}
+  Anfang:  ${row.snippet.slice(0, 200)}`);
+}
+
 function commandList(values) {
   const scenarios = loadScenarios(SCENARIOS_FILE).filter((s) => !values.art || s.art === values.art);
   for (const s of scenarios) say(`${s.id.padEnd(24)} ${s.art.padEnd(12)} ${s.titel}${s.anhang ? '  [mit PDF-Anhang]' : ''}`);
@@ -209,6 +223,8 @@ async function main() {
       return commandSend(values, { loop: false });
     case 'lauf':
       return commandSend(values, { loop: true });
+    case 'posteingang':
+      return commandInbox(values);
     case 'aufraeumen':
       return commandCleanup(values);
     default:

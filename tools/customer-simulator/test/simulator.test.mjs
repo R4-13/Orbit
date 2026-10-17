@@ -165,6 +165,19 @@ test('Gmail: Senden, Etikett anlegen oder wiederfinden, Auflisten mit Seiten, Pa
   await assert.rejects(createGmail({ getToken: async () => 'tok', fetchImpl: async () => json(403, { error: { message: 'Insufficient Permission' } }) }).profile(), /403.*Insufficient Permission/);
 });
 
+test('Gmail: der Posteingang wird nur gelesen (Absender, Betreff, Datum, Anfang)', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const path = String(url).replace('https://gmail.googleapis.com/gmail/v1/users/me', '');
+    calls.push(`${init.method} ${path}`);
+    if (path.startsWith('/messages?labelIds=INBOX')) return json(200, { messages: [{ id: 'x1' }] });
+    return json(200, { snippet: 'Guten Tag …', payload: { headers: [{ name: 'From', value: 'handwerkernull@gmail.com' }, { name: 'Subject', value: 'Re: Frage' }, { name: 'Date', value: 'Sat, 17 Oct 2026 14:04:00 +0000' }] } });
+  };
+  const rows = await createGmail({ getToken: async () => 'tok', fetchImpl }).recentInbox(5);
+  assert.deepEqual(rows, [{ id: 'x1', from: 'handwerkernull@gmail.com', subject: 'Re: Frage', date: 'Sat, 17 Oct 2026 14:04:00 +0000', snippet: 'Guten Tag …' }]);
+  assert.ok(calls.every((c) => c.startsWith('GET ')), 'nur lesende Aufrufe');
+});
+
 /** Die Befehlszeile als Ganzes, mit leerer Umgebung (kein Netz nötig: nur Probelauf und Ablehnungen). */
 function run(args, env = {}) {
   const dir = tmp();

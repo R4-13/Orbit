@@ -29,6 +29,7 @@ node simulator.mjs senden --szenario notfall-rohrbruch # PROBELAUF: zeigt die Ma
 node simulator.mjs senden --szenario notfall-rohrbruch --senden    # wirklich senden
 node simulator.mjs senden --art anfrage --anzahl 3 --abstand 30 --senden
 node simulator.mjs lauf --alle-minuten 10 --stunden 2 --senden    # regelmäßig zufällige Anfragen
+node simulator.mjs posteingang --anzahl 5   # Toms neueste empfangene Mails ansehen (nur lesen)
 node simulator.mjs aufraeumen            # Probelauf: wie viele Mails hat das Werkzeug in Toms Postfach?
 node simulator.mjs aufraeumen --senden   # in den Papierkorb legen
 node pruefen-entfernbar.mjs              # ist das Werkzeug restlos entfernbar?
