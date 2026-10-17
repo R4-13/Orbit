@@ -1,0 +1,4 @@
+# Lokale Einstellungen mit dem Zugang für Tom, Zähler und Notaus – gehören nie ins Repository.
+.env.local
+.state.json
+STOP
