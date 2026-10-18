@@ -233,20 +233,66 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       expect(sent).toEqual([]);
     });
 
-    it('ein vorübergehender Fehler (KI-Dienst nicht erreichbar) lässt einen optionalen Buchungsschritt nicht stillschweigend entfallen: der Vorgang geht an einen Menschen', async () => {
-      const tenantId = await newTenant({ calendar: true, profile: false });
-      const { caseId } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');
-      const llmFailure = jest.spyOn(llm, 'complete').mockRejectedValueOnce(new Error('fetch failed'));
-      const procedure = bookingProcedure();
-      (procedure.nodes[1] as Record<string, unknown>).optional = true;
-      (procedure.nodes[1] as Record<string, unknown>).onFailure = 'SKIP';
-      const orchestrator = app.get(OrchestratorService);
-      await orchestrator.startProcedure(tenantId, caseId, procedure as never);
-      await orchestrator.advance(tenantId, caseId);
-      llmFailure.mockRestore();
-      expect(await nodeState(tenantId, caseId, 'book')).toBe('FAILED');
-      expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('MANUAL_REVIEW');
-      expect(created).toEqual([]);
+    describe('Ausfall eines Systems: der Vorgang wird nicht abgebrochen, ORBIT wiederholt selbstständig', () => {
+      async function bookingDuringOutage() {
+        const tenantId = await newTenant({ calendar: true, profile: false });
+        const { caseId, slots } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');
+        const failure = jest.spyOn(llm, 'complete').mockRejectedValueOnce(new Error('fetch failed'));
+        const procedure = bookingProcedure();
+        (procedure.nodes[1] as Record<string, unknown>).optional = true; // auch ein optionaler Schritt wird bei einem Ausfall nicht gestrichen
+        (procedure.nodes[1] as Record<string, unknown>).onFailure = 'SKIP';
+        const orchestrator = app.get(OrchestratorService);
+        await orchestrator.startProcedure(tenantId, caseId, procedure as never);
+        await orchestrator.advance(tenantId, caseId);
+        failure.mockRestore();
+        return { tenantId, caseId, slots, orchestrator };
+      }
+      const caseStatus = async (tenantId: string, caseId: string) => (await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus;
+      const makeDue = (tenantId: string, caseId: string) => prisma.withRlsBypass((tx) => tx.processPlanNode.updateMany({ where: { tenantId, nodeKey: 'book', state: 'PLANNED' }, data: { retryAt: new Date(Date.now() - 1000) } }));
+
+      it('der Schritt bleibt geplant und wird mit Wartezeit wiederholt; der Vorgang wartet auf das System, niemand wird gestört', async () => {
+        const { tenantId, caseId } = await bookingDuringOutage();
+        expect(await nodeState(tenantId, caseId, 'book')).toBe('PLANNED');
+        expect(await caseStatus(tenantId, caseId)).toBe('WAITING_FOR_EXTERNAL_SYSTEM');
+        expect(created).toEqual([]);
+        const retry = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId, type: 'node.retry_scheduled' } });
+        expect(retry.payload).toMatchObject({ nodeKey: 'book', attempt: 1, errorCode: 'AI_UNAVAILABLE' });
+        const node = await prisma.forTenantId(tenantId).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'book' } });
+        expect(node.retryAt!.getTime()).toBeGreaterThan(Date.now());
+        expect(await prisma.forTenantId(tenantId).attentionItem.count({ where: { caseId } })).toBe(0);
+      });
+
+      it('ist das System wieder da, wird der Termin ohne jede Handarbeit gebucht und bestätigt', async () => {
+        const { tenantId, caseId, orchestrator } = await bookingDuringOutage();
+        await makeDue(tenantId, caseId);
+        seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+        await orchestrator.advance(tenantId, caseId);
+        expect(created).toHaveLength(1);
+        expect(sent).toHaveLength(1);
+        expect(await nodeState(tenantId, caseId, 'book')).toBe('SUCCEEDED');
+        expect(await caseStatus(tenantId, caseId)).toBe('COMPLETED');
+      });
+
+      it('bleibt das System länger als zwei Arbeitstage unerreichbar, wird ein Mensch eingeschaltet – vorher nicht', async () => {
+        const { tenantId, caseId, orchestrator } = await bookingDuringOutage();
+        const failAgain = jest.spyOn(llm, 'complete').mockRejectedValue(new Error('fetch failed'));
+        // Ein Versuch nach einem Tag: ORBIT wiederholt weiter.
+        await prisma.withRlsBypass((tx) => tx.caseEvent.updateMany({ where: { caseId, type: 'node.retry_scheduled' }, data: { createdAt: new Date(Date.now() - 24 * 3600 * 1000) } }));
+        await makeDue(tenantId, caseId);
+        await orchestrator.advance(tenantId, caseId);
+        expect(await nodeState(tenantId, caseId, 'book')).toBe('PLANNED');
+        expect(await caseStatus(tenantId, caseId)).toBe('WAITING_FOR_EXTERNAL_SYSTEM');
+        // Der Ausfall dauert nun schon sieben Tage (mindestens drei volle Arbeitstage dazwischen): jetzt geht der Vorgang an einen Menschen.
+        await prisma.withRlsBypass((tx) => tx.caseEvent.updateMany({ where: { caseId, type: 'node.retry_scheduled' }, data: { createdAt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } }));
+        await makeDue(tenantId, caseId);
+        await orchestrator.advance(tenantId, caseId);
+        failAgain.mockRestore();
+        expect(await nodeState(tenantId, caseId, 'book')).toBe('FAILED');
+        const row = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } });
+        expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+        expect(row.attentionReasons.join(' ')).toMatch(/Arbeitstagen/);
+        expect(created).toEqual([]);
+      });
     });
 
     it('ist der Termin inzwischen belegt, wird nicht gebucht', async () => {

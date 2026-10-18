@@ -16,11 +16,13 @@ export interface EffectiveLimits {
   maxActionsPerCase: number;
   /** Nach so vielen fehlgeschlagenen Aktionen in Folge wird nichts Neues mehr versucht, sondern geprüft. */
   maxConsecutiveCapabilityFailures: number;
+  /** Wie viele Arbeitstage ein angebundenes System ununterbrochen nicht erreichbar sein darf, bevor ein Mensch eingeschaltet wird (bis dahin wiederholt ORBIT selbstständig). */
+  maxOutageWorkingDays: number;
   /** Geschätzte KI-Kosten je Vorgang (in der Währung des Kostenprofils); danach wird nichts Neues mehr gestartet, sondern geprüft. Wirkt nur mit gepflegtem Kostenprofil. */
   maxAiCostPerCase: number;
 }
 
-export const LIMIT_KEYS = ['maxSteps', 'maxExternalActions', 'maxAutoQuestions', 'maxReplans', 'maxActionsPerCase', 'maxConsecutiveCapabilityFailures', 'maxAiCostPerCase'] as const;
+export const LIMIT_KEYS = ['maxSteps', 'maxExternalActions', 'maxAutoQuestions', 'maxReplans', 'maxActionsPerCase', 'maxConsecutiveCapabilityFailures', 'maxOutageWorkingDays', 'maxAiCostPerCase'] as const;
 export type LimitKey = (typeof LIMIT_KEYS)[number];
 
 /** Standardwerte, wenn der Blueprint nichts angibt. */
@@ -31,6 +33,7 @@ export const LIMIT_DEFAULTS: Readonly<EffectiveLimits> = {
   maxReplans: 3,
   maxActionsPerCase: 20,
   maxConsecutiveCapabilityFailures: 3,
+  maxOutageWorkingDays: 2,
   maxAiCostPerCase: 5,
 };
 
@@ -43,6 +46,7 @@ export const LIMIT_CEILINGS: Readonly<EffectiveLimits> = {
   maxReplans: 20,
   maxActionsPerCase: 50,
   maxConsecutiveCapabilityFailures: 10,
+  maxOutageWorkingDays: 2,
   maxAiCostPerCase: 100,
 };
 

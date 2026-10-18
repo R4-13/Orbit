@@ -45,6 +45,8 @@ export const CASE_EVENT_TYPES = {
   WAIT_STARTED: 'wait.started',
   WAIT_SATISFIED: 'wait.satisfied',
   WAIT_TIMED_OUT: 'wait.timed_out',
+  /** Ein angebundenes System war nicht erreichbar: der Schritt wird automatisch wiederholt (das erste Ereignis je Schritt hält fest, seit wann der Ausfall besteht). */
+  NODE_RETRY_SCHEDULED: 'node.retry_scheduled',
   COMMUNICATION_RECEIVED: 'communication.received',
   COMMAND_ACCEPTED: 'command.accepted',
   COMPLETED: 'case.completed',

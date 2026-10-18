@@ -1,3 +1,5 @@
+import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError } from '@orbit/shared';
+
 /**
  * Amendment 02 §12.5 — a tool call that returns without throwing is not
  * proof of success. Adapters and tools signal failure in several shapes
@@ -83,12 +85,32 @@ export function normalizeToolOutput(output: unknown): ToolResultContract {
 }
 
 /** Classifies an exception thrown by a tool. */
+/** Fehlermeldungen und -codes, die einen Ausfall der Verbindung beschreiben (Netz, DNS, Zeitüberschreitung) – nicht einen abgelehnten Auftrag. */
+const CONNECTION_FAILURE = /fetch failed|ECONNRESET|ECONNREFUSED|ECONNABORTED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|EHOSTUNREACH|ENETUNREACH|EPIPE|socket hang up|network error|timed? ?out|aborted|UND_ERR/i;
+
+/**
+ * Ist ein Fehler vorübergehend, sodass dieselbe Aktion später gelingen kann? Das gilt für den Ausfall der Verbindung zu einem angebundenen System (Netz, Zeitüberschreitung,
+ * nicht erreichbarer Dienst, Drosselung, Serverfehler) – nicht für eine Ablehnung (ungültige Angaben, fehlende Berechtigung, widerrufene Zustimmung).
+ */
+export function isTransientError(error: unknown): boolean {
+  if (error instanceof ExternalSystemError) return error.details?.retryable !== false;
+  if (error instanceof AiProviderUnavailableError || error instanceof IntegrationUnavailableError) return true;
+  if (!(error instanceof Error)) return false;
+  const cause = (error as { cause?: unknown }).cause;
+  const parts = [error.message, (error as { code?: unknown }).code, cause instanceof Error ? cause.message : undefined, cause && typeof cause === 'object' ? (cause as { code?: unknown }).code : undefined];
+  return parts.some((part) => typeof part === 'string' && CONNECTION_FAILURE.test(part));
+}
+
 export function classifyThrownToolError(error: unknown): ToolResultContract {
   if (error instanceof ToolOutcomeUnknownError) {
     return { status: 'OUTCOME_UNKNOWN', errorCode: error.errorCode, message: error.message, retryable: false };
   }
   if (error instanceof ToolFailedError) {
     return { status: 'FAILED', errorCode: error.errorCode, message: error.message, retryable: error.retryable };
+  }
+  if (isTransientError(error)) {
+    const provider = error instanceof ExternalSystemError && typeof error.details?.provider === 'string' ? error.details.provider : undefined;
+    return { status: 'FAILED', errorCode: 'SYSTEM_UNREACHABLE', message: `${provider ? `Das System „${provider}“` : 'Ein angebundenes System'} ist vorübergehend nicht erreichbar.`, retryable: true };
   }
   return {
     status: 'FAILED',

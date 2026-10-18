@@ -9,6 +9,8 @@ import {
   type TenantLimitsInput,
   evaluateCompletion,
   nextActions,
+  outageLimitReached,
+  outageRetryDelayMs,
   type BlueprintDefinition,
   type EvalContext,
   type ExecutionMode,
@@ -206,7 +208,9 @@ export class OrchestratorService {
         const retryAtOf = (nodeKey: string) => graph.nodes.find((n) => n.nodeKey === nodeKey)?.retryAt?.getTime() ?? 0;
         const actions = allActions.filter((a) => a.action !== 'EXECUTE' || retryAtOf(a.nodeKey) <= now);
         if (actions.length === 0 && allActions.length > 0) {
-          await this.lifecycle.transition(tenantId, caseId, { to: 'WAITING_FOR_EXTERNAL_SYSTEM', attentionReasons: ['Ein Schritt wird nach kurzer Wartezeit automatisch wiederholt.'] });
+          const waiting = graph.nodes.filter((n) => n.state === 'PLANNED' && n.retryAt && n.retryAt.getTime() > now);
+          const reasons = waiting.map((n) => `${(n.definition as unknown as PlanNode).title}: ${n.errorMessage ?? 'Ein Schritt'} ORBIT versucht es automatisch erneut (nächster Versuch ${n.retryAt!.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr).`);
+          await this.lifecycle.transition(tenantId, caseId, { to: 'WAITING_FOR_EXTERNAL_SYSTEM', attentionReasons: reasons.length > 0 ? reasons.slice(0, 3) : ['Ein Schritt wird nach kurzer Wartezeit automatisch wiederholt.'] });
           return { status: 'IDLE', executed };
         }
         if (actions.length === 0) {
@@ -464,14 +468,45 @@ export class OrchestratorService {
     }
     // FAILED
     if (intentId) await this.ledger.fail(tenantId, intentId, contract.errorCode ?? 'TOOL_FAILED', { message: contract.message });
-    const maxAttempts = def.retry?.maxAttempts ?? 1;
-    if (contract.retryable && node.attempts < maxAttempts) {
-      if (intentId) await this.prisma.forTenantId(tenantId).actionIntent.updateMany({ where: { id: intentId, status: 'FAILED' }, data: { status: 'PREPARED', errorCode: null } });
-      await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'PLANNED', errorCode: contract.errorCode, errorMessage: contract.message, retryAt: new Date(Date.now() + 30_000 * node.attempts), agentRunId: run.id });
+    // Ausfall eines angebundenen Systems (Netz, Dienst nicht erreichbar, Drosselung): der Vorgang wird nicht abgebrochen. ORBIT wiederholt den Schritt selbstständig mit
+    // wachsenden Abständen, bis er gelingt. Erst wenn der Ausfall die Grenze in Arbeitstagen überschreitet, wird ein Mensch eingeschaltet. Eine Ablehnung (nicht wiederholbar) geht wie bisher sofort weiter.
+    if (contract.retryable) {
+      const limits = effectiveLimits((await this.blueprintFor(tenantId, caseRow))?.limits, await this.tenantLimits(tenantId));
+      const scoped = this.prisma.forTenantId(tenantId);
+      const first = await scoped.caseEvent.findFirst({
+        where: { caseId: caseRow.id, type: CASE_EVENT_TYPES.NODE_RETRY_SCHEDULED, AND: [{ payload: { path: ['planId'], equals: graph.plan.id } }, { payload: { path: ['nodeKey'], equals: node.nodeKey } }] },
+        orderBy: { sequence: 'asc' },
+      });
+      const timeZone = (await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } })))?.timezone || 'Europe/Berlin';
+      if (!first || !outageLimitReached(first.createdAt, new Date(), timeZone, limits.maxOutageWorkingDays)) {
+        if (intentId) {
+          // Eine bereits freigegebene Aktion bleibt freigegeben: nach dem Ausfall braucht niemand ein zweites Mal zuzustimmen.
+          const failed = await this.ledger.get(tenantId, intentId);
+          await scoped.actionIntent.updateMany({ where: { id: intentId, status: 'FAILED' }, data: { status: failed.approvalId ? 'APPROVED' : 'PREPARED', errorCode: null } });
+        }
+        const retryAt = new Date(Date.now() + outageRetryDelayMs(node.attempts));
+        await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'PLANNED', errorCode: contract.errorCode, errorMessage: contract.message, retryAt, agentRunId: run.id });
+        await this.events
+          .append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.NODE_RETRY_SCHEDULED, payload: { planId: graph.plan.id, nodeKey: node.nodeKey, attempt: node.attempts, errorCode: contract.errorCode ?? null, message: contract.message ?? null, retryAt: retryAt.toISOString() } })
+          .catch((error: unknown) => this.logger.warn(`retry event of case ${caseRow.id} failed: ${safeMessage(error)}`));
+        return;
+      }
+      await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { agentRunId: run.id, state: 'RUNNING' }).catch(() => undefined);
+      await this.failNode(
+        tenantId,
+        caseRow,
+        graph,
+        node,
+        def,
+        contract.errorCode ?? 'SYSTEM_UNREACHABLE',
+        `${contract.message ?? 'Ein angebundenes System ist nicht erreichbar.'} Seit mehr als ${limits.maxOutageWorkingDays} Arbeitstagen ohne Erfolg – ORBIT hat es in dieser Zeit laufend erneut versucht. Bitte prüfen.`,
+        ['RUNNING'],
+        true,
+      );
       return;
     }
     await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { agentRunId: run.id, state: 'RUNNING' }).catch(() => undefined);
-    await this.failNode(tenantId, caseRow, graph, node, def, contract.errorCode ?? 'TOOL_FAILED', contract.message ?? 'Der Schritt ist fehlgeschlagen.', ['RUNNING'], contract.retryable === true);
+    await this.failNode(tenantId, caseRow, graph, node, def, contract.errorCode ?? 'TOOL_FAILED', contract.message ?? 'Der Schritt ist fehlgeschlagen.');
   }
 
   /** A tool may report facts it established (with provenance); they enter the case through the normal fact path. */

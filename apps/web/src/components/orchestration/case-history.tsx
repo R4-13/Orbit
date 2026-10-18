@@ -42,6 +42,8 @@ function describe(event: CaseEventRow): string {
       return 'Antwort eingegangen';
     case 'wait.timed_out':
       return 'Frist für die Antwort abgelaufen';
+    case 'node.retry_scheduled':
+      return `System nicht erreichbar – Schritt „${String(p.nodeKey)}“ wird automatisch wiederholt (Versuch ${String(p.attempt)})`;
     case 'communication.received':
       return 'Nachricht eingegangen';
     case 'case.referenced': {

@@ -11,6 +11,8 @@ describe('zentrale Limits (BP-39)', () => {
     expect(effectiveLimits({ maxActionsPerCase: 500 }).maxActionsPerCase).toBe(LIMIT_CEILINGS.maxActionsPerCase);
     expect(effectiveLimits({ maxSteps: 100 }).maxSteps).toBe(LIMIT_CEILINGS.maxSteps);
     expect(effectiveLimits({ maxAutoQuestions: 9 }).maxAutoQuestions).toBe(LIMIT_CEILINGS.maxAutoQuestions);
+    expect(effectiveLimits(undefined).maxOutageWorkingDays).toBe(2); // Standard und Obergrenze: höchstens zwei Arbeitstage Ausfall, dann ein Mensch
+    expect(effectiveLimits({ maxOutageWorkingDays: 1 }).maxOutageWorkingDays).toBe(1);
     expect(effectiveLimits({ maxReplans: 7 }).maxReplans).toBe(7);
   });
 
