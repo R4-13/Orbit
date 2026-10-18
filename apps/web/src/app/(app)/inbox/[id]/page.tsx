@@ -99,7 +99,7 @@ export default function InboxDetailPage() {
               ) : null}
             </dl>
             {data.bodyPreview ? (
-              <div className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-900">{data.bodyPreview}</div>
+              <div tabIndex={0} role="region" aria-label="Nachrichtentext" className="mt-3 max-h-80 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-900">{data.bodyPreview}</div>
             ) : (
               <p className="mt-3 text-sm text-slate-600">Der Nachrichtentext ist nicht gespeichert oder nicht mehr verfügbar.</p>
             )}

@@ -205,12 +205,19 @@ export const RISK_FLAG_LABELS: Readonly<Record<string, string>> = {
 
 export const riskFlagLabel = (key: string | null | undefined): string => (key && RISK_FLAG_LABELS[key]) || UNMAPPED_LABEL;
 
-const KNOWN_KEY_PATTERN = new RegExp(String.raw`\b(${Object.keys(RISK_FLAG_LABELS).join('|')})\b`, 'g');
+
+/** Einstufung der Geschäftsrelevanz in der Triage, wie sie in Begründungen der KI als Schlüssel auftauchen kann. */
+const TRIAGE_RELEVANCE_LABELS: Readonly<Record<string, string>> = { NON_BUSINESS: 'nicht geschäftlich', RELEVANT: 'geschäftlich relevant', UNCERTAIN: 'unklar' };
+
+/** Alle Schlüssel, die in Freitext durch ihre Bezeichnung ersetzt werden: Risikohinweise, Kategorien (ohne das Wort „unklar“ doppelt zu deuten) und Geschäftsrelevanz. */
+const KEY_LABELS: Readonly<Record<string, string>> = { ...RISK_FLAG_LABELS, ...Object.fromEntries(Object.entries(CATEGORY_LABELS).filter(([key]) => key.includes('_'))), ...TRIAGE_RELEVANCE_LABELS };
+
+const KNOWN_KEY_PATTERN = new RegExp(String.raw`\b(${Object.keys(KEY_LABELS).join('|')})\b`, 'g');
 
 /**
- * Sicherheitsnetz für Freitext aus dem Bestand (Aufgabentitel, Begründungen): bekannte technische Risikoschlüssel werden durch ihre
+ * Sicherheitsnetz für Freitext aus dem Bestand (Aufgabentitel, Begründungen der KI): bekannte technische Schlüssel (Risikohinweise, Kategorien, Geschäftsrelevanz) werden durch ihre
  * verständliche Bezeichnung ersetzt (UI v2 §3.2: keine sichtbaren Enum-Schlüssel). Unbekannte Wörter bleiben unverändert.
  */
 export function humanizeKnownKeys(text: string): string {
-  return text.replace(KNOWN_KEY_PATTERN, (key) => RISK_FLAG_LABELS[key] ?? key);
+  return text.replace(KNOWN_KEY_PATTERN, (key) => KEY_LABELS[key] ?? key);
 }

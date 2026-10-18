@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { NODE_STATE_PRESENTATION, type CaseGraphView } from '@orbit/shared';
+import { NODE_STATE_PRESENTATION, humanizeKnownKeys, type CaseGraphView } from '@orbit/shared';
 import { readingOrder } from '../../lib/graph-layout';
 import { ExecutionModeTag, StateChip } from './state-chip';
 
@@ -41,7 +41,7 @@ export function OrchestrationTimeline({ graph, selectedId, onSelect }: { graph: 
                   <ExecutionModeTag mode={node.executionMode} />
                   {node.availableActions.length > 0 ? <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-semibold text-brand-foreground">Aktion möglich</span> : null}
                 </span>
-                {node.conciseReason ? <span className="mt-1 block text-xs text-slate-600">{node.conciseReason}</span> : null}
+                {node.conciseReason ? <span className="mt-1 block text-xs text-slate-600">{humanizeKnownKeys(node.conciseReason)}</span> : null}
               </span>
             </button>
           </li>

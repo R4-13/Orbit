@@ -32,7 +32,8 @@ const MODULES: Array<{ path: string; heading: string }> = [
 
 async function noRawKeys(page: Page): Promise<string[]> {
   // Sichtbarer Text im Arbeitsbereich enthält keine Enum-/Policy-Schlüssel (UI v2 §3.2).
-  const text = await page.getByRole('main').innerText();
+  // E-Mail-Adressen (accounts.google.com …) sind Inhalt, keine Schlüssel.
+  const text = (await page.getByRole('main').innerText()).replace(/[\w.+-]+@[\w.-]+/g, '');
   return [...new Set(text.match(/\b[A-Z]{3,}(?:_[A-Z]{2,})+\b|\b[a-z]+\.[a-z_]+\.[a-z_]+\b/g) ?? [])];
 }
 

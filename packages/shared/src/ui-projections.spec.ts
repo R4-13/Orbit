@@ -96,6 +96,10 @@ describe('humanizeKnownKeys', () => {
     expect(humanizeKnownKeys('Prüfung erforderlich: PROMPT_INJECTION_SUSPECTED erzwingt Prüfung')).toBe('Prüfung erforderlich: Verdacht auf einen Manipulationsversuch erzwingt Prüfung');
     expect(humanizeKnownKeys('PHISHING_SUSPECTED und IDENTITY_MISMATCH')).toBe('Phishing-Verdacht und Absender passt nicht zur angegebenen Identität');
     expect(humanizeKnownKeys('Kein Schlüssel hier, auch nicht SOME_OTHER_KEY.')).toBe('Kein Schlüssel hier, auch nicht SOME_OTHER_KEY.');
+    // Begründungen der KI nennen auch Kategorien und die Geschäftsrelevanz als Schlüssel.
+    expect(humanizeKnownKeys('Werbenachricht (NEWSLETTER_OR_MARKETING), daher NON_BUSINESS.')).toBe('Werbenachricht (Newsletter oder Werbung), daher nicht geschäftlich.');
+    expect(humanizeKnownKeys('Gehört zu REQUEST_FOR_QUOTE; RELEVANT.')).toBe('Gehört zu Angebotsanfrage; geschäftlich relevant.');
+    expect(humanizeKnownKeys('Das ist Spam und privat.')).toBe('Das ist Spam und privat.'); // gewöhnliche Wörter bleiben
     expect(riskFlagLabel('AUTO_RESPONDER')).toBe('Automatische Antwort');
     expect(riskFlagLabel('NOPE')).toBe(UNMAPPED_LABEL);
   });

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, ErrorState } from '@orbit/ui';
+import { humanizeKnownKeys } from '@orbit/shared';
 import { errorMessage } from '../lib/api-client';
 import { formatDateTime } from '../lib/format';
 import { useExcludedIntake, useIntakeVisibility, useReviewIntakeDecision } from '../lib/hooks/use-intake-decisions';
@@ -55,7 +56,7 @@ export function ExcludedIntakeSection() {
                       <p className="text-xs text-slate-600">
                         {item.sender?.address ?? 'unbekannt'} · {formatDateTime(item.occurredAt)}
                       </p>
-                      <p className="mt-1 text-slate-700">{item.conciseReason ?? item.basis ?? 'Als nicht geschäftsrelevant eingestuft.'}</p>
+                      <p className="mt-1 text-slate-700">{humanizeKnownKeys(item.conciseReason ?? item.basis ?? 'Als nicht geschäftsrelevant eingestuft.')}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                         {item.category ? <Badge tone="neutral">{CATEGORY_LABELS[item.category] ?? item.category}</Badge> : null}
                         {item.confidence ? <span>Sicherheit {Math.round(item.confidence.relevance * 100)} %</span> : null}
