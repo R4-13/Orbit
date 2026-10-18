@@ -309,6 +309,28 @@ und Systeme zuerst (19/20); Tarifmodell und Selbstregistrierung (21); ob das Alt
 
 ---
 
+## 6a. Nachtrag vom 18.10.2026 – Entscheidungen des Auftraggebers und Folgen für die Prioritäten
+
+Siehe `ASSUMPTIONS.md` #619. Kurz: **erst der Auftragseingang und seine Verarbeitung stabil, dann weitere Anbindungen;** der KI-Anbieter wird nur vom Betreiber geändert; BYOK und ein
+MCP-Server sind erwünscht, aber nicht jetzt; Anbindungen werden je Betrieb nach Bedarf gebaut, nicht auf Vorrat.
+
+**Zurückgestellt** (aus Stufe 2): weitere Kanäle (19), weitere CRM/ERP und Preisquelle (20), Lizenz-/Tarifmodell und Selbstregistrierung (21), zweiter KI-Anbieter (23, soweit
+er einen Betriebs-Schlüssel meint), BYOK, MCP-Server.
+
+**Vorgezogen – Stabilisierungsprogramm „Auftragseingang“** (statt neuer Anbindungen):
+
+1. **Abnahmematrix mit den 19 Szenarien des Testwerkzeugs** durch die echte Verarbeitung: je Szenario erwartetes Verhalten, tatsächliches Verhalten, Bewertung (Auskunft,
+   Angebotsanfrage mit Rückfragen und Termin, Notfall, Beschwerde, Bewerbung, Rechnung mit Anhang, Fremdsprache, mehrere Anliegen, Werbung, Phishing, eingeschleuste Anweisung).
+2. **Zuverlässigkeit des Eingangs:** doppelte und verspätete Mails, Antworten außerhalb des Fadens, Abwesenheitsnotizen und Unzustellbarkeitsmeldungen, große Anhänge,
+   Lücken nach einem Ausfall (Historie-Abgleich), Zeitlimits.
+3. **Ausfall und Fristen live belegen** (echte Netzunterbrechung, 72-Stunden-Wartezeit mit beschleunigter Zeit).
+4. **Aufräumen im Alltag:** Freigaben-Liste mit Filtern, „Kunden anlegen“-Aufgaben, Alterung liegengebliebener Vorgänge, Kurz-Kennung.
+5. **Konten auf ein tragfähiges Minimum:** Passwort zurücksetzen, Kontosperre, MFA für Administratoren und Betreiber.
+6. **KI-Qualität:** Konsistenz der Einstufung auf ≥ 85 %, täglicher kleiner Stichprobenlauf.
+7. **BYOK für Mandanten abschalten** (Schalter, Standard AUS), damit die Regel „nur der Betreiber ändert die KI“ auch im Code gilt.
+
+---
+
 ## 7. Grenzen dieser Analyse
 
 * **Nicht ausgeführt:** die vollständige API-E2E-Suite und der vollständige Playwright-Lauf (nur gezielte Teilmengen, alle grün); die Live-Suiten mit echtem Modell.
