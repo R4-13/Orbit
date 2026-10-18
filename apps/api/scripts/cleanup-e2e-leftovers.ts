@@ -7,7 +7,7 @@
  *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-e2e-leftovers.ts <tenant-slug> --execute    # wirklich löschen (vorher sichern: scripts/backup-postgres.sh backup)
  *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-e2e-leftovers.ts --tenants [--execute]      # liegengebliebene Test-Betriebe „e2e-…“ (älter als ein Tag)
  *
- * Als Testeintrag gilt NUR, was eine Marke „E2E“ trägt (Name, Nummer, Titel, Schlüssel) oder an einem solchen Vorgang hängt; Kontakte und Mails werden an ihrer Adresse erkannt
+ * Als Testeintrag gilt NUR, was eine Marke „E2E“ trägt (Name, Nummer, Titel, Schlüssel) oder an einem solchen Vorgang hängt (Aufgaben auch: volle UUID im Titel); Kontakte und Mails werden an ihrer Adresse erkannt
  * (Domäne mit „e2e“). Echte Einträge, auch die Live-Tests mit der Testadresse des Kunden, bleiben. Das Protokoll (Audit) wird nie verändert.
  */
 import { NestFactory } from '@nestjs/core';
@@ -50,11 +50,14 @@ async function main(): Promise<void> {
       const invoices = await tx.invoice.findMany({ where: { tenantId, OR: [{ invoiceNumber: { startsWith: 'E2E-' } }, { caseId: { in: caseIds } }, { supplierId: { in: suppliers.map((s) => s.id) } }] }, select: { id: true } });
       const supplierIds = suppliers.map((s) => s.id);
       const invoiceIds = invoices.map((i) => i.id);
+      // Aufgaben mit einer vollen UUID im Titel (z. B. „Prüfung erforderlich: Kurze Frage 3f2a…-…“) stammen aus Tests: eine echte Betreffzeile enthält das nie.
+      const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      const uuidTaskIds = (await tx.task.findMany({ where: { tenantId }, select: { id: true, title: true } })).filter((t) => uuid.test(t.title)).map((t) => t.id);
       const intents = await tx.actionIntent.findMany({ where: { tenantId, caseId: { in: caseIds } }, select: { id: true } });
 
       const where = {
         approvals: { tenantId, OR: [{ reason: e2e }, { entityType: 'SUPPLIER' as const, entityId: { in: supplierIds } }, { entityType: 'INVOICE' as const, entityId: { in: invoiceIds } }, { entityType: 'PROCESS_ACTION' as const, entityId: { in: intents.map((i) => i.id) } }] },
-        tasks: { tenantId, OR: [{ title: e2e }, { caseId: { in: caseIds } }] },
+        tasks: { tenantId, OR: [{ title: e2e }, { caseId: { in: caseIds } }, { id: { in: uuidTaskIds } }] },
         documents: { tenantId, OR: [{ fileName: { startsWith: 'e2e', mode: 'insensitive' as const } }, { caseId: { in: caseIds } }] },
         emails: { tenantId, OR: [{ caseId: { in: caseIds } }, { subject: e2e }, { fromAddress: e2e }] },
         intakeEvents: { tenantId, caseId: { in: caseIds } },

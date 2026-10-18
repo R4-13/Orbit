@@ -44,3 +44,6 @@ infra/data/
 
 # Lokale Zugangsdaten des Betreibers (nie committen)
 .local/
+
+# Datenbanksicherungen (scripts/backup-postgres.sh) gehören nie ins Repository.
+/backups/
