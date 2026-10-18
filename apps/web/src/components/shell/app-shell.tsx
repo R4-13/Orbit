@@ -19,6 +19,7 @@ import { ConnectionBanner } from './connection-banner';
 import { GlobalSearch } from './global-search';
 import { NavigationTree, pageLabelFor } from './navigation';
 import { SondePanel } from './sonde-panel';
+import { SetupReturnLink } from '../setup/setup-return-link';
 
 const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME ?? 'Project ORBIT';
 
@@ -232,6 +233,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ConnectionBanner />
         <div className="flex min-h-0 flex-1">
           <main ref={setMainEl} id="main" tabIndex={-1} aria-label="Arbeitsbereich" data-shell-main style={{ padding: geometry.mainPadding }} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-page outline-none">
+            <SetupReturnLink />
             {children}
           </main>
           {docked && sondeOpen ? (

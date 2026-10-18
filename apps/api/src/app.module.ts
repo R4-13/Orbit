@@ -36,6 +36,7 @@ import { MeetingsModule } from './meetings/meetings.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { OrganizationModule } from './organization/organization.module';
+import { SetupModule } from './setup/setup.module';
 import { PolicyModule } from './policy/policy.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RetentionModule } from './retention/retention.module';
@@ -101,6 +102,7 @@ const rootEnvFile = findRepoRootEnvFile(__dirname);
     TenantsModule,
     BrandingModule,
     OrganizationModule,
+    SetupModule,
     UsersModule,
     AuthModule,
     PlatformControlModule,

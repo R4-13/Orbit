@@ -77,6 +77,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Settings,
     href: '/admin',
     children: [
+      { href: '/admin/setup', label: 'Einrichtungsassistent', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },
       { href: '/admin/settings', label: 'Unternehmen & Einstellungen', permission: PERMISSIONS.TENANT_MANAGE },
       { href: '/admin/branding', label: 'Erscheinungsbild', permission: PERMISSIONS.TENANT_BRANDING_CONFIGURE },
       { href: '/admin/company', label: 'Unternehmensprofil', permission: PERMISSIONS.TENANT_PROFILE_MANAGE },

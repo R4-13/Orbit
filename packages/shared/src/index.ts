@@ -23,6 +23,7 @@ export * from './tenant-profile';
 export * from './staff-csv';
 export * from './staff-routing';
 export * from './onboarding';
+export * from './setup-assistant';
 export * from './file-signature';
 export * from './api-keys';
 export * from './password-policy';

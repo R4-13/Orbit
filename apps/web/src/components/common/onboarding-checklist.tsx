@@ -26,6 +26,12 @@ export function OnboardingChecklist({ state, compact = false }: { state: TenantP
         </Badge>
       </div>
       <p className="mt-1 text-sm text-slate-600">Je besser ORBIT Ihren Betrieb kennt, desto selbstständiger kann es Anfragen verstehen, beantworten und die richtigen Personen informieren.</p>
+      <p className="mt-1 text-sm">
+        <Link href="/admin/setup" className="font-medium text-brand hover:underline" data-testid="open-setup-assistant">
+          Einrichtungsassistent öffnen
+        </Link>
+        <span className="text-slate-600"> – führt Schritt für Schritt auch durch Postfach, Kalender und CRM.</span>
+      </p>
       <progress className="mt-3 h-2 w-full" max={steps.length} value={doneCount} aria-label="Fortschritt der Einrichtung" />
       <ul className="mt-3 space-y-2">
         {steps.map((step) => (

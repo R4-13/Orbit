@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AutomationLevel, EscalationPolicy, OnboardingStep, StaffInput, UpdateTenantProfileRequest } from '@orbit/shared';
+import type { AutomationLevel, EscalationPolicy, OnboardingStep, SetupAssessment, StaffInput, UpdateTenantProfileRequest } from '@orbit/shared';
 import { apiFetch } from '../api-client';
 
 export interface TenantProfileView {
@@ -137,4 +137,9 @@ export function useImportStaff() {
     mutationFn: (input: { csv: string; deactivateMissing: boolean }) => apiFetch<StaffImportResult>('/v1/staff/import', { method: 'POST', body: JSON.stringify(input) }),
     onSuccess: invalidate,
   });
+}
+
+/** Einrichtungsassistent: Stand der Einrichtung und was ORBIT damit übernimmt (`GET /tenant/setup`). */
+export function useTenantSetup(enabled = true) {
+  return useQuery({ queryKey: ['tenant-setup'], queryFn: () => apiFetch<SetupAssessment>('/v1/tenant/setup'), enabled });
 }
