@@ -248,7 +248,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
         return { tenantId, caseId, slots, orchestrator };
       }
       const caseStatus = async (tenantId: string, caseId: string) => (await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus;
-      const makeDue = (tenantId: string, caseId: string) => prisma.withRlsBypass((tx) => tx.processPlanNode.updateMany({ where: { tenantId, nodeKey: 'book', state: 'PLANNED' }, data: { retryAt: new Date(Date.now() - 1000) } }));
+      const makeDue = (tenantId: string) => prisma.withRlsBypass((tx) => tx.processPlanNode.updateMany({ where: { tenantId, nodeKey: 'book', state: 'PLANNED' }, data: { retryAt: new Date(Date.now() - 1000) } }));
 
       it('der Schritt bleibt geplant und wird mit Wartezeit wiederholt; der Vorgang wartet auf das System, niemand wird gestört', async () => {
         const { tenantId, caseId } = await bookingDuringOutage();
@@ -264,7 +264,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
 
       it('ist das System wieder da, wird der Termin ohne jede Handarbeit gebucht und bestätigt', async () => {
         const { tenantId, caseId, orchestrator } = await bookingDuringOutage();
-        await makeDue(tenantId, caseId);
+        await makeDue(tenantId);
         seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
         await orchestrator.advance(tenantId, caseId);
         expect(created).toHaveLength(1);
@@ -278,13 +278,13 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
         const failAgain = jest.spyOn(llm, 'complete').mockRejectedValue(new Error('fetch failed'));
         // Ein Versuch nach einem Tag: ORBIT wiederholt weiter.
         await prisma.withRlsBypass((tx) => tx.caseEvent.updateMany({ where: { caseId, type: 'node.retry_scheduled' }, data: { createdAt: new Date(Date.now() - 24 * 3600 * 1000) } }));
-        await makeDue(tenantId, caseId);
+        await makeDue(tenantId);
         await orchestrator.advance(tenantId, caseId);
         expect(await nodeState(tenantId, caseId, 'book')).toBe('PLANNED');
         expect(await caseStatus(tenantId, caseId)).toBe('WAITING_FOR_EXTERNAL_SYSTEM');
         // Der Ausfall dauert nun schon sieben Tage (mindestens drei volle Arbeitstage dazwischen): jetzt geht der Vorgang an einen Menschen.
         await prisma.withRlsBypass((tx) => tx.caseEvent.updateMany({ where: { caseId, type: 'node.retry_scheduled' }, data: { createdAt: new Date(Date.now() - 7 * 24 * 3600 * 1000) } }));
-        await makeDue(tenantId, caseId);
+        await makeDue(tenantId);
         await orchestrator.advance(tenantId, caseId);
         failAgain.mockRestore();
         expect(await nodeState(tenantId, caseId, 'book')).toBe('FAILED');
