@@ -6,6 +6,13 @@ import { stableBucket } from './ai-governance';
  * die Laufzeit (`PlatformControlService`) und die Tests nutzen dieselben Funktionen.
  */
 
+// ── Feature Flags (Schlüssel, die der Code selbst abfragt) ───────────────────────────────────────────────────────────
+
+export const FEATURE_FLAGS = {
+  /** Eigener KI-Schlüssel (BYOK) für einen Mandanten freigegeben (Konzept Flexible Autonomie §8.3, D1). Standard AUS; Auswertung fail-closed. */
+  AI_BYOK: 'ai.byok',
+} as const;
+
 // ── Kill Switches ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 export const KILL_SWITCHES = {

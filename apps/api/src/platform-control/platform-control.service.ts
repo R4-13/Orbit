@@ -107,6 +107,19 @@ export class PlatformControlService {
     return evaluateFlag(flag, { tenantId, cohorts: tenant?.featureCohorts ?? [], environment: this.env.ORBIT_ENVIRONMENT });
   }
 
+  /**
+   * Boolescher Schalter, der im Zweifel AUS ist (fail-closed): unbekanntes oder nicht aktives Flag, nicht boolescher Wert oder nicht lesbare Datenbank
+   * liefern `false`. Für Freigaben, die der Betreiber ausdrücklich erteilen muss (z. B. `ai.byok`).
+   */
+  async flagEnabled(key: string, tenantId: string): Promise<boolean> {
+    try {
+      const result = await this.evaluate(key, tenantId);
+      return result?.value === true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Alle für Mandanten freigegebenen Flags mit dem für diesen Mandanten geltenden Wert (nie Kohorten-/Override-Interna). */
   async evaluateExposed(tenantId: string): Promise<Record<string, boolean | string | number>> {
     await this.evaluate('__warm__', tenantId);

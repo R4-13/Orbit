@@ -10,6 +10,10 @@ export type AiProviderConnectionSummary = Omit<AIProviderConnection, 'encryptedC
 export interface AiProviderStatus {
   mode: 'ORBIT_MANAGED' | 'TENANT_MANAGED';
   connection: AiProviderConnectionSummary | null;
+  /** Vom Betreiber für diesen Mandanten freigegeben (Flag `ai.byok`). */
+  byokEnabled: boolean;
+  /** Eine eigene Verbindung ist vorhanden, wird aber mangels Freigabe nicht benutzt. */
+  byokSuppressed: boolean;
   /** What actually serves AI requests and whether that was verified — separate from the configuration kind above. */
   runtime: AiRuntimeStatus;
 }

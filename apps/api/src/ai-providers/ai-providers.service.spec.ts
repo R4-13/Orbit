@@ -2,6 +2,7 @@ import { Test } from '@nestjs/testing';
 import { AiRegistryService } from '../ai-governance/ai-registry.service';
 import { AuditService } from '../audit/audit.service';
 import { ORBIT_ENV } from '../config/env.token';
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialEncryptionService } from '../security/credential-encryption.service';
 import { buildProviderAdapter } from './ai-provider-adapter-factory';
@@ -19,6 +20,7 @@ describe('AiProvidersService', () => {
   let audit: { record: jest.Mock };
   let encryption: { encrypt: jest.Mock; decrypt: jest.Mock };
   let resolver: { resolveForTenant: jest.Mock };
+  let byokFlag: boolean;
   let effectiveProvider: { providerName: string; modelName?: string; validateConfiguration?: jest.Mock };
 
   beforeEach(async () => {
@@ -28,6 +30,7 @@ describe('AiProvidersService', () => {
     prisma = { forTenantId: jest.fn().mockReturnValue(scoped) };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
     encryption = { encrypt: jest.fn().mockReturnValue(Buffer.from('cipher-bytes')), decrypt: jest.fn().mockReturnValue('sk-real-key') };
+    byokFlag = true;
     mockedBuildProviderAdapter.mockReset();
     effectiveProvider = { providerName: 'mock' };
     resolver = { resolveForTenant: jest.fn().mockImplementation(async () => effectiveProvider) };
@@ -40,6 +43,7 @@ describe('AiProvidersService', () => {
         { provide: CredentialEncryptionService, useValue: encryption },
         { provide: ORBIT_ENV, useValue: { ANTHROPIC_MODEL: 'claude-default', OPENAI_MODEL: 'gpt-default' } },
         { provide: AiProviderResolverService, useValue: resolver },
+        { provide: PlatformControlService, useValue: { flagEnabled: jest.fn(async () => byokFlag) } },
         { provide: AiRegistryService, useValue: { byokState: jest.fn().mockResolvedValue({ providerKnown: false, providerActive: false, modelsKnown: false, modelApproved: false }) } },
       ],
     }).compile();
@@ -78,6 +82,53 @@ describe('AiProvidersService', () => {
       expect(status.mode).toBe('TENANT_MANAGED');
       expect(status.connection).not.toHaveProperty('encryptedCredentials');
       expect(status.connection?.hasCredentials).toBe(true);
+    });
+  });
+
+  describe('Betreiberfreigabe ai.byok (Konzept Flexible Autonomie §8.3, D1) – serverseitig, nicht nur in der Oberfläche', () => {
+    beforeEach(() => {
+      byokFlag = false;
+    });
+
+    it('Einrichten ist ohne Freigabe gesperrt (403 BYOK_NOT_ENABLED) – bevor der Anbieter kontaktiert oder irgendetwas gespeichert wird', async () => {
+      await expect(service.upsertConnection('tenant_1', 'user_1', 'OPENAI', 'sk-test', undefined)).rejects.toMatchObject({ code: 'BYOK_NOT_ENABLED', httpStatus: 403 });
+      expect(mockedBuildProviderAdapter).not.toHaveBeenCalled();
+      expect(encryption.encrypt).not.toHaveBeenCalled();
+      expect(scoped.aIProviderConnection.upsert).not.toHaveBeenCalled();
+    });
+
+    it('Verbindungstest ist ohne Freigabe gesperrt', async () => {
+      await expect(service.testConnection('tenant_1', 'user_1')).rejects.toMatchObject({ code: 'BYOK_NOT_ENABLED' });
+      expect(scoped.aIProviderConnection.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('Trennen bleibt erlaubt: ein Mandant darf eigene Zugangsdaten jederzeit entfernen', async () => {
+      scoped.aIProviderConnection.findUnique.mockResolvedValue({ id: 'c', providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('s') });
+      scoped.aIProviderConnection.update.mockResolvedValue({ id: 'c', providerKey: 'OPENAI', status: 'DISCONNECTED', encryptedCredentials: null });
+      await expect(service.disconnect('tenant_1', 'user_1')).resolves.toMatchObject({ status: 'DISCONNECTED', hasCredentials: false });
+    });
+
+    it('Status: Bestandsverbindung bleibt sichtbar, wird aber als nicht benutzt gekennzeichnet; ORBIT Managed bedient', async () => {
+      scoped.aIProviderConnection.findUnique.mockResolvedValue({ id: 'c', providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('s'), byokActiveSince: new Date(), lastTestedAt: new Date(), lastTestStatus: 'OK' });
+      const status = await service.getStatus('tenant_1');
+      expect(status).toMatchObject({ mode: 'ORBIT_MANAGED', byokEnabled: false, byokSuppressed: true });
+      expect(status.connection?.hasCredentials).toBe(true);
+      // Die Gesundheit der (nicht benutzten) eigenen Verbindung wird nicht als Zustand des tatsächlichen Betriebs ausgegeben.
+      expect(status.runtime.health.state).not.toBe('VERIFIED');
+    });
+
+    it('Status ohne Freigabe und ohne Verbindung: byokEnabled=false, nichts unterdrückt', async () => {
+      scoped.aIProviderConnection.findUnique.mockResolvedValue(null);
+      expect(await service.getStatus('tenant_1')).toMatchObject({ mode: 'ORBIT_MANAGED', byokEnabled: false, byokSuppressed: false, connection: null });
+    });
+
+    it('mit Freigabe verhält sich alles wie bisher', async () => {
+      byokFlag = true;
+      mockedBuildProviderAdapter.mockReturnValue({ validateConfiguration: jest.fn().mockResolvedValue({ valid: true }) });
+      scoped.aIProviderConnection.upsert.mockResolvedValue({ id: 'c', providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('x') });
+      await expect(service.upsertConnection('tenant_1', 'user_1', 'OPENAI', 'sk-test', undefined)).resolves.toMatchObject({ status: 'CONNECTED' });
+      scoped.aIProviderConnection.findUnique.mockResolvedValue({ id: 'c', providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: Buffer.from('x'), byokActiveSince: new Date() });
+      expect(await service.getStatus('tenant_1')).toMatchObject({ mode: 'TENANT_MANAGED', byokEnabled: true, byokSuppressed: false });
     });
   });
 

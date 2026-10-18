@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MockLLMProvider, type LLMProvider } from '@orbit/agent-core';
 import type { OrbitEnv } from '@orbit/config';
 import {
   AiProviderUnavailableError,
+  FEATURE_FLAGS,
   KILL_SWITCHES,
   effectiveHealth,
   evaluateCandidate,
@@ -51,6 +52,10 @@ const DEFAULT_PROFILE: AiProfileKey = 'AGENT_TOOL_USE';
  */
 @Injectable()
 export class AiProviderResolverService {
+  private readonly logger = new Logger(AiProviderResolverService.name);
+  /** Pro Prozess und Mandant nur einmal warnen, damit die Auflösung (heißer Pfad) nicht das Log füllt. */
+  private readonly warnedByokSuppressed = new Set<string>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly encryption: CredentialEncryptionService,
@@ -84,6 +89,14 @@ export class AiProviderResolverService {
   private async resolveByok(tenantId: string, profileKey: AiProfileKey): Promise<ResolvedLlm | null> {
     const connection = await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } });
     if (!connection?.byokActiveSince) return null; // nie erfolgreich BYOK genutzt (oder ausdrücklich getrennt) → ORBIT Managed
+    // Betreiberfreigabe (D1): ohne Flag `ai.byok` bedient ORBIT Managed – die vorhandene Verbindung bleibt unangetastet, wird aber nicht benutzt.
+    if (!(await this.platformControl.flagEnabled(FEATURE_FLAGS.AI_BYOK, tenantId))) {
+      if (!this.warnedByokSuppressed.has(tenantId)) {
+        this.warnedByokSuppressed.add(tenantId);
+        this.logger.warn(`Mandant ${tenantId}: eigener KI-Schlüssel vorhanden, aber nicht vom Betreiber freigegeben (Flag ${FEATURE_FLAGS.AI_BYOK}) – ORBIT Managed bedient.`);
+      }
+      return null;
+    }
 
     const providerKey = connection.providerKey.toLowerCase();
     const unavailable = (reasons: string[]) =>

@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
-import { AiProviderUnavailableError, NotFoundError, ValidationFailedError, type AiRuntimeStatus } from '@orbit/shared';
+import { AiProviderUnavailableError, ByokNotEnabledError, FEATURE_FLAGS, NotFoundError, ValidationFailedError, type AiRuntimeStatus } from '@orbit/shared';
 import type { AIProviderConnection, AIProviderKey } from '@orbit/domain';
 import { ORBIT_ENV } from '../config/env.token';
 import { AiRegistryService } from '../ai-governance/ai-registry.service';
 import { AuditService } from '../audit/audit.service';
+import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CredentialEncryptionService } from '../security/credential-encryption.service';
 import { buildProviderAdapter } from './ai-provider-adapter-factory';
@@ -18,6 +19,10 @@ export interface AiProviderStatus {
   /** Configuration kind only — says nothing about whether a model is actually reachable. */
   mode: 'ORBIT_MANAGED' | 'TENANT_MANAGED';
   connection: AiProviderConnectionSummary | null;
+  /** Vom Betreiber für diesen Mandanten freigegeben (Flag `ai.byok`, Standard AUS). Ohne Freigabe sind Einrichten, Testen und Nutzen gesperrt. */
+  byokEnabled: boolean;
+  /** Es gibt eine aktive eigene Verbindung, die wegen fehlender Freigabe nicht benutzt wird (ORBIT Managed bedient). */
+  byokSuppressed: boolean;
   /** What really serves requests right now, and whether that was verified (Amendment 02 §5.3). */
   runtime: AiRuntimeStatus;
 }
@@ -47,18 +52,32 @@ export class AiProvidersService {
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
     private readonly resolver: AiProviderResolverService,
     private readonly registry: AiRegistryService,
+    private readonly platformControl: PlatformControlService,
   ) {}
+
+  private byokEnabled(tenantId: string): Promise<boolean> {
+    return this.platformControl.flagEnabled(FEATURE_FLAGS.AI_BYOK, tenantId);
+  }
+
+  /** Serverseitige Sperre (D1): unabhängig von der Oberfläche. */
+  private async assertByokEnabled(tenantId: string): Promise<void> {
+    if (!(await this.byokEnabled(tenantId))) {
+      throw new ByokNotEnabledError('Ein eigener KI-Schlüssel ist für Ihr Unternehmen nicht freigegeben. Bitte wenden Sie sich an den Betreiber.', { flag: FEATURE_FLAGS.AI_BYOK });
+    }
+  }
 
   /** Last on-demand verification of the platform-managed provider per tenant (process-local; BYOK keeps its own persisted test result). */
   private readonly platformVerification = new Map<string, AiRuntimeStatus['health']>();
 
   async getStatus(tenantId: string): Promise<AiProviderStatus> {
     const connection = await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } });
+    const byokEnabled = await this.byokEnabled(tenantId);
     const runtime = await this.describeRuntime(tenantId, connection);
     if (!connection || !connection.byokActiveSince) {
-      return { mode: 'ORBIT_MANAGED', connection: connection ? toSummary(connection) : null, runtime };
+      return { mode: 'ORBIT_MANAGED', connection: connection ? toSummary(connection) : null, byokEnabled, byokSuppressed: false, runtime };
     }
-    return { mode: 'TENANT_MANAGED', connection: toSummary(connection), runtime };
+    if (!byokEnabled) return { mode: 'ORBIT_MANAGED', connection: toSummary(connection), byokEnabled, byokSuppressed: true, runtime };
+    return { mode: 'TENANT_MANAGED', connection: toSummary(connection), byokEnabled, byokSuppressed: false, runtime };
   }
 
   /**
@@ -92,6 +111,7 @@ export class AiProvidersService {
   }
 
   private async describeRuntime(tenantId: string, connection: AIProviderConnection | null): Promise<AiRuntimeStatus> {
+    const byokServing = await this.byokEnabled(tenantId);
     const llm = await this.resolveOrUnavailable(tenantId);
     if (!llm) {
       return {
@@ -106,7 +126,7 @@ export class AiProvidersService {
     if (simulated) {
       return { ...base, health: { state: 'SIMULATED', checkedAt: null, detail: 'Es wird kein echtes KI-Modell aufgerufen.' } };
     }
-    if (connection?.status === 'CONNECTED') {
+    if (byokServing && connection?.status === 'CONNECTED') {
       const ok = connection.lastTestStatus === 'OK';
       return {
         ...base,
@@ -134,6 +154,7 @@ export class AiProvidersService {
     apiKey: string,
     model: string | undefined,
   ): Promise<AiProviderConnectionSummary> {
+    await this.assertByokEnabled(tenantId);
     const resolvedModel = model ?? defaultModelFor(providerKey, this.env);
     // Nur freigegebene Anbieter/Modelle (Amendment 03 §10.1): „eigener Schlüssel“ heißt nicht „beliebiger Endpunkt oder beliebiges Modell“.
     // Ist das Register für den Anbieter noch nicht gepflegt (Bootstrap), gilt – wie bisher – keine Einschränkung.
@@ -201,6 +222,7 @@ export class AiProvidersService {
   }
 
   async testConnection(tenantId: string, actorUserId: string): Promise<AiProviderConnectionSummary> {
+    await this.assertByokEnabled(tenantId);
     const existing = await this.prisma.forTenantId(tenantId).aIProviderConnection.findUnique({ where: { tenantId } });
     if (!existing || !existing.encryptedCredentials) {
       throw new NotFoundError('No BYOK provider connection configured for this tenant.');

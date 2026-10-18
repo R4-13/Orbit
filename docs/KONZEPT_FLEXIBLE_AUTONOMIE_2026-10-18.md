@@ -212,9 +212,9 @@ Grundsatz: *Ein Betrieb stellt nur ein, was die KI nicht wissen kann* – und wa
 Festlegungen zur Umsetzung:
 
 * **Schalter:** Plattform-Feature-Flag `ai.byok` (vorhandene Flag-Infrastruktur, Wert je Mandant), Standardwert `false`. Auswertung **fail-closed**: unbekanntes Flag, nicht lesbare Datenbank oder abgelaufenes Flag = AUS.
-* **Serverseitig durchgesetzt:** Schreibende Wege (`PUT /ai-providers/:providerKey`, Trennen, Verbindungstest) antworten bei AUS mit `403 BYOK_NOT_ENABLED` – unabhängig von der Oberfläche. Menü und Seite sind nur bei AN sichtbar (Mandantensicht der Flags, `exposeToTenant`).
-* **Bestehende Daten bleiben erhalten.** Eine vorhandene Verbindung wird nie gelöscht. Mandanten, die heute eine aktive BYOK-Verbindung haben (`byokActiveSince` gesetzt), erhalten bei der Einführung **einmalig einen nachvollziehbaren Mandanten-Override AN** (Audit), damit sich ihr Verhalten nicht still ändert. Im Betrieb `musterwerk` gibt es keine; die Aufgabe ist dort leer.
-* **Auflösung bei AUS:** Der Resolver ignoriert eine vorhandene Verbindung, wenn das Flag AUS ist, und nutzt ORBIT Managed – **mit sichtbarem Hinweis im Betreiber-Bereich** (kein stilles Umschalten ohne Spur). Kein Fallback *während* BYOK AN ist (Amendment 03 §10.3 bleibt).
+* **Serverseitig durchgesetzt:** Einrichten (`PUT /ai-providers/:providerKey`) und Verbindungstest antworten bei AUS mit `403 BYOK_NOT_ENABLED` – unabhängig von der Oberfläche. **Trennen bleibt erlaubt** (ein Mandant darf eigene Zugangsdaten jederzeit entfernen). Die Seite „KI & Modelle“ bleibt (Gruppe aus UI/UX §19); der BYOK-Teil zeigt bei AUS „nicht freigegeben“ ohne Einrichten/Testen.
+* **Bestehende Daten bleiben erhalten.** Eine vorhandene Verbindung wird nie gelöscht. Mandanten, die heute eine aktive BYOK-Verbindung haben (`byokActiveSince` gesetzt), erhalten bei der Einführung **einmalig einen Mandanten-Override AN** (Migration `20261018120000_ai_byok_flag`, in der Flag-Vorschau je Mandant sichtbar und vom Betreiber rücknehmbar), damit sich ihr Verhalten nicht still ändert. Im Betrieb `musterwerk` gibt es keine; die Aufgabe ist dort leer.
+* **Auflösung bei AUS:** Der Resolver ignoriert eine vorhandene Verbindung, wenn das Flag AUS ist, und nutzt ORBIT Managed – **mit Spur**: Warnung im Log (einmal je Prozess und Mandant), im Status des Mandanten `byokSuppressed=true` und in der Nutzungsmessung `source=ORBIT_MANAGED`. (Eine eigene Anzeige im Betreiber-Bereich ist nicht gebaut.) Kein Fallback *während* BYOK AN ist (Amendment 03 §10.3 bleibt).
 * **Freigegebene Anbieter und Modellprofile bleiben vom Betreiber vorgegeben** (`approved provider adapter / credential type / model profile`); der Schalter gibt nur das *Eintragen eines eigenen Schlüssels* frei, nicht beliebige Endpunkte.
 * **Tests:** Flag AUS blockiert alle schreibenden Wege (403), Lesen der Bereitschaft bleibt; Flag AN verhält sich wie bisher; Bestandsmigration setzt den Override; Resolver bei AUS; Mandantenisolation des Flags.
 
@@ -346,9 +346,9 @@ Zwei Orchestrierungswege bleiben **nur übergangsweise** bestehen (Altweg: 5 Age
 | AD-03 | – | Profil-Freitext: abgeleitete Fakten sichtbar, korrigierbar, nie automatisch Vollmacht | Vorschlag-Status, Audit | UT | teilweise |
 | AD-04 | – | Technische Agenten-Konfiguration nicht im normalen Menü, für Berechtigte erreichbar | Rollenprüfung | UT | neu |
 | AD-05 | – | Betriebsregeln (D2): Pflichtinhalte und Sicherheitsregeln werden nicht überschrieben | Prüfung vor Versand | UT | neu |
-| BY-01 | – | `ai.byok` AUS: schreibende Wege 403 `BYOK_NOT_ENABLED`; Lesen der Bereitschaft bleibt | Server-Test, nicht nur UI | UT | **neu (Umsetzung 18.10.)** |
-| BY-02 | – | `ai.byok` AN: Verhalten wie bisher; Bestand und Daten bleiben | Regressionstest | UT | neu |
-| BY-03 | – | Bestandsmigration: Mandant mit aktiver BYOK-Verbindung erhält Override AN (auditiert) | Migrationstest | UT | neu |
+| BY-01 | – | `ai.byok` AUS: Einrichten und Testen 403 `BYOK_NOT_ENABLED`; Lesen des Status und Trennen bleiben | Server-Test, nicht nur UI | UT | **umgesetzt 18.10. (12 E2E, 46 Unit)** |
+| BY-02 | – | `ai.byok` AN: Verhalten wie bisher; Bestand und Daten bleiben | Regressionstest | UT | umgesetzt (Unit + E2E) |
+| BY-03 | – | Bestandsmigration: Mandant mit aktiver BYOK-Verbindung erhält Override AN (Migration, in Flag-Vorschau sichtbar) | Migrationstest | UT | einmalig per SQL-Transaktion mit Rollback geprüft; kein automatischer Test |
 | BL-01 | T1–T3 | **20 Szenarien** des Testwerkzeugs | Soll/Ist/Bewertung je Szenario | AT (Messlatte) | Messlatte 0b |
 
 ### 13.2 Kennzahlen und Schwellen
@@ -384,5 +384,5 @@ Die 95-%-Quote gilt **nur** für die Vollständigkeit nicht sicherheitsrelevante
 | Aktionsverlässlichkeit (E) | Policy, Idempotenz, Lease, `OUTCOME_UNKNOWN` | Vorab-Prüfung, Rücklesung, Zeitlimits | – |
 | Aktionsklassen | Policy-Modi, Zahlung gesperrt | Preis festlegen als Quelle | – |
 | Administration | Assistent, Voreinstellungen, Flags | Gruppen-Darstellung, Profil-Ableitung | Migration, Expertenbereich |
-| KI-Anbieter/BYOK | Auflösung, BYOK, Notbremse | **Flag `ai.byok` serverseitig (in Umsetzung)** | – |
+| KI-Anbieter/BYOK | Auflösung, BYOK, Notbremse | **Flag `ai.byok` serverseitig (umgesetzt 18.10.)** | – |
 | Einführung/Rückfall | `planner.adaptive`, Kohorten, Flags | Wegmarke je Vorgang, Gegenprüfung | Schattenplan als Ereignis |

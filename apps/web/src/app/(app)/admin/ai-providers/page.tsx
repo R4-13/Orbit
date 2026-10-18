@@ -175,7 +175,7 @@ export default function AdminAiProvidersPage() {
       <h1 className="text-2xl font-semibold text-slate-900">KI &amp; Modelle</h1>
       <p className="mt-1 text-sm text-slate-600">
         Standardmäßig verwenden alle Agenten die von ORBIT betriebene KI-Konfiguration — kein eigener API-Key nötig.
-        Fortgeschrittene Kunden können stattdessen einen eigenen Provider-Zugang hinterlegen (Bring Your Own Key).
+        Einen eigenen Provider-Zugang (Bring Your Own Key) schaltet der Betreiber für Ihr Unternehmen auf Anfrage frei.
       </p>
 
       <Card className="mt-6">
@@ -203,7 +203,12 @@ export default function AdminAiProvidersPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-slate-900">Customer-Managed AI (BYOK)</p>
-                    {connection ? (
+                    {!status?.byokEnabled ? (
+                      <p className="text-xs text-slate-600" data-testid="byok-not-enabled">
+                        Für Ihr Unternehmen nicht freigegeben. Der Betreiber kann einen eigenen Schlüssel auf Anfrage freischalten.
+                        {status?.byokSuppressed ? ' Eine vorhandene eigene Verbindung wird deshalb derzeit nicht benutzt (ORBIT-Managed AI bedient).' : ''}
+                      </p>
+                    ) : connection ? (
                       <p className="text-xs text-slate-600">
                         {PROVIDER_LABELS[connection.providerKey]}
                         {connection.model ? ` · ${connection.model}` : ''}
@@ -217,18 +222,20 @@ export default function AdminAiProvidersPage() {
                     {statusInfo ? <Badge tone={isTenantManaged ? statusInfo.tone : 'neutral'}>{statusInfo.label}</Badge> : null}
                     {connection?.hasCredentials ? (
                       <>
-                        <Button variant="ghost" disabled={testConnection.isPending} onClick={handleTest}>
-                          Verbindung testen
-                        </Button>
+                        {status?.byokEnabled ? (
+                          <Button variant="ghost" disabled={testConnection.isPending} onClick={handleTest}>
+                            Verbindung testen
+                          </Button>
+                        ) : null}
                         <Button variant="ghost" disabled={disconnect.isPending} onClick={handleDisconnect}>
                           Trennen
                         </Button>
                       </>
-                    ) : (
+                    ) : status?.byokEnabled ? (
                       <Button variant="secondary" onClick={() => setShowByokForm((prev) => !prev)}>
                         {showByokForm ? 'Abbrechen' : 'Einrichten'}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 {testError ? <p className="mt-2 text-sm text-red-600">{testError}</p> : null}
@@ -236,7 +243,7 @@ export default function AdminAiProvidersPage() {
                 {connection?.lastTestStatus && connection.status === 'ERROR' ? (
                   <p className="mt-2 text-sm text-red-600">Letzter Fehler: {connection.lastTestStatus}</p>
                 ) : null}
-                {showByokForm ? (
+                {showByokForm && status?.byokEnabled ? (
                   <div className="mt-3">
                     <ByokForm onSaved={() => setShowByokForm(false)} />
                   </div>

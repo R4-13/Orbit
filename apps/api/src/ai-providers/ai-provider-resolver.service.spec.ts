@@ -68,6 +68,8 @@ interface Setup {
   budgetExceeded?: boolean;
   snapshot?: Partial<RoutingSnapshot> & { route?: RoutingSnapshot['route'] };
   tenantConnection?: Record<string, unknown> | null;
+  /** Betreiberfreigabe `ai.byok` (Standard im Test: erteilt; `false` = nicht freigegeben). */
+  byokEnabled?: boolean;
   byok?: { providerKnown: boolean; providerActive: boolean; modelsKnown: boolean; modelApproved: boolean };
 }
 
@@ -84,7 +86,7 @@ function build(setup: Setup) {
   const vault = { read: jest.fn(async () => ({ apiKey: 'sk-platform-secret' })) } as unknown as PlatformSecretVaultService;
   const prisma = { forTenantId: () => ({ aIProviderConnection: { findUnique: async () => setup.tenantConnection ?? null } }) } as unknown as PrismaService;
   const encryption = { decrypt: () => 'sk-tenant-key' } as unknown as CredentialEncryptionService;
-  const control = { killSwitchEngaged: jest.fn(async () => setup.killSwitch === true) } as unknown as PlatformControlService;
+  const control = { killSwitchEngaged: jest.fn(async () => setup.killSwitch === true), flagEnabled: jest.fn(async () => setup.byokEnabled !== false) } as unknown as PlatformControlService;
   const costGuard = {
     assertWithinBudget: jest.fn(async () => {
       if (setup.budgetExceeded) throw new AiProviderUnavailableError('Kostenlimit erreicht.', { mode: 'COST_LIMIT', reasons: ['COST_LIMIT_HARD'] });
@@ -302,6 +304,18 @@ describe('AiProviderResolverService', () => {
       await expect(notApproved.service.resolveProfile('t1', 'AGENT_TOOL_USE')).rejects.toMatchObject({ details: { reasons: ['MODEL_NOT_APPROVED'] } });
       const suspended = build({ tenantConnection: connected, byok: { providerKnown: true, providerActive: false, modelsKnown: true, modelApproved: true } });
       await expect(suspended.service.resolveProfile('t1', 'AGENT_TOOL_USE')).rejects.toMatchObject({ details: { reasons: ['PROVIDER_NOT_ACTIVE'] } });
+    });
+
+    it('ohne Betreiberfreigabe (ai.byok AUS) wird eine vorhandene eigene Verbindung NICHT benutzt – ORBIT Managed/Bootstrap bedient, ohne Fehler und ohne Löschen', async () => {
+      const off = build({ tenantConnection: connected, byokEnabled: false });
+      const resolved = await off.service.resolveProfile('t1', 'AGENT_TOOL_USE');
+      expect(resolved.source).toBe('ENV_BOOTSTRAP');
+      expect(off.registry.byokState).not.toHaveBeenCalled(); // der eigene Schlüssel wird nicht einmal entschlüsselt oder geprüft
+    });
+
+    it('mit Betreiberfreigabe (ai.byok AN) bedient der eigene Schlüssel wie bisher', async () => {
+      const on = build({ tenantConnection: connected, byokEnabled: true });
+      expect((await on.service.resolveProfile('t1', 'AGENT_TOOL_USE')).source).toBe('BYOK');
     });
 
     it('ein Mandant, der nie erfolgreich BYOK genutzt hat (oder ausdrücklich getrennt hat), läuft über ORBIT Managed/Bootstrap', async () => {

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -31,6 +32,20 @@ describe('AI providers (e2e)', () => {
   let prisma: PrismaService;
   let adminToken: string;
   let tenantId: string;
+  /** Mandant OHNE Betreiberfreigabe `ai.byok` (der Standard) – der Mandant oben hat sie per Mandanten-Override. */
+  let offAdminToken: string;
+  let offTenantId: string;
+
+  /** Setzt/entfernt den Mandanten-Override des Flags `ai.byok` (Betreiberfreigabe) – nur für die Test-Mandanten dieser Suite. */
+  async function setByokOverride(forTenantId: string, enabled: boolean): Promise<void> {
+    await app.get(PrismaService).withPlatformScope(async (tx) => {
+      const flag = await tx.platformFeatureFlag.findUniqueOrThrow({ where: { key: 'ai.byok' } });
+      const overrides = (flag.tenantOverrides as Array<{ tenantId: string; value: boolean }>).filter((o) => o.tenantId !== forTenantId);
+      if (enabled) overrides.push({ tenantId: forTenantId, value: true });
+      await tx.platformFeatureFlag.update({ where: { key: 'ai.byok' }, data: { tenantOverrides: overrides } });
+    });
+    app.get(PlatformControlService).invalidate();
+  }
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
@@ -53,9 +68,24 @@ describe('AI providers (e2e)', () => {
       .send({ email: adminUser.email, password: PASSWORD })
       .expect(200);
     adminToken = login.body.accessToken as string;
+    await setByokOverride(tenantId, true);
+
+    const offSuffix = randomUUID();
+    const off = await tenantsService.bootstrapTenant({
+      name: `E2E AI Providers Off ${offSuffix}`,
+      slug: `e2e-ai-providers-off-${offSuffix}`,
+      adminEmail: `admin-${offSuffix}@e2e-ai-providers.example`,
+      adminPassword: PASSWORD,
+      adminFirstName: 'E2E',
+      adminLastName: 'Admin',
+    });
+    offTenantId = off.tenant.id;
+    const offLogin = await request(app.getHttpServer()).post('/api/v1/auth/login').send({ email: off.adminUser.email, password: PASSWORD }).expect(200);
+    offAdminToken = offLogin.body.accessToken as string;
   });
 
   afterAll(async () => {
+    await setByokOverride(tenantId, false);
     // Die in diesem Lauf angelegten Mandanten wieder entfernen (frühere Läufe haben sie in der gemeinsamen Datenbank hinterlassen).
     await app.get(PrismaService).withRlsBypass((tx) => tx.tenant.deleteMany({ where: { slug: { startsWith: 'e2e-ai-providers-' } } }));
     await app.close();
@@ -67,7 +97,7 @@ describe('AI providers (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
 
-    expect(response.body).toMatchObject({ mode: 'ORBIT_MANAGED', connection: null });
+    expect(response.body).toMatchObject({ mode: 'ORBIT_MANAGED', connection: null, byokEnabled: true, byokSuppressed: false });
     // The configuration kind is "ORBIT-Managed", but with LLM_PROVIDER=mock nothing external is called — the runtime says so.
     expect(response.body.runtime).toMatchObject({ provider: 'mock', executionMode: 'SIMULATED', health: { state: 'SIMULATED' } });
   });
@@ -93,6 +123,47 @@ describe('AI providers (e2e)', () => {
       .delete('/api/v1/ai-providers')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(404);
+  });
+
+  describe('Betreiberfreigabe ai.byok AUS (Standard) – serverseitig durchgesetzt (D1)', () => {
+    it('Status zeigt byokEnabled=false', async () => {
+      const response = await request(app.getHttpServer()).get('/api/v1/ai-providers/status').set('Authorization', `Bearer ${offAdminToken}`).expect(200);
+      expect(response.body).toMatchObject({ mode: 'ORBIT_MANAGED', connection: null, byokEnabled: false, byokSuppressed: false });
+    });
+
+    it('PUT /ai-providers/:providerKey → 403 BYOK_NOT_ENABLED, nichts wird gespeichert', async () => {
+      const response = await request(app.getHttpServer())
+        .put('/api/v1/ai-providers/OPENAI')
+        .set('Authorization', `Bearer ${offAdminToken}`)
+        .send({ apiKey: 'sk-test-not-used' })
+        .expect(403);
+      expect(JSON.stringify(response.body)).toContain('BYOK_NOT_ENABLED');
+      const rows = await prisma.forTenantId(offTenantId).aIProviderConnection.count({ where: { tenantId: offTenantId } });
+      expect(rows).toBe(0);
+    });
+
+    it('POST /ai-providers/test → 403 BYOK_NOT_ENABLED', async () => {
+      await request(app.getHttpServer()).post('/api/v1/ai-providers/test').set('Authorization', `Bearer ${offAdminToken}`).expect(403);
+    });
+
+    it('eine Bestandsverbindung bleibt erhalten, wird als nicht benutzt gekennzeichnet und lässt sich trennen', async () => {
+      await prisma.forTenantId(offTenantId).aIProviderConnection.create({
+        data: { tenantId: offTenantId, providerKey: 'OPENAI', status: 'CONNECTED', encryptedCredentials: new Uint8Array([1, 2, 3]), model: 'gpt-4o', byokActiveSince: new Date() },
+      });
+      const status = await request(app.getHttpServer()).get('/api/v1/ai-providers/status').set('Authorization', `Bearer ${offAdminToken}`).expect(200);
+      expect(status.body).toMatchObject({ mode: 'ORBIT_MANAGED', byokEnabled: false, byokSuppressed: true });
+      expect(status.body.connection).toMatchObject({ hasCredentials: true });
+      expect(status.body.connection).not.toHaveProperty('encryptedCredentials');
+
+      const disconnected = await request(app.getHttpServer()).delete('/api/v1/ai-providers').set('Authorization', `Bearer ${offAdminToken}`).expect(200);
+      expect(disconnected.body).toMatchObject({ status: 'DISCONNECTED', hasCredentials: false });
+    });
+
+    it('die Freigabe eines Mandanten gilt nicht für einen anderen (Mandantentrennung des Flags)', async () => {
+      // tenantId (Override AN) darf, offTenantId (kein Override) darf nicht – derselbe Endpunkt, dieselbe Plattform.
+      await request(app.getHttpServer()).post('/api/v1/ai-providers/test').set('Authorization', `Bearer ${adminToken}`).expect(404); // erlaubt, aber keine Verbindung
+      await request(app.getHttpServer()).post('/api/v1/ai-providers/test').set('Authorization', `Bearer ${offAdminToken}`).expect(403);
+    });
   });
 
   it('rejects an unknown providerKey with 400', async () => {

@@ -96,6 +96,16 @@ export class PermissionDeniedError extends OrbitError {
   readonly retryable = false;
 }
 
+/**
+ * Konzept Flexible Autonomie §8.3 (Entscheidung D1): ein eigener KI-Schlüssel (BYOK) ist eine vom Betreiber je Mandant freigegebene Option (Flag `ai.byok`,
+ * Standard AUS). Ohne Freigabe antworten die schreibenden Wege serverseitig mit diesem Fehler – unabhängig davon, was die Oberfläche zeigt.
+ */
+export class ByokNotEnabledError extends OrbitError {
+  readonly code = 'BYOK_NOT_ENABLED';
+  readonly httpStatus = 403;
+  readonly retryable = false;
+}
+
 export function isOrbitError(error: unknown): error is OrbitError {
   return error instanceof OrbitError;
 }
