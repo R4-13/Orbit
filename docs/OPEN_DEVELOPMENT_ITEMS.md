@@ -46,6 +46,7 @@ Quelle: [`MASTER_SPEC_GAP_ANALYSIS.md`](MASTER_SPEC_GAP_ANALYSIS.md), [`KNOWN_LI
 | MST-03 | **Echte OCR** (statt Mock) | ENG / EXT | M–L | P2 | Tesseract lokal oder Cloud-Dienst |
 | MST-04 | Finanzsysteme **DATEV, Lexware** (Lieferantenstamm, Buchungsübertragung) | EXT | L je System | P2 | Partner-/OAuth-Registrierung (`DATEV_INTEGRATION.md`) |
 | MST-05 | **Microsoft 365** (Mail, Kalender) und **Google Calendar Schreiben** | EXT | L / M | P2 | Client-IDs und Zustimmung |
+| UX-02 | Vorgänge über Kurz-Kennung finden: Kennung im Vorgangskopf anzeigen und in der Suche der Vorgangsliste (und der Sonde) berücksichtigen; bei gleichlautenden Titeln derselben Person (#615) | ENG | S | P3 | |
 | MST-06 | ~~HubSpot als CRM-Anbindung~~ **umgesetzt** mit Service-Schlüssel (siehe AUT-09); OAuth für viele Kundenaccounts offen | ENG / EXT | L | erledigt (Rest P3) | |
 | MST-07 | ~~CSRF-Konzept~~ **dokumentiert** (`SECURITY.md` §6a) | ENG | S | erledigt | |
 | MST-08 | ~~Allgemeine API-Idempotenzschlüssel~~ **umgesetzt** (`Idempotency-Key`, `ASSUMPTIONS.md` #573). **Offen:** die Oberfläche sendet noch keine Schlüssel (Doppelklick-Schutz im Client) | ENG | S | P3 | |
