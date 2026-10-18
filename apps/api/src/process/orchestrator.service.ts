@@ -296,8 +296,10 @@ export class OrchestratorService {
   }
 
   /** Marks a node failed and moves the case according to the node's declared failure policy (§12.5). */
-  private async failNode(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, def: PlanNode, errorCode: string, message: string, from: ProcessPlanNode['state'][] = ['RUNNING']): Promise<void> {
-    if (def.optional && def.onFailure === 'SKIP') {
+  private async failNode(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, def: PlanNode, errorCode: string, message: string, from: ProcessPlanNode['state'][] = ['RUNNING'], transient = false): Promise<void> {
+    // Ein optionaler Schritt entfällt nur aus fachlichem Grund (z. B. keine eindeutige Terminwahl). Ein vorübergehender Fehler (Dienst oder Netz nicht erreichbar, nach allen
+    // Wiederholungen) darf ihn nicht stillschweigend streichen – sonst bliebe z. B. eine freigegebene Terminbuchung nach einem Netzausfall einfach aus: das geht an einen Menschen.
+    if (def.optional && def.onFailure === 'SKIP' && !transient) {
       await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, from, { state: 'SKIPPED', errorCode, errorMessage: message, completedAt: new Date() });
       return;
     }
@@ -469,7 +471,7 @@ export class OrchestratorService {
       return;
     }
     await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { agentRunId: run.id, state: 'RUNNING' }).catch(() => undefined);
-    await this.failNode(tenantId, caseRow, graph, node, def, contract.errorCode ?? 'TOOL_FAILED', contract.message ?? 'Der Schritt ist fehlgeschlagen.');
+    await this.failNode(tenantId, caseRow, graph, node, def, contract.errorCode ?? 'TOOL_FAILED', contract.message ?? 'Der Schritt ist fehlgeschlagen.', ['RUNNING'], contract.retryable === true);
   }
 
   /** A tool may report facts it established (with provenance); they enter the case through the normal fact path. */

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "key": "REQUEST_FOR_QUOTE",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "status": "DRAFT",
   "title": "Anfrage aufnehmen und übergeben",
   "description": "Anfrage prüfen, Angaben in bis zu drei Klärungsrunden erfragen, einen Termin vereinbaren (wenn ein Kalender angebunden ist) und die Anfrage mit einer Zusammenfassung an das CRM übergeben. ORBIT erstellt kein Angebot und nennt keinen Preis; das übernimmt die zuständige Person im Angebotssystem. Schritte, die ein nicht angebundenes System brauchen, entfallen für den Betrieb von selbst.",
@@ -147,7 +147,10 @@
             ]
           }
         ],
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "wait1",
@@ -289,7 +292,10 @@
             ]
           }
         ],
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "wait2",
@@ -431,7 +437,10 @@
             ]
           }
         ],
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "wait3",
@@ -530,7 +539,10 @@
           }
         ],
         "optional": true,
-        "onFailure": "SKIP"
+        "onFailure": "SKIP",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "confirm_draft",
@@ -604,7 +616,10 @@
             }
           }
         ],
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "lead",
@@ -616,7 +631,10 @@
         "config": {
           "purpose": "CRM_HANDOFF"
         },
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "notify",
@@ -631,7 +649,10 @@
           }
         },
         "optional": true,
-        "onFailure": "SKIP"
+        "onFailure": "SKIP",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "ack_draft",
@@ -691,7 +712,10 @@
             }
           }
         ],
-        "onFailure": "REVIEW"
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
       },
       {
         "id": "done",

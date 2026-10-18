@@ -233,6 +233,22 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       expect(sent).toEqual([]);
     });
 
+    it('ein vorübergehender Fehler (KI-Dienst nicht erreichbar) lässt einen optionalen Buchungsschritt nicht stillschweigend entfallen: der Vorgang geht an einen Menschen', async () => {
+      const tenantId = await newTenant({ calendar: true, profile: false });
+      const { caseId } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');
+      const llmFailure = jest.spyOn(llm, 'complete').mockRejectedValueOnce(new Error('fetch failed'));
+      const procedure = bookingProcedure();
+      (procedure.nodes[1] as Record<string, unknown>).optional = true;
+      (procedure.nodes[1] as Record<string, unknown>).onFailure = 'SKIP';
+      const orchestrator = app.get(OrchestratorService);
+      await orchestrator.startProcedure(tenantId, caseId, procedure as never);
+      await orchestrator.advance(tenantId, caseId);
+      llmFailure.mockRestore();
+      expect(await nodeState(tenantId, caseId, 'book')).toBe('FAILED');
+      expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('MANUAL_REVIEW');
+      expect(created).toEqual([]);
+    });
+
     it('ist der Termin inzwischen belegt, wird nicht gebucht', async () => {
       const tenantId = await newTenant({ calendar: true, profile: false });
       const { caseId, slots } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');

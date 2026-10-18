@@ -152,7 +152,7 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     expect(await prisma.forTenantId(tenantId).attentionItem.count({ where: { caseId, kind: 'NOTIFY_REQUEST' } })).toBe(1);
 
     const row = await caseOf(tenantId, caseId);
-    expect(row).toMatchObject({ blueprintKey: 'REQUEST_FOR_QUOTE', blueprintVersion: '2.0.0', orchestrationStatus: 'COMPLETED' });
+    expect(row).toMatchObject({ blueprintKey: 'REQUEST_FOR_QUOTE', blueprintVersion: '2.0.1', orchestrationStatus: 'COMPLETED' });
     expect(row.outcome).toMatchObject({ code: 'COMPLETION_CRITERIA_MET' });
   });
 
