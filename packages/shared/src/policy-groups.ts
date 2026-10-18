@@ -121,10 +121,11 @@ export function groupModeOf(
  */
 export type ActionClass = 'BLOCKED' | 'AFTER_APPROVAL' | 'AUTONOMOUS';
 
-export function actionClassOf(action: PolicyActionKey, mode: PolicyMode): ActionClass {
-  const def = DEFAULT_POLICY_CONFIG[action];
+export function actionClassOf(action: PolicyActionKey | (string & {}), mode: PolicyMode): ActionClass {
+  // Eine unbekannte (neue) Aktion hat keine feste Obergrenze; sie wird allein nach ihrem Modus eingeordnet.
+  const def: { mode: PolicyMode; locked?: boolean } | undefined = (DEFAULT_POLICY_CONFIG as Record<string, { mode: PolicyMode; locked?: boolean }>)[action];
   // Eine feste Obergrenze DISABLED (z. B. Zahlung ausführen) gilt unabhängig vom eingestellten Wert: auch mit Freigabe nicht ausführbar.
-  if (def.locked && def.mode === 'DISABLED') return 'BLOCKED';
+  if (def?.locked && def.mode === 'DISABLED') return 'BLOCKED';
   if (mode === 'DISABLED') return 'BLOCKED';
   if (mode === 'AUTONOMOUS') return 'AUTONOMOUS';
   return 'AFTER_APPROVAL';

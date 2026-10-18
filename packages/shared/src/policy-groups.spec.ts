@@ -64,6 +64,12 @@ describe('Aktionsklassen (gesperrt · nach Freigabe · autonom)', () => {
     expect(actionClassOf(POLICY_ACTIONS.EMAIL_SEND_INFORMATION, 'DISABLED')).toBe('BLOCKED');
   });
 
+  it('eine unbekannte (neue) Aktion bricht die Einordnung nicht ab und wird nach ihrem Modus eingeordnet', () => {
+    expect(actionClassOf('neue.faehigkeit.test', 'AUTONOMOUS')).toBe('AUTONOMOUS');
+    expect(actionClassOf('neue.faehigkeit.test', 'REQUIRE_APPROVAL')).toBe('AFTER_APPROVAL');
+    expect(actionClassOf('neue.faehigkeit.test', 'DISABLED')).toBe('BLOCKED');
+  });
+
   it('geänderte Bankverbindung ist nach Freigabe ausführbar, nie autonom (feste Obergrenze)', () => {
     expect(DEFAULT_POLICY_CONFIG[POLICY_ACTIONS.SUPPLIER_BANK_DETAILS_CHANGE].locked).toBe(true);
     expect(actionClassOf(POLICY_ACTIONS.SUPPLIER_BANK_DETAILS_CHANGE, 'REQUIRE_APPROVAL')).toBe('AFTER_APPROVAL');
