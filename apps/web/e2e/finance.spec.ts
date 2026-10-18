@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { useFreshTenant } from './utils/fresh-tenant';
 import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaUi } from './utils/login';
 
 async function apiPost<T>(path: string, token: string, body: unknown): Promise<T> {
@@ -57,14 +58,19 @@ test.describe('Finance', () => {
     await expect(duplicateNumberRows.filter({ hasText: 'Übertragen' })).toHaveCount(1);
     await expect(duplicateNumberRows.filter({ hasText: 'Mögliche Dublette' })).toHaveCount(1);
   });
+});
+
+/** Diese Tests legen Lieferanten, Dokumente und Rechnungen an: sie laufen in einem eigenen, frischen Betrieb, damit im Demo-Betrieb nichts liegen bleibt (ASSUMPTIONS.md #618). */
+test.describe('Finance (eigener Betrieb)', () => {
+  const tenant = useFreshTenant(['finance', 'approver']);
 
   test('approves a newly created pending supplier from the UI', async ({ page }) => {
     // Fresh fixture per run (via the real API), independent of seed/previous-run state.
-    const adminToken = await loginViaApi(DEMO_USERS.admin);
+    const adminToken = await loginViaApi(tenant().users.admin, tenant().password);
     const supplierName = `E2E Playwright Lieferant ${randomUUID()}`;
     await apiPost('/suppliers', adminToken, { name: supplierName });
 
-    await loginViaUi(page, DEMO_USERS.admin);
+    await loginViaUi(page, tenant().users.admin, tenant().password);
     await page.goto('/finance/suppliers');
 
     const row = page.locator('tr', { hasText: supplierName });
@@ -81,9 +87,9 @@ test.describe('Finance', () => {
     // Build an APPROVED-but-supplierless invoice via the real API: the
     // running dev server's MockOcrProvider queue is empty by default, so an
     // upload with no seeded OCR result naturally extracts no supplierName.
-    const adminToken = await loginViaApi(DEMO_USERS.admin);
-    const financeToken = await loginViaApi(DEMO_USERS.finance);
-    const approverToken = await loginViaApi(DEMO_USERS.approver);
+    const adminToken = await loginViaApi(tenant().users.admin, tenant().password);
+    const financeToken = await loginViaApi(tenant().users.finance as string, tenant().password);
+    const approverToken = await loginViaApi(tenant().users.approver as string, tenant().password);
 
     const fileName = `e2e-web-${randomUUID()}.pdf`;
     const bytes = Buffer.from(`%PDF-1.4 e2e web fixture ${randomUUID()}`, 'utf-8');
@@ -109,10 +115,9 @@ test.describe('Finance', () => {
     });
     await apiPatch(`/invoices/${invoice.id}/approve`, approverToken);
 
-    await loginViaUi(page, DEMO_USERS.approver);
+    await loginViaUi(page, tenant().users.approver as string, tenant().password);
     await page.goto(`/finance/invoices/${invoice.id}`);
     await page.getByRole('button', { name: 'Zur Buchhaltung übertragen' }).click();
 
     await expect(page.getByText('Invoice has no matched supplier to transfer to.')).toBeVisible();
-  });
-});
+  });});

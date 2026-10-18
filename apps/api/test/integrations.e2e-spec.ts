@@ -4,17 +4,19 @@ import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 /**
- * §39/§52 — live against real Postgres. Uses the seeded "Musterwerk GmbH"
- * admin only for auth; every row this suite writes is cleaned up in
- * afterEach so it never leaves connector credentials behind for the
- * shared demo tenant other suites/manual QA rely on (docs/DEMO_DATA.md).
+ * §39/§52 — live against real Postgres, in its OWN fresh tenant (deleted at
+ * the end). It must never run in the demo tenant: its cleanup removes every
+ * DATEV/HUBSPOT/LEXWARE connection of the tenant it runs in, which in the
+ * demo tenant destroyed a real, connected HubSpot account (ASSUMPTIONS.md #618).
  */
 describe('Integrations / credential storage (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let tenantsService: TenantsService;
+  let tenant: E2eRoleTenant;
   let adminToken: string;
   let tenantId: string;
   let scoped: ReturnType<PrismaService['forTenantId']>;
@@ -24,12 +26,9 @@ describe('Integrations / credential storage (e2e)', () => {
     prisma = app.get(PrismaService);
     tenantsService = app.get(TenantsService);
 
-    const login = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'admin@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-    adminToken = login.body.accessToken as string;
-    tenantId = login.body.user.tenantId as string;
+    tenant = await createRoleTenant(app, 'integrations', ['finance']);
+    adminToken = tenant.tokens.admin;
+    tenantId = tenant.tenantId;
     scoped = prisma.forTenantId(tenantId);
   });
 
@@ -50,6 +49,7 @@ describe('Integrations / credential storage (e2e)', () => {
   });
 
   afterAll(async () => {
+    await tenant.dispose();
     await app.close();
   });
 
@@ -244,14 +244,9 @@ describe('Integrations / credential storage (e2e)', () => {
   });
 
   it('rejects a role without INTEGRATION_CONFIGURE', async () => {
-    const financeLogin = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'finance@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-
     await request(app.getHttpServer())
       .get('/api/v1/integrations')
-      .set('Authorization', `Bearer ${financeLogin.body.accessToken}`)
+      .set('Authorization', `Bearer ${tenant.tokens.finance}`)
       .expect(403);
   });
 

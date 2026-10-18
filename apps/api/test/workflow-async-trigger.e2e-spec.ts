@@ -6,6 +6,7 @@ import { MockLLMProvider } from '@orbit/agent-core';
 import { LLM_PROVIDER } from '../src/agent/agent.tokens';
 import { WorkerModule } from '../worker/worker.module';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 async function waitFor(check: () => Promise<boolean>, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -40,6 +41,7 @@ describe('Workflow async trigger (e2e)', () => {
   let app: INestApplication;
   let workerApp: INestApplicationContext;
   let workerLlm: MockLLMProvider;
+  let tenant: E2eRoleTenant;
   let adminToken: string;
   const workflowKey = `e2e-async-trigger-${randomUUID().slice(0, 8)}`;
 
@@ -48,11 +50,9 @@ describe('Workflow async trigger (e2e)', () => {
     workerApp = await NestFactory.createApplicationContext(WorkerModule, { logger: false });
     workerLlm = workerApp.get(LLM_PROVIDER);
 
-    const login = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'admin@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-    adminToken = login.body.accessToken as string;
+    // Eigener, frischer Betrieb: die Ablauf-Definition dieser Suite bleibt nicht im Demo-Betrieb liegen (ASSUMPTIONS.md #618).
+    tenant = await createRoleTenant(app, 'async', []);
+    adminToken = tenant.tokens.admin;
 
     await request(app.getHttpServer())
       .post('/api/v1/workflow-definitions')
@@ -67,6 +67,7 @@ describe('Workflow async trigger (e2e)', () => {
   });
 
   afterAll(async () => {
+    await tenant.dispose();
     await app.close();
     await workerApp.close();
   });

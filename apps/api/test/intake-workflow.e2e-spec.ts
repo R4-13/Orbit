@@ -5,6 +5,7 @@ import type { MockOcrProvider } from '@orbit/integration-core';
 import { OCR_PROVIDER } from '../src/connectors/connectors.tokens';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 /**
  * End-to-end test of the Agent Runtime wiring (docs/ASSUMPTIONS.md Phase
@@ -23,38 +24,22 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
   let salesToken: string;
   let prisma: PrismaService;
   let tenantId: string;
-  let pausedActivationIds: string[] = [];
+  let tenant: E2eRoleTenant;
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
     ocrProvider = app.get(OCR_PROVIDER);
     prisma = app.get(PrismaService);
-
-    const login = async (email: string) => {
-      const response = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({ email, password: 'Musterwerk#2026!' })
-        .expect(200);
-      tenantId = response.body.user.tenantId as string;
-      return response.body.accessToken as string;
-    };
-    financeToken = await login('finance@musterwerk.example');
-    salesToken = await login('sales@musterwerk.example');
-
-    // This suite verifies the pre-existing domain workflows. If the demo tenant has an active process blueprint for the
-    // same intent (Amendment 02), the intake correctly starts that process instead — so the activation is paused for the
-    // duration of this suite and restored afterwards (the legacy path itself is unchanged and must keep working).
-    const active = await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.findMany({ where: { tenantId, enabled: true }, select: { id: true } }));
-    pausedActivationIds = active.map((a) => a.id);
-    if (pausedActivationIds.length > 0) {
-      await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.updateMany({ where: { id: { in: pausedActivationIds } }, data: { enabled: false } }));
-    }
+    // Eigener, frischer Betrieb: Die Vorgänge, Rechnungen, Lieferanten und Freigaben dieser Suite bleiben nicht im Demo-Betrieb „Musterwerk“ liegen (ASSUMPTIONS.md #618).
+    // Ein frischer Betrieb hat auch keinen aktivierten Prozess, der die hier geprüften älteren Abläufe überlagern würde.
+    tenant = await createRoleTenant(app, 'intake', ['finance', 'sales']);
+    tenantId = tenant.tenantId;
+    financeToken = tenant.tokens.finance;
+    salesToken = tenant.tokens.sales;
   });
 
   afterAll(async () => {
-    if (pausedActivationIds.length > 0) {
-      await prisma.withRlsBypass((tx) => tx.tenantProcessActivation.updateMany({ where: { id: { in: pausedActivationIds } }, data: { enabled: true } }));
-    }
+    await tenant.dispose();
     await app.close();
   });
 

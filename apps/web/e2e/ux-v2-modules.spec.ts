@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
+import { useFreshTenant } from './utils/fresh-tenant';
 import { API_BASE_URL, DEMO_USERS, loginViaApi, loginViaStorage } from './utils/login';
 
 /**
@@ -117,13 +118,15 @@ test.describe('Posteingang und Eingangsdetail (§11)', () => {
 });
 
 test.describe('Freigaben: Entscheidungsdetail mit Kontext (§14, AC-15)', () => {
+  const tenant = useFreshTenant(['viewer']);
+
   test('die Detailansicht beantwortet alle Fragen; „Genehmigt“ erscheint erst nach der Bestätigung des Servers', async ({ page }) => {
-    const adminToken = await loginViaApi(DEMO_USERS.admin);
+    const adminToken = await loginViaApi(tenant().users.admin, tenant().password);
     const name = `E2E Freigabe Lieferant ${randomUUID().slice(0, 8)}`;
     await api('POST', '/suppliers', adminToken, { name });
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.admin);
+    await loginViaStorage(page, tenant().users.admin, tenant().password);
     await page.goto('/approvals');
     const row = page.locator('tbody tr', { hasText: name });
     await expect(row).toBeVisible();
@@ -144,11 +147,11 @@ test.describe('Freigaben: Entscheidungsdetail mit Kontext (§14, AC-15)', () => 
   });
 
   test('Ablehnen verlangt eine zweite, ausdrückliche Bestätigung und führt nichts aus', async ({ page }) => {
-    const adminToken = await loginViaApi(DEMO_USERS.admin);
+    const adminToken = await loginViaApi(tenant().users.admin, tenant().password);
     const name = `E2E Ablehnung Lieferant ${randomUUID().slice(0, 8)}`;
     await api('POST', '/suppliers', adminToken, { name });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.admin);
+    await loginViaStorage(page, tenant().users.admin, tenant().password);
     await page.goto('/approvals');
     await page.locator('tbody tr', { hasText: name }).getByRole('link', { name: /Freigabe prüfen/ }).click();
     await page.getByRole('button', { name: 'Ablehnen' }).click();
@@ -164,11 +167,11 @@ test.describe('Freigaben: Entscheidungsdetail mit Kontext (§14, AC-15)', () => 
   });
 
   test('ein Nutzer ohne Entscheidungsrecht sieht die Entscheidung, aber keinen aktiven Genehmigen-Knopf', async ({ page }) => {
-    const adminToken = await loginViaApi(DEMO_USERS.admin);
+    const adminToken = await loginViaApi(tenant().users.admin, tenant().password);
     const name = `E2E Betrachter Lieferant ${randomUUID().slice(0, 8)}`;
     await api('POST', '/suppliers', adminToken, { name });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.viewer);
+    await loginViaStorage(page, tenant().users.viewer as string, tenant().password);
     await page.goto('/approvals?x=1');
     await page.getByRole('button', { name: /^Team/ }).click();
     const row = page.locator('tbody tr', { hasText: name });
@@ -180,11 +183,13 @@ test.describe('Freigaben: Entscheidungsdetail mit Kontext (§14, AC-15)', () => 
 });
 
 test.describe('Vorgang: Tabs und Vorschau (§9, §16)', () => {
+  const tenant = useFreshTenant([]);
+
   test('Tabs Überblick/Kommunikation/Dokumente/Historie sind per Tastatur erreichbar; Deep Link öffnet den Tab', async ({ page }) => {
-    const token = await loginViaApi(DEMO_USERS.admin);
+    const token = await loginViaApi(tenant().users.admin, tenant().password);
     const created = await api<{ id: string }>('POST', '/cases', token, { type: 'SALES', title: `E2E Vorgang ${randomUUID().slice(0, 8)}` });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.admin);
+    await loginViaStorage(page, tenant().users.admin, tenant().password);
     await page.goto(`/cases/${created.id}`);
     for (const tab of ['Überblick', 'Kommunikation', 'Dokumente', 'Historie']) await expect(page.getByRole('tab', { name: tab })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Orchestrierung' })).toHaveCount(0); // kein Prozess → keine erfundene Prozessgrafik
@@ -196,12 +201,12 @@ test.describe('Vorgang: Tabs und Vorschau (§9, §16)', () => {
   });
 
   test('Vorschau öffnet einen Drawer mit „Vollständige Details“, Escape schließt ihn und gibt den Fokus zurück', async ({ page }) => {
-    const token = await loginViaApi(DEMO_USERS.admin);
+    const token = await loginViaApi(tenant().users.admin, tenant().password);
     const title = `E2E Vorschau ${randomUUID().slice(0, 8)}`;
     const created = await api<{ id: string }>('POST', '/cases', token, { type: 'SALES', title });
     await api('POST', '/tasks', token, { caseId: created.id, title: `Aufgabe zu ${title}` });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.admin);
+    await loginViaStorage(page, tenant().users.admin, tenant().password);
     await page.goto('/tasks');
     const row = page.locator('li', { hasText: `Aufgabe zu ${title}` });
     await expect(row).toBeVisible();
@@ -220,12 +225,14 @@ test.describe('Vorgang: Tabs und Vorschau (§9, §16)', () => {
 });
 
 test.describe('Aufgaben (§15)', () => {
+  const tenant = useFreshTenant([]);
+
   test('„Meine Aufgaben“ gliedert nach Frist; für einen Prozess-Vorgang gibt es kein loses „Erledigt“', async ({ page }) => {
-    const token = await loginViaApi(DEMO_USERS.admin);
+    const token = await loginViaApi(tenant().users.admin, tenant().password);
     const title = `E2E überfällig ${randomUUID().slice(0, 8)}`;
     await api('POST', '/tasks', token, { title, dueDate: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() });
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginViaStorage(page, DEMO_USERS.admin);
+    await loginViaStorage(page, tenant().users.admin, tenant().password);
     await page.goto('/tasks');
     const overdue = page.getByRole('region', { name: 'Überfällig' });
     await expect(overdue.locator('li', { hasText: title })).toBeVisible();
@@ -252,10 +259,18 @@ test.describe('Systeme & Verbindungen (§18)', () => {
       await expect(connected).toBeVisible();
     }
 
+    // Die Antwort ist vorgegeben: die Anfrage legt sonst im Demo-Betrieb bei jedem Lauf eine Aufgabe an (die Wirkung selbst prüft der API-Test).
+    let sent: { systemName?: string } | undefined;
+    await page.route('**/api/v1/integrations/requests', async (route) => {
+      sent = route.request().postDataJSON() as { systemName?: string };
+      await route.fulfill({ json: { recorded: true } });
+    });
+    const systemName = `E2E-System ${randomUUID().slice(0, 6)}`;
     await page.getByRole('button', { name: 'System anfragen' }).click();
-    await page.getByLabel('Name des Systems').fill(`E2E-System ${randomUUID().slice(0, 6)}`);
+    await page.getByLabel('Name des Systems').fill(systemName);
     await page.getByRole('button', { name: 'Anfrage erfassen' }).click();
     await expect(page.getByText(/Die Anfrage wurde erfasst/)).toBeVisible();
+    expect(sent?.systemName).toBe(systemName);
   });
 
   test('der geführte Wizard erklärt Berechtigungen in Klartext und verlangt keine Zugangsdaten im Chat', async ({ page }) => {

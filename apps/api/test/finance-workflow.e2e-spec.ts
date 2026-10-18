@@ -4,6 +4,7 @@ import request from 'supertest';
 import type { MockOcrProvider } from '@orbit/integration-core';
 import { OCR_PROVIDER } from '../src/connectors/connectors.tokens';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 /**
  * End-to-end Finance workflow against the live Postgres + MinIO stack (no
@@ -13,15 +14,16 @@ import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
  * docs/IMPLEMENTATION_STATUS.md ("Document-Upload gegen echtes MinIO noch
  * nicht live getestet") by performing a real presigned-URL PUT.
  *
- * Uses the seeded "Musterwerk GmbH" demo users (Phase 13) for auth, but
- * creates its own fresh suppliers/documents/invoices per run (unique
- * names/invoice numbers via randomUUID) rather than mutating the seeded
- * fixtures the frontend demo/manual QA relies on — see docs/DEMO_DATA.md.
+ * Runs in its OWN fresh tenant (created with one user per role and deleted at
+ * the end), not in the seeded "Musterwerk GmbH" demo tenant: the suppliers,
+ * documents, invoices and approvals it creates would otherwise stay behind in
+ * the demo data and bury real open approvals (docs/ASSUMPTIONS.md #618).
  */
 describe('Finance workflow (e2e)', () => {
   let app: INestApplication;
   let ocrProvider: MockOcrProvider;
 
+  let tenant: E2eRoleTenant;
   let adminToken: string;
   let financeToken: string;
   let approverToken: string;
@@ -30,19 +32,14 @@ describe('Finance workflow (e2e)', () => {
     app = await bootstrapE2eApp();
     ocrProvider = app.get(OCR_PROVIDER);
 
-    const login = async (email: string) => {
-      const response = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({ email, password: 'Musterwerk#2026!' })
-        .expect(200);
-      return response.body.accessToken as string;
-    };
-    adminToken = await login('admin@musterwerk.example');
-    financeToken = await login('finance@musterwerk.example');
-    approverToken = await login('approval@musterwerk.example');
+    tenant = await createRoleTenant(app, 'finance', ['finance', 'approver']);
+    adminToken = tenant.tokens.admin;
+    financeToken = tenant.tokens.finance;
+    approverToken = tenant.tokens.approver;
   });
 
   afterAll(async () => {
+    await tenant.dispose();
     await app.close();
   });
 

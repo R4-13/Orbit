@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 /**
  * End-to-end Sales workflow against the live Postgres instance: Company ->
@@ -14,19 +15,19 @@ import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
  */
 describe('Sales workflow (e2e)', () => {
   let app: INestApplication;
+  let tenant: E2eRoleTenant;
   let salesToken: string;
 
   beforeAll(async () => {
     app = await bootstrapE2eApp();
 
-    const login = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'sales@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-    salesToken = login.body.accessToken;
+    // Eigener, frischer Betrieb: Kontakte, Unternehmen, Interessenten und Aufgaben dieser Suite bleiben nicht im Demo-Betrieb liegen (ASSUMPTIONS.md #618).
+    tenant = await createRoleTenant(app, 'sales', ['sales']);
+    salesToken = tenant.tokens.sales;
   });
 
   afterAll(async () => {
+    await tenant.dispose();
     await app.close();
   });
 

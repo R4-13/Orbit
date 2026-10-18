@@ -4,6 +4,7 @@ import request from 'supertest';
 import { MockLLMProvider } from '@orbit/agent-core';
 import { LLM_PROVIDER } from '../src/agent/agent.tokens';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+import { createRoleTenant, type E2eRoleTenant } from './utils/e2e-role-tenant';
 
 /**
  * End-to-end test of the Orchestrierung capability
@@ -26,6 +27,7 @@ import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 describe('Workflow orchestration (e2e)', () => {
   let app: INestApplication;
   let llm: MockLLMProvider;
+  let tenant: E2eRoleTenant;
   let adminToken: string;
   const workflowKey = `e2e-orchestration-${randomUUID().slice(0, 8)}`;
   const followUpAgentKey = `e2e-followup-agent-${randomUUID().slice(0, 8)}`;
@@ -34,11 +36,9 @@ describe('Workflow orchestration (e2e)', () => {
     app = await bootstrapE2eApp();
     llm = app.get(LLM_PROVIDER);
 
-    const login = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'admin@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-    adminToken = login.body.accessToken as string;
+    // Eigener, frischer Betrieb: die Folgeaufgaben dieser Suite bleiben nicht im Demo-Betrieb „Musterwerk“ liegen (ASSUMPTIONS.md #618).
+    tenant = await createRoleTenant(app, 'orch', ['sales']);
+    adminToken = tenant.tokens.admin;
 
     // A minimal, single-tool AgentDefinition for step 2 — avoids the
     // built-in sales-intake agent's 3-tool-call chain, which would need a
@@ -82,6 +82,7 @@ describe('Workflow orchestration (e2e)', () => {
   });
 
   afterAll(async () => {
+    await tenant.dispose();
     await app.close();
   });
 
@@ -150,14 +151,9 @@ describe('Workflow orchestration (e2e)', () => {
   });
 
   it('rejects a role without AGENT_MANAGE with 403', async () => {
-    const salesLogin = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({ email: 'sales@musterwerk.example', password: 'Musterwerk#2026!' })
-      .expect(200);
-
     await request(app.getHttpServer())
       .get('/api/v1/workflow-definitions')
-      .set('Authorization', `Bearer ${salesLogin.body.accessToken}`)
+      .set('Authorization', `Bearer ${tenant.tokens.sales}`)
       .expect(403);
   });
 });
