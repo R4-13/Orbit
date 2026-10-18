@@ -37,6 +37,7 @@ import { ReferenceProcessService } from './reference/reference-process.service';
 import { AppointmentSlotsService } from './reference/appointment-slots.service';
 import { ReferenceProcessTools } from './reference/reference-process.tools';
 import { RequestAnalysisService } from './reference/request-analysis.service';
+import { ShadowPlanService } from './shadow-plan.service';
 
 /**
  * Business Process Framework (Amendment 02). Everything here builds on the
@@ -73,6 +74,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     LiveReconciliationService,
     CaseOrchestrationService,
     HumanInteractionService,
+    ShadowPlanService,
     OrbitContactsDirectory,
     // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.
     { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory, hubspot: HubSpotCustomerDirectory) => [orbit, hubspot], inject: [OrbitContactsDirectory, HubSpotCustomerDirectory] },
@@ -96,6 +98,7 @@ import { RequestAnalysisService } from './reference/request-analysis.service';
     ProcessSweepService,
     CaseOrchestrationService,
     HumanInteractionService,
+    ShadowPlanService,
     CustomerRecordService,
     CUSTOMER_DIRECTORIES,
   ],

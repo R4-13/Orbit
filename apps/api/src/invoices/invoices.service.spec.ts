@@ -61,6 +61,20 @@ describe('InvoicesService', () => {
   });
 
   describe('createFromDocument', () => {
+    it('ist je Dokument und Vorgang idempotent: ein zweiter Aufruf legt keine zweite Rechnung und keine zweite Prüfung an', async () => {
+      scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'k', mimeType: 'application/pdf' });
+      const existing = { id: 'inv_existing', documentId: 'doc_1', caseId: 'case_1' };
+      scoped.invoice.findFirst.mockResolvedValueOnce(existing);
+
+      const result = await service.createFromDocument('tenant_1', 'agent', { documentId: 'doc_1', caseId: 'case_1' }, 'AGENT');
+
+      expect(result).toBe(existing);
+      expect(scoped.invoice.findFirst).toHaveBeenCalledWith({ where: { documentId: 'doc_1', caseId: 'case_1' } });
+      expect(ocr.extractInvoiceData).not.toHaveBeenCalled();
+      expect(scoped.invoice.create).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
     it('runs OCR, matches/creates the supplier, and creates a PENDING_APPROVAL invoice', async () => {
       scoped.document.findUnique.mockResolvedValue({
         id: 'doc_1',

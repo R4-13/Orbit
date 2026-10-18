@@ -69,6 +69,13 @@ export class InvoicesService {
       throw new NotFoundError('Document not found.', { id: input.documentId });
     }
 
+    // Idempotent je Dokument und Vorgang (Messlatte 18.10.: derselbe Anhang ergab durch einen zweiten Aufruf zwei leere Rechnungen und zwei Freigaben): ein zweiter Aufruf
+    // für dasselbe Dokument im selben Vorgang liefert die vorhandene Rechnung zurück und legt nichts Neues an.
+    if (input.caseId) {
+      const existing = await this.prisma.forTenantId(tenantId).invoice.findFirst({ where: { documentId: document.id, caseId: input.caseId } });
+      if (existing) return existing;
+    }
+
     const bytes = await this.storage.getObjectBytes(document.storageKey);
     // Die Bytes werden hier ohnehin gelesen: ein Programm oder eine Datei, die nicht zur angegebenen Art passt, wird nicht verarbeitet (MST-09).
     const signature = verifyFileSignature(document.mimeType, bytes);

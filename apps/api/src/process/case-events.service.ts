@@ -50,6 +50,8 @@ export const CASE_EVENT_TYPES = {
   COMMUNICATION_RECEIVED: 'communication.received',
   COMMAND_ACCEPTED: 'command.accepted',
   COMPLETED: 'case.completed',
+  /** Schattenbetrieb: der freie Planer hat zu diesem Vorgang mitgeplant, ohne etwas auszuführen (Bewertung der Planung, kein Plan im Vorgang). */
+  SHADOW_PLAN_PROPOSED: 'shadow.plan_proposed',
 } as const;
 
 /**

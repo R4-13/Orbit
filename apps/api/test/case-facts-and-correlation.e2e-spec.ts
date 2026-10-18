@@ -348,5 +348,59 @@ describe('Case facts, lifecycle and correlation (e2e)', () => {
       expect(caseFacts[0]).toMatchObject({ key: 'request.product_or_service', status: 'CANDIDATE', sourceType: 'EMAIL', verifiedBy: null });
       expect(caseFacts[0]?.evidenceRefs).toEqual(['body']);
     });
+
+    it('a reply to a FREELY planned case (plan without blueprint) is handed to the engine – it neither opens a second case nor falls back to the legacy path (Konzept Flexible Autonomie §9.1)', async () => {
+      const tenantId = await newTenant();
+      const c = await newCase(tenantId, 'Freier Plan');
+      await prisma.forTenantId(tenantId).processPlan.create({
+        data: { tenantId, caseId: c.id, revision: 1, status: 'ACTIVE', source: 'LLM_PLANNER', goalKeys: [], basedOnCaseRevision: 1, explanation: 'Freier Plan', planHash: 'x'.repeat(8), validation: {} },
+      });
+      await newMail(tenantId, c.id, { direction: 'INBOUND', fromAddress: 'kunde@kunde.example' });
+      await newMail(tenantId, c.id, { direction: 'OUTBOUND', fromAddress: 'info@firma.example', toAddresses: ['kunde@kunde.example'], rfcMessageId: '<orbit-free-1@firma.example>' });
+
+      const result = await intake.handleIntakeEvent(tenantId, undefined, {
+        tenantId,
+        channel: 'SIMULATED',
+        provider: 'simulated',
+        externalEventId: randomUUID(),
+        occurredAt: new Date(),
+        sender: { address: 'kunde@kunde.example' },
+        recipients: [{ address: 'info@firma.example' }],
+        subject: 'Re: Freier Plan',
+        content: 'Hier die gewünschten Angaben.',
+        inReplyTo: '<orbit-free-1@firma.example>',
+      });
+
+      expect(result.case?.id).toBe(c.id);
+      expect(await prisma.forTenantId(tenantId).case.count({ where: { tenantId } })).toBe(1);
+      const events = await prisma.forTenantId(tenantId).caseEvent.findMany({ where: { caseId: c.id, type: 'communication.received' } });
+      expect(events).toHaveLength(1);
+    });
+
+    it('a reply to a case WITHOUT any plan (legacy path) is not claimed by the engine', async () => {
+      const tenantId = await newTenant();
+      const c = await newCase(tenantId, 'Altweg');
+      await newMail(tenantId, c.id, { direction: 'INBOUND', fromAddress: 'kunde@kunde.example' });
+      await newMail(tenantId, c.id, { direction: 'OUTBOUND', fromAddress: 'info@firma.example', toAddresses: ['kunde@kunde.example'], rfcMessageId: '<orbit-legacy-1@firma.example>' });
+      llm.seedResponse({
+        toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_triage_result', input: buildTriageFixture({ businessRelevance: 'NOT_RELEVANT', category: 'OTHER' }) as unknown as Record<string, unknown> }],
+        stopReason: 'tool_use',
+      });
+
+      await intake.handleIntakeEvent(tenantId, undefined, {
+        tenantId,
+        channel: 'SIMULATED',
+        provider: 'simulated',
+        externalEventId: randomUUID(),
+        occurredAt: new Date(),
+        sender: { address: 'kunde@kunde.example' },
+        recipients: [{ address: 'info@firma.example' }],
+        subject: 'Re: Altweg',
+        content: 'Antwort.',
+        inReplyTo: '<orbit-legacy-1@firma.example>',
+      });
+
+      expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: c.id, type: 'communication.received' } })).toBe(0);
+    });
   });
 });

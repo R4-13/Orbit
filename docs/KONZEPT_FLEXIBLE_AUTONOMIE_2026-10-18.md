@@ -245,14 +245,14 @@ Erst festhalten, dann messen, dann nur nachweisbar Besseres einführen:
 | **Übernahme eines Vorgangs** (ausdrücklicher Befehl durch berechtigte Person) | Zulässig **nur**, wenn der Plan beendet wird (`CANCELLED` mit Grund) und die bisherigen Wirkungen im neuen Weg als Fakten/Belege übernommen werden. Ein Vorgang **mit begonnener Wirkung** wird nicht automatisch im Altweg neu gestartet, sondern an einen Menschen übergeben (`MANUAL_REVIEW`). |
 | **Nie** | Ein Vorgang wird nie gleichzeitig vom Altweg und vom neuen Weg bearbeitet; Planrevisionen löschen keine Historie (Amendment 02 §33.3); offene Freigaben verfallen nicht stillschweigend. |
 
-**Technik:** Wegmarke je Vorgang (vorhandene Felder: `blueprintKey`/Plan = ENGINE, `WorkflowRun` = LEGACY; **ERWEITERN:** ausdrückliche Marke und Gegenprüfung an beiden Einstiegen – der Orchestrator lehnt einen Vorgang mit laufendem `WorkflowRun` ab, der Altweg einen mit aktivem Plan). **Heutiger Befund:** Antworten auf Vorgänge ohne `blueprintKey` (freier Plan) werden im Eingang nicht an den Plan weitergegeben (`intake.service.ts`, „Only cases that run on a blueprint are continued here“) – das ist ein Fehler für den freien Weg und wird in Schritt 1 behoben.
+**Technik (umgesetzt 18.10., Unit-getestet):** Der Weg wird **aus vorhandenen Daten abgeleitet**, nicht als zweite Statusspalte gespeichert (Governance §5.3): existiert ein Plan irgendeiner Herkunft, ist der Weg `ENGINE`; existieren nur Workflow-Läufe, ist er `LEGACY` (`apps/api/src/process/processing-path.ts`). An beiden Einstiegen wird gegengeprüft: `OrchestratorService.startCase/startProcedure` lehnt einen Vorgang im Altweg ab, `WorkflowRunnerService` (mit `caseId`) einen Vorgang mit Plan – Fehler `409 PROCESSING_PATH_CONFLICT`. Die „ausdrückliche Übernahme“ (Plan beenden, Belege übernehmen) ist **nicht gebaut**. **Befund und Korrektur:** Antworten auf Vorgänge mit freiem Plan (ohne `blueprintKey`) wurden im Eingang nicht an den Plan weitergegeben; behoben (Prüfung auf vorhandenen Plan), E2E-Test in `case-facts-and-correlation.e2e-spec.ts`.
 
 ### 9.2 Messung und Budget (D9)
 
 * **Einstiegshürde:** mindestens **60 bewertete Fälle**; **jedes vereinbarte Szenario** (20 Szenarien + FA-Fälle) mindestens einmal, **kritische Fälle wiederholt** (mindestens dreimal: Notfall, Phishing, eingeschleuste Anweisung, Pflichtfreigaben, Doppelwirkung/Koordination). Die Fallzahl ist **kein** allgemeiner Zuverlässigkeitsnachweis.
 * **Beobachtungszeitraum:** zusätzlich zwei Wochen im Pilot; ersetzt die Fallzahl nicht.
 * **Bewertet:** Schattenbetrieb = Planung; aktive kontrollierte Tests = Ausführung. Kennzahlen **je Szenariotyp** (13.2).
-* **Kosten:** vorhandene Kostenlimits gelten weiter. **Schätzung vor dem Lauf** (aus 113 gemessenen KI-Aufrufen, Ø 1.860 Eingabe-/220 Ausgabetoken; ein Angebotsvorgang braucht 8–11 Aufrufe, ein einfacher 3–4): Messlatte ≈ **0,7 Mio. Token**, Schattenbetrieb für 60 Fälle zusätzlich ≈ **0,3 Mio.**, aktive Tests ≈ **0,7 Mio.**, mit Reserve 2× insgesamt **ca. 3–4 Mio. Token** für alle drei Läufe. **Lücke:** `estimated_cost` ist in `ai_usage_records` nicht gefüllt (kein Preis am Modellprofil `gpt-6-luna` hinterlegt) – der Eurobetrag kann erst mit hinterlegtem Preis berechnet werden (ERWEITERN, Betreiberdaten).
+* **Kosten:** vorhandene Kostenlimits gelten weiter. **Gemessen in der Messlatte (18.10.):** 95 KI-Aufrufe, 217.422 Token für 22 Eingänge und 6 Antworten, ≈ 7.800 Token je Eingang. **Hochrechnung** für die Läufe mit je 60 Fällen: Messlatte/aktive Tests ≈ **0,5–0,6 Mio.** je Lauf, Schattenplaner zusätzlich ≈ 4.400 Token je Planung ≈ **0,3 Mio.**, insgesamt **ca. 1,5 Mio. Token** für alle drei Läufe (die ursprüngliche Schätzung von 3–4 Mio. war zu hoch). **Lücke:** `estimated_cost` ist in `ai_usage_records` nicht gefüllt (kein Preis am Modellprofil `gpt-6-luna` hinterlegt) – der Eurobetrag kann erst mit hinterlegtem Preis berechnet werden (ERWEITERN, Betreiberdaten).
 
 ## 10. Keine zweite Orchestrierungsarchitektur
 
@@ -312,6 +312,9 @@ Zwei Orchestrierungswege bleiben **nur übergangsweise** bestehen (Altweg: 5 Age
 23. **D4:** keine automatische Lockerung der Planfreigabe nach der Pilotphase.
 24. **D7:** Pilot beweist nur den Angebotsbereich; unbekannte Vorgänge und Ereignisse ohne Nachricht sind zusätzlich abzunehmen.
 25. **D9:** Fallzahl ≥ 60 *und* Szenariodeckung; Zeitraum ersetzt keine Fallzahl; Budget vorab (9.2).
+26. **D4 – Auslegung:** „Planfreigabe beibehalten“ bezieht sich auf den **vorhandenen** Mechanismus (Regel `process.plan.activate`: im Grundzustand und in „Vorsichtig“ Freigabe, in „Ausgewogen“/„Hochautomatisiert“ per Voreinstellung autonom, jede Wirkung bleibt durch ihre eigene Regel geschützt). Daran ändert dieses Vorhaben nichts; eine weitere Lockerung gibt es nicht ohne ausdrückliche, begrenzte Entscheidung.
+27. **Bearbeitungsweg** wird abgeleitet statt gespeichert (9.1).
+28. **Abschlussnachweis frei geplanter Abläufe** (5a) ist festes Regelwerk im Code (`adhoc-completion.ts`), nicht Teil des Plans.
 
 ## 13. Abnahmematrix
 
@@ -372,6 +375,10 @@ Bewertungsreihenfolge: **Muss-Kriterien → Null-Kriterien → Qualität → Auf
 | | KI-Kosten je Vorgang | ≤ Limit; Vergleich Messlatte |
 
 Die 95-%-Quote gilt **nur** für die Vollständigkeit nicht sicherheitsrelevanter Übergaben; sie öffnet für Pflichtfreigaben, Mandantentrennung und sicherheitsrelevante Übergaben **keine** Ausnahme. Schwellen für Qualität sind Vorschläge und werden mit der Messlatte auf Basis gemessener Werte bestätigt.
+
+### 13.3 Messlatte (Ist-Zustand)
+
+Gemessen am 18.10.2026: [`MESSLATTE_IST_2026-10-18.md`](MESSLATTE_IST_2026-10-18.md) – 22 Szenarien, ✔ 10 · ◐ 11 · ✘ 1, Flexibilitätsfälle FA-01…FA-12 mit Beleg, Kennzahlen je Szenariotyp, Kosten, Nebenwirkungen. Die Spalte „Erwartet heute“ oben ist damit durch gemessene Werte ersetzt; wo sie vom Messwert abweicht, gilt der Messwert.
 
 ## 14. Statusübersicht
 

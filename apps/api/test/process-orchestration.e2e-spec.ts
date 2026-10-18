@@ -470,7 +470,11 @@ describe('Process orchestration engine (e2e)', () => {
 
       await commands.execute(actor(tenantId), c.id, cmd('APPROVE_PLAN', (await caseOf(tenantId, c.id)).revision, { planId: plan.id }));
       expect(calls.lookup).toBe(before + 1);
-      expect((await caseOf(tenantId, c.id)).orchestrationStatus).toBe('COMPLETED');
+      // Konzept §5a (FA-09): ein Nachschlagen allein beantwortet kein Anliegen. Der freie Plan ist durchgelaufen, aber ohne Wirkungsnachweis schließt er den Vorgang NICHT ab.
+      const finished = await caseOf(tenantId, c.id);
+      expect(finished.orchestrationStatus).toBe('MANUAL_REVIEW');
+      expect(finished.completedAt).toBeNull();
+      expect(finished.attentionReasons.join(' ')).toMatch(/Nachweis/);
     });
 
     it('rejects a plan with an invented recipient even after a repair attempt and routes to manual review', async () => {

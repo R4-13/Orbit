@@ -29,3 +29,11 @@ WHERE c.created_at >= :since::timestamp ORDER BY c.created_at;
 SELECT left(c.id, 8) AS vorgang, c.orchestration_status AS orch, array_to_string(c.attention_reasons, ' | ') AS hinweise, c.business_goals AS ziele
 FROM cases c JOIN tenants t ON t.id = c.tenant_id AND t.slug = :slug
 WHERE c.created_at >= :since::timestamp ORDER BY c.created_at;
+
+\echo '=== Einstufung je Eingang (Triage) ==='
+SELECT to_char((m.received_at AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Berlin', 'HH24:MI') AS zeit, left(m.subject, 30) AS betreff, d.status AS entscheidung, d.applied_relevance AS relevanz,
+       coalesce(d.result->>'category', '-') AS kategorie, coalesce(d.result->>'urgency', '-') AS dringlichkeit, coalesce(d.result->>'senderRoleHypothesis', '-') AS absender_rolle,
+       coalesce(d.result->'riskFlags'::text, '[]'::jsonb)::text AS risiko, left(coalesce(d.result->>'conciseReason', d.failure_reason, ''), 150) AS begruendung
+FROM email_messages m JOIN tenants t ON t.id = m.tenant_id AND t.slug = :slug
+LEFT JOIN intake_events ie ON ie.email_message_id = m.id LEFT JOIN intake_decisions d ON d.intake_event_id = ie.id
+WHERE m.direction = 'INBOUND' AND m.created_at >= :since::timestamp ORDER BY m.received_at;

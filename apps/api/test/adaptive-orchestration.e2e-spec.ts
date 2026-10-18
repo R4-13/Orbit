@@ -378,6 +378,26 @@ describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
     expect((await caseOf(tenantId, caseId)).completedAt).toBeNull();
   });
 
+  it('FA-05 (Messlatte 18.10.): eine spätere Korrektur eines früher genannten, nicht erfragten Werts geht nicht verloren – sie wird als sichtbarer Widerspruch erfasst, nie still überschrieben', async () => {
+    const tenantId = await newTenant({ autonomousClarification: true });
+    seedTriage();
+    seedExtraction([{ key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'Fenster' }]);
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Angebot Fenster', content: 'Wir möchten ein Angebot für Fenster, etwa 7 m².', threadId: 'thr-fa5', rfcMessageId: '<fa5-1@kunde.example>' }));
+    const caseId = first.case!.id;
+    // Die Fläche wurde in der ersten Nachricht genannt (z. B. aus der Einstufung), aber nie erfragt.
+    await facts.propose(tenantId, caseId, [{ key: 'Fensterfläche', value: 7, valueType: 'number', sourceType: 'EMAIL', sourceRef: 'message:erste', evidenceRefs: ['etwa 7 m²'], confidence: 0.8 }]);
+
+    seedExtraction([
+      { key: 'request.quantity', value: 12, evidence: '12 Fenster' },
+      { key: 'Fensterfläche', value: 12, evidence: 'Korrektur: es sind 12 m²' },
+    ]);
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Angebot Fenster', content: '12 Fenster. Korrektur: es sind 12 m², nicht 7.', threadId: 'thr-fa5', inReplyTo: '<sent-1@mail.example>', rfcMessageId: '<fa5-2@kunde.example>' }));
+
+    const area = (await facts.getCurrent(tenantId, caseId)).filter((f) => f.key === 'Fensterfläche');
+    expect(area.map((f) => f.value).sort()).toEqual([12, 7]);
+    expect(area.every((f) => f.status === 'CONFLICTED')).toBe(true);
+  });
+
   it('AD-07: Policy REQUIRE_APPROVAL → die Vorbereitung läuft autonom, die Wirkung wartet auf die gebundene Freigabe (nichts versendet)', async () => {
     const tenantId = await newTenant({ autonomousClarification: false });
     seedTriage();

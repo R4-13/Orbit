@@ -7,6 +7,7 @@ import {
   checkAiCostLimit,
   effectiveLimits,
   type TenantLimitsInput,
+  evaluateAdHocCompletion,
   evaluateCompletion,
   nextActions,
   outageLimitReached,
@@ -205,6 +206,8 @@ export class OrchestratorService {
 
         if (await this.resumeDecidedApprovals(tenantId, caseRow, graph, executed)) continue;
 
+        // Angaben mit abgelaufener Gültigkeit werden vor jeder Entscheidung als veraltet markiert und nicht mehr gebunden (Amendment 02 §7.3; Konzept AV-01).
+        await this.facts.markExpiredStale(tenantId, caseId);
         const ctx = await this.buildEvalContext(tenantId, caseRow, graph);
         const allActions = nextActions(this.runtimeNodes(graph), this.runtimeEdges(graph), ctx);
         // Eine Wiederholung hat eine Wartezeit (Backoff): ein Schritt vor seinem `retryAt` wird nicht erneut versucht, sonst wären alle Versuche in
@@ -576,8 +579,10 @@ export class OrchestratorService {
     // Ein Vorgang wird nicht mit einem simulierten Schritt abgeschlossen, solange der echte Weg offen ist: erst wird live wiederholt.
     if ((await this.live.reconcile(tenantId, caseRow.id, { runningCompleteKey: node.nodeKey })).redone.length > 0) return;
     const blueprint = await this.blueprintFor(tenantId, caseRow);
-    const evidence = (await this.ledger.confirmedEffects(tenantId, caseRow.id)).map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
+    const confirmed = await this.ledger.confirmedEffects(tenantId, caseRow.id);
+    const evidence = confirmed.map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
     let met: boolean;
+    let blockReason: string | undefined;
     if (blueprint) {
       // BP-40: deterministische Bewertung je Ziel; der Schnappschuss wird festgehalten, ob erfüllt oder nicht.
       const evaluation = evaluateCompletion({ goals: blueprint.goals, completionCriteria: blueprint.completionCriteria, goalCriteria: blueprint.goalCriteria }, ctx, evidence);
@@ -585,15 +590,23 @@ export class OrchestratorService {
       await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.COMPLETION_EVALUATED, payload: { met: evaluation.met, criteriaMet: evaluation.criteriaMet, goals: evaluation.goals, evidenceRefs: evaluation.evidenceRefs } });
       if (evaluation.criteriaMet === null) this.logger.warn(`completion criteria of case ${caseRow.id} not evaluable`);
     } else {
-      met = graph.nodes.every((n) => n.nodeKey === node.nodeKey || ['SUCCEEDED', 'SKIPPED', 'SUPERSEDED'].includes(n.state));
+      // Frei geplant: „alle Schritte erledigt“ genügt nicht (Konzept §5a). Der Abschluss braucht einen belegten Wirkungsnachweis; die Kriterien liegen fest im Code, die Planung
+      // kann sie weder ändern noch umgehen.
+      const evaluation = evaluateAdHocCompletion({
+        allOtherNodesDone: graph.nodes.every((n) => n.nodeKey === node.nodeKey || ['SUCCEEDED', 'SKIPPED', 'SUPERSEDED'].includes(n.state)),
+        effects: confirmed.map((e) => ({ capabilityKey: e.capabilityKey, purpose: e.purpose })),
+      });
+      met = evaluation.met;
+      if (!met) blockReason = evaluation.description;
+      await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.COMPLETION_EVALUATED, payload: { met, basis: 'ADHOC_CLOSING_PROOF', reason: evaluation.reason, evidenceRefs: evaluation.evidence } });
     }
     if (!met) {
-      await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: 'Die Abschlusskriterien sind nicht erfüllt.' });
-      await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: ['Der Ablauf ist durchgelaufen, aber die Abschlusskriterien sind nicht nachweislich erfüllt.'] });
+      await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: blockReason ?? 'Die Abschlusskriterien sind nicht erfüllt.' });
+      await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: [blockReason ?? 'Der Ablauf ist durchgelaufen, aber die Abschlusskriterien sind nicht nachweislich erfüllt.'] });
       return;
     }
     await this.succeed(tenantId, caseRow.id, graph, node, { criteriaMet: true }, 'LIVE');
-    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'PLAN_EXECUTED', evidenceRefs: evidence } });
+    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'ADHOC_CLOSING_PROOF', evidenceRefs: evidence } });
   }
 
   // ── Waiting, events, approvals ──────────────────────────────────────────────

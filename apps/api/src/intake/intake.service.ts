@@ -16,6 +16,7 @@ import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
+import { ShadowPlanService } from '../process/shadow-plan.service';
 import { OrchestratorService } from '../process/orchestrator.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -120,6 +121,7 @@ export class IntakeService {
     private readonly orchestrator: OrchestratorService,
     private readonly adHoc: AdHocIntakeService,
     private readonly attachmentTexts: AttachmentTextService,
+    private readonly shadow: ShadowPlanService,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -581,6 +583,8 @@ export class IntakeService {
     const scoped = this.prisma.forTenantId(tenantId);
     let failure: string | undefined;
     let outcome: Awaited<ReturnType<OrchestratorService['startCase']>> | undefined;
+    // Schattenbetrieb (nur mit Plattform-Flag `planner.shadow`): der freie Planer plant parallel mit und führt nichts aus. Nie abwarten, nie ein Fehler für den Vorgang.
+    void this.shadow.recordSafely(tenantId, businessCase.id, subject);
     try {
       outcome = await this.orchestrator.startCase(tenantId, businessCase.id, { userId: actorUserId, blueprintKey, intentSummary: subject });
       await this.orchestrator.advance(tenantId, businessCase.id);
@@ -631,8 +635,10 @@ export class IntakeService {
     if (result.status !== 'MATCHED' || !result.caseId) return null;
 
     const matched = await scoped.case.findUnique({ where: { id: result.caseId } });
-    // Only cases that run on a blueprint are continued here; legacy cases keep their pre-existing behaviour.
-    if (!matched?.blueprintKey) return null;
+    // Only cases that run on the process engine are continued here – on a blueprint or on a freely planned (ad-hoc) plan; legacy cases keep their
+    // pre-existing behaviour. A case has exactly one processing path (Konzept Flexible Autonomie §9.1): once it has a plan, replies belong to the engine.
+    if (!matched) return null;
+    if (!matched.blueprintKey && (await scoped.processPlan.count({ where: { caseId: matched.id } })) === 0) return null;
 
     await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: matched.id } });
     await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: matched.id, status: 'PROCESSING' } });

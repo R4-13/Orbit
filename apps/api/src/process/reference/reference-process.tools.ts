@@ -234,6 +234,14 @@ export class ReferenceProcessTools implements OnModuleInit {
         // Vom Anfrage-Analysator ermittelte Angaben dieses Vorgangs (und die Terminwahl): die Antwort auf die Rückfrage wird ihnen zugeordnet.
         const analysed = await this.analysis.latest(ctx.tenantId, caseId);
         for (const r of analysed?.requirements ?? []) if (!allowed.has(r.key)) allowed.set(r.key, { type: r.type, description: r.question });
+        // Bereits von der Kundschaft genannte Angaben dieses Vorgangs (Messlatte 18.10.: eine spätere Korrektur "7 m², nein: 12 m²" ging verloren, weil nur die erfragten Schlüssel
+        // gelesen wurden). Nennt die Antwort einen anderen Wert, entsteht ein sichtbarer Widerspruch statt eines stillen Weiterrechnens mit dem alten Wert – nie "letzte Mail gewinnt".
+        const known = (await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => (f.sourceType === 'EMAIL' || f.sourceType === 'ATTACHMENT') && (f.status === 'CANDIDATE' || f.status === 'CONFIRMED') && f.key !== 'contact.email');
+        for (const f of known.slice(0, 20)) {
+          if (allowed.has(f.key)) continue;
+          const shown = JSON.stringify(f.value).slice(0, 80);
+          allowed.set(f.key, { type: typeof f.value === 'number' ? 'number' : 'string', description: `bereits genannt: ${shown}; nur angeben, wenn die Nachricht einen anderen Wert nennt (Korrektur)` });
+        }
         if (analysed && appointmentKindOf(analysed.nextStep)) allowed.set(APPOINTMENT_AGREED_KEY, { type: 'string', description: 'Der von der Person gewählte Termin bzw. Terminwunsch (Datum, Uhrzeit) oder ihre Erreichbarkeit.' });
 
         const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {

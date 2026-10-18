@@ -16,6 +16,34 @@ Sonde, Amendment 01/02/03, UI/UX v2, Channel Event Runtime, [`AUTONOMY_ASSESSMEN
 
 ---
 
+## 0. Flexible, autonome Bearbeitung (Konzept Fassung 2.1, Stand 18.10.2026)
+
+Quelle: [`KONZEPT_FLEXIBLE_AUTONOMIE_2026-10-18.md`](KONZEPT_FLEXIBLE_AUTONOMIE_2026-10-18.md), Messlatte [`MESSLATTE_IST_2026-10-18.md`](MESSLATTE_IST_2026-10-18.md). Reihenfolge: Messlatte (erledigt) → Schattenbetrieb → begrenzte Einführung → Ausweitung.
+
+**Umgesetzt am 18.10.:** BYOK nur mit Betreiberfreigabe (`ai.byok`) · genau ein Bearbeitungsweg je Vorgang (Gegenprüfung) · Regel-Gruppen und Aktionsklassen (Darstellung) · Abschlussnachweis für frei geplante Abläufe (FA-09) · Antworten auf frei geplante Vorgänge gehen an den Plan · Gültigkeit von Fakten wird ausgewertet · Rechnung je Dokument/Vorgang idempotent · Korrekturen früher genannter Werte werden als Widerspruch erfasst · Schattenbetrieb als Gerüst (Flag `planner.shadow`, Standard AUS).
+
+| ID | Punkt | Art | Aufwand | Prio | Anmerkung |
+|---|---|---|---|---|---|
+| FX-01 | **Zielarbeit bei unbekannten Vorgängen:** Eingangsbestätigung bzw. Rückfrage statt nur Übergabe; verstehende Fähigkeiten (`facts.extract_from_message`, `requirements.resolve`) für freie Pläne öffnen; allgemeiner Faktenwortschatz | ENG | M | P1 | Messlatte Szenarien 8, 20, 21; Addendum ADD-2.1/2.5 |
+| FX-02 | **Mehrere Anliegen aufteilen** und je Teilziel bearbeiten (Ziele im selben Vorgang, bei fachlich getrennten Anliegen verknüpfte Vorgänge) | ENG | M | P1 | Szenario 12; ADD-3.1; hängt an FX-06 |
+| FX-03 | **Allgemeines Geschäftsereignis** (Sonde-/Aufgabenauftrag, Wiedervorlage, Personal-Abwesenheit manuell) über dem vorhandenen Eingang | ENG | L | P1 | FA-03; ADD-1.1–1.3; D6 |
+| FX-04 | **Schattenbetrieb scharf schalten** und auswerten: Flag `planner.shadow` für `musterwerk`, Auswertungsbericht (Planbewertung, Abdeckung gegenüber tatsächlicher Ausführung, Kosten) | ENG | S | P1 | Konzept 9; D9 (≥ 60 Fälle) |
+| FX-05 | **Beschwerde:** Antwortentwurf automatisch vorbereiten (Antwort zur Freigabe), interne Bearbeitung läuft weiter | ENG | S | P1 | D5; Szenario 11 |
+| FX-06 | **Vorgangsverknüpfung** (voraussichtlich eigene Beziehung, Governance §5.3 begründen) | ENG | M | P2 | D8 |
+| FX-07 | **Wirkungsschlüssel (`resourceKey`)** an `ActionIntent` für Objekt-/Aktionskoordination (Termin, Empfänger, Auftrag) | ENG | M | P2 | FA-10; ADD-3.2; Tool muss den Schlüssel liefern (Slot erst im Werkzeug bekannt) |
+| FX-08 | **Rücklesung der Wirkung** je Fähigkeit (Gesendet-Ordner, Kalender, CRM) und Prüfung unmittelbar vor der Wirkung | ENG | M | P2 | AV-01/AV-02; ADD-4.3 |
+| FX-09 | **Preis festlegen** durch berechtigte Person (Fakt `HUMAN` als Quelle); Angebot nur mit Quelle | ENG | M | P2 | ADD-4.2; FA-11 |
+| FX-10 | **Notfall-Bestätigung:** gasspezifischer Sicherheitshinweis (Gasversorger, Lüften, kein Funke) neben „Notruf 112“ | ENG | S | P1 | Szenario 14 (Inhalt mit dem Betrieb abstimmen) |
+| FX-11 | **Sprache:** Anrede und Gruß in der Sprache der Anfrage (englische Anfrage → englischer Gruß) | ENG | S | P2 | Szenario 3 |
+| FX-12 | **Statusfrage mit mehrdeutigem Bezug:** Rückfrage an den Absender („Meinen Sie …?“) statt stiller Übergabe | ENG | S | P2 | Szenario 22 |
+| FX-13 | **Nachfassen vor der Übergabe** bei ausbleibender Antwort (Wiedervorlage, Grenzen, danach Übergabe) | ENG | S | P2 | FA-04 |
+| FX-14 | **Administration:** Unternehmensprofil als Freitext mit sichtbarer Ableitung, technische Agenten-Konfiguration in den Expertenbereich, Migration der Regeln („nie lockerer“), Betriebsregeln für Sprache/Ansprache (D2) | ENG | L | P2 | Konzept 8.2; die Gruppen-Darstellung steht |
+| FX-15 | **Echte Rechnungsauslese** (der Texterkenner ist ein Platzhalter `mock`) | EXT/ENG | L | P3 | Finance nachrangig laut Entscheidung 18.10. |
+| FX-16 | **Modellpreis** am KI-Profil hinterlegen, damit Kosten in Euro berechenbar sind | MAN | S | P2 | `estimated_cost` bleibt sonst leer |
+| FX-17 | **Übernahme eines Vorgangs** zwischen Alt- und neuem Weg (ausdrücklicher Befehl) | ENG | M | P3 | Konzept 9.1; erst vor der Ausweitung nötig |
+
+---
+
 ## 1. Autonomie – „ORBIT versteht jeden Eingang und handelt selbst“ (Kernziel)
 
 Quelle: [`AUTONOMY_ASSESSMENT.md`](AUTONOMY_ASSESSMENT.md). **P0** (jeder Eingang wird ein Vorgang, Notfall-Meldung) und **P1a** (Betriebsprofil) sind umgesetzt; die Meldung/Eskalation und die

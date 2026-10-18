@@ -11,6 +11,8 @@ import { stableBucket } from './ai-governance';
 export const FEATURE_FLAGS = {
   /** Eigener KI-Schlüssel (BYOK) für einen Mandanten freigegeben (Konzept Flexible Autonomie §8.3, D1). Standard AUS; Auswertung fail-closed. */
   AI_BYOK: 'ai.byok',
+  /** Schattenbetrieb des Vorgangs-Agenten: zu Vorgängen des bisherigen Wegs wird mitgeplant, aber nichts ausgeführt (Konzept Flexible Autonomie §9 Schritt 1). Standard AUS. */
+  PLANNER_SHADOW: 'planner.shadow',
 } as const;
 
 // ── Kill Switches ────────────────────────────────────────────────────────────────────────────────────────────────────

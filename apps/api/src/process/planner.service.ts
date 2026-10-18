@@ -200,12 +200,28 @@ export class PlannerService {
     return graph;
   }
 
+  /**
+   * Schattenbetrieb (Konzept Flexible Autonomie §9 Schritt 1): schlägt einen frei geplanten Ablauf für den Vorgang vor – **ohne Blueprint, ohne ihn zu speichern, zu
+   * aktivieren oder auszuführen**. Gleiche Prüfung (`validatePlan`), gleicher Planer, gleiche Kostenmessung am Vorgang; nur das Ergebnis wird nicht übernommen.
+   */
+  async shadowPropose(
+    tenantId: string,
+    caseId: string,
+    intentSummary?: string,
+  ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult }> {
+    const caseRow = await this.prisma.forTenantId(tenantId).case.findUnique({ where: { id: caseId } });
+    if (!caseRow) throw new NotFoundError('Case not found.', { caseId });
+    const context = await this.buildContext(tenantId, caseId);
+    return this.proposeWithModel(tenantId, caseRow, { trigger: 'INITIAL', intentSummary }, context, undefined, 'process-planning-shadow');
+  }
+
   private async proposeWithModel(
     tenantId: string,
     caseRow: Case,
     request: PlanRequest,
     context: PlanValidationContext,
     parent: PlanGraph | undefined,
+    runPurpose = 'process-planning',
   ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult }> {
     if (await this.platformControl.killSwitchEngaged(KILL_SWITCHES.ADAPTIVE_PLANNER)) {
       return { status: 'UNAVAILABLE', reason: 'Der KI-Planer ist plattformweit vorübergehend gestoppt (Kill Switch).' };
@@ -222,7 +238,7 @@ export class PlannerService {
       return { status: 'UNAVAILABLE', reason: 'Die KI-Planung (process.plan) ist per Policy nicht autonom erlaubt.' };
     }
 
-    const run = await this.runs.start({ tenantId, agentType: 'ORCHESTRATOR', triggerType: 'MANUAL', input: { purpose: 'process-planning', caseId: caseRow.id, trigger: request.trigger } });
+    const run = await this.runs.start({ tenantId, agentType: 'ORCHESTRATOR', triggerType: 'MANUAL', input: { purpose: runPurpose, caseId: caseRow.id, trigger: request.trigger } });
     const runtime = new AgentRuntime(llm, this.toolRegistry.subset([SUBMIT_PLAN_TOOL]), (action, ctx) => this.policy.resolveMode(ctx.tenantId, action));
     const system = buildLayeredSystemPrompt(this.taskPrompt());
     const messages: LLMMessage[] = [{ role: 'user', content: await this.buildUserMessage(tenantId, caseRow, request, context, parent) }];
