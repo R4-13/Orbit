@@ -7,7 +7,7 @@
  *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-e2e-leftovers.ts <tenant-slug> --execute    # wirklich löschen (vorher sichern: scripts/backup-postgres.sh backup)
  *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-e2e-leftovers.ts --tenants [--execute]      # liegengebliebene Test-Betriebe „e2e-…“ (älter als ein Tag)
  *
- * Als Testeintrag gilt NUR, was eine Marke „E2E“ trägt (Name, Nummer, Titel, Schlüssel) oder an einem solchen Vorgang hängt (Aufgaben auch: volle UUID im Titel); Kontakte und Mails werden an ihrer Adresse erkannt
+ * Als Testeintrag gilt NUR, was eine Marke „E2E“ trägt (Name, Nummer, Titel, Schlüssel) oder an einem solchen Vorgang hängt (Aufgaben auch: volle UUID im Titel; Rechnungen auch: ohne Nummer, ohne Dokument und ohne Lieferant – das ist nichts Echtes); Kontakte und Mails werden an ihrer Adresse erkannt
  * (Domäne mit „e2e“). Echte Einträge, auch die Live-Tests mit der Testadresse des Kunden, bleiben. Das Protokoll (Audit) wird nie verändert.
  */
 import { NestFactory } from '@nestjs/core';
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
       const mailCases = await tx.emailMessage.findMany({ where: { tenantId, caseId: { not: null }, OR: [{ subject: e2e }, { fromAddress: e2e }] }, select: { caseId: true }, distinct: ['caseId'] });
       const caseIds = [...new Set([...cases.map((c) => c.id), ...mailCases.map((m) => m.caseId as string)])];
       const suppliers = await tx.supplier.findMany({ where: { tenantId, name: { startsWith: 'E2E', mode: 'insensitive' } }, select: { id: true } });
-      const invoices = await tx.invoice.findMany({ where: { tenantId, OR: [{ invoiceNumber: { startsWith: 'E2E-' } }, { caseId: { in: caseIds } }, { supplierId: { in: suppliers.map((s) => s.id) } }] }, select: { id: true } });
+      const invoices = await tx.invoice.findMany({ where: { tenantId, OR: [{ invoiceNumber: { startsWith: 'E2E-' } }, { caseId: { in: caseIds } }, { supplierId: { in: suppliers.map((s) => s.id) } }, { AND: [{ OR: [{ invoiceNumber: null }, { invoiceNumber: '' }] }, { documentId: null }, { supplierId: null }] }] }, select: { id: true } });
       const supplierIds = suppliers.map((s) => s.id);
       const invoiceIds = invoices.map((i) => i.id);
       // Aufgaben mit einer vollen UUID im Titel (z. B. „Prüfung erforderlich: Kurze Frage 3f2a…-…“) stammen aus Tests: eine echte Betreffzeile enthält das nie.
