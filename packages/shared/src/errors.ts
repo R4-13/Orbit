@@ -106,6 +106,13 @@ export class ByokNotEnabledError extends OrbitError {
   readonly retryable = false;
 }
 
+/** Konzept Flexible Autonomie §9.1: ein Vorgang wird nie gleichzeitig vom Altweg und von der Prozess-Engine bearbeitet. */
+export class ProcessingPathConflictError extends OrbitError {
+  readonly code = 'PROCESSING_PATH_CONFLICT';
+  readonly httpStatus = 409;
+  readonly retryable = false;
+}
+
 export function isOrbitError(error: unknown): error is OrbitError {
   return error instanceof OrbitError;
 }

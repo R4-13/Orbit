@@ -24,7 +24,7 @@ nicht zum endgültigen Löschen (Mails kommen nur in den Papierkorb).
 
 ```bash
 node simulator.mjs status                              # Einstellungen, Zähler, Notaus
-node simulator.mjs liste                               # die 20 Szenarien
+node simulator.mjs liste                               # die 22 Szenarien
 node simulator.mjs senden --szenario notfall-rohrbruch # PROBELAUF: zeigt die Mail, sendet nichts
 node simulator.mjs senden --szenario notfall-rohrbruch --senden    # wirklich senden
 node simulator.mjs senden --art anfrage --anzahl 3 --abstand 30 --senden

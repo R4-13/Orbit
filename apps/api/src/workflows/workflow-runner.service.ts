@@ -6,6 +6,7 @@ import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
 import { AgentDefinitionResolverService } from '../agent-definitions/agent-definition-resolver.service';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { assertProcessingPath } from '../process/processing-path';
 import { PrismaService } from '../prisma/prisma.service';
 import { buildWorkflowStepMessage, evaluateWorkflowCondition, type WorkflowPathContext, type WorkflowStepConditionExpr } from './workflow-path';
 import type { WorkflowDefinitionWithSteps } from './workflow-definitions.service';
@@ -211,6 +212,7 @@ export class WorkflowRunnerService {
     triggerInput: Record<string, unknown>,
     caseId?: string,
   ): Promise<{ definition: WorkflowDefinitionWithSteps; workflowRun: WorkflowRun }> {
+    if (caseId) await assertProcessingPath(this.prisma.forTenantId(tenantId), caseId, 'LEGACY');
     const definition = await this.prisma.forTenantId(tenantId).workflowDefinition.findUnique({
       where: { tenantId_key: { tenantId, key } },
       include: { steps: { orderBy: { order: 'asc' } } },

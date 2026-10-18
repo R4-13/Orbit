@@ -200,6 +200,24 @@
       "betreff": "Hallo",
       "text": "Hallo?",
       "erwartung": "Keine Annahmen; Rückfrage oder Prüfung durch einen Menschen."
+    },
+    {
+      "id": "unbekannt-leitung-umzug",
+      "art": "anfrage",
+      "titel": "Unbekannte Vorgangsart: Verlegung von Anschlüssen im Praxisumzug",
+      "absender": "Tom Orbit",
+      "betreff": "Praxisumzug – Wasser- und Gasanschlüsse",
+      "text": "Guten Tag,\n\nunsere Zahnarztpraxis zieht Ende Januar in neue Räume um. Dort müssen drei Behandlungsplätze an Wasser und Druckluft angeschlossen und ein Gasanschluss für das Labor verlegt werden. Die Abnahme durch den Prüfer muss vor der Eröffnung am 3. Februar erfolgt sein. Können Sie das übernehmen und wie würden Sie vorgehen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Unbekannte Vorgangsart (kein Standardangebot): ORBIT versteht das Anliegen, holt fehlende Angaben, stellt Fristen fest und arbeitet bis zu einem Wartepunkt (Rückfrage), einer Freigabe oder einer begründeten Übergabe weiter. Kein Preis, keine Zusage zur Frist."
+    },
+    {
+      "id": "unbekannt-wartungsvertrag",
+      "art": "anfrage",
+      "titel": "Unbekannte Vorgangsart: Wartungsvertrag für mehrere Wohnungen",
+      "absender": "Tom Orbit",
+      "betreff": "Wartungsvertrag für 12 Wohneinheiten",
+      "text": "Hallo,\n\nwir verwalten ein Haus mit 12 Wohneinheiten und suchen einen Betrieb, der die Heizungsanlage (Baujahr 2009) dauerhaft wartet, mit Bereitschaftsdienst am Wochenende. Wie sehen Ihre Konditionen aus und wie schnell könnten Sie starten? Bitte melden Sie sich.\n\nTom Orbit, Hausverwaltung",
+      "erwartung": "Unbekannte Vorgangsart (Dauerauftrag/Vertrag): kein erfundener Preis oder Vertragsinhalt; ORBIT klärt Angaben (Anlage, Umfang), benennt Zuständige und führt bis zu Wartepunkt, Freigabe oder begründeter Übergabe."
     }
   ]
 }

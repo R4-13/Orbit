@@ -35,6 +35,7 @@ import { runInCaseContext } from '../common/case-context';
 import { PlannerService } from './planner.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
+import { assertProcessingPath } from './processing-path';
 
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
@@ -113,6 +114,7 @@ export class OrchestratorService {
   }
 
   private async startCaseInContext(tenantId: string, caseId: string, options: StartCaseOptions): Promise<StartCaseResult> {
+    await assertProcessingPath(this.prisma.forTenantId(tenantId), caseId, 'ENGINE');
     const active = options.blueprintKey ? await this.blueprints.getActive(tenantId, options.blueprintKey) : options.intentKey ? await this.blueprints.findActiveForIntent(tenantId, options.intentKey) : null;
     if (options.blueprintKey && !active) {
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: [`Der Prozess ${options.blueprintKey} ist für diesen Mandanten nicht aktiviert.`] });
@@ -130,7 +132,10 @@ export class OrchestratorService {
    * Scheitert die Prüfung (z. B. eine Fähigkeit ist nicht ausführbar), kommt der Vorgang zur Prüfung – das Verfahren wird nie verkürzt oder umgangen.
    */
   async startProcedure(tenantId: string, caseId: string, procedure: Parameters<PlannerService['plan']>[2]['procedure'], options: { userId?: string; intentSummary?: string } = {}): Promise<StartCaseResult> {
-    return runInCaseContext(caseId, () => this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, intentSummary: options.intentSummary, procedure }));
+    return runInCaseContext(caseId, async () => {
+      await assertProcessingPath(this.prisma.forTenantId(tenantId), caseId, 'ENGINE');
+      return this.planAndActivate(tenantId, caseId, { trigger: 'INITIAL', userId: options.userId, intentSummary: options.intentSummary, procedure });
+    });
   }
 
   private async planAndActivate(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2]): Promise<StartCaseResult> {

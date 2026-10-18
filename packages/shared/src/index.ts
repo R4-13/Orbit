@@ -8,6 +8,7 @@ export * from './runtime-alerts';
 export * from './cost-guardrails';
 export * from './support-session';
 export * from './policy';
+export * from './policy-groups';
 export * from './audit';
 export * from './result';
 export * from './duration';
