@@ -316,12 +316,14 @@ export class PlannerService {
     const errors = validation.issues.filter((i) => i.severity === 'ERROR');
     if (errors.length === 0 || !errors.some((i) => i.code === 'REPLAN_DROPS_CONFIRMED_EFFECT' || i.code === 'REPLAN_AFTER_UNDERSTANDING') || errors.some((i) => !repairable.has(i.code))) return undefined;
     let candidate: PlanProposal = proposal;
-    const present = new Set(candidate.nodes.map((n) => n.id));
-    const restored = (context.confirmedEffects ?? [])
-      .filter((effect) => !present.has(effect.nodeId))
+    // Jeder ausgeführte Schritt kehrt unverändert aus der letzten Revision zurück: fehlt er, wird er ergänzt; weicht das Modell von ihm ab (andere Fähigkeit oder anderer Zweck unter derselben Kennung), wird er ersetzt.
+    const originals = (context.confirmedEffects ?? [])
       .map((effect) => parent?.nodes.find((n) => n.nodeKey === effect.nodeId)?.definition as unknown as PlanNode | undefined)
       .filter((def): def is PlanNode => def !== undefined);
-    if (restored.length > 0) candidate = { ...candidate, nodes: [...candidate.nodes, ...restored] };
+    if (originals.length > 0) {
+      const byId = new Map(originals.map((def) => [def.id, def] as const));
+      candidate = { ...candidate, nodes: [...candidate.nodes.map((n) => byId.get(n.id) ?? n), ...originals.filter((def) => !candidate.nodes.some((n) => n.id === def.id))] };
+    }
     let result = validatePlan(candidate, context);
     if (result.valid) return result;
     const remaining = result.issues.filter((i) => i.severity === 'ERROR');

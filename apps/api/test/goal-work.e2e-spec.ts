@@ -253,4 +253,34 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
     expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId, status: 'AWAITING_APPROVAL' } })).toBe(1);
   });
+
+  it('Auskunft nicht belegbar → freies Weiterplanen: lässt das Modell einen bereits ausgeführten Schritt weg oder ändert ihn, stellt ORBIT ihn selbst unverändert wieder her – der Vorgang geht nicht wegen einer Formfrage ohne Zielarbeit an eine Person', async () => {
+    const tenantId = await newTenant();
+    for (const action of ['email.send.information', 'knowledge.answer']) {
+      await prisma.forTenantId(tenantId).policyConfig.upsert({ where: { tenantId_action: { tenantId, action } }, create: { tenantId, action, mode: 'AUTONOMOUS' }, update: { mode: 'AUTONOMOUS' } });
+    }
+    seedTriage({ category: 'GENERAL_INQUIRY' });
+    seedTool('submit_knowledge_answer', { answerable: false, answer: '', sources: [], confidence: 0.2 });
+    // Das freie Weiterplanen lässt „notify_staff“ weg (bereits ausgeführt) und setzt die Anforderungsprüfung mit Weiterplanen-Stelle an.
+    seedTool('submit_process_plan', {
+      goalKeys: ['inquiry.answered', 'human.review'],
+      nodes: [
+        node('sender_check', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('weiter', 'REASSESS', { config: { replan: true } }),
+      ],
+      edges: [edge('sender_check', 'reqs'), edge('reqs', 'weiter')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Erst verstehen, dann mit dem Ergebnis weiterplanen.',
+    });
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage', content: 'Können Sie auch Brandschutztüren einbauen?' }));
+    const caseId = result.case!.id;
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'plan.replan_unavailable' } })).toBe(0);
+    const plans = await prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' }, include: { nodes: true } });
+    expect(plans.length).toBeGreaterThanOrEqual(2);
+    const second = plans[1]!;
+    expect(second.nodes.find((n) => n.nodeKey === 'notify_staff')?.state).toBe('SUCCEEDED'); // wiederhergestellt, nicht wiederholt
+    expect(second.nodes.some((n) => n.nodeKey === 'weiter')).toBe(true);
+  });
 });
