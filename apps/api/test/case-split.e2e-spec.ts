@@ -243,7 +243,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
   it('eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['ANLIEGEN_STANDORT', 'ANLIEGEN_ZUGANG']);
-    const askPlan = (note: string) => ({
+    const askPlan = () => ({
       goalKeys: ['staff.informed'],
       nodes: [
         node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
@@ -282,9 +282,9 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
         siteVisit: { recommended: false, reason: '' },
         nextStep: 'ASK_CUSTOMER',
       });
-    seedPlan(askPlan('Standort geklärt.'));
+    seedPlan(askPlan());
     analysis('standort', 'Standort', 'An welcher Adresse liegt das Objekt?');
-    seedPlan(askPlan('Zugang geklärt.'));
+    seedPlan(askPlan());
     analysis('zugang', 'Zugang', 'Wie kommen wir ins Objekt?');
     const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
     const kids = await children(tenantId, result.case!.id);
