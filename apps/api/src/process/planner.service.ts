@@ -314,6 +314,8 @@ ${describeGoalCatalogue()}
 Zielarbeit bei unbekannten Vorgängen (kein hinterlegter Prozess): Arbeite wie eine Mitarbeiterin bis das Ziel nachgewiesen ist oder ein sachlich notwendiger Warte-, Freigabe- oder Übergabepunkt erreicht ist – nicht nur bis zum ersten Schritt.
 - Verstehen zuerst: RESOLVE_CONTEXT (context.lookup), dann requirements.resolve (ermittelt aus der Nachricht, was bekannt ist und was für das Ziel noch fehlt). Aus Antworten der Kundschaft liest facts.extract_from_message (messageId = sourceRef inbound.latestMessageId) die Angaben aus.
 - Fehlt etwas, das nur die Kundschaft weiß: Rückfrage (communication.draft + email.send, purpose CLARIFICATION, höchstens so viele wie das Limit erlaubt), dann WAIT_EVENT. Nach der Antwort wird neu geplant: lies die Antwort aus, prüfe erneut, handle oder frage gezielt nach.
+- Zweistufig planen: Was gefragt werden muss, weißt du erst nach der Anforderungsprüfung. Liegt unten noch KEIN Ergebnis der Anforderungsprüfung vor, plane in dieser Revision nur das Verstehen (context.lookup, requirements.resolve) und beende sie mit einem REASSESS-Knoten (config.replan = true, ohne ausgehende Kante): ORBIT plant danach mit dem Ergebnis weiter. Eine Übergabe an eine Person gehört erst in die Revision, die das Ergebnis kennt.
+- Liegt unten ein Ergebnis der Anforderungsprüfung mit fehlenden Angaben vor, die nur die Kundschaft kennt: stelle EINE gebündelte Rückfrage (communication.draft mit missing = Ergebnis "missing" von requirements.resolve, dann email.send, purpose CLARIFICATION) und warte darauf (WAIT_EVENT). Übergib nicht ohne Rückfrage – es sei denn, es geht um einen Notfall, um Zusagen, Preise oder Rechtliches, oder die Kundschaft kann nichts dazu liefern. Eine Eingangsbestätigung allein ersetzt die Rückfrage nicht. Informiere die zuständige Person zusätzlich (staff.notify), damit sie den Stand kennt.
 - Bestätige den Eingang nur, wenn die Kundschaft sonst lange nichts hört (purpose ACKNOWLEDGEMENT).
 - Reichen Kontext und Angaben nicht für eine sichere Antwort, oder entscheidet eine Person (Zusagen, Preise, Rechtliches): staff.notify mit Zusammenfassung (was ist bekannt, was fehlt, was ist erfolgt) und MANUAL_TASK – das ist ein zulässiger Endpunkt, kein Scheitern. Nenne nie Preise oder Fristen, die nicht belegt sind.
 - Plane nur Schritte, deren Ergebnis du für das Ziel brauchst; jeder Plan endet an COMPLETE (Ziel nachweisbar), WAIT_EVENT, APPROVAL oder MANUAL_TASK.
@@ -329,6 +331,27 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
   }
 
   /** Betreff und Text der letzten eingegangenen Nachricht des Vorgangs (gekürzt) – der Planer plant sonst nur nach Titel und einzelnen Fakten. */
+  /** Das Ergebnis der Anforderungsprüfung, falls schon vorhanden: was ist bekannt, was fehlt (und wen das betrifft). Aus Nachrichten abgeleitet, daher UNTRUSTED. */
+  private async requirementsBlock(tenantId: string, caseId: string): Promise<string> {
+    const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: 'requirements.analyzed' }, orderBy: { sequence: 'desc' }, select: { payload: true } });
+    const analysis = (event?.payload as { analysis?: { summary?: string; nextStep?: string; missingInformation?: Array<{ key?: string; question?: string }>; knownDetails?: Array<{ label?: string; value?: string }> } } | null | undefined)?.analysis;
+    if (!analysis) return 'Ergebnis der Anforderungsprüfung: noch nicht vorhanden.';
+    const known = (analysis.knownDetails ?? []).map((d) => `- ${d.label ?? ''}: ${d.value ?? ''}`).join('\n') || '(nichts Belegtes)';
+    const missing = (analysis.missingInformation ?? []).map((m) => `- ${m.key ?? ''}: ${m.question ?? ''}`).join('\n') || '(nichts fehlt)';
+    return `Ergebnis der Anforderungsprüfung (UNTRUSTED, aus der Nachricht abgeleitet):\n${wrapUntrustedContent(`Zusammenfassung: ${analysis.summary ?? ''}\nBekannt:\n${known}\nFehlend (nur die Kundschaft kann das beantworten):\n${missing}`)}`;
+  }
+
+  /** Ein interner Auftrag hat keine Nachricht der Kundschaft: kein Absender, kein Kundenkontakt – das Ziel ergibt sich aus der Anweisung (und ihrer Frist). */
+  private async orderBlock(tenantId: string, caseId: string): Promise<string> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const order = await scoped.caseEvent.findFirst({ where: { caseId, type: 'order.created' }, select: { payload: true } });
+    if (!order) return '';
+    const hasMessage = (await scoped.emailMessage.count({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' } })) > 0;
+    if (hasMessage) return '';
+    const dueAt = (order.payload as { dueAt?: string | null } | null | undefined)?.dueAt;
+    return `Interner Auftrag ohne Nachricht der Kundschaft: es gibt keinen Absender – plane KEIN context.lookup, KEIN requirements.resolve, KEINE Kommunikation mit der Kundschaft. Erreichbare Ergebnisse sind: Person informiert (staff.notify), Aufgabe angelegt (MANUAL_TASK), Prüfung durch eine Person (human.review).${dueAt ? ` Die Frist (${dueAt}) ist eine Frist, kein Ziel: das fachliche Ziel bleibt die Sache selbst; die Aufgabe trägt die Fälligkeit automatisch.` : ''}`;
+  }
+
   private async latestInboundText(tenantId: string, caseId: string): Promise<string> {
     const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { subject: true, bodyText: true, bodyPreview: true } });
     if (!message) {
@@ -351,7 +374,7 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
     Ausgaben, die spätere Schritte lesen dürfen: ${c.contract.outputs.join(', ')}${c.contract.producesFacts?.length ? `
     Legt selbst an (als Fakt bindbar): ${c.contract.producesFacts.join(', ')}` : ''}`
           : '';
-        return `- ${c.key}: ${c.description} [sideEffect=${c.sideEffect}, executable=${exec?.executable ?? false}${exec && !exec.executable ? `, Grund: ${exec.reasons.join(' ')}` : ''}${c.policyActionByPurpose ? `, purposes=${Object.keys(c.policyActionByPurpose).join('|')}` : ''}]${contract}`;
+        return `- ${c.key}: ${c.description} [sideEffect=${c.sideEffect}, executable=${exec?.executable ?? false}${exec && !exec.executable ? `, Grund: ${exec.reasons.join(' ')}` : ''}${c.policyActionByPurpose ? `, purposes=${Object.keys(c.policyActionByPurpose).join('|')}` : c.contract?.purposes ? `, purposes=${c.contract.purposes.join('|')} (config.purpose Pflicht, gleich wie beim Versand)` : ''}]${contract}`;
       })
       .join('\n');
     const factLines = facts.map((f) => `- ${f.key} (${f.status}, ${f.sourceType}): ${JSON.stringify(f.value).slice(0, 200)}`).join('\n') || '(keine)';
@@ -366,6 +389,8 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
       blueprintText,
       `Absichtsbeschreibung:\n${wrapUntrustedContent(request.intentSummary ?? caseRow.title)}`,
       `Letzte Nachricht der Kundschaft (UNTRUSTED):\n${wrapUntrustedContent(await this.latestInboundText(tenantId, caseRow.id))}`,
+      await this.requirementsBlock(tenantId, caseRow.id),
+      await this.orderBlock(tenantId, caseRow.id),
       `Bekannte Fakten (UNTRUSTED, aus externen Nachrichten):\n${wrapUntrustedContent(factLines)}`,
       `Verfügbare Fähigkeiten:\n${capabilityLines}`,
       `${await this.profileContext.promptFor(tenantId).catch(() => '') || 'Betriebsprofil: nicht hinterlegt.'}`,

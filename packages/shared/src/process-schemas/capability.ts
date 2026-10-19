@@ -45,6 +45,8 @@ export const CapabilityDefinitionSchema = z
         outputs: z.array(z.string().min(1).max(40)).max(12),
         /** Fakten, die diese Fähigkeit selbst anlegt – spätere Schritte dürfen sie binden. */
         producesFacts: z.array(z.string().min(1).max(60)).max(5).optional(),
+        /** Zulässige Zwecke (`config.purpose`), wenn die Fähigkeit ohne Zweck nicht ausführbar ist, ohne dass ein Zweck eine eigene Policy-Aktion hätte (z. B. der Entwurf einer Nachricht). */
+        purposes: z.array(z.string().min(1).max(40)).max(12).optional(),
         /** `BLUEPRINT_ONLY`: nur in einem hinterlegten Prozess nutzbar (Preise, Angebote, Anforderungsermittlung) – ein frei geplanter Ablauf darf sie nicht verwenden. */
         scope: z.enum(['ADHOC', 'BLUEPRINT_ONLY']),
       })
@@ -136,6 +138,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
         { name: 'kind', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "kind"' },
       ],
       outputs: ['draftId', 'version', 'contentHash', 'to', 'subject'],
+      purposes: ['CLARIFICATION', 'QUOTE_DELIVERY', 'ACKNOWLEDGEMENT', 'STATUS_UPDATE', 'ATTACHMENT_REQUEST', 'INFORMATION', 'APPOINTMENT_CONFIRMATION'],
       scope: 'ADHOC',
     },
     idempotencyStrategy: 'PAYLOAD_HASH',

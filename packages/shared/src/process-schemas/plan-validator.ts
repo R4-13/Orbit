@@ -272,11 +272,12 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   const completeNodes = nodes.filter((n) => n.type === 'COMPLETE');
   const out = outgoing(validEdges);
   // A revision may end in a wait or a manual task on purpose (§11.2: the answer continues the case in a new revision).
-  const endsInPause = nodes.some((n) => (n.type === 'WAIT_EVENT' || n.type === 'MANUAL_TASK') && (out.get(n.id) ?? []).length === 0);
+  const isReplanPoint = (n: PlanNode) => n.type === 'REASSESS' && n.config.replan === true;
+  const endsInPause = nodes.some((n) => (n.type === 'WAIT_EVENT' || n.type === 'MANUAL_TASK' || isReplanPoint(n)) && (out.get(n.id) ?? []).length === 0);
   if (completeNodes.length === 0 && !endsInPause) add({ code: 'NO_TERMINAL', check: 4, message: 'Der Plan hat weder einen Abschlussknoten (COMPLETE) noch ein definiertes Ende in einer Wartestelle.' });
   for (const node of nodes) {
     // A wait ends the current revision on purpose (§11.2): the answer arrives as an event and continues in a new revision.
-    if (node.type === 'COMPLETE' || node.type === 'WAIT_EVENT' || node.type === 'MANUAL_TASK') continue;
+    if (node.type === 'COMPLETE' || node.type === 'WAIT_EVENT' || node.type === 'MANUAL_TASK' || isReplanPoint(node)) continue;
     if ((out.get(node.id) ?? []).length === 0) add({ code: 'DEAD_END', check: 4, nodeId: node.id, message: `Knoten "${node.id}" führt nirgendwohin (kein Fehler-/Abschlusspfad).` });
   }
 
@@ -364,6 +365,9 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     const purpose = typeof node.config.purpose === 'string' ? node.config.purpose : undefined;
     if (cap.policyActionByPurpose && (!purpose || !(purpose in cap.policyActionByPurpose))) {
       add({ code: 'PURPOSE_MISSING', check: 6, nodeId: node.id, message: `"${cap.key}" braucht einen Zweck (${Object.keys(cap.policyActionByPurpose).join(', ')}), damit die richtige Policy greift.` });
+    }
+    if (!blueprint && cap.contract?.purposes && (!purpose || !cap.contract.purposes.includes(purpose))) {
+      add({ code: 'PURPOSE_MISSING', check: 6, nodeId: node.id, message: `"${cap.key}" braucht in config.purpose einen der Zwecke ${cap.contract.purposes.join(', ')} (derselbe Zweck wie der anschließende Versand).` });
     }
     const action = purpose && cap.policyActionByPurpose?.[purpose] ? cap.policyActionByPurpose[purpose] : cap.policyAction;
     const mode = ctx.policyModes.get(action);

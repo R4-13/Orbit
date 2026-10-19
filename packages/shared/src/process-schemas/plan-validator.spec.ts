@@ -197,6 +197,24 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(clarificationPlan(), ctx({ limits: { maxSteps: 30, maxExternalActions: 4, maxAutoQuestions: 0 } })))).toContain('LIMIT_QUESTIONS');
   });
 
+  it('eine Revision darf mit einer „Weiterplanen“-Stelle enden (REASSESS, replan) – ein gewöhnlicher REASSESS ohne Fortsetzung ist weiter eine Sackgasse', () => {
+    const understanding = clarificationPlan({ nodes: [node('resolve', 'EVALUATE_REQUIREMENTS'), node('again', 'REASSESS', { config: { replan: true } })], edges: [edge('e1', 'resolve', 'again')] });
+    expect(validatePlan(understanding, ctx()).valid).toBe(true);
+    const plain = clarificationPlan({ nodes: [node('resolve', 'EVALUATE_REQUIREMENTS'), node('again', 'REASSESS')], edges: [edge('e1', 'resolve', 'again')] });
+    expect(codes(validatePlan(plain, ctx()))).toEqual(expect.arrayContaining(['NO_TERMINAL', 'DEAD_END']));
+  });
+
+  it('der Entwurf einer Nachricht braucht seinen Zweck (config.purpose) – sonst scheitert er erst bei der Ausführung', () => {
+    const plan = clarificationPlan();
+    const draft = plan.nodes.find((n) => n.capability?.key === 'communication.draft')!;
+    draft.config = {};
+    expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).toContain('PURPOSE_MISSING');
+    draft.config = { purpose: 'NICHT_VORHANDEN' };
+    expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).toContain('PURPOSE_MISSING');
+    draft.config = { purpose: 'CLARIFICATION' };
+    expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).not.toContain('PURPOSE_MISSING');
+  });
+
   it('a complete plan with a terminal node is valid, and a plan without one is not', () => {
     const complete = clarificationPlan();
     complete.nodes.push(node('done', 'COMPLETE'));
