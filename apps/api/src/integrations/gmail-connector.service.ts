@@ -384,6 +384,28 @@ export class GmailConnectorService {
     return { eventId: body.id ?? input.eventId, htmlLink: body.htmlLink, alreadyExisted: false };
   }
 
+  /**
+   * Liest einen Termin zurück (Google `events.get`): Rücklesung der Wirkung (FX-08). Gibt `undefined` zurück, wenn der Termin nicht (mehr) existiert.
+   */
+  async getCalendarEvent(tenantId: string, input: { calendarId: string; eventId: string }): Promise<{ eventId: string; status: string; start?: Date; end?: Date } | undefined> {
+    const integration = await this.prisma.forTenantId(tenantId).integration.findUnique({ where: { tenantId_connectorType: { tenantId, connectorType: 'GMAIL' } } });
+    if (!integration || integration.status !== 'CONNECTED') throw new IntegrationUnavailableError('Der Kalender ist nicht verbunden.');
+    const accessToken = await this.getValidAccessToken(tenantId);
+    let response: Response;
+    try {
+      response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new ExternalSystemError('Der Kalender hat nicht geantwortet.', { calendarId: input.calendarId });
+    }
+    if (response.status === 404 || response.status === 410) return undefined;
+    if (!response.ok) throw new ExternalSystemError(`Der Kalender hat die Rücklesung abgelehnt (${response.status}).`, { status: response.status });
+    const body = (await response.json()) as { id?: string; status?: string; start?: { dateTime?: string }; end?: { dateTime?: string } };
+    return { eventId: body.id ?? input.eventId, status: body.status ?? 'confirmed', start: body.start?.dateTime ? new Date(body.start.dateTime) : undefined, end: body.end?.dateTime ? new Date(body.end.dateTime) : undefined };
+  }
+
   private async getValidAccessToken(tenantId: string): Promise<string> {
     const inFlight = this.refreshing.get(tenantId);
     if (inFlight) return inFlight;

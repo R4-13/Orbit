@@ -554,9 +554,13 @@ model Case {
   /// Orchestrator-Lease (§12.3): nur ein Worker bearbeitet einen Case; Ablauf wiederholt keine bereits gestartete externe Wirkung blind.
   leaseOwner          String?                 @map("lease_owner")
   leaseExpiresAt      DateTime?               @map("lease_expires_at")
+  /// Teilvorgang einer Nachricht mit mehreren Anliegen (FX-02/FX-06): der Hauptvorgang, der die Nachricht trägt. Eine eigene Beziehung, weil sie abfragbar, referenzgesichert und dauerhaft sein muss (Roll-up, Anzeige).
+  parentCaseId        String?                 @map("parent_case_id")
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   assignee User?  @relation("CaseAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  parent   Case?  @relation("CaseSplit", fields: [parentCaseId], references: [id], onDelete: SetNull)
+  children Case[] @relation("CaseSplit")
 
   tasks               Task[]
   documents           Document[]
@@ -583,6 +587,7 @@ model Case {
   @@index([tenantId, orchestrationStatus])
   @@index([tenantId, updatedAt])
   @@index([orchestrationStatus, updatedAt])
+  @@index([tenantId, parentCaseId])
   @@map("cases")
 }
 
@@ -2024,6 +2029,8 @@ model ActionIntent {
   /// SHA-256 ueber die kanonische Nutzlast; eine Freigabe bindet daran (Section 14.4).
   payloadHash    String             @map("payload_hash")
   idempotencyKey String             @map("idempotency_key")
+  /// Wirkungsschlüssel (FA-10): das Geschäftsobjekt, auf das die Wirkung zielt (z. B. ein Terminfenster). Wird vom Werkzeug beim Beanspruchen gesetzt; gleiche Schlüssel in verschiedenen Vorgängen werden koordiniert.
+  resourceKey    String?            @map("resource_key")
   status         ActionIntentStatus @default(PREPARED)
   approvalId     String?            @map("approval_id")
   errorCode      String?            @map("error_code")
@@ -2036,6 +2043,7 @@ model ActionIntent {
 
   @@unique([tenantId, idempotencyKey])
   @@index([tenantId, caseId, status])
+  @@index([tenantId, resourceKey])
   @@map("action_intents")
 }
 

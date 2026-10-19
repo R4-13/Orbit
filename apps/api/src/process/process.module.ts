@@ -7,6 +7,7 @@ import { ApprovalsModule } from '../approvals/approvals.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
 import { ActionLedgerService } from './action-ledger.service';
+import { CaseRollupService } from './case-rollup.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseCommandsController } from './case-commands.controller';
@@ -58,6 +59,7 @@ import { ShadowPlanService } from './shadow-plan.service';
     CaseLifecycleService,
     PlanStoreService,
     ActionLedgerService,
+    CaseRollupService,
     CapabilityRegistryService,
     BlueprintRegistryService,
     PlannerService,

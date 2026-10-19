@@ -9,6 +9,7 @@ import { ContactsService } from '../src/contacts/contacts.service';
 import { IntakeService } from '../src/intake/intake.service';
 import { GmailConnectorService } from '../src/integrations/gmail-connector.service';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
+import { PolicyEnforcementService } from '../src/policy/policy-enforcement.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CaseEventsService } from '../src/process/case-events.service';
 import { CaseFactsService } from '../src/process/case-facts.service';
@@ -190,9 +191,9 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
   });
 
   describe('Termin buchen', () => {
-    async function caseWithProposal(tenantId: string, agreed: string) {
+    async function caseWithProposal(tenantId: string, agreed: string, sender = SENDER, subject = 'Termin') {
       seedTriage();
-      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Termin', content: 'Ich hätte gern einen Termin.' }));
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject, content: 'Ich hätte gern einen Termin.', sender: { address: sender, displayName: 'Kunde' } }));
       const caseId = result.case!.id;
       const start = new Date(Date.now() + 3 * 24 * 3600 * 1000);
       start.setMinutes(0, 0, 0);
@@ -230,6 +231,87 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       expect(sent).toHaveLength(1);
       expect(sent[0]!.to).toBe(SENDER);
       expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'appointment.booked' } })).toBe(1);
+    });
+
+    it('Wirkungsschlüssel (FA-10): dasselbe Terminfenster wird nur einem Vorgang gegeben – der zweite bucht nicht doppelt, auch wenn der Kalender es noch frei meldet', async () => {
+      const tenantId = await newTenant({ calendar: true, profile: false });
+      const first = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.', 'eins@kunde.example');
+      const second = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.', 'zwei@kunde.example', 'Anderer Termin');
+      expect(second.caseId).not.toBe(first.caseId);
+      expect(second.slots[0]!.start).toBe(first.slots[0]!.start);
+      const orchestrator = app.get(OrchestratorService);
+
+      seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+      await orchestrator.startProcedure(tenantId, first.caseId, bookingProcedure() as never);
+      await orchestrator.advance(tenantId, first.caseId);
+      expect(created).toHaveLength(1);
+      const intent = await prisma.forTenantId(tenantId).actionIntent.findFirstOrThrow({ where: { caseId: first.caseId, capabilityKey: 'calendar.book' } });
+      expect(intent.resourceKey).toMatch(/^calendar:primary:/);
+
+      seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+      await orchestrator.startProcedure(tenantId, second.caseId, bookingProcedure() as never);
+      await orchestrator.advance(tenantId, second.caseId);
+      expect(created).toHaveLength(1); // kein zweiter Termin im selben Fenster
+      expect(await nodeState(tenantId, second.caseId, 'book')).toBe('FAILED');
+      const row = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: second.caseId } });
+      expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+      expect(row.attentionReasons.join(' ')).toMatch(/vergeben/);
+      expect(sent).toHaveLength(1); // nur die Bestätigung des ersten Vorgangs
+    });
+
+    it('Prüfung unmittelbar vor der Wirkung (FX-08): wird der Vorgang zwischen Regelprüfung und Ausführung angehalten, wird nichts gebucht', async () => {
+      const tenantId = await newTenant({ calendar: true, profile: false });
+      const { caseId } = await caseWithProposal(tenantId, 'Der erste Termin passt mir gut.');
+      seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+      const policy = app.get(PolicyEnforcementService);
+      const original = policy.resolveMode.bind(policy);
+      const spy = jest.spyOn(policy, 'resolveMode').mockImplementation(async (tenant: string, action: never) => {
+        const mode = await original(tenant, action);
+        const running = await prisma.forTenantId(tenant).processPlanNode.count({ where: { nodeKey: 'book', state: 'RUNNING' } });
+        if ((action as string) === 'meeting.create' && running > 0) await prisma.withRlsBypass((tx) => tx.case.update({ where: { id: caseId }, data: { orchestrationStatus: 'PAUSED' } }));
+        return mode;
+      });
+      try {
+        const orchestrator = app.get(OrchestratorService);
+        await orchestrator.startProcedure(tenantId, caseId, bookingProcedure() as never);
+        await orchestrator.advance(tenantId, caseId);
+      } finally {
+        spy.mockRestore();
+      }
+      expect(created).toEqual([]);
+      expect(sent).toEqual([]);
+      const node = await prisma.forTenantId(tenantId).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'book' } });
+      expect(node).toMatchObject({ state: 'BLOCKED', errorCode: 'CASE_STATE_CHANGED' });
+      expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('PAUSED');
+    });
+
+    it('Rücklesung (FX-08): steht der Termin nicht wie gebucht im Kalender, ist das Ergebnis ungewiss und die Bestätigung geht nicht hinaus; bei bestätigter Rücklesung ist es belegt', async () => {
+      const readBack = jest.spyOn(GmailConnectorService.prototype, 'getCalendarEvent');
+      try {
+        const tenantA = await newTenant({ calendar: true, profile: false });
+        const a = await caseWithProposal(tenantA, 'Der erste Termin passt mir gut.');
+        seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+        readBack.mockImplementationOnce(async (_tenant, input) => ({ eventId: input.eventId, status: 'cancelled' }));
+        const orchestrator = app.get(OrchestratorService);
+        await orchestrator.startProcedure(tenantA, a.caseId, bookingProcedure() as never);
+        await orchestrator.advance(tenantA, a.caseId);
+        expect(created).toHaveLength(1);
+        expect(sent).toEqual([]);
+        expect(await nodeState(tenantA, a.caseId, 'book')).toBe('OUTCOME_UNKNOWN');
+        expect((await prisma.forTenantId(tenantA).case.findUniqueOrThrow({ where: { id: a.caseId } })).orchestrationStatus).toBe('MANUAL_REVIEW');
+
+        const tenantB = await newTenant({ calendar: true, profile: false });
+        const b = await caseWithProposal(tenantB, 'Der erste Termin passt mir gut.');
+        seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+        readBack.mockImplementationOnce(async (_tenant, input) => ({ eventId: input.eventId, status: 'confirmed', start: new Date(b.slots[0]!.start), end: new Date(b.slots[0]!.end) }));
+        await orchestrator.startProcedure(tenantB, b.caseId, bookingProcedure() as never);
+        await orchestrator.advance(tenantB, b.caseId);
+        expect(sent).toHaveLength(1);
+        const booked = await prisma.forTenantId(tenantB).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'book' } });
+        expect(booked.output).toMatchObject({ readBack: 'CONFIRMED' });
+      } finally {
+        readBack.mockRestore();
+      }
     });
 
     it('ohne eindeutige oder belegte Wahl wird nichts gebucht', async () => {

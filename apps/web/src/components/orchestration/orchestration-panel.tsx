@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CASE_ORCHESTRATION_LABELS, type CaseGraphView } from '@orbit/shared';
 import { Badge, ErrorState, type BadgeTone } from '@orbit/ui';
@@ -100,6 +101,34 @@ export function OrchestrationPanel({ caseId }: { caseId: string }) {
           {streamInfo.label}
         </span>
       </div>
+
+      {graph.relations ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800" aria-label="Verknüpfte Vorgänge">
+          {graph.relations.parent ? (
+            <p>
+              Teilvorgang von{' '}
+              <Link className="font-medium text-brand underline" href={`/cases/${graph.relations.parent.id}`}>
+                {graph.relations.parent.title}
+              </Link>
+            </p>
+          ) : null}
+          {graph.relations.children.length > 0 ? (
+            <>
+              <p className="font-medium">Teilvorgänge dieser Nachricht</p>
+              <ul className="mt-1 space-y-0.5">
+                {graph.relations.children.map((child) => (
+                  <li key={child.id} className="flex flex-wrap items-center gap-2">
+                    <Link className="text-brand underline" href={`/cases/${child.id}`}>
+                      {child.title}
+                    </Link>
+                    <Badge tone={STATUS_TONES[child.status] ?? 'neutral'}>{CASE_ORCHESTRATION_LABELS[child.status] ?? child.status}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       {graph.attentionReasons.length > 0 ? (
         <ul className="space-y-1 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" aria-label="Was jetzt Aufmerksamkeit braucht">

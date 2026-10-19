@@ -109,6 +109,8 @@ export interface CaseGraphView {
   revisions: Array<{ revision: number; status: string; source: string; createdAt: string; explanation: string; diff: { added: string[]; removed: string[]; changed: string[]; kept: string[] } | null }>;
   /** The blueprint the case runs on, if any. */
   blueprint?: { key: string; version: string; title: string };
+  /** Verknüpfte Vorgänge einer aufgeteilten Nachricht (FX-02): der Hauptvorgang bzw. die Teilvorgänge. */
+  relations?: { parent?: { id: string; title: string; status: CaseOrchestrationStatusValue }; children: Array<{ id: string; title: string; status: CaseOrchestrationStatusValue }> };
 }
 
 /** What the user sees before confirming an outgoing message or a quote (§17.2: recipient, text, attachment, amount). */

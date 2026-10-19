@@ -13,6 +13,8 @@ export const FEATURE_FLAGS = {
   AI_BYOK: 'ai.byok',
   /** Schattenbetrieb des Vorgangs-Agenten: zu Vorgängen des bisherigen Wegs wird mitgeplant, aber nichts ausgeführt (Konzept Flexible Autonomie §9 Schritt 1). Standard AUS. */
   PLANNER_SHADOW: 'planner.shadow',
+  /** Aufteilung einer Nachricht mit mehreren Anliegen in verknüpfte Teilvorgänge (ADD-3.1). Standard AUS. */
+  PROCESS_SPLIT: 'process.split',
 } as const;
 
 // ── Kill Switches ────────────────────────────────────────────────────────────────────────────────────────────────────

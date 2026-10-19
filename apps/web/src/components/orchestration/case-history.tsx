@@ -54,6 +54,14 @@ function describe(event: CaseEventRow): string {
         ? `Bezieht sich vermutlich auf einen früheren Vorgang – ${candidates.length} kommen infrage, bitte zuordnen`
         : `Bezieht sich auf einen früheren Vorgang${candidates[0]?.title ? `: ${candidates[0].title}` : ''}`;
     }
+    case 'case.split': {
+      const kids = Array.isArray(p.children) ? (p.children as unknown[]) : [];
+      return `Nachricht mit mehreren Anliegen in ${kids.length} Teilvorgänge aufgeteilt`;
+    }
+    case 'case.split_from':
+      return `Teilvorgang einer Nachricht mit mehreren Anliegen${p.goal ? `: ${String(p.goal)}` : ''}`;
+    case 'plan.scope_approved':
+      return 'Umfang der Wirkungen des Plans freigegeben';
     case 'appointment.proposed':
       return 'Termine vorgeschlagen';
     case 'appointment.booked':

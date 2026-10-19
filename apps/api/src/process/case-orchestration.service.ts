@@ -96,6 +96,11 @@ export class CaseOrchestrationService {
     const graph = wanted ? await this.store.load(viewer.tenantId, wanted.id) : undefined;
     const isLatest = !graph || graph.plan.id === latest?.id;
     const blueprint = await this.blueprintOf(viewer.tenantId, caseRow);
+    const [parentRow, childRows] = await Promise.all([
+      caseRow.parentCaseId ? scoped.case.findFirst({ where: { id: caseRow.parentCaseId }, select: { id: true, title: true, orchestrationStatus: true } }) : Promise.resolve(null),
+      scoped.case.findMany({ where: { parentCaseId: caseId }, select: { id: true, title: true, orchestrationStatus: true }, orderBy: { createdAt: 'asc' } }),
+    ]);
+    const relations = parentRow || childRows.length > 0 ? { ...(parentRow ? { parent: { id: parentRow.id, title: parentRow.title, status: parentRow.orchestrationStatus } } : {}), children: childRows.map((c) => ({ id: c.id, title: c.title, status: c.orchestrationStatus })) } : undefined;
 
     const base = {
       caseId,
@@ -117,6 +122,7 @@ export class CaseOrchestrationService {
         diff: (r.diffFromParent as { added: string[]; removed: string[]; changed: string[]; kept: string[] } | null) ?? null,
       })),
       blueprint: blueprint ? { key: blueprint.key, version: caseRow.blueprintVersion ?? blueprint.version, title: blueprint.title } : undefined,
+      relations,
     };
 
     if (mode === 'DEFINITION') {

@@ -25,6 +25,8 @@ import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from '.
 import { ReferenceProcessService } from './reference-process.service';
 import { renderSimplePdf, type PdfLine } from './simple-pdf';
 import { CustomerRecordService } from '../customer/customer-record.service';
+import { messageCaseIds } from '../case-scope';
+import { ActionLedgerService } from '../action-ledger.service';
 
 const SUBMIT_FACTS_TOOL = 'submit_extracted_facts';
 /** Zwecke einer vorbereiteten Mitteilung; der Zweck bestimmt die Regel (Policy), die vor dem Senden gilt (siehe `email.send` im Fähigkeitenverzeichnis). */
@@ -83,6 +85,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly appointments: AppointmentSlotsService,
     private readonly customers: CustomerRecordService,
     private readonly attachmentTexts: AttachmentTextService,
+    private readonly ledger: ActionLedgerService,
   ) {}
 
   onModuleInit(): void {
@@ -176,7 +179,7 @@ export class ReferenceProcessTools implements OnModuleInit {
       execute: async (_input, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
         const scoped = this.prisma.forTenantId(ctx.tenantId);
-        const inbound = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+        const inbound = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
         if (!inbound) throw new ToolFailedError('Zu diesem Vorgang liegt keine eingegangene Nachricht vor.', { errorCode: 'NO_INBOUND_MESSAGE' });
 
         const created = await this.facts.propose(ctx.tenantId, caseId, [
@@ -414,7 +417,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         if (/^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmaster|bounces?)([+._-]|@)/i.test(replyTarget)) {
           throw new ToolFailedError('Die absendende Adresse ist ein automatischer Absender; es wird keine Nachricht vorbereitet.', { errorCode: 'AUTOMATED_SENDER' });
         }
-        const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+        const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
         const companyName = await this.tenantName(ctx.tenantId);
 
         const lang = await this.languageFor(ctx.tenantId, inbound);
@@ -512,6 +515,18 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const replyTarget = await this.confirmedFact(ctx.tenantId, caseId, 'contact.email');
         if (typeof replyTarget !== 'string' || replyTarget.toLowerCase() !== draft.toAddress.toLowerCase()) {
           throw new ToolFailedError('Der Empfänger stimmt nicht mehr mit der bestätigten Antwortadresse überein.', { errorCode: 'RECIPIENT_NOT_VERIFIED' });
+        }
+
+        // Wirkungsschlüssel (FA-10): Teilvorgänge einer aufgeteilten Nachricht bestätigen den Eingang nur einmal – der erste Teilvorgang tut es, die übrigen sind damit abgedeckt.
+        if (input.purpose === 'ACKNOWLEDGEMENT') {
+          const root = (await messageCaseIds(this.prisma, ctx.tenantId, caseId))[1] ?? caseId;
+          const claim = await this.ledger.claimResource(ctx.tenantId, ctx.agentRunId, `mail.ack:${draft.toAddress.toLowerCase()}:${root}`, 'EXCLUSIVE');
+          if (!claim.claimed) {
+            await scoped.communicationDraft.update({ where: { id: draft.id }, data: { status: 'SUPERSEDED' } });
+            // Der Beleg ist der der abdeckenden Bestätigung des anderen Teilvorgangs: es ist derselbe Versand, keine neue Wirkung.
+            const covering = (await this.ledger.receipts(ctx.tenantId, claim.holder.intentId)).find((r) => r.status === 'CONFIRMED');
+            return { skipped: 'ALREADY_ACKNOWLEDGED', coveredByCaseId: claim.holder.caseId, providerRef: covering?.providerRef ?? `covered-by:${claim.holder.intentId}`, recipient: draft.toAddress, executionMode: covering?.executionMode === 'SIMULATED' ? 'SIMULATED' : 'LIVE' };
+          }
         }
 
         const attachments = [];

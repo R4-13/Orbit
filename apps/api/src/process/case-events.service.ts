@@ -54,6 +54,10 @@ export const CASE_EVENT_TYPES = {
   SHADOW_PLAN_PROPOSED: 'shadow.plan_proposed',
   /** Eine Person hat den Umfang der Wirkungen eines frei geplanten Plans freigegeben; spätere Neuplanungen innerhalb dieses Umfangs brauchen keine neue Freigabe. */
   PLAN_SCOPE_APPROVED: 'plan.scope_approved',
+  /** Der Hauptvorgang einer Nachricht mit mehreren Anliegen wurde in Teilvorgänge aufgeteilt (nennt die Teilvorgänge). */
+  CASE_SPLIT: 'case.split',
+  /** Dieser Vorgang ist ein Teilvorgang (nennt den Hauptvorgang und das Anliegen). */
+  CASE_SPLIT_FROM: 'case.split_from',
 } as const;
 
 /**

@@ -11,6 +11,7 @@ import { CaseFactsService } from '../case-facts.service';
 import { REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, analysisPrompt, evaluateAnalysis, type AnalysisResult, type RequestAnalysis } from './request-analysis';
 import { ReferenceProcessService } from './reference-process.service';
 import { ProfileContextService } from '../../organization/profile-context.service';
+import { messageCaseIds } from '../case-scope';
 
 const MAX_BODY_CHARS = 12_000;
 
@@ -76,7 +77,7 @@ export class RequestAnalysisService {
     const alreadyAsked = await scoped.emailMessage.count({ where: { caseId: ctx.caseId, direction: 'OUTBOUND', OR: [{ providerMessageId: null }, { NOT: { providerMessageId: { startsWith: 'sim-' } } }] } });
     if (alreadyAsked > 0) return { mode: 'LIVE', skipped: 'ALREADY_ASKED' };
 
-    const message = await scoped.emailMessage.findFirst({ where: { caseId: ctx.caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' } });
+    const message = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, ctx.caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' } });
     if (!message) return { mode: 'SIMULATED', skipped: 'NO_MESSAGE' };
 
     const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {

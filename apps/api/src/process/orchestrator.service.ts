@@ -38,6 +38,7 @@ import { runInCaseContext } from '../common/case-context';
 import { PlannerService } from './planner.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
+import { CaseRollupService } from './case-rollup.service';
 import { assertProcessingPath } from './processing-path';
 
 const LEASE_MS = 60_000;
@@ -107,6 +108,7 @@ export class OrchestratorService {
     private readonly approvals: ApprovalsService,
     private readonly audit: AuditService,
     private readonly live: LiveReconciliationService,
+    private readonly rollup: CaseRollupService,
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
   ) {}
 
@@ -176,8 +178,14 @@ export class OrchestratorService {
 
   // ── The advance loop ────────────────────────────────────────────────────────
 
-  advance(tenantId: string, caseId: string): Promise<AdvanceResult> {
-    return runInCaseContext(caseId, () => this.advanceInContext(tenantId, caseId));
+  async advance(tenantId: string, caseId: string): Promise<AdvanceResult> {
+    const result = await runInCaseContext(caseId, () => this.advanceInContext(tenantId, caseId));
+    // Ein Teilvorgang (aufgeteilte Nachricht, FX-02) meldet seinen Stand an den Hauptvorgang, der erst mit allen Teilvorgängen schließt.
+    if (result.status !== 'LEASED_ELSEWHERE') {
+      const parent = await this.prisma.forTenantId(tenantId).case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } });
+      if (parent?.parentCaseId) await this.rollup.update(tenantId, parent.parentCaseId);
+    }
+    return result;
   }
 
   private async advanceInContext(tenantId: string, caseId: string): Promise<AdvanceResult> {
@@ -433,6 +441,14 @@ export class OrchestratorService {
         }
         await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'AWAITING_APPROVAL' });
         await this.lifecycle.transition(tenantId, caseRow.id, { to: 'WAITING_FOR_APPROVAL', attentionReasons: [`${def.title}: Freigabe erforderlich.`] });
+        return;
+      }
+      // Prüfung unmittelbar vor der Wirkung (FX-08): Zwischen der Vorbereitung bzw. Freigabe und dem Versand kann der Vorgang angehalten, beendet oder neu geplant worden sein
+      // (z. B. durch die Notbremse oder eine Person). Ein Plan, der auf die Planfreigabe wartet, führt nur verstehende Schritte aus (nie eine Wirkung). Dann wirkt nichts mehr; der Schritt bleibt ohne Wirkung blockiert und die Absicht bleibt unverändert nachvollziehbar.
+      const latest = await this.loadCase(tenantId, caseRow.id);
+      const planNow = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { id: graph.plan.id }, select: { status: true } });
+      if (TERMINAL_CASE_STATUSES.has(latest.orchestrationStatus) || latest.orchestrationStatus === 'PAUSED' || !(planNow?.status === 'ACTIVE' || planNow?.status === 'AWAITING_APPROVAL')) {
+        await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'CASE_STATE_CHANGED', errorMessage: 'Der Vorgang wurde vor der Ausführung angehalten, beendet oder neu geplant; es wurde nichts ausgeführt.' });
         return;
       }
       if (!(await this.ledger.beginDispatch(tenantId, intent.id))) return; // someone else owns the dispatch

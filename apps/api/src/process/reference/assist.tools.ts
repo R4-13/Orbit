@@ -12,6 +12,7 @@ import { AttentionService } from '../../organization/attention.service';
 import { ProfileContextService } from '../../organization/profile-context.service';
 import { PolicyEnforcementService } from '../../policy/policy-enforcement.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActionLedgerService } from '../action-ledger.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { CustomerRecordService, splitDisplayName } from '../customer/customer-record.service';
@@ -20,6 +21,7 @@ import { buildCalendarPool, pickCalendar, type PoolCalendar } from './calendar-p
 import { buildHandoffSummary } from './handoff-summary';
 import { APPOINTMENT_AGREED_KEY, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
+import { messageCaseIds } from '../case-scope';
 
 const SUBMIT_KNOWLEDGE_TOOL = 'submit_knowledge_answer';
 const SUBMIT_SLOT_TOOL = 'submit_slot_choice';
@@ -68,6 +70,7 @@ export class AssistProcessTools implements OnModuleInit {
     private readonly analysis: RequestAnalysisService,
     private readonly customers: CustomerRecordService,
     private readonly contacts: ContactsService,
+    private readonly ledger: ActionLedgerService,
   ) {}
 
   onModuleInit(): void {
@@ -113,7 +116,7 @@ export class AssistProcessTools implements OnModuleInit {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
         let question = input.question?.trim();
         if (!question) {
-          const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+          const inbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
           if (!inbound) throw new ToolFailedError('Zu diesem Vorgang liegt keine eingegangene Nachricht vor.', { errorCode: 'NO_INBOUND_MESSAGE' });
           question = `Betreff: ${inbound.subject ?? ''}\n\n${(inbound.bodyText ?? inbound.bodyPreview ?? '').slice(0, MAX_TEXT_CHARS)}`;
         }
@@ -196,7 +199,7 @@ ${profile}`);
   private async handoffFor(tenantId: string, caseId: string, customer: { name: string; email: string }, note?: string) {
     const scoped = this.prisma.forTenantId(tenantId);
     const caseRow = await scoped.case.findUnique({ where: { id: caseId }, select: { title: true } });
-    const first = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
+    const first = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
     const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }));
     const analysis = await this.analysis.latest(tenantId, caseId);
     const facts = (await this.caseFacts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => ({ key: f.key, value: f.value }));
@@ -235,6 +238,11 @@ ${profile}`);
         const existing = await this.prisma.forTenantId(ctx.tenantId).lead.findFirst({ where: { caseId } });
         if (existing) return { leadId: existing.id, reused: true, executionMode: 'LIVE' };
         const contact = await this.orbitContactFor(ctx.tenantId, caseId);
+        // Wirkungsschlüssel (FA-10): zwei Vorgänge desselben Kontakts übergeben nicht gleichzeitig; der zweite wartet und findet danach den Interessenten vor.
+        const claim = await this.ledger.claimResource(ctx.tenantId, ctx.agentRunId, `crm.lead:${contact.id}`, 'CONCURRENT');
+        if (!claim.claimed) throw new ToolFailedError('Für diesen Kontakt läuft gerade die CRM-Übergabe eines anderen Vorgangs; sie wird danach erneut geprüft.', { errorCode: 'RESOURCE_BUSY', retryable: true });
+        const afterClaim = await this.prisma.forTenantId(ctx.tenantId).lead.findFirst({ where: { caseId } });
+        if (afterClaim) return { leadId: afterClaim.id, reused: true, executionMode: 'LIVE' };
         const handoff = await this.handoffFor(ctx.tenantId, caseId, contact, input.note);
         const lead = await this.leads.create(ctx.tenantId, undefined, { contactId: contact.id, source: 'EMAIL', title: handoff.title, notes: handoff.text, caseId }, 'AGENT');
         return { leadId: lead.id, reused: false, known: handoff.summary.known.length, open: handoff.summary.open.length, executionMode: 'LIVE' };
@@ -306,6 +314,9 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
           // Frei genügt in EINEM der Kalender (z. B. ein Monteur von mehreren); ein freier Kalender einer Person geht vor dem Betriebskalender, damit der Termin eine zuständige Person hat.
           const free = pickCalendar(pool, (id) => busyById.get(id) ?? [], slot.start, slot.end, timeZone);
           if (!free) throw new ToolFailedError('Der gewählte Termin ist inzwischen nicht mehr frei; bitte einen neuen Termin vorschlagen.', { errorCode: 'SLOT_NO_LONGER_FREE' });
+          // Wirkungsschlüssel (FA-10): ein Terminfenster in einem Kalender gehört dem ersten Vorgang, der es beansprucht – auch dann, wenn der Kalender es noch nicht als belegt meldet.
+          const claim = await this.ledger.claimResource(ctx.tenantId, ctx.agentRunId, `calendar:${free.calendarId}:${slot.start.toISOString()}/${slot.end.toISOString()}`, 'EXCLUSIVE');
+          if (!claim.claimed) throw new ToolFailedError('Der gewählte Termin wurde inzwischen für einen anderen Vorgang vergeben; bitte einen neuen Termin vorschlagen.', { errorCode: 'SLOT_NO_LONGER_FREE' });
           return await this.createEvent(ctx.tenantId, caseId, proposal.kind, slot, free, timeZone, tenantRow?.name ?? 'ORBIT');
         } catch (error) {
           if (error instanceof ToolFailedError || error instanceof ToolOutcomeUnknownError) throw error;
@@ -336,6 +347,17 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
       if (error instanceof GmailSendOutcomeUnknownError) throw new ToolOutcomeUnknownError(error.message, 'CALENDAR_OUTCOME_UNKNOWN');
       throw error;
     }
+    // Rücklesung (FX-08): steht der Termin wirklich so im Kalender? Fehlt die Rücklesung (z. B. kein Lesezugriff), bleibt das als „nicht geprüft“ sichtbar – es wird nichts behauptet.
+    let readBack: 'CONFIRMED' | 'NOT_VERIFIED' = 'NOT_VERIFIED';
+    try {
+      const found = await this.gmail.getCalendarEvent(tenantId, { calendarId: calendar.calendarId, eventId: created.eventId });
+      if (!found || found.status === 'cancelled' || (found.start && found.start.getTime() !== slot.start.getTime())) {
+        throw new ToolOutcomeUnknownError('Der Termin wurde angelegt, steht aber nicht wie gebucht im Kalender; bitte abgleichen. Die Bestätigung an die Kundschaft geht nicht hinaus.', 'CALENDAR_READBACK_MISMATCH');
+      }
+      readBack = 'CONFIRMED';
+    } catch (error) {
+      if (error instanceof ToolOutcomeUnknownError) throw error;
+    }
     await this.caseEvents
       .append(tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_BOOKED, payload: { kind, start: slot.start.toISOString(), end: slot.end.toISOString(), eventId: created.eventId, ...(calendar.staff ? { assignee: { staffId: calendar.staff.id, name: calendar.staff.name } } : {}) }, dedupeKey: `appointment-booked:${eventId}` })
       .catch(() => undefined);
@@ -344,6 +366,7 @@ ${slots.map((s, i) => `${i}: ${labelOf(s)}`).join('\n')}`);
       eventId: created.eventId,
       htmlLink: created.htmlLink ?? null,
       reused: created.alreadyExisted,
+      readBack,
       kind,
       start: slot.start.toISOString(),
       end: slot.end.toISOString(),

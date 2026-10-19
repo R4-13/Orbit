@@ -17,6 +17,13 @@ export interface PrepareActionInput {
   payload: Record<string, unknown>;
 }
 
+/**
+ * Ergebnis des Beanspruchens eines Wirkungsschlüssels (FA-10). `EXCLUSIVE`: das Objekt gehört dem ersten Vorgang, der es beansprucht – auch nach der Ausführung (z. B. ein gebuchtes Terminfenster).
+ * `CONCURRENT`: nur gleichzeitige Ausführungen schließen sich aus (z. B. die CRM-Übergabe desselben Kontakts); später darf ein anderer Vorgang wieder wirken.
+ */
+export type ResourceClaimMode = 'EXCLUSIVE' | 'CONCURRENT';
+export type ResourceClaimResult = { claimed: true } | { claimed: false; holder: { caseId: string; intentId: string; status: string } };
+
 /** Eine neue Aktion würde ein zentrales Limit (BP-39) überschreiten: der Vorgang geht zur Prüfung, es wird nichts vorbereitet. */
 export class ActionLimitReachedError extends Error {
   constructor(
@@ -126,6 +133,29 @@ export class ActionLedgerService {
     if (approval?.status !== 'APPROVED') return false;
     const result = await scoped.actionIntent.updateMany({ where: { id: intent.id, status: 'PREPARED' }, data: { status: 'APPROVED', approvalId: approval.id } });
     return result.count === 1;
+  }
+
+  /**
+   * Beansprucht ein Geschäftsobjekt für die gerade laufende Wirkung (Wirkungsschlüssel, FA-10). Das Werkzeug ruft das auf, sobald es das Objekt kennt (z. B. das gewählte Terminfenster) und
+   * **bevor** es wirkt. Die Prüfung und das Eintragen laufen unter einer Sperre je Mandant und Schlüssel, damit zwei Vorgänge nicht gleichzeitig denselben Platz belegen. Hält ein anderer
+   * Vorgang den Schlüssel, wirkt dieser Vorgang nicht; das Werkzeug meldet es als Konflikt (der Vorgang plant neu oder geht an eine Person).
+   */
+  async claimResource(tenantId: string, agentRunId: string, resourceKey: string, mode: ResourceClaimMode): Promise<ResourceClaimResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const run = await scoped.agentRun.findFirst({ where: { id: agentRunId } });
+    const nodeKey = (run?.input as { nodeKey?: unknown } | null)?.nodeKey;
+    if (!run?.caseId || typeof nodeKey !== 'string') throw new NotFoundError('The run belongs to no node of a case.', { agentRunId });
+    const caseId = run.caseId;
+    return this.prisma.inTenantTransaction(tenantId, async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}|${resourceKey}`}, 0))`;
+      const own = await tx.actionIntent.findFirst({ where: { caseId, nodeKey, status: 'DISPATCHING' }, orderBy: { createdAt: 'desc' } });
+      if (!own) throw new NotFoundError('No dispatching action for this run.', { agentRunId });
+      const blockingStates = mode === 'EXCLUSIVE' ? ['DISPATCHING', 'CONFIRMED', 'OUTCOME_UNKNOWN'] : ['DISPATCHING', 'OUTCOME_UNKNOWN'];
+      const holder = await tx.actionIntent.findFirst({ where: { resourceKey, caseId: { not: caseId }, status: { in: blockingStates as never } }, orderBy: { createdAt: 'asc' } });
+      if (holder) return { claimed: false as const, holder: { caseId: holder.caseId, intentId: holder.id, status: holder.status } };
+      await tx.actionIntent.update({ where: { id: own.id }, data: { resourceKey } });
+      return { claimed: true as const };
+    });
   }
 
   async get(tenantId: string, intentId: string): Promise<ActionIntent> {

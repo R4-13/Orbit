@@ -16,6 +16,7 @@ import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
+import { CaseSplitService } from './case-split.service';
 import { ShadowPlanService } from '../process/shadow-plan.service';
 import type { OcrProvider } from '@orbit/integration-core';
 import { OCR_PROVIDER } from '../connectors/connectors.tokens';
@@ -126,6 +127,7 @@ export class IntakeService {
     private readonly adHoc: AdHocIntakeService,
     private readonly attachmentTexts: AttachmentTextService,
     private readonly shadow: ShadowPlanService,
+    private readonly splitter: CaseSplitService,
     @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
@@ -425,6 +427,20 @@ export class IntakeService {
     const scoped = this.prisma.forTenantId(tenantId);
     const { intakeEventId, inboundEmailId, documentIds } = persisted;
     const route = routeForCategory(triage.category);
+
+    // Mehrere getrennte Anliegen (nur mit Betreiber-Flag `process.split`): jedes Anliegen wird ein eigener Teilvorgang, der Hauptvorgang trägt die Nachricht (ADD-3.1).
+    const splitDecision = await this.splitter.decide(tenantId, triage);
+    if (splitDecision.split) {
+      await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
+      const parent = await this.cases.create(tenantId, actorUserId ?? '', { type: 'GENERAL', title: `Mehrere Anliegen: ${event.subject ?? '(ohne Betreff)'}`, description: event.content?.slice(0, 1000) });
+      await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: parent.id } });
+      if (documentIds.length > 0) await scoped.document.updateMany({ where: { id: { in: documentIds } }, data: { caseId: parent.id } });
+      await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: parent.id, status: 'PROCESSING' } });
+      await this.adHoc.linkReference(tenantId, parent.id, event.sender?.address, triage).catch(() => undefined);
+      await this.splitter.split({ tenantId, actorUserId, parent, triage, event, inboundEmailId }, splitDecision);
+      const fresh = (await scoped.case.findUnique({ where: { id: parent.id } })) ?? parent;
+      return { case: fresh, category: 'OTHER', agentRunIds: [], intakeEventId };
+    }
 
     // A relevant business input with no configured process is NOT filtered out (Amendment 02 §6.1, E11-E14/E24).
     if (!route) {

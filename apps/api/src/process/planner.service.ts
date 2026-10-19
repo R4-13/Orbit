@@ -29,6 +29,7 @@ import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseFactsService } from './case-facts.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
+import { messageCaseIds } from './case-scope';
 
 export const SUBMIT_PLAN_TOOL = 'submit_process_plan';
 export const PLANNER_PROMPT_VERSION = 'planner-prompt/1';
@@ -326,7 +327,7 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
 
   /** Betreff und Text der letzten eingegangenen Nachricht des Vorgangs (gekürzt) – der Planer plant sonst nur nach Titel und einzelnen Fakten. */
   private async latestInboundText(tenantId: string, caseId: string): Promise<string> {
-    const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { subject: true, bodyText: true, bodyPreview: true } });
+    const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { subject: true, bodyText: true, bodyPreview: true } });
     if (!message) return '(keine Nachricht)';
     return `Betreff: ${message.subject ?? ''}\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, 3000)}`;
   }

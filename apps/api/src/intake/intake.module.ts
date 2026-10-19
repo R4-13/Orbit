@@ -14,13 +14,14 @@ import { ExecutionEvidenceService } from './execution-evidence.service';
 import { IntakeController } from './intake.controller';
 import { IntakeDecisionsController } from './intake-decisions.controller';
 import { IntakeDecisionsService } from './intake-decisions.service';
+import { CaseSplitService } from './case-split.service';
 import { IntakeService } from './intake.service';
 import { SemanticTriageService } from './semantic-triage.service';
 
 @Module({
   imports: [ProfileContextModule, AgentModule, AiProvidersModule, ProcessModule, AgentDefinitionsModule, CasesModule, ApprovalsModule, StorageModule, TasksModule, WorkflowsModule, AttachmentTextModule],
   controllers: [IntakeController, IntakeDecisionsController],
-  providers: [IntakeService, ExecutionEvidenceService, SemanticTriageService, IntakeDecisionsService],
+  providers: [IntakeService, ExecutionEvidenceService, SemanticTriageService, IntakeDecisionsService, CaseSplitService],
   // IntakeService exported for ChannelSyncProcessor (Increment D) — the pipeline a real connector
   // sync event is fed into, same entry point `handleIncomingEmail()` already uses.
   exports: [IntakeService],
