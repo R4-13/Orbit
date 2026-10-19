@@ -90,3 +90,14 @@ Nur beschreibend (n klein); die Schwellen werden erst mit dem 60-Fälle-Lauf bes
 * **Offene Freigaben (6):** 3 Auskunftsantworten, 2 Rechnungen, 1 Terminbuchung (Dienstag, 14:00) – **nicht freigeben**; sie sind Testreste. Kalendereintrag wurde nicht angelegt.
 * **Direkter Eingriff:** die Frist des Wartens im Vorgang `2eb85924` wurde zur Fristprüfung auf „abgelaufen“ gesetzt (nur dieser Messvorgang).
 * Aufräumen der Testvorgänge: `apps/api/scripts/cleanup-e2e-leftovers.ts` bzw. `tools/customer-simulator aufraeumen` (Toms Postfach) nach Ihrer Entscheidung.
+
+## 6. Bereinigung (19.10.2026)
+
+Auf Entscheidung des Auftraggebers wurden die Messreste gezielt bereinigt (Skript `apps/api/scripts/cleanup-messlatte.ts`, Sicherung `backups/orbit-20261019-074441.dump` vorab, außerhalb von Git).
+
+* **Folgeaktionen gestoppt:** 18 offene Hinweise (Erinnerungen/Eskalationen) beendet, 17 Vorgänge abgebrochen (Wartezeiten beendet, offene Freigaben ungültig), die 2 verbliebenen Rechnungsfreigaben ausdrücklich **abgelehnt** – **keine Testfreigabe wurde ausgeführt**, kein Kalendereintrag entstand.
+* **Gelöscht (nur Vorgänge ab 18.10. 16:39 UTC mit Nachricht von `tomorbit777@gmail.com`):** 18 Vorgänge samt Plänen/Fakten/Ereignissen/Entwürfen, 10 Aufgaben, 2 Rechnungen, 1 Anfrage (Lead), 6 Freigaben.
+* **HubSpot:** der Deal `528184226026` („Anfrage zu Heizkörpertausch – Tom Orbit“) war nachweislich durch die Messung neu angelegt (18.10. 17:59 UTC) und nur mit dem bestehenden Kontakt verknüpft (keine Unternehmen, keine Notizen) → entfernt (im HubSpot-Papierkorb wiederherstellbar). Der Kontakt blieb unberührt.
+* **Toms Postfach:** 40 Mails (22 gesendete Szenarien, 5 Antworten, 13 Antworten von ORBIT) per `aufraeumen --seit` in den **Papierkorb** gelegt (30 Tage wiederherstellbar).
+* **Bleibt (Nachweis und Schutz vor erneutem Einlesen):** 90 Eingänge und 90 Nachrichten ab dem Messzeitpunkt (darunter ORBITs eigene Meldungen), Dokumente, Protokoll. Die Abfrage des Postfachs erkennt Bekanntes an diesen Einträgen; ein Löschen hätte dieselben Mails erneut verarbeiten lassen. Die 12 Eingänge „in Bearbeitung“ und 3 „zu prüfen“ wurden als erledigt markiert (Vermerk `bereinigt` in den Metadaten).
+* **Reste:** Die 22 Szenario-Mails (und ORBITs Antworten) liegen weiter im Postfach `handwerkernull@gmail.com` (Posteingang/Gesendet); das ist das echte Postfach des Betriebs und wurde nicht angefasst. Frühere Testvorgänge (vor dem 18.10.) blieben unverändert.

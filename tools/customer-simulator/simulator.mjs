@@ -32,7 +32,7 @@ const HELP = `Kunden-Simulator (Testwerkzeug)
   node simulator.mjs posteingang [--anzahl 5]      Toms neueste empfangene Mails ansehen (nur lesen)
   node simulator.mjs antworten --text "…" [--nr 1] [--senden]
                                                    Tom antwortet im selben Faden auf eine empfangene Mail (Probelauf ohne --senden)
-  node simulator.mjs aufraeumen [--senden]         von diesem Werkzeug gesendete Mails in Toms Postfach in den Papierkorb legen
+  node simulator.mjs aufraeumen [--seit <ISO>] [--senden]   gesendete Mails (mit --seit: nur seit dann, dazu die Antworten der erlaubten Empfänger) in Toms Postfach in den Papierkorb legen
 
 Auswahl:  --szenario <Kennung> | --art <Art>   (ohne Angabe: zufällig)      --anzahl N (höchstens ${MAX_PER_COMMAND})
           --an <Adresse> (muss in SIM_ALLOWED_RECIPIENTS stehen)   --abstand <Sekunden> (Pause zwischen Mails, Standard 20)
@@ -150,8 +150,18 @@ async function commandCleanup(values) {
   const gmail = gmailFor(config);
   await assertAccount(gmail, config);
   const labelId = await gmail.ensureLabel(config.label);
-  const ids = await gmail.listByLabel(labelId);
-  say(`${ids.length} Mail(s) mit dem Etikett „${config.label}“ in Toms Postfach.`);
+  let ids;
+  if (values.seit) {
+    // Eng begrenzt auf einen Zeitraum (Gmail-Suche "after:"): die vom Werkzeug gesendeten Mails UND die Antworten der erlaubten Empfänger darauf.
+    const since = Math.floor(new Date(String(values.seit)).getTime() / 1000);
+    if (!Number.isFinite(since)) throw new Error('--seit ist kein Zeitpunkt (z. B. 2026-10-18T16:39:00Z).');
+    const queries = [`label:${config.label} after:${since}`, ...config.allowedRecipients.map((address) => `from:${address} after:${since}`)];
+    ids = [...new Set((await Promise.all(queries.map((q) => gmail.search(q)))).flat())];
+    say(`${ids.length} Mail(s) seit ${String(values.seit)} (vom Werkzeug gesendet oder Antworten der erlaubten Empfänger) in Toms Postfach.`);
+  } else {
+    ids = await gmail.listByLabel(labelId);
+    say(`${ids.length} Mail(s) mit dem Etikett „${config.label}“ in Toms Postfach.`);
+  }
   if (!send) {
     say('Probelauf: nichts verändert. Zum Aufräumen --senden angeben (die Mails kommen in den Papierkorb und sind dort 30 Tage wiederherstellbar).');
     return;
@@ -246,7 +256,7 @@ async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({
     args: rest,
-    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' }, text: { type: 'string' }, datei: { type: 'string' }, nr: { type: 'string' } },
+    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' }, text: { type: 'string' }, datei: { type: 'string' }, nr: { type: 'string' }, seit: { type: 'string' } },
     strict: true,
   });
   switch (command) {

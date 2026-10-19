@@ -179,6 +179,18 @@ test('Gmail: Senden, Etikett anlegen oder wiederfinden, Auflisten mit Seiten, Pa
   await assert.rejects(createGmail({ getToken: async () => 'tok', fetchImpl: async () => json(403, { error: { message: 'Insufficient Permission' } }) }).profile(), /403.*Insufficient Permission/);
 });
 
+test('Gmail: Suche mit Suchtext und Seiten (nur lesend)', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url: String(url), method: init?.method });
+    return String(url).includes('pageToken=p2') ? json(200, { messages: [{ id: 'c' }] }) : json(200, { messages: [{ id: 'a' }, { id: 'b' }], nextPageToken: 'p2' });
+  };
+  const gmail = createGmail({ getToken: async () => 't', fetchImpl });
+  assert.deepEqual(await gmail.search('from:x@example.com after:100'), ['a', 'b', 'c']);
+  assert.ok(calls.every((c) => c.method === 'GET'));
+  assert.match(calls[0].url, /messages\?q=from%3Ax%40example\.com%20after%3A100&maxResults=100/);
+});
+
 test('Gmail: der Posteingang wird nur gelesen (Absender, Betreff, Datum, Anfang)', async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {

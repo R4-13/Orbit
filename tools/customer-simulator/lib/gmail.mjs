@@ -40,6 +40,17 @@ export function createGmail({ getToken, fetchImpl = fetch }) {
       } while (pageToken && ids.length < limit);
       return ids.slice(0, limit);
     },
+    /** Nachrichten zu einer Gmail-Suche (z. B. "from:adresse after:1760000000"), höchstens `limit`. Nur lesend. */
+    async search(query, limit = 500) {
+      const ids = [];
+      let pageToken;
+      do {
+        const page = await call('GET', `/messages?q=${encodeURIComponent(query)}&maxResults=100${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`);
+        ids.push(...(page.messages ?? []).map((m) => m.id));
+        pageToken = page.nextPageToken;
+      } while (pageToken && ids.length < limit);
+      return ids.slice(0, limit);
+    },
     /** Die neuesten Nachrichten im Posteingang (nur Absender, Betreff, Datum und Anfang – nichts wird verändert). */
     async recentInbox(limit = 10) {
       const page = await call('GET', `/messages?labelIds=INBOX&maxResults=${Math.min(Math.max(limit, 1), 50)}`);
