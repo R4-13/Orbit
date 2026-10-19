@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CaseEventsService } from './case-events.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
+import { InternalOrderService } from './internal-order.service';
 import { OrchestratorService } from './orchestrator.service';
 
 const BATCH = 50;
@@ -28,6 +29,7 @@ export class ProcessSweepService {
     private readonly events: CaseEventsService,
     private readonly orchestrator: OrchestratorService,
     private readonly live: LiveReconciliationService,
+    private readonly orders: InternalOrderService,
   ) {}
 
   async sweep(now = new Date()): Promise<SweepResult> {
@@ -65,6 +67,9 @@ export class ProcessSweepService {
     } catch (error) {
       this.logger.warn(`sweep: live reconciliation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+
+    // Fälligkeit interner Aufträge: überfällige, noch offene Aufträge werden der zuständigen Person gemeldet (der Vorgang schließt dadurch nicht).
+    await this.orders.raiseOverdue(now);
 
     let advanced = 0;
     let failed = 0;

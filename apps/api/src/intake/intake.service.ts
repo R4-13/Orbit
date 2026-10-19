@@ -665,6 +665,22 @@ export class IntakeService {
         dedupeKey: 'inbound:' + inboundEmailId,
       });
       await this.orchestrator.advance(tenantId, matched.id);
+      // Teilvorgang einer aufgeteilten Nachricht (FX-02): Die Antwort hängt am Teilvorgang, auf dessen Nachricht sie antwortet, kann aber Angaben für die übrigen enthalten. Jeder Geschwister-
+      // Teilvorgang, der gerade auf eine Antwort wartet, erhält sie ebenfalls und wertet sie selbst aus (seine Fragen, seine Ziele); nichts geht verloren.
+      if (matched.parentCaseId) {
+        const siblings = await scoped.case.findMany({
+          where: { parentCaseId: matched.parentCaseId, id: { not: matched.id }, orchestrationStatus: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED'] }, waitSubscriptions: { some: { status: 'WAITING', eventType: 'communication.received' } } },
+          select: { id: true },
+        });
+        for (const sibling of siblings) {
+          await this.orchestrator.receiveInbound(tenantId, sibling.id, {
+            type: 'communication.received',
+            payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: 'SIBLING_FAN_OUT', fanOutFromCaseId: matched.id },
+            dedupeKey: `inbound:${inboundEmailId}:${sibling.id}`,
+          });
+          await this.orchestrator.advance(tenantId, sibling.id);
+        }
+      }
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
     }

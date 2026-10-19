@@ -2,9 +2,13 @@ import type { PrismaService } from '../prisma/prisma.service';
 
 /**
  * Die Vorgänge, deren eingegangene Nachrichten zu diesem Vorgang gehören: er selbst und – bei einem Teilvorgang einer aufgeteilten Nachricht (FX-02) – sein Hauptvorgang, der die
- * Nachricht trägt. Eigene (neuere) Nachrichten des Teilvorgangs gehen bei absteigender Sortierung vor; die ursprüngliche Nachricht steht bei aufsteigender Sortierung vorn.
+ * ursprüngliche Nachricht trägt, sowie die **Geschwister**. Eine Antwort der Kundschaft hängt an dem Teilvorgang, auf dessen Nachricht sie antwortet, kann aber Angaben für andere Teilvorgänge
+ * enthalten; diese dürfen dadurch nicht verloren gehen. Bei absteigender Sortierung gewinnt die neueste Nachricht der Familie, bei aufsteigender die ursprüngliche (die des Hauptvorgangs).
  */
 export async function messageCaseIds(prisma: PrismaService, tenantId: string, caseId: string): Promise<string[]> {
-  const row = await prisma.forTenantId(tenantId).case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } });
-  return row?.parentCaseId ? [caseId, row.parentCaseId] : [caseId];
+  const scoped = prisma.forTenantId(tenantId);
+  const row = await scoped.case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } });
+  if (!row?.parentCaseId) return [caseId];
+  const siblings = await scoped.case.findMany({ where: { parentCaseId: row.parentCaseId, id: { not: caseId } }, select: { id: true } });
+  return [caseId, row.parentCaseId, ...siblings.map((s) => s.id)];
 }

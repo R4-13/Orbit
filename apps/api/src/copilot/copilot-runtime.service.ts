@@ -110,6 +110,15 @@ export class CopilotRuntimeService {
     }
   }
 
+  /** Zeitzone des Betriebs (für die aktuelle Zeit im Prompt); bei jedem Problem Europe/Berlin – das darf eine Antwort nie verhindern. */
+  private async tenantTimeZone(tenantId: string): Promise<string> {
+    try {
+      return (await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } })))?.timezone || 'Europe/Berlin';
+    } catch {
+      return 'Europe/Berlin';
+    }
+  }
+
   private async runAskTurn(
     tenantId: string,
     actorUserId: string,
@@ -141,7 +150,9 @@ export class CopilotRuntimeService {
     // Case context (Amendment 02 §17.4): built on the server for this user, read-only; absent when the user may not read the case.
     const contextBlock = viewer?.context ? await this.caseContext.build(tenantId, viewer.permissions, viewer.context) : null;
     const modeBlock = `Aktueller Modus dieser Nachricht: ${mode}. Nur die Werkzeuge dieses Modus stehen zur Verfügung. Wünscht der Nutzer etwas, das mehr verlangt (Entwürfe oder Aktionen), erkläre kurz, dass er dafür oben im Sonde-Panel den Modus „Vorbereiten“ bzw. „Ausführen“ wählen muss – tue nie so, als hättest du es ohne passendes Werkzeug getan.`;
-    const systemPrompt = buildLayeredSystemPrompt([SONDE_SYSTEM_PROMPT, modeBlock, contextBlock].filter(Boolean).join('\n\n'));
+    const timeZone = await this.tenantTimeZone(tenantId);
+    const nowBlock = `Aktuelle Zeit des Betriebs: ${new Intl.DateTimeFormat('de-DE', { timeZone, dateStyle: 'full', timeStyle: 'short' }).format(new Date())} (Zeitzone ${timeZone}).`;
+    const systemPrompt = buildLayeredSystemPrompt([SONDE_SYSTEM_PROMPT, nowBlock, modeBlock, contextBlock].filter(Boolean).join('\n\n'));
 
     const agentRun = await this.runs.start({
       tenantId,
@@ -196,6 +207,8 @@ Du unterstützt aktuell drei Modi:
 - ASK: Du beantwortest Fragen zum aktuellen operativen Stand (offene Vorgänge, Aufgaben, ausstehende Freigaben) auf Basis der dir bereitgestellten Lese-Tools. Du erklärst, fasst zusammen und beantwortest Fragen.
 - PREPARE: Du kannst einen E-Mail-Antwortentwurf speichern (draft_email — wird NICHT versendet), einen Terminvorschlag mit Alternativslots anlegen (create_meeting — muss von einem Menschen final bestätigt werden) und einen Buchungsvorschlag für eine zur Freigabe anstehende Rechnung erstellen (create_booking_proposal — bucht nichts, wartet auf menschliche Freigabe). Jedes dieser Tools erzeugt nur einen Vorschlag, nie eine endgültige Aktion.
 - ACT: Du kannst eine Aufgabe anlegen (create_task), einen Kontakt anlegen (create_contact), einen Lead anlegen (create_lead) — diese drei wirken sofort und endgültig, genau wie wenn ein Mensch sie selbst anlegt. Du kannst außerdem eine zuvor entworfene E-Mail zum Versand vorschlagen (send_email) — das versendet NICHT sofort, sondern wartet immer auf eine menschliche Freigabe, unabhängig davon, was der Nutzer sagt.
+
+Zusätzlich kannst du im Modus ACT einen internen Auftrag erteilen (create_internal_order): kind=REMINDER („Erinnere uns um …“) informiert die zuständige Person zum Zeitpunkt remindAt; kind=TASK („Prüfe bis …“) lässt ORBIT die Sache selbst bearbeiten, dueAt ist nur die Frist. Erinnerung und Prüfung sind verschiedene Aufträge: setze nie kind=REMINDER, wenn etwas geprüft oder erledigt werden soll. Gib Zeiten als Ortszeit des Betriebs an (JJJJ-MM-TTTHH:MM) und rechne relative Angaben anhand der aktuellen Zeit unten aus. Der Auftrag schreibt nichts nach außen. Nenne dem Nutzer nach dem Anlegen den verstandenen Zeitpunkt in Ortszeit.
 
 Du darfst in dieser Version KEINE anderen Aktionen ausführen: keine Workflows starten, keine Termine final bestätigen, keine Rechnungen freigeben oder buchen, keine Zahlungen auslösen. Wenn ein Nutzer danach fragt, erkläre ehrlich, dass das in ORBIT aktuell noch nicht freigeschaltet ist, statt es zu simulieren.
 

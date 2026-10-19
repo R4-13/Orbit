@@ -8,6 +8,8 @@ import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
 import { ActionLedgerService } from './action-ledger.service';
 import { CaseRollupService } from './case-rollup.service';
+import { ChildCaseStarterService } from './child-case-starter.service';
+import { CHILD_CASE_STARTER } from './child-case-starter.token';
 import { InternalOrderService } from './internal-order.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
@@ -61,6 +63,8 @@ import { ShadowPlanService } from './shadow-plan.service';
     PlanStoreService,
     ActionLedgerService,
     CaseRollupService,
+    ChildCaseStarterService,
+    { provide: CHILD_CASE_STARTER, useExisting: ChildCaseStarterService },
     InternalOrderService,
     CapabilityRegistryService,
     BlueprintRegistryService,
@@ -86,6 +90,7 @@ import { ShadowPlanService } from './shadow-plan.service';
     CustomerRecordService,
   ],
   exports: [
+    ChildCaseStarterService,
     AdHocIntakeService,
     CaseFactsService,
     CaseCorrelationService,

@@ -12,6 +12,10 @@
  *
  *   set -a && source .env && set +a
  *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-messlatte.ts <tenant-slug> --since 2026-10-18T16:39:00Z --sender tomorbit777@gmail.com [--execute]
+ *
+ * Enger (Praxistests 19.10.): statt Zeitfenster ausdrücklich benannte Vorgänge – `--cases <id,id,…>` (volle Vorgangs-IDs; Teilvorgänge dieser Vorgänge gehören dazu). Dann ist die Zuordnung
+ * allein die ID-Liste; `--since`/`--sender` entfallen (der HubSpot-Zeitvergleich nutzt den Anlagezeitpunkt des ältesten Vorgangs):
+ *   pnpm --filter @orbit/api exec ts-node scripts/cleanup-messlatte.ts <tenant-slug> --cases <id,id,…> [--execute]
  */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
@@ -32,9 +36,11 @@ async function main(): Promise<void> {
   const slug = process.argv.slice(2).find((a) => !a.startsWith('--'));
   const sinceText = option('--since');
   const sender = option('--sender')?.toLowerCase();
+  const explicitCases = option('--cases')?.split(',').map((id) => id.trim()).filter(Boolean);
   const execute = process.argv.includes('--execute');
-  if (!slug || !sinceText || !sender) throw new Error('Aufruf: cleanup-messlatte.ts <tenant-slug> --since <ISO> --sender <Adresse> [--execute]');
-  const since = new Date(sinceText);
+  if (!slug || (!explicitCases && (!sinceText || !sender))) throw new Error('Aufruf: cleanup-messlatte.ts <tenant-slug> (--since <ISO> --sender <Adresse> | --cases <id,id,…>) [--execute]');
+  if (explicitCases && explicitCases.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) throw new Error('--cases erwartet volle Vorgangs-IDs.');
+  let since = new Date(sinceText ?? Date.now());
   if (Number.isNaN(since.getTime())) throw new Error('--since ist kein Zeitpunkt.');
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: ['error'] });
@@ -44,11 +50,19 @@ async function main(): Promise<void> {
     if (!tenant) throw new Error(`Betrieb "${slug}" nicht gefunden.`);
     const tenantId = tenant.id;
 
-    // Umfang: Vorgänge ab `since`, an denen mindestens eine Nachricht des Test-Absenders hängt.
+    // Umfang: entweder ausdrücklich benannte Vorgänge (samt Teilvorgängen) oder Vorgänge ab `since`, an denen mindestens eine Nachricht des Test-Absenders hängt.
     const scope = await prisma.withRlsBypass(async (tx) => {
-      const mails = await tx.emailMessage.findMany({ where: { tenantId, direction: 'INBOUND', fromAddress: { equals: sender, mode: 'insensitive' }, caseId: { not: null }, createdAt: { gte: since } }, select: { caseId: true } });
-      const caseIds = [...new Set(mails.map((m) => m.caseId as string))];
-      const cases = await tx.case.findMany({ where: { tenantId, id: { in: caseIds }, createdAt: { gte: since } }, select: { id: true, title: true, orchestrationStatus: true, blueprintKey: true } });
+      let caseIds: string[];
+      if (explicitCases) {
+        const children = await tx.case.findMany({ where: { tenantId, parentCaseId: { in: explicitCases } }, select: { id: true } });
+        caseIds = [...new Set([...explicitCases, ...children.map((c) => c.id)])];
+        const oldest = await tx.case.findFirst({ where: { tenantId, id: { in: caseIds } }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
+        if (oldest) since = oldest.createdAt;
+      } else {
+        const mails = await tx.emailMessage.findMany({ where: { tenantId, direction: 'INBOUND', fromAddress: { equals: sender, mode: 'insensitive' }, caseId: { not: null }, createdAt: { gte: since } }, select: { caseId: true } });
+        caseIds = [...new Set(mails.map((m) => m.caseId as string))];
+      }
+      const cases = await tx.case.findMany({ where: { tenantId, id: { in: caseIds }, ...(explicitCases ? {} : { createdAt: { gte: since } }) }, select: { id: true, title: true, orchestrationStatus: true, blueprintKey: true } });
       const ids = cases.map((c) => c.id);
       const intents = await tx.actionIntent.findMany({ where: { tenantId, caseId: { in: ids } }, select: { id: true } });
       const invoices = await tx.invoice.findMany({ where: { tenantId, caseId: { in: ids } }, select: { id: true } });
@@ -65,11 +79,11 @@ async function main(): Promise<void> {
         tasks: await tx.task.count({ where: { tenantId, caseId: { in: ids } } }),
         attention: await tx.attentionItem.count({ where: { tenantId, caseId: { in: ids }, state: { not: 'RESOLVED' } } }),
         retainedMails: await tx.emailMessage.count({ where: { tenantId, caseId: { in: ids } } }),
-        retainedIntake: await tx.intakeEvent.count({ where: { tenantId, OR: [{ caseId: { in: ids } }, { createdAt: { gte: since }, emailMessage: { fromAddress: { equals: sender, mode: 'insensitive' } } }] } }),
+        retainedIntake: await tx.intakeEvent.count({ where: { tenantId, OR: [{ caseId: { in: ids } }, ...(sender ? [{ createdAt: { gte: since }, emailMessage: { fromAddress: { equals: sender, mode: 'insensitive' as const } } }] : [])] } }),
       };
     });
 
-    console.log(`Betrieb ${slug}: ${scope.cases.length} Vorgänge ab ${since.toISOString()} mit Nachricht von ${sender}:`);
+    console.log(explicitCases ? `Betrieb ${slug}: ${scope.cases.length} ausdrücklich benannte Vorgänge (samt Teilvorgängen):` : `Betrieb ${slug}: ${scope.cases.length} Vorgänge ab ${since.toISOString()} mit Nachricht von ${sender}:`);
     for (const c of scope.cases) console.log(`  ${c.id.slice(0, 8)}  ${c.orchestrationStatus.padEnd(22)} ${c.title}`);
     console.log(`Offene Freigaben: ${scope.approvalsPending} (insgesamt ${scope.approvalsAll}) · Aufgaben: ${scope.tasks} · Rechnungen: ${scope.invoiceIds.length} · Anfragen (Leads): ${scope.leadIds.length} · offene Hinweise: ${scope.attention}`);
     console.log(`Bleiben (Nachweis, Schutz vor erneutem Einlesen): ${scope.retainedMails} Nachrichten, ${scope.retainedIntake} Eingänge, Dokumente, Protokoll.`);
@@ -125,7 +139,7 @@ async function main(): Promise<void> {
 
     // 2. Verbliebene offene Freigaben ablehnen.
     const rejected = await prisma.withRlsBypass((tx) =>
-      tx.approval.updateMany({ where: { ...scope.approvalWhere, status: 'PENDING' }, data: { status: 'REJECTED', decisionReason: 'Testfreigabe ungültig gemacht (Messlatte 18.10.2026); nichts wurde ausgeführt.', decidedAt: new Date() } }),
+      tx.approval.updateMany({ where: { ...scope.approvalWhere, status: 'PENDING' }, data: { status: 'REJECTED', decisionReason: 'Testfreigabe ungültig gemacht (Messreste-Bereinigung); nichts wurde ausgeführt.', decidedAt: new Date() } }),
     );
     console.log(`2. ${rejected.count} offene Testfreigaben abgelehnt (nichts ausgeführt).`);
 

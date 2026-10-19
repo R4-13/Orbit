@@ -58,6 +58,8 @@ export const CASE_EVENT_TYPES = {
   CASE_SPLIT: 'case.split',
   /** Ein interner Auftrag (z. B. über Sonde) wurde erteilt: Anweisung, Zeitpunkt und wer ihn erteilt hat. */
   ORDER_CREATED: 'order.created',
+  /** Die Fälligkeit eines internen Auftrags ist überschritten, der Auftrag ist noch offen: die zuständige Person wurde gemeldet (einmalig). */
+  ORDER_OVERDUE: 'order.overdue',
   /** Dieser Vorgang ist ein Teilvorgang (nennt den Hauptvorgang und das Anliegen). */
   CASE_SPLIT_FROM: 'case.split_from',
 } as const;

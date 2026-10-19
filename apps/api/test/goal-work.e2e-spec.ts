@@ -169,4 +169,88 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     expect(plans.at(-1)!.goalKeys).toEqual(expect.arrayContaining(['human.review']));
     expect(row.completedAt).toBeNull();
   });
+
+  it('Grenzen der Freigabe (Punkt 6): ein anderer Empfänger wird in einer Neuplanung weder frei gewählt noch durch die frühere Freigabe gedeckt – nichts geht an eine fremde Adresse', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    const askNodes = () => [
+      node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+      node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+      node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+      node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+    ];
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [...askNodes(), node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } })],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen.',
+    });
+    seedAnalysis();
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    await confirmPlan(tenantId, caseId);
+    expect(sent).toHaveLength(1);
+
+    // Neuplanung nach der Antwort: dieselbe Fähigkeit (E-Mail) und derselbe Zweck (Rückfrage), aber an eine ANDERE Adresse.
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [
+        ...askNodes(),
+        node('other_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { literal: 'fremd@beispiel.de' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('other_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'other_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('human', 'MANUAL_TASK', { title: 'Eine Person prüft' }),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'other_draft'), edge('other_draft', 'other_send'), edge('other_send', 'human')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Auch an eine weitere Adresse fragen.',
+    });
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
+
+    // Erste Schranke: die Planprüfung lässt keinen frei gewählten Empfänger zu (und keine Wiederholung der bereits bestätigten Rückfrage); der Plan wird nicht aktiv, der Vorgang geht zur Prüfung.
+    // Zweite Schranke (Freigabeumfang mit Ziel, siehe plan-approval.spec): selbst ein zulässiger Plan mit anderem Ziel wäre durch die frühere Freigabe nicht gedeckt.
+    const row = await caseOf(tenantId, caseId);
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(row.attentionReasons.join(' ')).toMatch(/INVENTED_PARAMETER/);
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId, status: 'ACTIVE' } })).toBe(1);
+    expect(sent).toHaveLength(1); // an die fremde Adresse ging nichts hinaus
+    expect(sent.every((m) => m.to === SENDER)).toBe(true);
+  });
+
+  it('Die Freigabe läuft ab: nach Ablauf der Gültigkeit braucht auch eine Wirkung im früheren Umfang wieder die Freigabe', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    const askNodes = () => [
+      node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+      node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+      node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+      node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+    ];
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [...askNodes(), node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } })],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen.',
+    });
+    seedAnalysis();
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    await confirmPlan(tenantId, caseId);
+    // Die Freigabe liegt 15 Tage zurück (Gültigkeit 14 Tage).
+    await prisma.withRlsBypass((tx) => tx.caseEvent.updateMany({ where: { caseId, type: 'plan.scope_approved' }, data: { createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000) } }));
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [...askNodes(), node('human', 'MANUAL_TASK', { title: 'Eine Person prüft' })],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'human')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen und übergeben.',
+    });
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId, status: 'AWAITING_APPROVAL' } })).toBe(1);
+  });
 });

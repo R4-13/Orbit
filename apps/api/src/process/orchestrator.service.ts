@@ -615,8 +615,12 @@ export class OrchestratorService {
   }
 
   private async startManual(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, def: PlanNode): Promise<void> {
+    // Gehört der Vorgang zu einem internen Auftrag mit Fälligkeit, trägt die Aufgabe diese Fälligkeit (Zeitpunkt, Frist und Ziel bleiben getrennt).
+    const order = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId: caseRow.id, type: CASE_EVENT_TYPES.ORDER_CREATED }, orderBy: { sequence: 'asc' }, select: { payload: true } });
+    const dueIso = (order?.payload as { dueAt?: string | null } | null | undefined)?.dueAt;
+    const dueDate = dueIso ? new Date(dueIso) : undefined;
     await this.prisma.forTenantId(tenantId).task.create({
-      data: { tenantId, caseId: caseRow.id, title: def.title, description: def.purpose ?? 'Manueller Schritt im Prozess.', source: 'AGENT' },
+      data: { tenantId, caseId: caseRow.id, title: def.title, description: def.purpose ?? 'Manueller Schritt im Prozess.', source: 'AGENT', ...(dueDate && !Number.isNaN(dueDate.getTime()) ? { dueDate } : {}) },
     });
     await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'WAITING' });
     await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: [`${def.title}: Bitte manuell bearbeiten.`] });

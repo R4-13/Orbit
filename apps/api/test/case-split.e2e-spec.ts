@@ -9,6 +9,7 @@ import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
 import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { messageCaseIds } from '../src/process/case-scope';
 import { OrchestratorService } from '../src/process/orchestrator.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -48,7 +49,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     tenants.push(tenant.id);
     const integration = await prisma.forTenantId(tenant.id).integration.create({ data: { tenantId: tenant.id, connectorType: 'GMAIL', status: 'CONNECTED', externalAccountDisplayName: 'firma@e2e.example', grantedCapabilities: ['email.read', 'email.send'] } });
     connectionByTenant.set(tenant.id, integration.id);
-    for (const action of ['email.send.information', 'email.send.acknowledgement', 'knowledge.answer', 'staff.notify']) {
+    for (const action of ['email.send.information', 'email.send.acknowledgement', 'email.send.clarification', 'knowledge.answer', 'staff.notify']) {
       await prisma.forTenantId(tenant.id).policyConfig.upsert({ where: { tenantId_action: { tenantId: tenant.id, action } }, create: { tenantId: tenant.id, action, mode: 'AUTONOMOUS' }, update: { mode: 'AUTONOMOUS' } });
     }
     await prisma.forTenantId(tenant.id).tenantProfile.create({
@@ -206,5 +207,99 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     const second = await prisma.forTenantId(tenantId).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'send', plan: { caseId: kids[1]!.id } } });
     expect(second.state).toBe('SUCCEEDED');
     expect(second.output).toMatchObject({ skipped: 'ALREADY_ACKNOWLEDGED', coveredByCaseId: kids[0]!.id });
+  });
+
+  it('fünf Anliegen: vier werden bearbeitet, das fünfte bleibt ausdrücklich offen und wird gestartet, sobald ein Platz frei ist – der Hauptvorgang schließt erst, wenn alle fünf berücksichtigt sind', async () => {
+    const tenantId = await newTenant(true);
+    seedTriage(['ANLIEGEN_A', 'ANLIEGEN_B', 'ANLIEGEN_C', 'ANLIEGEN_D', 'ANLIEGEN_E']);
+    for (let i = 0; i < 4; i += 1) seedPlan(ackPlan()); // vier Teilvorgänge wollen den Eingang bestätigen und warten auf die Planbestätigung
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const parentId = result.case!.id;
+    let kids = await children(tenantId, parentId);
+    expect(kids).toHaveLength(5);
+    expect(kids.map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'RECEIVED']);
+    let parent = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: parentId } });
+    expect(parent.orchestrationStatus).toBe('IN_PROGRESS');
+    expect(parent.attentionReasons).toEqual(['1 Anliegen wartet auf die Bearbeitung.']);
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId: kids[4]!.id } })).toBe(0); // nicht begonnen, aber nicht verloren
+
+    // Der erste Teilvorgang wird erledigt → ein Platz wird frei → das fünfte Anliegen wird gestartet (und erledigt).
+    seedPlan(notifyPlan());
+    await confirmPlan(tenantId, kids[0]!.id);
+    kids = await children(tenantId, parentId);
+    expect(kids[0]!.orchestrationStatus).toBe('COMPLETED');
+    expect(kids[4]!.orchestrationStatus).toBe('COMPLETED');
+    parent = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: parentId } });
+    expect(parent.orchestrationStatus).toBe('IN_PROGRESS'); // drei Teilvorgänge sind noch offen
+
+    for (const kid of kids.slice(1, 4)) await confirmPlan(tenantId, kid.id);
+    parent = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: parentId } });
+    expect((await children(tenantId, parentId)).map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED']);
+    expect(parent.orchestrationStatus).toBe('COMPLETED');
+    expect(parent.outcome).toMatchObject({ code: 'CHILDREN_SETTLED' });
+    expect(sent).toHaveLength(1); // eine Eingangsbestätigung für fünf Anliegen
+  });
+
+  it('eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren', async () => {
+    const tenantId = await newTenant(true);
+    seedTriage(['ANLIEGEN_STANDORT', 'ANLIEGEN_ZUGANG']);
+    const askPlan = (note: string) => ({
+      goalKeys: ['staff.informed'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: note } } }),
+        node('done', 'COMPLETE'),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait'), edge('wait', 'notify'), edge('notify', 'done')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen und danach informieren.',
+    });
+    const analysis = (key: string, label: string, question: string) =>
+      seedTool('submit_request_analysis', {
+        requestType: label,
+        summary: `${label} klären.`,
+        knownDetails: [],
+        missingInformation: [{ key, label, question }],
+        siteVisit: { recommended: false, reason: '' },
+        nextStep: 'ASK_CUSTOMER',
+      });
+    seedPlan(askPlan('Standort geklärt.'));
+    analysis('standort', 'Standort', 'An welcher Adresse liegt das Objekt?');
+    seedPlan(askPlan('Zugang geklärt.'));
+    analysis('zugang', 'Zugang', 'Wie kommen wir ins Objekt?');
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const kids = await children(tenantId, result.case!.id);
+    expect(kids).toHaveLength(2);
+    await confirmPlan(tenantId, kids[0]!.id);
+    await confirmPlan(tenantId, kids[1]!.id);
+    expect(sent.map((m) => m.bodyText.includes('Adresse') || m.bodyText.includes('ins Objekt'))).toEqual([true, true]);
+    expect((await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } })).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_INFORMATION']);
+
+    // Eine einzige Antwort – im Mailfaden der ersten Rückfrage – beantwortet beide Fragen.
+    const reply = await intake.handleIntakeEvent(tenantId, undefined, {
+      ...mail(tenantId),
+      subject: 'Re: Zwei Fragen',
+      content: 'Das Objekt ist in der Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      rfcMessageId: '<antwort@kunde.example>',
+      inReplyTo: '<sent-1@mail.example>',
+      references: ['<split@kunde.example>', '<sent-1@mail.example>'],
+    });
+    expect(reply.case!.id).toBe(kids[0]!.id); // zugeordnet über den Mailfaden der ersten Rückfrage
+    const after = await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } });
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']); // auch der zweite Teilvorgang hat die Antwort erhalten und wurde fortgesetzt
+    const secondWait = await prisma.forTenantId(tenantId).waitSubscription.findFirstOrThrow({ where: { caseId: kids[1]!.id } });
+    expect(secondWait.status).toBe('SATISFIED');
+    const fanOut = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[1]!.id, type: 'communication.received' } });
+    expect(fanOut.payload).toMatchObject({ rule: 'SIBLING_FAN_OUT', fanOutFromCaseId: kids[0]!.id });
+    // Die Antwort ist für beide Teilvorgänge lesbar (Familie), nicht nur für den, an dem sie hängt.
+    const familyIds = await messageCaseIds(prisma, tenantId, kids[1]!.id);
+    expect(familyIds).toEqual(expect.arrayContaining([kids[0]!.id, result.case!.id]));
+    expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
+    expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
   });
 });

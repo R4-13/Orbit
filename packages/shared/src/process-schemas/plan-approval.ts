@@ -1,4 +1,5 @@
 import type { CapabilityDefinition } from './capability';
+import type { Operand } from './expressions';
 import type { PlanNode, PlanProposal } from './plan';
 
 /**
@@ -22,12 +23,57 @@ export function planNeedsWriteApproval(proposal: PlanProposal, capabilities: Rea
   return proposal.nodes.some((node) => node.type === 'ACTION' && node.capability !== undefined && isEffectCapability(capabilities.get(node.capability.key)));
 }
 
-/** Die Wirkungen eines Plans als `capability/purpose` (sortiert, eindeutig) – der Umfang, den eine Planfreigabe abdeckt. */
+/** Wie lange eine Planfreigabe für spätere Neuplanungen desselben Vorgangs gilt. Danach braucht eine neue Wirkung wieder eine Freigabe. */
+export const PLAN_SCOPE_VALIDITY_DAYS = 14;
+
+/** Eingaben, die **bestimmen, worauf oder an wen** eine Wirkung geht (Empfänger, Kalender, Kontakt, Person). Inhalte (Text, Betreff) gehören nicht dazu. */
+const TARGET_INPUT_KEYS: readonly string[] = ['to', 'recipient', 'recipients', 'cc', 'bcc', 'calendarId', 'attendee', 'attendees', 'contactId', 'staffId', 'assignee'];
+
+function describeOperand(operand: Operand): string {
+  if ('fact' in operand) return `fact:${operand.fact}`;
+  if ('literal' in operand) return `literal:${String(operand.literal).trim().toLowerCase()}`;
+  if ('config' in operand) return `config:${operand.config}`;
+  if ('sourceRef' in operand) return `source:${operand.sourceRef}`;
+  return 'derived'; // Ergebnis eines früheren Schritts – kein frei gewähltes Ziel
+}
+
+/**
+ * Das Ziel einer Wirkung: an wen bzw. worauf sie geht. Ein Versand trägt den Empfänger nicht selbst, sondern der Entwurf, auf den er verweist (`draftId`) – dessen Empfänger gilt. Die Ausführung
+ * prüft zusätzlich, dass der Empfänger die bestätigte Antwortadresse ist; hier geht es darum, dass eine Neuplanung das Ziel nicht still ändert.
+ */
+function effectTarget(node: PlanNode, byId: ReadonlyMap<string, PlanNode>): string {
+  const inputs: Array<[string, Operand]> = Object.entries(node.inputs ?? {});
+  const draftRef = node.inputs?.draftId;
+  if (draftRef && 'stepOutput' in draftRef) {
+    const draft = byId.get(draftRef.stepOutput.node);
+    if (draft) inputs.push(...Object.entries(draft.inputs ?? {}));
+  }
+  const parts = inputs
+    .filter(([key]) => TARGET_INPUT_KEYS.includes(key))
+    .map(([key, operand]) => `${key}=${describeOperand(operand)}`)
+    .sort();
+  return parts.length > 0 ? parts.join(',') : '*';
+}
+
+/**
+ * Die Wirkungen eines Plans als `capability/purpose>Ziel` (sortiert, eindeutig) – der Umfang, den eine Planfreigabe abdeckt. Fähigkeit und Zweck allein sind keine Vollmacht: ein anderer
+ * Empfänger oder ein anderes Objekt ist eine andere Wirkung.
+ */
 export function planEffectKeys(proposal: Pick<PlanProposal, 'nodes'>, capabilities: ReadonlyMap<string, CapabilityDefinition>): string[] {
+  const byId = new Map(proposal.nodes.map((n) => [n.id, n] as const));
   const keys = proposal.nodes
     .filter((node) => node.type === 'ACTION' && node.capability !== undefined && isEffectCapability(capabilities.get(node.capability.key)))
-    .map((node) => `${node.capability!.key}${typeof node.config.purpose === 'string' ? `/${node.config.purpose}` : ''}`);
+    .map((node) => `${node.capability!.key}${typeof node.config.purpose === 'string' ? `/${node.config.purpose}` : ''}>${effectTarget(node, byId)}`);
   return [...new Set(keys)].sort();
+}
+
+/** Zielangaben, die ohne ausdrückliche Wahl entstehen (Antwortadresse des Vorgangs, abgeleitete Ergebnisse): ältere Freigaben ohne Zielangabe decken genau diese ab. */
+const DEFAULT_TARGETS: ReadonlySet<string> = new Set(['*', 'to=fact:contact.email', 'recipient=fact:contact.email']);
+
+function isCovered(effectKey: string, approved: ReadonlySet<string>): boolean {
+  if (approved.has(effectKey)) return true;
+  const [base, target = '*'] = effectKey.split('>');
+  return approved.has(base as string) && DEFAULT_TARGETS.has(target); // Freigabe im früheren Format (nur Fähigkeit/Zweck)
 }
 
 /**
@@ -35,7 +81,7 @@ export function planEffectKeys(proposal: Pick<PlanProposal, 'nodes'>, capabiliti
  * (z. B. die nächste Rückfrage derselben Art) wiederholt die Freigabe nicht; jede **neue Art** von Wirkung verlangt sie wieder (Entscheidung D4: begrenzt und ausdrücklich).
  */
 export function planNeedsNewApproval(proposal: PlanProposal, capabilities: ReadonlyMap<string, CapabilityDefinition>, approvedEffects: ReadonlySet<string>): boolean {
-  return planEffectKeys(proposal, capabilities).some((key) => !approvedEffects.has(key));
+  return planEffectKeys(proposal, capabilities).some((key) => !isCovered(key, approvedEffects));
 }
 
 /** Knotentypen, die auch vor der Planfreigabe laufen dürfen: verstehen, vorbereiten, entscheiden – nie warten, übergeben, abschließen oder wirken. */
