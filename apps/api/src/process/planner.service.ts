@@ -403,6 +403,20 @@ Fehlend (nur die Kundschaft kann das beantworten):
 ${missing}`)}`;
   }
 
+  /**
+   * Teilvorgang einer Nachricht mit mehreren Anliegen (FX-02): Dieser Vorgang bearbeitet genau ein Anliegen. Ohne diese Eingrenzung plante jeder Teilvorgang die Ziele der ganzen Nachricht (Live-Fund) und konnte
+   * deshalb nie sauber abschließen. Die Geschwister und ihre Anliegen werden genannt, damit nichts doppelt oder gar nicht bearbeitet wird.
+   */
+  private async splitBlock(tenantId: string, caseId: string): Promise<string> {
+    const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: 'case.split_from' }, orderBy: { sequence: 'asc' }, select: { payload: true } });
+    const payload = event?.payload as { goal?: string; intentKey?: string; siblings?: string[] } | null | undefined;
+    if (!payload?.goal) return '';
+    const siblings = (payload.siblings ?? []).map((s) => `- ${s}`).join('\n') || '(keine)';
+    return `Teilvorgang einer Nachricht mit mehreren Anliegen. Dein Anliegen (nur dieses bearbeitest du): "${payload.goal}". Die übrigen Anliegen der Nachricht bearbeiten eigene Teilvorgänge – plane dafür nichts und wähle keine Ziele, die nur sie betreffen (z. B. kein Angebot, keinen Termin, keine Antwort auf ihre Fragen), es sei denn, dein Anliegen verlangt es:
+${siblings}
+Die Nachricht der Kundschaft enthält alle Anliegen; lies nur den Teil, der zu deinem Anliegen gehört. Eine Eingangsbestätigung gehört der ganzen Nachricht und wird nur einmal gesendet (ein weiterer Teilvorgang ist damit abgedeckt).`;
+  }
+
   /** Ein interner Auftrag hat keine Nachricht der Kundschaft: kein Absender, kein Kundenkontakt – das Ziel ergibt sich aus der Anweisung (und ihrer Frist). */
   private async orderBlock(tenantId: string, caseId: string): Promise<string> {
     const scoped = this.prisma.forTenantId(tenantId);
@@ -453,6 +467,7 @@ ${missing}`)}`;
       `Letzte Nachricht der Kundschaft (UNTRUSTED):\n${wrapUntrustedContent(await this.latestInboundText(tenantId, caseRow.id))}`,
       await this.requirementsBlock(tenantId, caseRow.id),
       await this.orderBlock(tenantId, caseRow.id),
+      await this.splitBlock(tenantId, caseRow.id),
       `Bekannte Fakten (UNTRUSTED, aus externen Nachrichten):\n${wrapUntrustedContent(factLines)}`,
       `Verfügbare Fähigkeiten:\n${capabilityLines}`,
       `${await this.profileContext.promptFor(tenantId).catch(() => '') || 'Betriebsprofil: nicht hinterlegt.'}`,

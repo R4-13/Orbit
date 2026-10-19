@@ -37,7 +37,9 @@ async function main(): Promise<void> {
     const scoped = prisma.forTenantId(tenant.id);
     const plan = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' }, include: { nodes: true } });
     if (!plan) throw new Error('Der Vorgang hat keinen Plan, der auf die Freigabe wartet.');
-    const sender = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { fromAddress: true } });
+    // Ein Teilvorgang einer aufgeteilten Nachricht hat die Nachricht nicht selbst: sie liegt am Hauptvorgang.
+    const own = await scoped.case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } });
+    const sender = await scoped.emailMessage.findFirst({ where: { caseId: { in: own?.parentCaseId ? [caseId, own.parentCaseId] : [caseId] }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { fromAddress: true } });
     if (!sender || sender.fromAddress.toLowerCase() !== onlyTo) throw new Error(`Die Absenderadresse des Vorgangs (${sender?.fromAddress ?? 'unbekannt'}) ist nicht ${onlyTo}.`);
 
     const catalogue = app.get(CapabilityRegistryService).catalogue();

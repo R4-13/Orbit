@@ -218,6 +218,15 @@
       "betreff": "Wartungsvertrag für 12 Wohneinheiten",
       "text": "Hallo,\n\nwir verwalten ein Haus mit 12 Wohneinheiten und suchen einen Betrieb, der die Heizungsanlage (Baujahr 2009) dauerhaft wartet, mit Bereitschaftsdienst am Wochenende. Wie sehen Ihre Konditionen aus und wie schnell könnten Sie starten? Bitte melden Sie sich.\n\nTom Orbit, Hausverwaltung",
       "erwartung": "Unbekannte Vorgangsart (Dauerauftrag/Vertrag): kein erfundener Preis oder Vertragsinhalt; ORBIT klärt Angaben (Anlage, Umfang), benennt Zuständige und führt bis zu Wartepunkt, Freigabe oder begründeter Übergabe."
+    },
+    {
+      "id": "fuenf-anliegen",
+      "art": "anfrage",
+      "titel": "Fünf Anliegen in einer Mail (Aufteilung)",
+      "absender": "Tom Orbit",
+      "betreff": "Fünf Dinge auf einmal",
+      "text": "Guten Tag,\n\nich habe fünf Anliegen: Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer. Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben. Drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren. Viertens: Sind Sie samstags telefonisch erreichbar? Fünftens tropft im Gäste-WC der Wasserhahn, bitte um einen Reparaturtermin.\n\nDanke, Tom Orbit",
+      "erwartung": "Fünf Anliegen erkannt; bei aktivierter Aufteilung fünf Teilvorgänge, vier werden bearbeitet, das fünfte bleibt offen und wird nachgezogen; der Hauptvorgang schließt erst mit allen."
     }
   ]
 }
