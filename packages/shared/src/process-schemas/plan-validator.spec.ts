@@ -243,6 +243,15 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(plan, ctx({ blueprint: undefined, confirmedEffects: [{ nodeId: 'notify', capability: 'staff.notify' }] })))).not.toContain('DEAD_END');
   });
 
+  it('hinter dem Warten auf eine Antwort wird im freien Plan nichts geplant (die Antwort bestimmt, was folgt); ein hinterlegter Prozess darf es', () => {
+    const behind = clarificationPlan();
+    behind.nodes.push(node('after', 'MANUAL_TASK'));
+    behind.edges.push(edge('e9', 'wait', 'after'));
+    expect(codes(validatePlan(behind, ctx({ blueprint: undefined })))).toContain('PLAN_BEHIND_WAIT');
+    expect(codes(validatePlan(behind, ctx()))).not.toContain('PLAN_BEHIND_WAIT');
+    expect(codes(validatePlan(clarificationPlan(), ctx({ blueprint: undefined })))).not.toContain('PLAN_BEHIND_WAIT');
+  });
+
   it('a complete plan with a terminal node is valid, and a plan without one is not', () => {
     const complete = clarificationPlan();
     complete.nodes.push(node('done', 'COMPLETE'));

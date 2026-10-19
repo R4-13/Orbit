@@ -113,6 +113,27 @@ export function reduceToUnderstanding(
   };
 }
 
+/**
+ * Schneidet alles ab, was hinter einem Warten auf eine Antwort der Kundschaft geplant wurde (außer bereits ausgeführten Schritten): was dann zu tun ist, hängt vom Inhalt der Antwort ab; ORBIT plant nach der
+ * Antwort neu. `undefined`, wenn nichts abzuschneiden ist.
+ */
+export function stripBehindWait(proposal: PlanProposal, executedNodeIds: ReadonlySet<string>): PlanProposal | undefined {
+  const waits = proposal.nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config?.eventType === 'communication.received');
+  const behind = new Set<string>();
+  const visit = (id: string): void => {
+    for (const edge of proposal.edges.filter((e) => e.source === id)) {
+      if (behind.has(edge.target)) continue;
+      behind.add(edge.target);
+      visit(edge.target);
+    }
+  };
+  for (const wait of waits) visit(wait.id);
+  const removable = [...behind].filter((id) => !executedNodeIds.has(id));
+  if (removable.length === 0) return undefined;
+  const drop = new Set(removable);
+  return { ...proposal, nodes: proposal.nodes.filter((n) => !drop.has(n.id)), edges: proposal.edges.filter((e) => !drop.has(e.source) && !drop.has(e.target)) };
+}
+
 /** Knotentypen, die auch vor der Planfreigabe laufen dürfen: verstehen, vorbereiten, entscheiden – nie warten, übergeben, abschließen oder wirken. */
 const PRE_APPROVAL_TYPES: ReadonlySet<string> = new Set(['INTERPRET', 'RESOLVE_CONTEXT', 'EVALUATE_REQUIREMENTS', 'DECISION', 'REASSESS', 'PREPARE']);
 

@@ -251,13 +251,27 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
         node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
         node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
         node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen und auf die Antwort warten.',
+    });
+    // Nach der Antwort plant ORBIT neu (hinter dem Warten wird nichts vorausgeplant): die Antwort wird ausgewertet, die zuständige Person informiert.
+    const afterReply = (note: string) => ({
+      goalKeys: ['staff.informed'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
         node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: note } } }),
         node('done', 'COMPLETE'),
       ],
-      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait'), edge('wait', 'notify'), edge('notify', 'done')],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'notify'), edge('notify', 'done')],
       unresolvedRequirements: [],
       assumptions: [],
-      conciseExplanation: 'Gezielt nachfragen und danach informieren.',
+      conciseExplanation: 'Antwort ausgewertet, Person informiert.',
     });
     const analysis = (key: string, label: string, question: string) =>
       seedTool('submit_request_analysis', {
@@ -280,7 +294,9 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(sent.map((m) => m.bodyText.includes('Adresse') || m.bodyText.includes('ins Objekt'))).toEqual([true, true]);
     expect((await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } })).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_INFORMATION']);
 
-    // Eine einzige Antwort – im Mailfaden der ersten Rückfrage – beantwortet beide Fragen.
+    // Eine einzige Antwort – im Mailfaden der ersten Rückfrage – beantwortet beide Fragen. Jeder Teilvorgang plant danach selbst neu.
+    seedPlan(afterReply('Standort geklärt.'));
+    seedPlan(afterReply('Zugang geklärt.'));
     const reply = await intake.handleIntakeEvent(tenantId, undefined, {
       ...mail(tenantId),
       subject: 'Re: Zwei Fragen',

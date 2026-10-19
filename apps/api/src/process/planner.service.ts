@@ -8,6 +8,7 @@ import {
   validatePlan,
   PLAN_SCOPE_VALIDITY_DAYS,
   reduceToUnderstanding,
+  stripBehindWait,
   planNeedsNewApproval,
   planNeedsWriteApproval,
   describeGoalCatalogue,
@@ -312,9 +313,9 @@ export class PlannerService {
    * Nur wenn danach alles gültig ist; sonst bleibt es beim Reparaturversuch mit dem Modell.
    */
   private repairDeterministically(proposal: PlanProposal, validation: PlanValidationResult, context: PlanValidationContext, parent: PlanGraph | undefined): PlanValidationResult | undefined {
-    const repairable = new Set(['REPLAN_DROPS_CONFIRMED_EFFECT', 'REPLAN_AFTER_UNDERSTANDING', 'DEAD_END', 'NO_TERMINAL']);
+    const repairable = new Set(['REPLAN_DROPS_CONFIRMED_EFFECT', 'REPLAN_AFTER_UNDERSTANDING', 'PLAN_BEHIND_WAIT', 'DEAD_END', 'NO_TERMINAL']);
     const errors = validation.issues.filter((i) => i.severity === 'ERROR');
-    if (errors.length === 0 || !errors.some((i) => i.code === 'REPLAN_DROPS_CONFIRMED_EFFECT' || i.code === 'REPLAN_AFTER_UNDERSTANDING') || errors.some((i) => !repairable.has(i.code))) return undefined;
+    if (errors.length === 0 || !errors.some((i) => i.code === 'REPLAN_DROPS_CONFIRMED_EFFECT' || i.code === 'REPLAN_AFTER_UNDERSTANDING' || i.code === 'PLAN_BEHIND_WAIT') || errors.some((i) => !repairable.has(i.code))) return undefined;
     let candidate: PlanProposal = proposal;
     // Jeder ausgeführte Schritt kehrt unverändert aus der letzten Revision zurück: fehlt er, wird er ergänzt; weicht das Modell von ihm ab (andere Fähigkeit oder anderer Zweck unter derselben Kennung), wird er ersetzt.
     const originals = (context.confirmedEffects ?? [])
@@ -324,6 +325,7 @@ export class PlannerService {
       const byId = new Map(originals.map((def) => [def.id, def] as const));
       candidate = { ...candidate, nodes: [...candidate.nodes.map((n) => byId.get(n.id) ?? n), ...originals.filter((def) => !candidate.nodes.some((n) => n.id === def.id))] };
     }
+    if (errors.some((i) => i.code === 'PLAN_BEHIND_WAIT')) candidate = stripBehindWait(candidate, new Set((context.confirmedEffects ?? []).map((c) => c.nodeId))) ?? candidate;
     let result = validatePlan(candidate, context);
     if (result.valid) return result;
     const remaining = result.issues.filter((i) => i.severity === 'ERROR');
@@ -352,7 +354,7 @@ ${describeGoalCatalogue()}
 - Trage Unsicherheiten als assumptions mit requiresReview=true ein. Erkläre den Plan in conciseExplanation in 1–2 Sätzen. unresolvedRequirements sind kurze Stichworte (höchstens 120 Zeichen je Eintrag), keine Sätze.
 Zielarbeit bei unbekannten Vorgängen (kein hinterlegter Prozess): Arbeite wie eine Mitarbeiterin bis das Ziel nachgewiesen ist oder ein sachlich notwendiger Warte-, Freigabe- oder Übergabepunkt erreicht ist – nicht nur bis zum ersten Schritt.
 - Verstehen zuerst: RESOLVE_CONTEXT (context.lookup), dann requirements.resolve (ermittelt aus der Nachricht, was bekannt ist und was für das Ziel noch fehlt). Aus Antworten der Kundschaft liest facts.extract_from_message (messageId = sourceRef inbound.latestMessageId) die Angaben aus.
-- Fehlt etwas, das nur die Kundschaft weiß: Rückfrage (communication.draft + email.send, purpose CLARIFICATION, höchstens so viele wie das Limit erlaubt), dann WAIT_EVENT. Nach der Antwort wird neu geplant: lies die Antwort aus, prüfe erneut, handle oder frage gezielt nach.
+- Fehlt etwas, das nur die Kundschaft weiß: Rückfrage (communication.draft + email.send, purpose CLARIFICATION, höchstens so viele wie das Limit erlaubt), dann WAIT_EVENT als LETZTER Knoten dieser Revision (keine Kante dahinter, auch keine Meldung an eine Person: was danach geschieht, hängt vom Inhalt der Antwort ab). Nach der Antwort wird neu geplant: lies die Antwort aus (facts.extract_from_message), prüfe erneut, handle oder frage gezielt nach, informiere die zuständige Person mit dem neuen Stand.
 - Zweistufig planen: Was gefragt werden muss, weißt du erst nach der Anforderungsprüfung. Liegt unten noch KEIN Ergebnis der Anforderungsprüfung vor, plane in dieser Revision nur das Verstehen (context.lookup, requirements.resolve) und beende sie mit einem REASSESS-Knoten (config.replan = true, ohne ausgehende Kante): ORBIT plant danach mit dem Ergebnis weiter. Eine Übergabe an eine Person gehört erst in die Revision, die das Ergebnis kennt.
 - Liegt unten ein Ergebnis der Anforderungsprüfung mit fehlenden Angaben vor, die nur die Kundschaft kennt: stelle EINE gebündelte Rückfrage (communication.draft mit missing = Ergebnis "missing" von requirements.resolve, dann email.send, purpose CLARIFICATION) und warte darauf (WAIT_EVENT). Übergib nicht ohne Rückfrage – es sei denn, es geht um einen Notfall, um Zusagen, Preise oder Rechtliches, oder die Kundschaft kann nichts dazu liefern. Eine Eingangsbestätigung allein ersetzt die Rückfrage nicht. Informiere die zuständige Person zusätzlich (staff.notify), damit sie den Stand kennt.
 - Bestätige den Eingang nur, wenn die Kundschaft sonst lange nichts hört (purpose ACKNOWLEDGEMENT).

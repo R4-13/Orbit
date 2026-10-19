@@ -477,6 +477,13 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     add({ code: 'CLARIFICATION_EXPECTED', check: 12, message: `Die Anforderungsprüfung hat ${ctx.customerQuestionsOpen} fehlende Angaben ergeben, die nur die Kundschaft kennt, und es wurde noch nicht gefragt. Plane eine gebündelte Rückfrage (communication.draft mit missing = Ergebnis "missing" von requirements.resolve, dann email.send, purpose CLARIFICATION) und danach einen WAIT_EVENT, bevor du an eine Person übergibst.` });
   }
 
+  // Hinter dem Warten auf eine Antwort der Kundschaft wird nichts geplant: was dann zu tun ist, hängt vom Inhalt der Antwort ab (Live-Fund: die Antwort wurde ohne Auswertung an eine Person gegeben). Nach der
+  // Antwort plant ORBIT neu – mit der ausgelesenen Antwort. Ein hinterlegter Prozess legt seine Fortsetzung selbst fest.
+  if (!blueprint) {
+    const waits = nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config.eventType === 'communication.received' && (out.get(n.id) ?? []).length > 0);
+    for (const wait of waits) add({ code: 'PLAN_BEHIND_WAIT', check: 12, nodeId: wait.id, message: `Hinter dem Warten "${wait.id}" auf eine Antwort wird nichts geplant: ORBIT plant nach der Antwort neu und liest sie dabei aus. Beende die Revision am Warteknoten ohne ausgehende Kante.` });
+  }
+
   // Wer die Anforderungsprüfung erst im Plan ausführt, kennt ihr Ergebnis beim Planen nicht: Übergabe oder Rückfrage lassen sich erst danach sinnvoll festlegen.
   const runsRequirements = nodes.some((n) => n.capability?.key === 'requirements.resolve');
   if (!blueprint && ctx.requirementsAnalyzed === false && runsRequirements && !askedAlready && !onlyUnderstanding) {

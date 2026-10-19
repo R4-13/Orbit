@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CAPABILITIES } from './capability';
-import { isEffectCapability, isReplanPoint, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, reduceToUnderstanding, runsBeforePlanApproval } from './plan-approval';
+import { isEffectCapability, isReplanPoint, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, reduceToUnderstanding, runsBeforePlanApproval, stripBehindWait } from './plan-approval';
 import type { PlanNode, PlanProposal } from './plan';
 
 const catalogue = new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c]));
@@ -94,5 +94,22 @@ describe('Reduktion auf das Verstehen (Zielarbeit)', () => {
 
   it('gibt es nichts zu verstehen, bleibt der Plan unverändert (undefined)', () => {
     expect(reduceToUnderstanding(plan([node('notify', 'ACTION', 'staff.notify'), node('human', 'MANUAL_TASK')]), catalogue, new Set())).toBeUndefined();
+  });
+});
+
+describe('Nichts hinter dem Warten auf eine Antwort', () => {
+  const wait = (): PlanNode => ({ ...node('wait', 'WAIT_EVENT'), config: { eventType: 'communication.received' } });
+  it('schneidet ab, was hinter dem Warten auf eine Antwort geplant wurde – außer bereits Ausgeführtem', () => {
+    const nodes = [node('ask', 'ACTION', 'email.send'), wait(), node('notify', 'ACTION', 'staff.notify'), node('human', 'MANUAL_TASK')];
+    const edges = [
+      { id: 'e1', source: 'ask', target: 'wait' },
+      { id: 'e2', source: 'wait', target: 'notify' },
+      { id: 'e3', source: 'notify', target: 'human' },
+    ];
+    const stripped = stripBehindWait({ ...plan(nodes), edges }, new Set())!;
+    expect(stripped.nodes.map((n) => n.id)).toEqual(['ask', 'wait']);
+    expect(stripped.edges.map((e) => e.id)).toEqual(['e1']);
+    expect(stripBehindWait({ ...plan(nodes), edges }, new Set(['notify', 'human']))).toBeUndefined(); // nur Ausgeführtes dahinter
+    expect(stripBehindWait(plan([node('ask', 'ACTION', 'email.send'), wait()]), new Set())).toBeUndefined(); // nichts dahinter
   });
 });
