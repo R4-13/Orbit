@@ -125,7 +125,8 @@ export const DEFAULT_POLICY_CONFIG: Record<PolicyActionKey, PolicyDefault> = {
   [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.PROCESS_PLAN]: { mode: 'AUTONOMOUS' },
-  [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: { mode: 'REQUIRE_APPROVAL' },
+  // Feste Vorgabe (Entscheidung D4, Addendum ADD-2.1): schreibende Wirkungen eines unbekannten Vorgangs brauchen die Planfreigabe – kein Autonomiegrad hebt das auf.
+  [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: { mode: 'REQUIRE_APPROVAL', locked: true },
   [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.EMAIL_SEND_INFORMATION]: { mode: 'REQUIRE_APPROVAL' },
   [POLICY_ACTIONS.STAFF_NOTIFY]: { mode: 'AUTONOMOUS' },

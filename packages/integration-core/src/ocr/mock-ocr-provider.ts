@@ -16,6 +16,11 @@ export class MockOcrProvider implements OcrProvider {
     this.queue = [...scriptedResults];
   }
 
+  /** Der Platzhalter liest nur vorbereitete Ergebnisse (Tests/Demo); ohne sie liest er nichts. */
+  canExtract(): boolean {
+    return this.queue.length > 0;
+  }
+
   async extractInvoiceData(_documentBytes: Buffer, _mimeType: string): Promise<ExtractedInvoiceData> {
     return this.queue.shift() ?? { confidenceScore: 0 };
   }

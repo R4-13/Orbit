@@ -74,7 +74,7 @@ export const POLICY_ACTION_LABELS: Readonly<Record<string, string>> = {
   'email.send.clarification': 'Rückfrage an den Kunden senden',
   'email.send.quote_delivery': 'Angebot an den Kunden senden',
   'process.plan': 'Ablauf planen',
-  'process.plan.activate': 'Frei geplanten Ablauf ohne Bestätigung starten',
+  'process.plan.activate': 'Planbestätigung für schreibende Wirkungen unbekannter Vorgänge (fest)',
   'email.send.acknowledgement': 'Bestätigung oder Statusauskunft an die Kundschaft senden',
   'email.send.information': 'Auskunft aus dem Betriebswissen an die Kundschaft senden',
   'staff.notify': 'Mitarbeiter benachrichtigen',

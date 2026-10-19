@@ -9,6 +9,7 @@ import { CaseFactsService } from './case-facts.service';
 import { buildEmergencyProcedure } from './emergency-procedure';
 import { buildInformationProcedure, buildStatusProcedure } from './standard-procedures';
 import { OrchestratorService, type StartCaseResult } from './orchestrator.service';
+import { ShadowPlanService } from './shadow-plan.service';
 
 const REFERENCE_WINDOW_DAYS = 60;
 /** Absender, die nie eine Antwort bekommen sollen (Lieferanten, Sonstige) – nur Kundschaft, Interessenten und Unbekannte. */
@@ -35,6 +36,7 @@ export class AdHocIntakeService {
     private readonly policy: PolicyEnforcementService,
     private readonly facts: CaseFactsService,
     private readonly events: CaseEventsService,
+    private readonly shadow: ShadowPlanService,
   ) {}
 
   /** Startet die Bearbeitung und treibt sie voran. Wirft nie: bei jedem Fehler bleibt der Vorgang bei einer Person. */
@@ -42,8 +44,11 @@ export class AdHocIntakeService {
     try {
       let result: StartCaseResult;
       let mode: AdHocStartResult['mode'] = 'PLANNED';
+      // Schattenbetrieb: wo der tatsächliche Weg ein festes Verfahren ist (Notfall, Auskunft, Status), plant der freie Planer zum Vergleich mit – ohne etwas auszuführen (nur mit Flag `planner.shadow`).
+      // Wo der tatsächliche Weg ohnehin der freie Planer ist, gibt es nichts zu vergleichen.
       if (triage.urgency === 'CRITICAL') {
         mode = 'EMERGENCY_PROCEDURE';
+        void this.shadow.recordSafely(tenantId, caseRow.id, subject);
         const acknowledgeSender = await this.canAcknowledge(tenantId, triage);
         const procedure = buildEmergencyProcedure({
           message: `Notfall: „${subject.slice(0, 120)}“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren.`,
@@ -54,12 +59,14 @@ export class AdHocIntakeService {
         const standard = await this.standardProcedure(tenantId, caseRow.id, triage, subject);
         if (standard) {
           mode = 'STANDARD_PROCEDURE';
+          void this.shadow.recordSafely(tenantId, caseRow.id, subject);
           result = await this.orchestrator.startProcedure(tenantId, caseRow.id, standard, { userId, intentSummary: subject });
         } else {
           result = await this.orchestrator.startCase(tenantId, caseRow.id, { userId, intentSummary: subject });
         }
       }
-      if (result.outcome === 'RUNNING') await this.orchestrator.advance(tenantId, caseRow.id);
+      // Auch ein Plan, der auf die Planfreigabe wartet, läuft los: seine verstehenden und vorbereitenden Schritte (Kontext, Angaben, Entwürfe) laufen vor der Freigabe (Entscheidung D4).
+      if (result.outcome === 'RUNNING' || result.outcome === 'AWAITING_PLAN_APPROVAL') await this.orchestrator.advance(tenantId, caseRow.id);
       return { result, mode };
     } catch (error) {
       this.logger.warn(`Ad-hoc processing failed for case ${caseRow.id}: ${error instanceof Error ? error.message : String(error)}`);

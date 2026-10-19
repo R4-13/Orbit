@@ -55,7 +55,7 @@ const ACTION_LABELS: Record<string, string> = {
   'email.send.clarification': 'Rückfrage an den Absender senden',
   'email.send.quote_delivery': 'Angebot an den Kunden senden',
   'process.plan': 'Prozessplan durch die KI vorschlagen',
-  'process.plan.activate': 'Frei geplanten Ablauf ohne Bestätigung starten',
+  'process.plan.activate': 'Planbestätigung für schreibende Wirkungen unbekannter Vorgänge (fest)',
   'email.send.acknowledgement': 'Bestätigung/Statusauskunft an die Kundschaft senden',
   'email.send.information': 'Auskunft aus dem Betriebswissen senden',
   'staff.notify': 'Mitarbeiter benachrichtigen',
@@ -289,10 +289,10 @@ export default function AdminPoliciesPage() {
           {levelRules.length > 0 ? (
             <Card className="mt-4 overflow-hidden" data-testid="policy-level-rules">
               <div className="border-b border-slate-100 px-4 py-3">
-                <h2 className="text-base font-semibold text-slate-900">Freie Planung</h2>
+                <h2 className="text-base font-semibold text-slate-900">Unbekannte Vorgänge (feste Vorgabe)</h2>
                 <p className="text-xs text-slate-600">
-                  Darf ORBIT einen selbst geplanten Ablauf ohne vorherige Bestätigung des ganzen Plans starten? Jede Wirkung nach außen bleibt trotzdem durch ihre eigene Regel
-                  geschützt. Wird auch durch den Automatisierungsgrad gesetzt.
+                  Bei einem Vorgang ohne hinterlegten Prozess plant ORBIT selbst. Verstehende und vorbereitende Schritte laufen sofort; schreibende Wirkungen (Versand, Termin, CRM) beginnen erst nach
+                  Ihrer Planbestätigung – in jeder Stufe. Danach gilt für jede Aktion zusätzlich ihre eigene Regel.
                 </p>
               </div>
               <PolicyRows policies={levelRules} onError={setActionError} />

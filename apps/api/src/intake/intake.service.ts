@@ -17,6 +17,8 @@ import { CaseFactsService, type FactInput } from '../process/case-facts.service'
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
 import { ShadowPlanService } from '../process/shadow-plan.service';
+import type { OcrProvider } from '@orbit/integration-core';
+import { OCR_PROVIDER } from '../connectors/connectors.tokens';
 import { OrchestratorService } from '../process/orchestrator.service';
 import { StorageService } from '../storage/storage.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -45,6 +47,8 @@ interface DomainHandlerResult {
   outcomeUnknown?: boolean;
   /** The durable workflow paused for a human approval — the case must say so, not look finished. */
   waitingForApproval?: boolean;
+  /** Eine benötigte Fähigkeit fehlt (z. B. Rechnungsauslese): begründete Übergabe an einen Menschen, kein leeres Ergebnis. */
+  manualReview?: string;
 }
 
 /** What `persistIntake()` stored — everything a later retry needs, so a pending triage never loses an input. */
@@ -122,6 +126,7 @@ export class IntakeService {
     private readonly adHoc: AdHocIntakeService,
     private readonly attachmentTexts: AttachmentTextService,
     private readonly shadow: ShadowPlanService,
+    @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
   async handleIncomingEmail(tenantId: string, actorUserId: string | undefined, input: IncomingEmailDto): Promise<IntakeResult> {
@@ -510,6 +515,8 @@ export class IntakeService {
     const blueprint = await this.blueprints.findActiveForIntent(tenantId, triage.category);
     if (blueprint) return this.runBlueprintProcess(tenantId, actorUserId, businessCase, intakeEventId, blueprint.row.key, route, event.subject ?? '');
 
+    // Schattenbetrieb auch für den Altweg (Agenten/Workflows): der freie Planer plant mit, ohne etwas auszuführen (nur mit Flag `planner.shadow`).
+    void this.shadow.recordSafely(tenantId, businessCase.id, event.subject ?? '');
     const handler = this.domainWorkflowHandlers[route];
     let agentRunIds: string[] = [];
     let workflowFailure: string | undefined;
@@ -529,21 +536,10 @@ export class IntakeService {
     }
 
     // The category is routed but the handler had nothing to act on (e.g. an invoice mail without attachment): visible review, not "done".
-    if (handled === null) {
-      await this.lifecycle.transition(
-        tenantId,
-        businessCase.id,
-        { to: 'MANUAL_REVIEW', attentionReasons: ['Die Voraussetzungen für den automatischen Ablauf fehlen (z. B. kein Anhang).'] },
-        { type: 'AGENT' },
-      );
-      await this.sendToReview(
-        tenantId,
-        actorUserId,
-        event,
-        intakeEventId,
-        `Kategorie ${triage.category} erkannt, aber die Voraussetzungen für den automatischen Ablauf fehlen (z. B. kein Anhang).`,
-        'BUSINESS_ACTIONABLE',
-      );
+    if (handled === null || handled.manualReview !== undefined) {
+      const why = handled?.manualReview ?? 'Die Voraussetzungen für den automatischen Ablauf fehlen (z. B. kein Anhang).';
+      await this.lifecycle.transition(tenantId, businessCase.id, { to: 'MANUAL_REVIEW', attentionReasons: [why] }, { type: 'AGENT' });
+      await this.sendToReview(tenantId, actorUserId, event, intakeEventId, `Kategorie ${triage.category} erkannt: ${why}`, 'BUSINESS_ACTIONABLE');
       return { case: businessCase, category: route, agentRunIds, intakeEventId };
     }
 
@@ -772,6 +768,10 @@ export class IntakeService {
     const documentId = documentIds[0];
     if (!documentId) {
       throw new Error('runFinanceAgent called without a stored document — caller (domainWorkflowHandlers.FINANCE) must guard this.');
+    }
+    // Fehlt die Rechnungsauslese, entsteht kein leerer Rechnungsdatensatz: das Dokument bleibt erhalten, die fehlende Fähigkeit wird benannt, eine Person erfasst die Rechnung.
+    if (this.ocr.canExtract && !this.ocr.canExtract()) {
+      return { manualReview: 'Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen.' };
     }
 
     if (this.llm instanceof MockLLMProvider) {

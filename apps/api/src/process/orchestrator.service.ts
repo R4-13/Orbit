@@ -12,6 +12,7 @@ import {
   nextActions,
   outageLimitReached,
   outageRetryDelayMs,
+  runsBeforePlanApproval,
   type BlueprintDefinition,
   type EvalContext,
   type ExecutionMode,
@@ -201,10 +202,17 @@ export class OrchestratorService {
         }
         if (await this.expireWaits(tenantId, caseRow)) continue;
 
-        const graph = await this.store.getActive(tenantId, caseId);
-        if (!graph) return { status: 'IDLE', executed };
+        let graph = await this.store.getActive(tenantId, caseId);
+        // Entscheidung D4: ein Plan, der mit schreibenden Wirkungen auf die Planfreigabe wartet, führt vorher seine **verstehenden und vorbereitenden** Schritte aus (Kontext, Angaben,
+        // Anforderungen, Entwürfe) – keine Wirkung, kein Warten, keine Übergabe, kein Abschluss. Der Fall bleibt „wartet auf Freigabe“.
+        let preApproval = false;
+        if (!graph) {
+          graph = await this.store.getAwaitingApproval(tenantId, caseId);
+          if (!graph) return { status: 'IDLE', executed };
+          preApproval = true;
+        }
 
-        if (await this.resumeDecidedApprovals(tenantId, caseRow, graph, executed)) continue;
+        if (!preApproval && (await this.resumeDecidedApprovals(tenantId, caseRow, graph, executed))) continue;
 
         // Angaben mit abgelaufener Gültigkeit werden vor jeder Entscheidung als veraltet markiert und nicht mehr gebunden (Amendment 02 §7.3; Konzept AV-01).
         await this.facts.markExpiredStale(tenantId, caseId);
@@ -214,7 +222,15 @@ export class OrchestratorService {
         // Sekunden verbraucht. Der Sweep nimmt den Fall nach Ablauf der Wartezeit wieder auf.
         const now = Date.now();
         const retryAtOf = (nodeKey: string) => graph.nodes.find((n) => n.nodeKey === nodeKey)?.retryAt?.getTime() ?? 0;
-        const actions = allActions.filter((a) => a.action !== 'EXECUTE' || retryAtOf(a.nodeKey) <= now);
+        const capabilityCatalogue = this.capabilities.catalogue();
+        const understandingNode = (nodeKey: string) => {
+          const definition = graph!.nodes.find((n) => n.nodeKey === nodeKey)?.definition as unknown as PlanNode | undefined;
+          return definition !== undefined && runsBeforePlanApproval(definition, capabilityCatalogue);
+        };
+        const actions = preApproval
+          ? allActions.filter((a) => a.action === 'EXECUTE' && retryAtOf(a.nodeKey) <= now && understandingNode(a.nodeKey))
+          : allActions.filter((a) => a.action !== 'EXECUTE' || retryAtOf(a.nodeKey) <= now);
+        if (preApproval && actions.length === 0) return { status: 'IDLE', executed };
         if (actions.length === 0 && allActions.length > 0) {
           const waiting = graph.nodes.filter((n) => n.state === 'PLANNED' && n.retryAt && n.retryAt.getTime() > now);
           const reasons = waiting.map((n) => `${(n.definition as unknown as PlanNode).title}: ${n.errorMessage ?? 'Ein Schritt'} ORBIT versucht es automatisch erneut (nächster Versuch ${n.retryAt!.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr).`);
@@ -240,7 +256,7 @@ export class OrchestratorService {
           } else if (action.action === 'BLOCK') {
             await this.store.transitionNode(tenantId, caseId, graph.plan.id, node.nodeKey, 'PLANNED', { state: 'BLOCKED', errorCode: 'EXPRESSION_INVALID', errorMessage: action.reason });
           } else {
-            await this.ensureInProgress(tenantId, caseId);
+            if (!preApproval) await this.ensureInProgress(tenantId, caseId);
             await this.executeNode(tenantId, await this.loadCase(tenantId, caseId), graph, node, ctx);
             executed.push(node.nodeKey);
           }
@@ -592,13 +608,24 @@ export class OrchestratorService {
     } else {
       // Frei geplant: „alle Schritte erledigt“ genügt nicht (Konzept §5a). Der Abschluss braucht einen belegten Wirkungsnachweis; die Kriterien liegen fest im Code, die Planung
       // kann sie weder ändern noch umgehen.
+      const goalKeys = [...new Set([...(await this.store.rootGoalKeys(tenantId, caseRow.id)), ...graph.plan.goalKeys])];
       const evaluation = evaluateAdHocCompletion({
         allOtherNodesDone: graph.nodes.every((n) => n.nodeKey === node.nodeKey || ['SUCCEEDED', 'SKIPPED', 'SUPERSEDED'].includes(n.state)),
-        effects: confirmed.map((e) => ({ capabilityKey: e.capabilityKey, purpose: e.purpose })),
+        goalKeys,
+        evidence: { effects: confirmed.map((e) => ({ capabilityKey: e.capabilityKey, purpose: e.purpose })), tasksCreated: await this.prisma.forTenantId(tenantId).task.count({ where: { caseId: caseRow.id } }) },
       });
       met = evaluation.met;
       if (!met) blockReason = evaluation.description;
-      await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.COMPLETION_EVALUATED, payload: { met, basis: 'ADHOC_CLOSING_PROOF', reason: evaluation.reason, evidenceRefs: evaluation.evidence } });
+      await this.events.append(tenantId, caseRow.id, {
+        type: CASE_EVENT_TYPES.COMPLETION_EVALUATED,
+        payload: {
+          met,
+          criteriaMet: met,
+          reason: evaluation.reason,
+          goals: evaluation.goals.map((g) => ({ goal: g.label, basis: 'GOAL_CRITERIA', status: g.status === 'ACHIEVED' ? 'ACHIEVED' : g.status === 'NOT_ACHIEVED' ? 'NOT_ACHIEVED' : 'NOT_EVALUABLE' })),
+          evidenceRefs: evaluation.evidence,
+        },
+      });
     }
     if (!met) {
       await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: blockReason ?? 'Die Abschlusskriterien sind nicht erfüllt.' });
@@ -606,7 +633,7 @@ export class OrchestratorService {
       return;
     }
     await this.succeed(tenantId, caseRow.id, graph, node, { criteriaMet: true }, 'LIVE');
-    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'ADHOC_CLOSING_PROOF', evidenceRefs: evidence } });
+    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'ADHOC_GOALS_PROVEN', evidenceRefs: evidence } });
   }
 
   // ── Waiting, events, approvals ──────────────────────────────────────────────

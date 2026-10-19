@@ -61,13 +61,46 @@ describe('Abschlussnachweis frei geplanter Abläufe (FA-09, e2e)', () => {
 
     const evaluated = await prisma.forTenantId(tenantId).caseEvent.findMany({ where: { caseId, type: 'completion.evaluated' } });
     expect(evaluated).toHaveLength(1);
-    expect(evaluated[0]!.payload).toMatchObject({ met: false, basis: 'ADHOC_CLOSING_PROOF', reason: 'NO_CLOSING_PROOF' });
+    expect(evaluated[0]!.payload).toMatchObject({ met: false, reason: 'GOAL_NOT_ACHIEVED', goals: [{ goal: 'Anfrage beantwortet', status: 'NOT_ACHIEVED' }] });
   });
 
-  it('eine interne Aufgabe oder Meldung ist ebenfalls kein Abschlussnachweis (Übergabe ≠ erledigt)', async () => {
+  it('ein internes Ziel („Zuständige Person informieren“) schließt OHNE jede E-Mail ab, sobald die bestätigte Meldung vorliegt – eine E-Mail ist weder nötig noch allgemein ausreichend', async () => {
+    const { tenantId, caseId } = await newCase();
+    const internal: PlanProposal = {
+      goalKeys: ['staff.informed'],
+      nodes: [node('notify', 'ACTION', { title: 'Person informieren', capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte morgen Herrn Meier an die Wartung erinnern.' } } }), node('done', 'COMPLETE', { title: 'Erledigt' })],
+      edges: [{ id: 'e_notify_done', source: 'notify', target: 'done' }],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Interner Auftrag: Person informieren.',
+    };
+    await orchestrator.startProcedure(tenantId, caseId, internal, { intentSummary: 'Interner Auftrag' });
+    await orchestrator.advance(tenantId, caseId);
+    const row = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } });
+    expect(row.orchestrationStatus).toBe('COMPLETED');
+    expect(row.outcome).toMatchObject({ code: 'ADHOC_GOALS_PROVEN' });
+    expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId, direction: 'OUTBOUND' } })).toBe(0);
+  });
+
+  it('eine versendete Antwort allein schließt ein internes Ziel nicht ab (falscher Nachweis für das Ziel)', async () => {
+    const { tenantId, caseId } = await newCase();
+    const wrong: PlanProposal = {
+      goalKeys: ['staff.informed'],
+      nodes: [node('summary', 'INTERPRET', { title: 'Zusammenfassen' }), node('done', 'COMPLETE', { title: 'Erledigt' })],
+      edges: [{ id: 'e_summary_done', source: 'summary', target: 'done' }],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Nur zusammenfassen.',
+    };
+    await orchestrator.startProcedure(tenantId, caseId, wrong, { intentSummary: 'Test' });
+    await orchestrator.advance(tenantId, caseId);
+    expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('MANUAL_REVIEW');
+  });
+
+  it('eine interne Aufgabe oder Meldung ist ebenfalls kein Abschlussnachweis für ein Ziel „Person prüft“ (Übergabe ≠ erledigt)', async () => {
     const { tenantId, caseId } = await newCase();
     const handover: PlanProposal = {
-      goalKeys: ['complaint.handled'],
+      goalKeys: ['human.review'],
       nodes: [node('task', 'MANUAL_TASK', { title: 'Eine Person prüft' })],
       edges: [],
       unresolvedRequirements: [],

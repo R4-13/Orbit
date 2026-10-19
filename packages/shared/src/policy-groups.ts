@@ -79,7 +79,7 @@ export const TECHNICAL_POLICY_ACTIONS: readonly PolicyActionKey[] = [
   POLICY_ACTIONS.PROCESS_PLAN,
 ];
 
-/** Gehören zum Autonomiegrad selbst (Voreinstellung), nicht zu einer Gruppe: darf ORBIT einen frei geplanten Ablauf ohne vorherige Bestätigung des ganzen Plans starten? */
+/** Feste Vorgabe, keine Wahl: schreibende Wirkungen eines unbekannten (frei geplanten) Vorgangs brauchen die Planbestätigung – in jeder Stufe (Entscheidung D4). */
 export const AUTONOMY_LEVEL_POLICY_ACTIONS: readonly PolicyActionKey[] = [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE];
 
 /** Plattformseitig gesperrt, nicht einstellbar und in keiner Gruppe (Zahlung ausführen: in dieser Ausbaustufe nie ausführbar, auch nicht nach Freigabe). */

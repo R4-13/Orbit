@@ -28,8 +28,8 @@ export const AUTOMATION_PRESETS: Readonly<Record<AutomationPresetKey, Automation
     key: 'BALANCED',
     label: 'Ausgewogen (empfohlen)',
     description:
-      'Rückfragen an Absender („Welche Menge benötigen Sie?“), Eingangsbestätigungen und Statusauskünfte gehen selbstständig hinaus, von der KI frei geplante Abläufe starten ohne vorherige Bestätigung. Angebote, Auskünfte aus dem Betriebswissen, Follow-ups, Termine und Buchhaltung bleiben freigabepflichtig.',
-    overrides: { [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: 'AUTONOMOUS', [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: 'AUTONOMOUS', [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: 'AUTONOMOUS' },
+      'Rückfragen an Absender („Welche Menge benötigen Sie?“), Eingangsbestätigungen und Statusauskünfte gehen selbstständig hinaus. Von der KI frei geplante Abläufe für unbekannte Vorgänge brauchen für schreibende Wirkungen weiter die Planbestätigung (in jeder Stufe). Angebote, Auskünfte aus dem Betriebswissen, Follow-ups, Termine und Buchhaltung bleiben freigabepflichtig.',
+    overrides: { [POLICY_ACTIONS.EMAIL_SEND_CLARIFICATION]: 'AUTONOMOUS', [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: 'AUTONOMOUS' },
   },
   HIGH: {
     key: 'HIGH',
@@ -41,7 +41,6 @@ export const AUTOMATION_PRESETS: Readonly<Record<AutomationPresetKey, Automation
       [POLICY_ACTIONS.EMAIL_SEND_QUOTE_DELIVERY]: 'AUTONOMOUS',
       [POLICY_ACTIONS.EMAIL_SEND_ACKNOWLEDGEMENT]: 'AUTONOMOUS',
       [POLICY_ACTIONS.EMAIL_SEND_INFORMATION]: 'AUTONOMOUS',
-      [POLICY_ACTIONS.PROCESS_PLAN_ACTIVATE]: 'AUTONOMOUS',
       [POLICY_ACTIONS.FOLLOW_UP_SEND]: 'AUTONOMOUS',
       [POLICY_ACTIONS.MEETING_CREATE]: 'AUTONOMOUS',
       [POLICY_ACTIONS.INVOICE_TRANSFER_TO_FIBU]: 'AUTONOMOUS',

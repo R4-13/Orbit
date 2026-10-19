@@ -443,9 +443,13 @@ describe('Process orchestration engine (e2e)', () => {
   describe('ad-hoc plans (§11.4) and the deterministic gate', () => {
     const adHocPlan = (overrides: Record<string, unknown> = {}) => ({
       goalKeys: ['topic.reviewed'],
-      nodes: [node('look', 'ACTION', { capability: { key: 'fx.lookup' }, inputs: { key: { fact: 'topic' } } }), node('done', 'COMPLETE')],
-      edges: [edge('e1', 'look', 'done')],
-      conciseExplanation: 'Wert nachschlagen und abschließen.',
+      nodes: [
+        node('look', 'ACTION', { capability: { key: 'fx.lookup' }, inputs: { key: { fact: 'topic' } } }),
+        node('tell', 'ACTION', { capability: { key: 'fx.notify' }, config: { purpose: 'CLARIFICATION' }, inputs: { to: { fact: 'contact.email' }, text: { literal: 'Wir melden uns.' } } }),
+        node('done', 'COMPLETE'),
+      ],
+      edges: [edge('e1', 'look', 'tell'), edge('e2', 'tell', 'done')],
+      conciseExplanation: 'Wert nachschlagen, Kundschaft informieren und abschließen.',
       ...overrides,
     });
     const seedPlan = (input: unknown) => {
@@ -457,6 +461,7 @@ describe('Process orchestration engine (e2e)', () => {
       const tenantId = await newTenant();
       const c = await newCase(tenantId);
       await facts.setByHuman(tenantId, c.id, 'u1', { key: 'topic', value: 'Garantiefrage', valueType: 'string' });
+      await facts.setByHuman(tenantId, c.id, 'u1', { key: 'contact.email', value: 'kundin@kunde.example', valueType: 'email' });
       seedPlan(adHocPlan());
       const before = calls.lookup;
 
@@ -470,11 +475,10 @@ describe('Process orchestration engine (e2e)', () => {
 
       await commands.execute(actor(tenantId), c.id, cmd('APPROVE_PLAN', (await caseOf(tenantId, c.id)).revision, { planId: plan.id }));
       expect(calls.lookup).toBe(before + 1);
-      // Konzept §5a (FA-09): ein Nachschlagen allein beantwortet kein Anliegen. Der freie Plan ist durchgelaufen, aber ohne Wirkungsnachweis schließt er den Vorgang NICHT ab.
-      const finished = await caseOf(tenantId, c.id);
-      expect(finished.orchestrationStatus).toBe('MANUAL_REVIEW');
-      expect(finished.completedAt).toBeNull();
-      expect(finished.attentionReasons.join(' ')).toMatch(/Nachweis/);
+      // Nach der Planbestätigung gilt für die Wirkung ihre eigene Regel (hier: Freigabe nötig) – der Vorgang ist nicht abgeschlossen (FA-09: ohne Zielnachweis schließt kein Plan ab).
+      const after = await caseOf(tenantId, c.id);
+      expect(after.orchestrationStatus).toBe('WAITING_FOR_APPROVAL');
+      expect(after.completedAt).toBeNull();
     });
 
     it('rejects a plan with an invented recipient even after a repair attempt and routes to manual review', async () => {

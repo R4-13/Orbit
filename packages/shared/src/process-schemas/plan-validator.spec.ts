@@ -253,6 +253,21 @@ describe('strenge Bindungen für frei geplante Abläufe (Steckbriefe der Fähigk
     expect(codes(validatePlan(plan, strict()))).toContain('CAPABILITY_BLUEPRINT_ONLY');
   });
 
+  it('Planvertrag (FA-09): eine Revision darf die Ziele der ersten Planung ergänzen, aber nicht streichen oder durch leichtere ersetzen', () => {
+    const revision = (goalKeys: string[]) => ({
+      goalKeys,
+      nodes: [node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte prüfen' } } }), wait],
+      edges: [edge('e1', 'notify', 'wait')],
+      conciseExplanation: 'Revision.',
+    });
+    const contract = { contractGoalKeys: ['inquiry.answered'] };
+    expect(codes(validatePlan(revision(['staff.informed']), strict(contract)))).toContain('GOAL_CONTRACT_VIOLATION');
+    expect(codes(validatePlan(revision(['inquiry.answered']), strict(contract)))).not.toContain('GOAL_CONTRACT_VIOLATION');
+    expect(codes(validatePlan(revision(['inquiry.answered', 'staff.informed']), strict(contract)))).not.toContain('GOAL_CONTRACT_VIOLATION');
+    // Die erste Planung hat keinen Vertrag; ein hinterlegter Prozess ebenfalls nicht.
+    expect(codes(validatePlan(revision(['staff.informed']), strict()))).not.toContain('GOAL_CONTRACT_VIOLATION');
+  });
+
   it('ohne strenge Bindung (hinterlegter Prozess) bleibt das Verhalten unverändert', () => {
     expect(validatePlan(clarificationPlan(), ctx()).valid).toBe(true);
   });

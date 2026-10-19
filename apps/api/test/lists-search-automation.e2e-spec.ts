@@ -115,18 +115,19 @@ describe('Lists, search and automation level (e2e)', () => {
         expect.arrayContaining([
           { action: 'email.send.clarification', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
           { action: 'email.send.acknowledgement', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
-          { action: 'process.plan.activate', from: 'REQUIRE_APPROVAL', to: 'AUTONOMOUS' },
         ]),
       );
-      expect(body.presets[1]!.changes).toHaveLength(3);
+      expect(body.presets[1]!.changes).toHaveLength(2);
+      // Entscheidung D4: keine Stufe hebt die Planbestätigung für unbekannte Vorgänge auf.
+      for (const preset of body.presets) expect(preset.changes.map((c) => c.action)).not.toContain('process.plan.activate');
     });
 
     it('„Ausgewogen“ lässt Rückfragen selbstständig hinausgehen, Angebote bleiben freigabepflichtig', async () => {
       const result = (await apply('BALANCED').expect(201)).body as { current: string; changed: number };
-      expect(result).toEqual({ current: 'BALANCED', changed: 3 });
+      expect(result).toEqual({ current: 'BALANCED', changed: 2 });
       expect(await modeOf('email.send.clarification')).toBe('AUTONOMOUS');
       expect(await modeOf('email.send.acknowledgement')).toBe('AUTONOMOUS');
-      expect(await modeOf('process.plan.activate')).toBe('AUTONOMOUS');
+      expect(await modeOf('process.plan.activate')).toBe('REQUIRE_APPROVAL');
       expect(await modeOf('email.send.quote_delivery')).toBe('REQUIRE_APPROVAL');
       expect(await modeOf('email.send.information')).toBe('REQUIRE_APPROVAL');
       expect(((await get().expect(200)).body as { current: string }).current).toBe('BALANCED');
@@ -137,6 +138,7 @@ describe('Lists, search and automation level (e2e)', () => {
       expect(await modeOf('followup.send')).toBe('AUTONOMOUS');
       expect(await modeOf('email.send.quote_delivery')).toBe('AUTONOMOUS');
       expect(await modeOf('supplier.create')).toBe('REQUIRE_APPROVAL');
+      expect(await modeOf('process.plan.activate')).toBe('REQUIRE_APPROVAL');
       expect(await modeOf('supplier.bank_details.change')).toBe('REQUIRE_APPROVAL');
       expect(await modeOf('payment.execute')).toBe('DISABLED');
       expect(((await get().expect(200)).body as { current: string }).current).toBe('HIGH');

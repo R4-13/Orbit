@@ -18,7 +18,7 @@ describe('InvoicesService', () => {
   };
   let audit: { record: jest.Mock };
   let storage: { getObjectBytes: jest.Mock };
-  let ocr: { extractInvoiceData: jest.Mock };
+  let ocr: { extractInvoiceData: jest.Mock; canExtract?: jest.Mock };
   let financeConnector: { transferInvoice: jest.Mock; providerName: string };
   let suppliers: { findOrCreate: jest.Mock };
   let approvals: { create: jest.Mock; markDecided: jest.Mock };
@@ -61,6 +61,34 @@ describe('InvoicesService', () => {
   });
 
   describe('createFromDocument', () => {
+    it('automatisch ohne Rechnungsauslese: kein leerer Rechnungsdatensatz – die fehlende Fähigkeit wird benannt (CAPABILITY_MISSING), das Dokument bleibt', async () => {
+      scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'k', mimeType: 'application/pdf' });
+      ocr.canExtract = jest.fn(() => false);
+
+      await expect(service.createFromDocument('tenant_1', 'agent', { documentId: 'doc_1', caseId: 'case_1' }, 'AGENT')).rejects.toMatchObject({ code: 'CAPABILITY_MISSING', httpStatus: 422 });
+      expect(ocr.extractInvoiceData).not.toHaveBeenCalled();
+      expect(scoped.invoice.create).not.toHaveBeenCalled();
+      expect(suppliers.findOrCreate).not.toHaveBeenCalled();
+    });
+
+    it('automatisch: liefert die Auslese nichts Verwertbares (keine Nummer, kein Betrag, kein Lieferant), entsteht ebenfalls kein leerer Datensatz', async () => {
+      scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'k', mimeType: 'application/pdf' });
+      ocr.extractInvoiceData.mockResolvedValue({ confidenceScore: 0 });
+
+      await expect(service.createFromDocument('tenant_1', 'agent', { documentId: 'doc_1' }, 'AGENT')).rejects.toMatchObject({ code: 'CAPABILITY_MISSING' });
+      expect(scoped.invoice.create).not.toHaveBeenCalled();
+    });
+
+    it('ein Mensch kann weiterhin ein Dokument ohne Auslese anlegen (manuelle Erfassung)', async () => {
+      scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'k', mimeType: 'application/pdf' });
+      ocr.extractInvoiceData.mockResolvedValue({ confidenceScore: 0 });
+      scoped.invoice.create.mockResolvedValue({ id: 'inv_1' });
+
+      await service.createFromDocument('tenant_1', 'user_1', { documentId: 'doc_1' }, 'USER');
+
+      expect(scoped.invoice.create).toHaveBeenCalledTimes(1);
+    });
+
     it('ist je Dokument und Vorgang idempotent: ein zweiter Aufruf legt keine zweite Rechnung und keine zweite Prüfung an', async () => {
       scoped.document.findUnique.mockResolvedValue({ id: 'doc_1', storageKey: 'k', mimeType: 'application/pdf' });
       const existing = { id: 'inv_existing', documentId: 'doc_1', caseId: 'case_1' };

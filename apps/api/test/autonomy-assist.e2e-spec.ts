@@ -7,6 +7,7 @@ import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { OrchestratorService } from '../src/process/orchestrator.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -158,23 +159,69 @@ describe('Autonomie ohne hinterlegten Prozess (e2e)', () => {
         [edge('sender_check', 'ack_draft'), edge('ack_draft', 'ack_send'), edge('ack_send', 'done')],
       );
 
-    it('Regel „Planen ohne Bestätigung“: der Ablauf läuft sofort, die Wirkung nach außen folgt ihrer eigenen Regel', async () => {
-      const tenantId = await newTenant({ 'process.plan.activate': 'AUTONOMOUS', 'email.send.acknowledgement': 'AUTONOMOUS' });
+    // Entscheidung D4 / ADD-2.1: schreibende Wirkungen eines unbekannten Vorgangs brauchen die Planfreigabe – in JEDER Autonomiestufe, auch wenn die (gesperrte) Regel in der Datenbank
+    // fälschlich auf „autonom“ stünde. Verstehende Schritte laufen vorher; die Einzelaktionsregel gilt nach der Freigabe zusätzlich.
+    const PROFILES: Record<string, Record<string, 'AUTONOMOUS' | 'REQUIRE_APPROVAL'>> = {
+      Vorsichtig: {},
+      Ausgewogen: { 'email.send.clarification': 'AUTONOMOUS', 'email.send.acknowledgement': 'AUTONOMOUS' },
+      Hochautomatisiert: { 'email.send.clarification': 'AUTONOMOUS', 'email.send.acknowledgement': 'AUTONOMOUS', 'email.send.information': 'AUTONOMOUS', 'email.send.quote_delivery': 'AUTONOMOUS', 'followup.send': 'AUTONOMOUS', 'meeting.create': 'AUTONOMOUS' },
+    };
+
+    for (const [profile, modes] of Object.entries(PROFILES)) {
+      it(`Stufe „${profile}“: ein frei geplanter Ablauf mit Versand wartet auf die Planbestätigung (auch bei \`process.plan.activate\` = autonom in der Datenbank); Kontext wurde vorher gelesen, nichts geht hinaus`, async () => {
+        const tenantId = await newTenant({ ...modes, 'email.send.acknowledgement': 'AUTONOMOUS', 'process.plan.activate': 'AUTONOMOUS' });
+        seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
+        ackPlan();
+        const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage zu Ihren Leistungen', content: 'Machen Sie auch Badsanierung?' }));
+        const caseId = result.case!.id;
+        expect(sent).toEqual([]);
+        expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_APPROVAL');
+        const plan = (await store.getLatest(tenantId, caseId))!;
+        expect(plan.plan.status).toBe('AWAITING_APPROVAL');
+        // Verstehende und vorbereitende Schritte liefen vor der Freigabe, die Wirkung nicht.
+        const state = (key: string) => plan.nodes.find((n) => n.nodeKey === key)?.state;
+        expect(state('sender_check')).toBe('SUCCEEDED');
+        expect(state('ack_draft')).toBe('SUCCEEDED');
+        expect(state('ack_send')).toBe('PLANNED');
+        expect(state('done')).toBe('PLANNED');
+      });
+    }
+
+    it('nach der Planbestätigung folgt die Wirkung ihrer eigenen Regel: autonom → genau eine Bestätigung; Freigabe nötig → sie wartet weiter', async () => {
+      const autonomous = await newTenant({ 'email.send.acknowledgement': 'AUTONOMOUS' });
       seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
       ackPlan();
-      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage zu Ihren Leistungen', content: 'Machen Sie auch Badsanierung?' }));
+      const first = await intake.handleIntakeEvent(autonomous, undefined, mail(autonomous, { subject: 'Frage', content: 'Machen Sie auch Badsanierung?' }));
+      const plan = (await store.getLatest(autonomous, first.case!.id))!.plan;
+      await app.get(OrchestratorService).approvePlan(autonomous, 'user-1', plan.id);
+      await app.get(OrchestratorService).advance(autonomous, first.case!.id);
       expect(sent).toHaveLength(1);
       expect(sent[0]).toMatchObject({ to: SENDER });
-      expect((await caseOf(tenantId, result.case!.id)).orchestrationStatus).not.toBe('WAITING_FOR_APPROVAL');
-    });
 
-    it('Regel „Plan nur mit Bestätigung“: der Plan wartet, es geschieht nichts', async () => {
-      const tenantId = await newTenant({ 'process.plan.activate': 'REQUIRE_APPROVAL', 'email.send.acknowledgement': 'AUTONOMOUS' });
+      sent = [];
+      const guarded = await newTenant({ 'email.send.acknowledgement': 'REQUIRE_APPROVAL' });
       seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
       ackPlan();
-      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Frage', content: 'Machen Sie auch Badsanierung?' }));
+      const second = await intake.handleIntakeEvent(guarded, undefined, mail(guarded, { subject: 'Frage', content: 'Machen Sie auch Badsanierung?' }));
+      const guardedPlan = (await store.getLatest(guarded, second.case!.id))!.plan;
+      await app.get(OrchestratorService).approvePlan(guarded, 'user-1', guardedPlan.id);
+      await app.get(OrchestratorService).advance(guarded, second.case!.id);
       expect(sent).toEqual([]);
-      expect((await caseOf(tenantId, result.case!.id)).orchestrationStatus).toBe('WAITING_FOR_APPROVAL');
+      expect(await nodeState(guarded, second.case!.id, 'ack_send')).toBe('AWAITING_APPROVAL');
+    });
+
+    it('ein Ablauf ohne schreibende Wirkung (nur Kontext lesen und Übergabe an eine Person) startet sofort – die sichere Rückfallstufe braucht keine Planbestätigung', async () => {
+      const tenantId = await newTenant({});
+      seedTriage({ urgency: 'NORMAL', category: 'COMPLAINT_OR_SERVICE' });
+      seedPlan(
+        [node('sender_check', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }), node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte Anliegen prüfen.' } } }), node('human', 'MANUAL_TASK', { title: 'Eine Person prüft' })],
+        [edge('sender_check', 'notify'), edge('notify', 'human')],
+      );
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Reklamation', content: 'Der Monteur war unfreundlich.' }));
+      expect(sent).toEqual([]);
+      expect((await store.getLatest(tenantId, result.case!.id))!.plan.status).toBe('ACTIVE');
+      expect(await nodeState(tenantId, result.case!.id, 'notify')).toBe('SUCCEEDED');
+      expect((await caseOf(tenantId, result.case!.id)).orchestrationStatus).toBe('MANUAL_REVIEW');
     });
 
     it('ohne verwertbaren Plan (keine KI) bleibt der Vorgang wie bisher bei einer Person zur Prüfung', async () => {

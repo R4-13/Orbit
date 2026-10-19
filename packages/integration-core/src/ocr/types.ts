@@ -25,5 +25,10 @@ export interface ExtractedInvoiceData {
 
 export interface OcrProvider {
   readonly providerName: string;
+  /**
+   * Kann dieser Texterkenner jetzt Rechnungsdaten lesen? Fehlt die Angabe, gilt „ja“. Ein Platzhalter ohne vorbereitete Ergebnisse liest nichts und meldet das, damit daraus keine leeren
+   * Rechnungsdatensätze entstehen (Konzept Flexible Autonomie, Messlatte 18.10.: zwei leere Rechnungen zu einem Dokument).
+   */
+  canExtract?(): boolean;
   extractInvoiceData(documentBytes: Buffer, mimeType: string): Promise<ExtractedInvoiceData>;
 }

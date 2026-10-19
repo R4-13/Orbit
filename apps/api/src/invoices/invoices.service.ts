@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError, PolicyViolationError, verifyFileSignature } from '@orbit/shared';
+import { CapabilityMissingError, NotFoundError, PolicyViolationError, verifyFileSignature } from '@orbit/shared';
 import { Prisma, type BookingProposal, type FinanceTransfer, type Invoice, type Supplier } from '@orbit/domain';
 import type { FinanceConnector, OcrProvider } from '@orbit/integration-core';
 import { ApprovalsService } from '../approvals/approvals.service';
@@ -80,7 +80,14 @@ export class InvoicesService {
     // Die Bytes werden hier ohnehin gelesen: ein Programm oder eine Datei, die nicht zur angegebenen Art passt, wird nicht verarbeitet (MST-09).
     const signature = verifyFileSignature(document.mimeType, bytes);
     if (signature.status === 'MISMATCH') throw new PolicyViolationError(`Die Datei wird nicht verarbeitet: ${signature.reason}`, { id: document.id });
+    // Automatische Verarbeitung ohne Auslese: kein leerer Rechnungsdatensatz (das Dokument bleibt erhalten, ein Mensch erfasst die Rechnung).
+    if (actorType === 'AGENT' && this.ocrProvider.canExtract && !this.ocrProvider.canExtract()) {
+      throw new CapabilityMissingError('Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar. Das Dokument ist gesichert; die Rechnung muss manuell erfasst werden.', { documentId: document.id });
+    }
     const extracted = await this.ocrProvider.extractInvoiceData(bytes, document.mimeType);
+    if (actorType === 'AGENT' && !extracted.invoiceNumber && extracted.amountGross === undefined && !extracted.supplierName) {
+      throw new CapabilityMissingError('Aus dem Dokument konnten keine Rechnungsdaten gelesen werden. Das Dokument ist gesichert; die Rechnung muss manuell erfasst werden.', { documentId: document.id });
+    }
 
     const duplicate =
       extracted.invoiceNumber && extracted.amountGross !== undefined

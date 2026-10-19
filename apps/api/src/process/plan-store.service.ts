@@ -166,6 +166,18 @@ export class PlanStoreService {
   }
 
   /** The newest revision in any state (proposed, awaiting approval, active, ...) — what the orchestration view shows. */
+  /** Die Ziele der ersten Planung (Planvertrag): sie gelten für alle Revisionen. */
+  async rootGoalKeys(tenantId: string, caseId: string): Promise<string[]> {
+    const first = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId }, orderBy: { revision: 'asc' }, select: { goalKeys: true } });
+    return first?.goalKeys ?? [];
+  }
+
+  /** Der Plan, der auf die Planfreigabe wartet (D4): seine verstehenden Schritte dürfen vorher laufen. */
+  async getAwaitingApproval(tenantId: string, caseId: string): Promise<PlanGraph | undefined> {
+    const plan = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
+    return plan ? this.load(tenantId, plan.id) : undefined;
+  }
+
   async getLatest(tenantId: string, caseId: string): Promise<PlanGraph | undefined> {
     const plan = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId }, orderBy: { revision: 'desc' } });
     return plan ? this.load(tenantId, plan.id) : undefined;

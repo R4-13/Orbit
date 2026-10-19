@@ -57,6 +57,11 @@ export interface PlanValidationContext {
    * Plan erst bei der Ausführung – bei einem frei geplanten Ablauf wartet dann niemand darauf.
    */
   strictBindings?: boolean;
+  /**
+   * Planvertrag (Konzept Flexible Autonomie §5a, ADD-2.3): die Ziele der ersten Planung eines frei geplanten Vorgangs. Jede Revision muss sie enthalten – eine Revision darf Ziele ergänzen,
+   * aber keines streichen oder durch ein leichteres ersetzen (sonst ließe sich ein Vorgang durch Umplanen „erledigen“).
+   */
+  contractGoalKeys?: readonly string[];
 }
 
 export interface PlanValidationResult {
@@ -403,6 +408,12 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     for (const duplicate of duplicates) {
       add({ code: 'REPLAN_REPEATS_CONFIRMED_EFFECT', check: 9, nodeId: duplicate.id, message: `"${duplicate.id}" würde die bereits bestätigte Wirkung "${effect.capability}${effect.purpose ? `/${effect.purpose}` : ''}" wiederholen.` });
     }
+  }
+
+  // ── 9b. Planvertrag: Ziele werden nie gestrichen oder abgeschwächt ────────
+  if (!blueprint && ctx.contractGoalKeys && ctx.contractGoalKeys.length > 0) {
+    const missing = ctx.contractGoalKeys.filter((goal) => !plan.goalKeys.includes(goal));
+    if (missing.length > 0) add({ code: 'GOAL_CONTRACT_VIOLATION', check: 9, message: `Die Ziele der ersten Planung gelten weiter und dürfen nicht gestrichen werden: ${missing.join(', ')}.` });
   }
 
   // ── 10. Checkable completion criteria, valid wait / timeout handling ──────

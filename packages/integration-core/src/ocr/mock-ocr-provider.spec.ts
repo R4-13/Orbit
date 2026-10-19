@@ -21,6 +21,15 @@ describe('MockOcrProvider', () => {
     expect(result).toEqual({ confidenceScore: 0 });
   });
 
+  it('canExtract() ist nur wahr, solange vorbereitete Ergebnisse vorliegen – der Platzhalter liest sonst nichts', async () => {
+    const provider = new MockOcrProvider();
+    expect(provider.canExtract()).toBe(false);
+    provider.seedResult({ supplierName: 'Nachtrag GmbH', confidenceScore: 0.5 });
+    expect(provider.canExtract()).toBe(true);
+    await provider.extractInvoiceData(Buffer.from(''), 'application/pdf');
+    expect(provider.canExtract()).toBe(false);
+  });
+
   it('seedResult() appends to the queue', async () => {
     const provider = new MockOcrProvider();
     provider.seedResult({ supplierName: 'Nachtrag GmbH', confidenceScore: 0.5 });

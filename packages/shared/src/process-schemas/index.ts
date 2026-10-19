@@ -17,5 +17,7 @@ export * from './resolution';
 export * from './limits';
 export * from './outage';
 export * from './completion';
+export * from './goal-catalogue';
 export * from './adhoc-completion';
+export * from './plan-approval';
 export * from './shadow-rating';

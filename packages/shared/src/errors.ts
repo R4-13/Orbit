@@ -113,6 +113,15 @@ export class ProcessingPathConflictError extends OrbitError {
   readonly retryable = false;
 }
 
+/**
+ * Eine benötigte Fähigkeit fehlt in dieser Umgebung (z. B. die automatische Rechnungsauslese): ORBIT erzeugt daraus kein leeres Ergebnis, sondern übergibt begründet an einen Menschen.
+ */
+export class CapabilityMissingError extends OrbitError {
+  readonly code = 'CAPABILITY_MISSING';
+  readonly httpStatus = 422;
+  readonly retryable = false;
+}
+
 export function isOrbitError(error: unknown): error is OrbitError {
   return error instanceof OrbitError;
 }

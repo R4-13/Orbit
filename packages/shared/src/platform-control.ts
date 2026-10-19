@@ -149,3 +149,9 @@ export const RESERVED_FLAG_PREFIXES = ['security.', 'tenant_isolation', 'auth.',
 export function isReservedFlagKey(key: string): boolean {
   return RESERVED_FLAG_PREFIXES.some((prefix) => key.startsWith(prefix));
 }
+
+/**
+ * Obergrenze des Schattenbetriebs je Mandant (Entscheidung vom 19.10.2026): zunächst höchstens 60 Schattenplanungen – ein begrenzter Messlauf, keine Dauereinrichtung und keine automatische
+ * Freigabe zur aktiven Einführung. Eine Erhöhung ist eine ausdrückliche Entscheidung.
+ */
+export const SHADOW_PLAN_LIMIT_PER_TENANT = 60;

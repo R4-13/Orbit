@@ -21,7 +21,6 @@ function describe(event: CaseEventRow): string {
     case 'shadow.plan_proposed':
       return p.available === false ? 'Schattenplan nicht verfügbar (nur Vergleich, nichts ausgeführt)' : 'Schattenplan erstellt (nur Vergleich, nichts ausgeführt)';
     case 'completion.evaluated':
-      if (p.basis === 'ADHOC_CLOSING_PROOF') return p.met === true ? 'Abschluss nachgewiesen (inhaltliche Antwort versendet)' : 'Abschluss nicht nachgewiesen – kein Beleg, dass das Anliegen beantwortet ist';
       return describeCompletionEvaluation({ met: p.met === true, goals: (p.goals as Parameters<typeof describeCompletionEvaluation>[0]['goals'] | undefined) ?? [] });
     case 'case.completed':
       return 'Vorgang abgeschlossen (Abschlusskriterien erfüllt)';

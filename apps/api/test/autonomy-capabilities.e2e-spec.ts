@@ -33,6 +33,14 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
   let sent: OutboundMessage[] = [];
   let created: Array<Record<string, unknown>> = [];
   const spies: jest.SpyInstance[] = [];
+
+  /** Die berechtigte Person bestätigt den wartenden Plan (Entscheidung D4); danach läuft er weiter. */
+  async function confirmPlan(tenantId: string, caseId: string): Promise<void> {
+    const waiting = await prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
+    if (!waiting) return;
+    await app.get(OrchestratorService).approvePlan(tenantId, 'user-confirm', waiting.id);
+    await app.get(OrchestratorService).advance(tenantId, caseId);
+  }
   const tenants: string[] = [];
   const connectionByTenant = new Map<string, string>();
 
@@ -149,7 +157,8 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       const tenantId = await newTenant();
       seedTriage();
       seedPlan([ctxNode(), draftNode('ask_draft', 'ATTACHMENT_REQUEST', { what: { literal: 'der Anhang mit der Rechnung' } }), sendNode('ask_send', 'ask_draft', 'ATTACHMENT_REQUEST'), node('done', 'COMPLETE')], [edge('sender_check', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'done')]);
-      await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Rechnung', content: 'Anbei die Rechnung.' }));
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Rechnung', content: 'Anbei die Rechnung.' }));
+      await confirmPlan(tenantId, result.case!.id); // D4: der Versand eines unbekannten Vorgangs beginnt erst nach der Planbestätigung
       expect(sent).toHaveLength(1);
       expect(sent[0]!.bodyText).toContain('der Anhang mit der Rechnung');
     });
@@ -175,6 +184,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       seedTriage({ senderRoleHypothesis: 'PROSPECT' });
       seedPlan([ctxNode(), node('lead', 'ACTION', { capability: { key: 'crm.lead.create' } }), node('done', 'COMPLETE')], [edge('sender_check', 'lead'), edge('lead', 'done')]);
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+      await confirmPlan(tenantId, result.case!.id); // D4: die Übergabe an das CRM ist eine Wirkung
       expect(await prisma.forTenantId(tenantId).lead.count({ where: { caseId: result.case!.id } })).toBe(1);
     });
   });
