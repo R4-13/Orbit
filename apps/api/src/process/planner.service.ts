@@ -33,6 +33,7 @@ import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseFactsService } from './case-facts.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { messageCaseIds } from './case-scope';
+import { isAppointmentSchedulingRequirement } from './reference/request-analysis';
 
 export const SUBMIT_PLAN_TOOL = 'submit_process_plan';
 export const PLANNER_PROMPT_VERSION = 'planner-prompt/1';
@@ -367,21 +368,35 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
   }
 
   /** Betreff und Text der letzten eingegangenen Nachricht des Vorgangs (gekürzt) – der Planer plant sonst nur nach Titel und einzelnen Fakten. */
-  /** Wie viele Angaben die Anforderungsprüfung als fehlend ermittelt hat (nur die Kundschaft kann sie liefern). 0, solange noch keine Prüfung gelaufen ist. */
-  private async openCustomerQuestions(tenantId: string, caseId: string): Promise<number> {
+  /**
+   * Das Ergebnis der Anforderungsprüfung (gespeicherte Analyse): was bekannt ist und welche Angaben noch fehlen, die nur die Kundschaft kennt. Eine Anforderung gilt als erfüllt, sobald ein bestätigter
+   * Fakt mit ihrem Schlüssel vorliegt; Terminfragen und die Antwortadresse zählen nicht (der Termin wird gesondert vereinbart). `undefined`, solange die Prüfung noch nicht gelaufen ist.
+   */
+  private async requirementsState(tenantId: string, caseId: string): Promise<{ summary: string; known: Array<{ label: string; value: string | number }>; missing: Array<{ key: string; question: string }> } | undefined> {
     const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: 'requirements.analyzed' }, orderBy: { sequence: 'desc' }, select: { payload: true } });
-    const missing = (event?.payload as { analysis?: { missingInformation?: unknown[] } } | null | undefined)?.analysis?.missingInformation;
-    return Array.isArray(missing) ? missing.length : 0;
+    const analysis = (event?.payload as { analysis?: { summary?: string; known?: Array<{ label?: string; value?: string | number }>; requirements?: Array<{ key: string; label: string; question: string }> } } | null | undefined)?.analysis;
+    if (!analysis) return undefined;
+    const confirmed = new Set((await this.facts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => f.key));
+    const missing = (analysis.requirements ?? []).filter((r) => r.key !== 'contact.email' && !confirmed.has(r.key) && !isAppointmentSchedulingRequirement(r)).map((r) => ({ key: r.key, question: r.question }));
+    return { summary: analysis.summary ?? '', known: (analysis.known ?? []).map((k) => ({ label: k.label ?? '', value: k.value ?? '' })), missing };
   }
 
-  /** Das Ergebnis der Anforderungsprüfung, falls schon vorhanden: was ist bekannt, was fehlt (und wen das betrifft). Aus Nachrichten abgeleitet, daher UNTRUSTED. */
+  private async openCustomerQuestions(tenantId: string, caseId: string): Promise<number> {
+    return (await this.requirementsState(tenantId, caseId))?.missing.length ?? 0;
+  }
+
+  /** Das Ergebnis der Anforderungsprüfung für den Planer: was ist bekannt, was fehlt. Aus Nachrichten abgeleitet, daher UNTRUSTED. */
   private async requirementsBlock(tenantId: string, caseId: string): Promise<string> {
-    const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: 'requirements.analyzed' }, orderBy: { sequence: 'desc' }, select: { payload: true } });
-    const analysis = (event?.payload as { analysis?: { summary?: string; nextStep?: string; missingInformation?: Array<{ key?: string; question?: string }>; knownDetails?: Array<{ label?: string; value?: string }> } } | null | undefined)?.analysis;
-    if (!analysis) return 'Ergebnis der Anforderungsprüfung: noch nicht vorhanden.';
-    const known = (analysis.knownDetails ?? []).map((d) => `- ${d.label ?? ''}: ${d.value ?? ''}`).join('\n') || '(nichts Belegtes)';
-    const missing = (analysis.missingInformation ?? []).map((m) => `- ${m.key ?? ''}: ${m.question ?? ''}`).join('\n') || '(nichts fehlt)';
-    return `Ergebnis der Anforderungsprüfung (UNTRUSTED, aus der Nachricht abgeleitet):\n${wrapUntrustedContent(`Zusammenfassung: ${analysis.summary ?? ''}\nBekannt:\n${known}\nFehlend (nur die Kundschaft kann das beantworten):\n${missing}`)}`;
+    const state = await this.requirementsState(tenantId, caseId);
+    if (!state) return 'Ergebnis der Anforderungsprüfung: noch nicht vorhanden.';
+    const known = state.known.map((d) => `- ${d.label}: ${d.value}`).join('\n') || '(nichts Belegtes)';
+    const missing = state.missing.map((m) => `- ${m.key}: ${m.question}`).join('\n') || '(nichts fehlt)';
+    return `Ergebnis der Anforderungsprüfung (UNTRUSTED, aus der Nachricht abgeleitet):
+${wrapUntrustedContent(`Zusammenfassung: ${state.summary}
+Bekannt:
+${known}
+Fehlend (nur die Kundschaft kann das beantworten):
+${missing}`)}`;
   }
 
   /** Ein interner Auftrag hat keine Nachricht der Kundschaft: kein Absender, kein Kundenkontakt – das Ziel ergibt sich aus der Anweisung (und ihrer Frist). */
