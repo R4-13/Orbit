@@ -56,6 +56,8 @@ export const CASE_EVENT_TYPES = {
   PLAN_SCOPE_APPROVED: 'plan.scope_approved',
   /** Der Hauptvorgang einer Nachricht mit mehreren Anliegen wurde in Teilvorgänge aufgeteilt (nennt die Teilvorgänge). */
   CASE_SPLIT: 'case.split',
+  /** Ein interner Auftrag (z. B. über Sonde) wurde erteilt: Anweisung, Zeitpunkt und wer ihn erteilt hat. */
+  ORDER_CREATED: 'order.created',
   /** Dieser Vorgang ist ein Teilvorgang (nennt den Hauptvorgang und das Anliegen). */
   CASE_SPLIT_FROM: 'case.split_from',
 } as const;

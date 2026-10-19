@@ -14,6 +14,7 @@ import {
   outageRetryDelayMs,
   planEffectKeys,
   runsBeforePlanApproval,
+  TIME_REACHED_EVENT,
   type BlueprintDefinition,
   type EvalContext,
   type ExecutionMode,
@@ -599,15 +600,18 @@ export class OrchestratorService {
 
   private async startWait(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, def: PlanNode): Promise<void> {
     const eventType = typeof def.config.eventType === 'string' ? def.config.eventType : 'communication.received';
+    // Zeitgesteuertes Ereignis (FX-03): die Zeit ist die Frist, und ihr Erreichen ist der Erfolg des Schrittes (keine Zeitüberschreitung).
+    const until = eventType === TIME_REACHED_EVENT && typeof def.config.until === 'string' ? new Date(def.config.until) : undefined;
+    const timed = until !== undefined && !Number.isNaN(until.getTime());
     const hours = def.timeout?.hours ?? DEFAULT_WAIT_HOURS;
     const receipts = await this.ledger.confirmedEffects(tenantId, caseRow.id);
     const correlation = { caseId: caseRow.id, awaitedAfter: receipts.map((r) => r.providerRef).filter(Boolean) };
     await this.prisma.inTenantTransaction(tenantId, async (tx) => {
-      await tx.waitSubscription.create({ data: { tenantId, caseId: caseRow.id, planId: graph.plan.id, nodeKey: node.nodeKey, eventType, correlation: asJson(correlation), deadlineAt: new Date(Date.now() + hours * 3_600_000) } });
-      await this.events.appendInTx(tx, tenantId, caseRow.id, { type: CASE_EVENT_TYPES.WAIT_STARTED, payload: { nodeKey: node.nodeKey, eventType, deadlineHours: hours } });
+      await tx.waitSubscription.create({ data: { tenantId, caseId: caseRow.id, planId: graph.plan.id, nodeKey: node.nodeKey, eventType, correlation: asJson(correlation), deadlineAt: timed ? until : new Date(Date.now() + hours * 3_600_000) } });
+      await this.events.appendInTx(tx, tenantId, caseRow.id, { type: CASE_EVENT_TYPES.WAIT_STARTED, payload: { nodeKey: node.nodeKey, eventType, ...(timed ? { until: until.toISOString() } : { deadlineHours: hours }) } });
     });
     await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'WAITING' });
-    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'WAITING_FOR_INFORMATION', attentionReasons: [`${def.title}: Wartet auf eine Antwort.`] });
+    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'WAITING_FOR_INFORMATION', attentionReasons: [timed ? `${def.title}: Wiedervorlage am ${until.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}.` : `${def.title}: Wartet auf eine Antwort.`] });
   }
 
   private async startManual(tenantId: string, caseRow: Case, graph: PlanGraph, node: ProcessPlanNode, def: PlanNode): Promise<void> {
@@ -702,6 +706,19 @@ export class OrchestratorService {
   private async expireWaits(tenantId: string, caseRow: Case): Promise<boolean> {
     const due = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', deadlineAt: { lt: new Date() } } });
     if (!due || !due.planId || !due.nodeKey) return false;
+    if (due.eventType === TIME_REACHED_EVENT) {
+      // Der Zeitpunkt ist erreicht: der Warteschritt gelingt und der Ablauf geht weiter.
+      await this.prisma.inTenantTransaction(tenantId, async (tx) => {
+        await tx.waitSubscription.updateMany({ where: { id: due.id, status: 'WAITING' }, data: { status: 'SATISFIED', resolvedAt: new Date() } });
+        await this.events.appendInTx(tx, tenantId, caseRow.id, { type: CASE_EVENT_TYPES.WAIT_SATISFIED, payload: { nodeKey: due.nodeKey, reason: TIME_REACHED_EVENT } });
+      });
+      const active = await this.store.getActive(tenantId, caseRow.id);
+      if (active && active.plan.id === due.planId) {
+        await this.store.transitionNode(tenantId, caseRow.id, active.plan.id, due.nodeKey, ['WAITING'], { state: 'SUCCEEDED', output: asJson({ reached: TIME_REACHED_EVENT }), executionMode: 'LIVE', completedAt: new Date() });
+        await this.lifecycle.transition(tenantId, caseRow.id, { to: 'IN_PROGRESS' });
+      }
+      return true;
+    }
     await this.prisma.inTenantTransaction(tenantId, async (tx) => {
       await tx.waitSubscription.updateMany({ where: { id: due.id, status: 'WAITING' }, data: { status: 'TIMED_OUT', resolvedAt: new Date() } });
       await this.events.appendInTx(tx, tenantId, caseRow.id, { type: CASE_EVENT_TYPES.WAIT_TIMED_OUT, payload: { nodeKey: due.nodeKey } });

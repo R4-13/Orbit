@@ -39,9 +39,11 @@ function describe(event: CaseEventRow): string {
     case 'action.outcome_unknown':
       return `Ergebnis einer Aktion ungewiss: ${String(p.capability)}`;
     case 'wait.started':
-      return `Wartet auf Antwort (Schritt „${String(p.nodeKey)}“)`;
+      return p.until ? `Wiedervorlage am ${formatDateTime(String(p.until))}` : `Wartet auf Antwort (Schritt „${String(p.nodeKey)}“)`;
     case 'wait.satisfied':
-      return 'Antwort eingegangen';
+      return p.reason === 'time.reached' ? 'Zeitpunkt erreicht' : 'Antwort eingegangen';
+    case 'order.created':
+      return `Interner Auftrag erteilt${p.dueAt ? ` (fällig ${formatDateTime(String(p.dueAt))})` : ''}`;
     case 'wait.timed_out':
       return 'Frist für die Antwort abgelaufen';
     case 'node.retry_scheduled':

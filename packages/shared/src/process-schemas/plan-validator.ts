@@ -99,6 +99,9 @@ export function isForbiddenLiteralKey(key: string): boolean {
   return (FORBIDDEN_LITERAL_INPUT_KEYS as readonly string[]).includes(key.toLowerCase().replace(/[_-]/g, ''));
 }
 
+/** Zeitgesteuertes Ereignis: ein Warteknoten, der zu einem festen Zeitpunkt weiterläuft (Wiedervorlage, Erinnerung). */
+export const TIME_REACHED_EVENT = 'time.reached';
+export const MAX_TIME_WAIT_DAYS = 90;
 const DEFAULT_WAIT_TIMEOUT_HINT = 'Ein WAIT_EVENT-Knoten braucht eine Frist (timeout) oder eine Blueprint-Wait-Regel mit Timeout-Policy.';
 
 /**
@@ -427,6 +430,13 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   for (const node of nodes) {
     if (node.type !== 'WAIT_EVENT') continue;
     const eventType = node.config.eventType;
+    if (eventType === TIME_REACHED_EVENT) {
+      // Zeitgesteuertes Ereignis (FX-03): die Zeit ist selbst die Frist; sie muss ein gültiger Zeitpunkt in überschaubarer Zukunft sein.
+      const until = typeof node.config.until === 'string' ? Date.parse(node.config.until) : Number.NaN;
+      if (Number.isNaN(until)) add({ code: 'WAIT_TIME_INVALID', check: 10, nodeId: node.id, message: `Der Warteknoten "${node.id}" braucht einen gültigen Zeitpunkt (config.until, ISO 8601).` });
+      else if (until > Date.now() + MAX_TIME_WAIT_DAYS * 24 * 3600 * 1000) add({ code: 'WAIT_TIME_TOO_FAR', check: 10, nodeId: node.id, message: `Der Zeitpunkt liegt mehr als ${MAX_TIME_WAIT_DAYS} Tage in der Zukunft.` });
+      continue;
+    }
     if (eventType !== 'communication.received') add({ code: 'WAIT_UNKNOWN_EVENT', check: 10, nodeId: node.id, message: `Warteknoten "${node.id}" nennt kein bekanntes Ereignis.` });
     const ruleCovers = blueprint?.waitRules.some((r) => r.eventType === eventType && r.timeoutPolicyRef) ?? false;
     if (!node.timeout && !ruleCovers) add({ code: 'WAIT_WITHOUT_TIMEOUT', check: 10, nodeId: node.id, message: DEFAULT_WAIT_TIMEOUT_HINT });

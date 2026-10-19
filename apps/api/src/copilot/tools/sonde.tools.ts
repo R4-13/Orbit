@@ -68,7 +68,7 @@ export const SONDE_PREPARE_TOOL_NAMES = ['draft_email', 'create_meeting', 'creat
  * Kommentar); ein Tool in zwei Modus-Subsets gleichzeitig zu führen wäre
  * reine, bedeutungslose Duplikation.
  */
-export const SONDE_ACT_TOOL_NAMES = ['create_task', 'create_contact', 'create_lead', 'send_email'] as const;
+export const SONDE_ACT_TOOL_NAMES = ['create_task', 'create_contact', 'create_lead', 'send_email', 'create_internal_order'] as const;
 
 /**
  * §26/§32 des Master-Dokuments ("Sonde modes" / "READ" capability

@@ -1,4 +1,4 @@
-import type { PlanProposal } from '@orbit/shared';
+import { TIME_REACHED_EVENT, type PlanProposal } from '@orbit/shared';
 
 type Node = PlanProposal['nodes'][number];
 type Edge = PlanProposal['edges'][number];
@@ -52,6 +52,25 @@ export function buildInformationProcedure(options: { message: string }): PlanPro
     unresolvedRequirements: [],
     assumptions: [],
     conciseExplanation: 'Allgemeine Frage: aus dem Betriebswissen beantworten, sonst eine Person informieren.',
+  };
+}
+
+/**
+ * Interner Auftrag mit Zeitpunkt (FX-03, z. B. „Erinnere uns am Freitag um 8 Uhr an die Wartung bei Meier“): bis zum Zeitpunkt warten (zeitgesteuertes Ereignis), dann die zuständige
+ * Person informieren. Ziel „Zuständige Person informiert“ – erreicht mit der bestätigten Meldung. Keine Nachricht nach außen, keine Preise, keine Zusagen.
+ */
+export function buildReminderProcedure(options: { message: string; until: string }): PlanProposal {
+  return {
+    goalKeys: ['staff.informed'],
+    nodes: [
+      node('wait_until', 'WAIT_EVENT', 'Bis zum Zeitpunkt warten', { config: { eventType: TIME_REACHED_EVENT, until: options.until } }),
+      node('notify_staff', 'ACTION', 'Zuständige Person informieren', { capability: { key: 'staff.notify' }, inputs: { message: { literal: options.message } } }),
+      node('reminded', 'COMPLETE', 'Auftrag erledigt'),
+    ],
+    edges: [edge('wait_until', 'notify_staff'), edge('notify_staff', 'reminded')],
+    unresolvedRequirements: [],
+    assumptions: [],
+    conciseExplanation: 'Interner Auftrag mit Zeitpunkt: zum Zeitpunkt die zuständige Person informieren.',
   };
 }
 

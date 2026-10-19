@@ -176,6 +176,21 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(unknownEvent, ctx()))).toContain('WAIT_UNKNOWN_EVENT');
   });
 
+  it('10: ein zeitgesteuertes Ereignis (time.reached) braucht einen gültigen Zeitpunkt in überschaubarer Zukunft, aber keine eigene Frist', () => {
+    const timed = (until: unknown) => {
+      const plan = clarificationPlan();
+      plan.nodes[3] = node('wait', 'WAIT_EVENT', { config: { eventType: 'time.reached', ...(until === undefined ? {} : { until }) } });
+      return codes(validatePlan(plan, ctx({ blueprint: undefined })));
+    };
+    const inOneHour = new Date(Date.now() + 3600_000).toISOString();
+    expect(timed(inOneHour)).not.toContain('WAIT_WITHOUT_TIMEOUT');
+    expect(timed(inOneHour)).not.toContain('WAIT_UNKNOWN_EVENT');
+    expect(timed(inOneHour)).not.toContain('WAIT_TIME_INVALID');
+    expect(timed(undefined)).toContain('WAIT_TIME_INVALID');
+    expect(timed('morgen')).toContain('WAIT_TIME_INVALID');
+    expect(timed(new Date(Date.now() + 200 * 24 * 3600_000).toISOString())).toContain('WAIT_TIME_TOO_FAR');
+  });
+
   it('11: enforces step, external action and question limits', () => {
     expect(codes(validatePlan(clarificationPlan(), ctx({ limits: { maxSteps: 3, maxExternalActions: 4, maxAutoQuestions: 2 } })))).toContain('LIMIT_STEPS');
     expect(codes(validatePlan(clarificationPlan(), ctx({ limits: { maxSteps: 30, maxExternalActions: 0, maxAutoQuestions: 2 } })))).toContain('LIMIT_EXTERNAL_ACTIONS');

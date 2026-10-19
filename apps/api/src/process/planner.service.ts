@@ -328,7 +328,11 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
   /** Betreff und Text der letzten eingegangenen Nachricht des Vorgangs (gekürzt) – der Planer plant sonst nur nach Titel und einzelnen Fakten. */
   private async latestInboundText(tenantId: string, caseId: string): Promise<string> {
     const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { subject: true, bodyText: true, bodyPreview: true } });
-    if (!message) return '(keine Nachricht)';
+    if (!message) {
+      // Ein Vorgang ohne Nachricht (interner Auftrag, FX-03): maßgeblich ist die erteilte Anweisung.
+      const order = await this.prisma.forTenantId(tenantId).case.findFirst({ where: { id: caseId }, select: { title: true, description: true } });
+      return order?.description ? `Interner Auftrag (von einer Person erteilt): ${order.title}\n${order.description.slice(0, 3000)}` : '(keine Nachricht)';
+    }
     return `Betreff: ${message.subject ?? ''}\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, 3000)}`;
   }
 
