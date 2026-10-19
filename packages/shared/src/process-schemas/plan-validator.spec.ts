@@ -215,6 +215,34 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).not.toContain('PURPOSE_MISSING');
   });
 
+  it('Zielarbeit: wer weiß, was nur die Kundschaft beantworten kann, übergibt nicht stumm – ohne Rückfrage ist der Plan unzulässig, mit Rückfrage (oder als reines Verstehen mit Weiterplanen) zulässig', () => {
+    const base = { blueprint: undefined, strictBindings: true, knownFactKeys: new Set(['contact.email']), customerQuestionsOpen: 3 };
+    const handover = clarificationPlan({ nodes: [node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte prüfen.' } } }), node('human', 'MANUAL_TASK')], edges: [edge('e1', 'notify', 'human')] });
+    expect(codes(validatePlan(handover, ctx(base)))).toContain('CLARIFICATION_EXPECTED');
+    expect(codes(validatePlan(handover, ctx({ ...base, customerQuestionsOpen: 0 })))).not.toContain('CLARIFICATION_EXPECTED'); // nichts offen
+    expect(codes(validatePlan(handover, ctx({ ...base, priorClarifications: 1 })))).not.toContain('CLARIFICATION_EXPECTED'); // schon gefragt
+    const understanding = clarificationPlan({ nodes: [node('resolve', 'EVALUATE_REQUIREMENTS'), node('again', 'REASSESS', { config: { replan: true } })], edges: [edge('e1', 'resolve', 'again')] });
+    expect(codes(validatePlan(understanding, ctx(base)))).not.toContain('CLARIFICATION_EXPECTED');
+    expect(codes(validatePlan(clarificationPlan(), ctx(base)))).not.toContain('CLARIFICATION_EXPECTED'); // enthält eine Rückfrage
+    expect(codes(validatePlan(handover, ctx({ ...base, blueprint })))).not.toContain('CLARIFICATION_EXPECTED'); // hinterlegter Prozess: dort regelt der Prozess die Rückfragen
+  });
+
+  it('Zielarbeit: wer die Anforderungsprüfung erst im Plan ausführt, plant danach weiter, statt vorher zu übergeben', () => {
+    const base = { blueprint: undefined, strictBindings: true, knownFactKeys: new Set(['contact.email']), requirementsAnalyzed: false };
+    const guess = clarificationPlan({ nodes: [node('resolve', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte prüfen.' } } }), node('human', 'MANUAL_TASK')], edges: [edge('e1', 'resolve', 'notify'), edge('e2', 'notify', 'human')] });
+    expect(codes(validatePlan(guess, ctx(base)))).toContain('REPLAN_AFTER_UNDERSTANDING');
+    const understanding = clarificationPlan({ nodes: [node('resolve', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), node('again', 'REASSESS', { config: { replan: true } })], edges: [edge('e1', 'resolve', 'again')] });
+    expect(codes(validatePlan(understanding, ctx(base)))).not.toContain('REPLAN_AFTER_UNDERSTANDING');
+    expect(codes(validatePlan(clarificationPlan(), ctx(base)))).not.toContain('REPLAN_AFTER_UNDERSTANDING'); // fragt bereits
+    expect(codes(validatePlan(guess, ctx({ ...base, requirementsAnalyzed: true })))).not.toContain('REPLAN_AFTER_UNDERSTANDING'); // Ergebnis bekannt
+  });
+
+  it('ein bereits ausgeführter Schritt darf in einer Neuplanung ohne Fortsetzung stehen bleiben (Verlauf), ein neuer nicht', () => {
+    const plan = clarificationPlan({ nodes: [node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Bitte prüfen.' } } }), node('again', 'REASSESS', { config: { replan: true } })], edges: [] });
+    expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).toContain('DEAD_END');
+    expect(codes(validatePlan(plan, ctx({ blueprint: undefined, confirmedEffects: [{ nodeId: 'notify', capability: 'staff.notify' }] })))).not.toContain('DEAD_END');
+  });
+
   it('a complete plan with a terminal node is valid, and a plan without one is not', () => {
     const complete = clarificationPlan();
     complete.nodes.push(node('done', 'COMPLETE'));

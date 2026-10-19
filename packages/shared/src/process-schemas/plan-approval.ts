@@ -84,6 +84,35 @@ export function planNeedsNewApproval(proposal: PlanProposal, capabilities: Reado
   return planEffectKeys(proposal, capabilities).some((key) => !isCovered(key, approvedEffects));
 }
 
+/** Eine „Weiterplanen“-Stelle: ein REASSESS-Knoten mit `config.replan` (Modelle schreiben den Wert gelegentlich als Text „true“; das gilt ebenso). */
+export function isReplanPoint(node: Pick<PlanNode, 'type' | 'config'>): boolean {
+  return node.type === 'REASSESS' && (node.config?.replan === true || node.config?.replan === 'true');
+}
+
+/**
+ * Reduziert einen Plan auf das Verstehen: die verstehenden Schritte (die vor der Planfreigabe laufen dürfen) und bereits ausgeführte Schritte bleiben, alles Weitere entfällt, und eine
+ * Weiterplanen-Stelle schließt die Revision ab. So wird nach der Anforderungsprüfung mit deren Ergebnis weitergeplant. `undefined`, wenn es nichts zu verstehen gibt.
+ */
+export function reduceToUnderstanding(
+  proposal: PlanProposal,
+  capabilities: ReadonlyMap<string, CapabilityDefinition>,
+  executedNodeIds: ReadonlySet<string>,
+): PlanProposal | undefined {
+  const keep = proposal.nodes.filter((n) => executedNodeIds.has(n.id) || (runsBeforePlanApproval(n, capabilities) && n.type !== 'REASSESS' && n.type !== 'PREPARE' && n.type !== 'DECISION'));
+  if (!keep.some((n) => !executedNodeIds.has(n.id))) return undefined;
+  const ids = new Set(keep.map((n) => n.id));
+  const edges = proposal.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+  const sinks = keep.filter((n) => !executedNodeIds.has(n.id) && !edges.some((e) => e.source === n.id && !executedNodeIds.has(e.target)));
+  const replanId = 'weiter_planen';
+  const replan: PlanNode = { id: replanId, type: 'REASSESS', title: 'Mit dem Ergebnis weiter planen', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: { replan: true }, evidenceRefs: [] };
+  return {
+    ...proposal,
+    nodes: [...keep, replan],
+    edges: [...edges, ...sinks.map((n) => ({ id: `e_${n.id}_${replanId}`, source: n.id, target: replanId }))],
+    conciseExplanation: 'Zuerst verstehen (Absender, Anforderungen); danach wird mit dem Ergebnis weitergeplant (Rückfrage oder Übergabe).',
+  };
+}
+
 /** Knotentypen, die auch vor der Planfreigabe laufen dürfen: verstehen, vorbereiten, entscheiden – nie warten, übergeben, abschließen oder wirken. */
 const PRE_APPROVAL_TYPES: ReadonlySet<string> = new Set(['INTERPRET', 'RESOLVE_CONTEXT', 'EVALUATE_REQUIREMENTS', 'DECISION', 'REASSESS', 'PREPARE']);
 

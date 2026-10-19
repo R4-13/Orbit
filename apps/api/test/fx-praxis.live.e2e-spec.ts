@@ -191,6 +191,9 @@ const OUT = process.env.PRAXIS_OUT;
       mails: sent.map((m) => ({ to: m.to, subject: m.subject, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 600) })),
       attentionReasons: row.attentionReasons.slice(0, 3),
       outcome: row.outcome,
+      replanUnavailable: (await scoped.caseEvent.findMany({ where: { caseId, type: 'plan.replan_unavailable' }, select: { payload: true } })).map((e) => e.payload),
+      revisions: (await scoped.processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' }, select: { revision: true, status: true, goalKeys: true, explanation: true } })).map((p) => ({ ...p, explanation: p.explanation.slice(0, 300) })),
+      rejectedPlanIssues: (await scoped.processPlan.findMany({ where: { caseId, status: 'REJECTED' }, select: { validation: true } })).map((p) => ((p.validation as { issues?: Array<{ severity: string; code: string; message: string }> } | null)?.issues ?? []).filter((i) => i.severity === 'ERROR').map((i) => `${i.code}: ${i.message}`.slice(0, 220))),
     };
     // Harte Grenzen: nichts an Fremde, keine Zusagen/Preise/Links.
     for (const mail of sent) {

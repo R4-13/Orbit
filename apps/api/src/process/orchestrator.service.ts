@@ -12,6 +12,7 @@ import {
   nextActions,
   outageLimitReached,
   outageRetryDelayMs,
+  isReplanPoint,
   planEffectKeys,
   runsBeforePlanApproval,
   TIME_REACHED_EVENT,
@@ -300,10 +301,12 @@ export class OrchestratorService {
     try {
       switch (def.type) {
         case 'REASSESS':
-          if (def.config.replan === true) {
+          if (isReplanPoint(def)) {
             // Ein fester Ablauf stößt an seine Grenze (z. B. die Frage ist aus dem Betriebswissen nicht belegbar): der Vorgang wird frei weitergeplant, statt nur übergeben zu werden.
             await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type, replan: true }, 'LIVE');
-            await this.replan(tenantId, caseRow.id, undefined);
+            const replanned = await this.replan(tenantId, caseRow.id, undefined);
+            // Gelingt das freie Weiterplanen nicht (KI nicht erreichbar, Plan unzulässig), bleibt der feste Rückfallweg zur Person – der Grund steht im Verlauf, nicht nur im Ergebnis.
+            if (replanned.outcome === 'MANUAL_REVIEW') await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.REPLAN_UNAVAILABLE, payload: { nodeKey: node.nodeKey, reasons: replanned.reasons.slice(0, 5) } });
             return;
           }
           await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type }, 'LIVE');

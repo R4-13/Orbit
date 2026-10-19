@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CAPABILITIES } from './capability';
-import { isEffectCapability, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, runsBeforePlanApproval } from './plan-approval';
+import { isEffectCapability, isReplanPoint, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, reduceToUnderstanding, runsBeforePlanApproval } from './plan-approval';
 import type { PlanNode, PlanProposal } from './plan';
 
 const catalogue = new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c]));
@@ -72,5 +72,27 @@ describe('Planfreigabe für schreibende Wirkungen unbekannter Vorgänge (D4)', (
     expect(runsBeforePlanApproval(node('m', 'MANUAL_TASK'), catalogue)).toBe(false);
     expect(runsBeforePlanApproval(node('k', 'COMPLETE'), catalogue)).toBe(false);
     expect(runsBeforePlanApproval(node('p', 'PREPARE', 'unbekannt.x'), catalogue)).toBe(false);
+  });
+});
+
+describe('Reduktion auf das Verstehen (Zielarbeit)', () => {
+  it('behält verstehende und bereits ausgeführte Schritte, streicht den Rest und schließt mit einer Weiterplanen-Stelle ab', () => {
+    const nodes = [node('ctx', 'RESOLVE_CONTEXT', 'context.lookup'), node('reqs', 'EVALUATE_REQUIREMENTS', 'requirements.resolve'), node('notify', 'ACTION', 'staff.notify'), node('human', 'MANUAL_TASK')];
+    const edges = [
+      { id: 'e1', source: 'ctx', target: 'reqs' },
+      { id: 'e2', source: 'reqs', target: 'notify' },
+      { id: 'e3', source: 'notify', target: 'human' },
+    ];
+    const reduced = reduceToUnderstanding({ ...plan(nodes), edges }, catalogue, new Set(['notify']))!;
+    expect(reduced.nodes.map((n) => n.id)).toEqual(['ctx', 'reqs', 'notify', 'weiter_planen']);
+    expect(reduced.nodes.at(-1)).toMatchObject({ type: 'REASSESS', config: { replan: true } });
+    expect(reduced.edges.map((e) => `${e.source}>${e.target}`)).toEqual(['ctx>reqs', 'reqs>notify', 'reqs>weiter_planen']); // der ausgeführte Schritt bleibt als Verlauf stehen, die Revision endet an der Weiterplanen-Stelle
+    expect(isReplanPoint(reduced.nodes.at(-1)!)).toBe(true);
+    expect(isReplanPoint({ type: 'REASSESS', config: { replan: 'true' } })).toBe(true);
+    expect(isReplanPoint({ type: 'REASSESS', config: {} })).toBe(false);
+  });
+
+  it('gibt es nichts zu verstehen, bleibt der Plan unverändert (undefined)', () => {
+    expect(reduceToUnderstanding(plan([node('notify', 'ACTION', 'staff.notify'), node('human', 'MANUAL_TASK')]), catalogue, new Set())).toBeUndefined();
   });
 });

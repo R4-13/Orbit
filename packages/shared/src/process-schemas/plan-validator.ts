@@ -3,6 +3,7 @@ import type { CapabilityDefinition } from './capability';
 import { collectReferences, emptyReferences, expressionDepth, MAX_EXPRESSION_DEPTH, type Expr, type ExpressionReferences } from './expressions';
 import { PLAN_LIMITS, PlanProposalSchema, type PlanEdge, type PlanNode, type PlanProposal } from './plan';
 import type { PolicyMode } from '../policy';
+import { isReplanPoint as isReplanNode } from './plan-approval';
 
 /**
  * Amendment 02 §11.3 — the deterministic plan validator. It is a pure
@@ -64,6 +65,13 @@ export interface PlanValidationContext {
   contractGoalKeys?: readonly string[];
   /** Bereits gesendete Rückfragen des Vorgangs aus früheren Planungen: die Grenze gilt je Vorgang, nicht je Plan (frei geplante Abläufe). */
   priorClarifications?: number;
+  /**
+   * Frei geplanter Ablauf: Anzahl der Angaben, die die Anforderungsprüfung als fehlend ermittelt hat und die nur die Kundschaft kennt. Wer sie kennt und noch nicht gefragt hat, übergibt nicht stumm: der Plan muss
+   * eine gebündelte Rückfrage enthalten (`CLARIFICATION_EXPECTED`), bevor er an eine Person übergibt.
+   */
+  customerQuestionsOpen?: number;
+  /** Frei geplanter Ablauf: ist die Anforderungsprüfung für diesen Vorgang schon gelaufen? `false`: ihr Ergebnis ist beim Planen noch unbekannt. */
+  requirementsAnalyzed?: boolean;
 }
 
 export interface PlanValidationResult {
@@ -272,12 +280,14 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   const completeNodes = nodes.filter((n) => n.type === 'COMPLETE');
   const out = outgoing(validEdges);
   // A revision may end in a wait or a manual task on purpose (§11.2: the answer continues the case in a new revision).
-  const isReplanPoint = (n: PlanNode) => n.type === 'REASSESS' && n.config.replan === true;
+  const isReplanPoint = isReplanNode;
   const endsInPause = nodes.some((n) => (n.type === 'WAIT_EVENT' || n.type === 'MANUAL_TASK' || isReplanPoint(n)) && (out.get(n.id) ?? []).length === 0);
   if (completeNodes.length === 0 && !endsInPause) add({ code: 'NO_TERMINAL', check: 4, message: 'Der Plan hat weder einen Abschlussknoten (COMPLETE) noch ein definiertes Ende in einer Wartestelle.' });
   for (const node of nodes) {
     // A wait ends the current revision on purpose (§11.2): the answer arrives as an event and continues in a new revision.
     if (node.type === 'COMPLETE' || node.type === 'WAIT_EVENT' || node.type === 'MANUAL_TASK' || isReplanPoint(node)) continue;
+    // Ein bereits bestätigter (ausgeführter) Schritt ist Verlauf, keine offene Sackgasse: er muss in einer Neuplanung nicht weiterverbunden werden.
+    if ((ctx.confirmedEffects ?? []).some((effect) => effect.nodeId === node.id)) continue;
     if ((out.get(node.id) ?? []).length === 0) add({ code: 'DEAD_END', check: 4, nodeId: node.id, message: `Knoten "${node.id}" führt nirgendwohin (kein Fehler-/Abschlusspfad).` });
   }
 
@@ -459,6 +469,19 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   const maxQuestions = Math.min(ctx.limits.maxAutoQuestions, blueprint?.limits?.maxAutoQuestions ?? ctx.limits.maxAutoQuestions);
   const priorQuestions = blueprint ? 0 : (ctx.priorClarifications ?? 0);
   if (clarifications + priorQuestions > maxQuestions) add({ code: 'LIMIT_QUESTIONS', check: 11, message: `Der Plan enthält ${clarifications} Rückfragen${priorQuestions > 0 ? ` (bereits gestellt: ${priorQuestions})` : ''}, erlaubt sind ${maxQuestions} je Vorgang.` });
+
+  // ── 12. Zielarbeit: fehlt der Kundschaft bekanntes Wissen, wird gefragt, bevor übergeben wird ─────────
+  const askedAlready = (ctx.priorClarifications ?? 0) > 0 || clarifications > 0;
+  const onlyUnderstanding = nodes.some(isReplanNode);
+  if (!blueprint && (ctx.customerQuestionsOpen ?? 0) > 0 && !askedAlready && !onlyUnderstanding) {
+    add({ code: 'CLARIFICATION_EXPECTED', check: 12, message: `Die Anforderungsprüfung hat ${ctx.customerQuestionsOpen} fehlende Angaben ergeben, die nur die Kundschaft kennt, und es wurde noch nicht gefragt. Plane eine gebündelte Rückfrage (communication.draft mit missing = Ergebnis "missing" von requirements.resolve, dann email.send, purpose CLARIFICATION) und danach einen WAIT_EVENT, bevor du an eine Person übergibst.` });
+  }
+
+  // Wer die Anforderungsprüfung erst im Plan ausführt, kennt ihr Ergebnis beim Planen nicht: Übergabe oder Rückfrage lassen sich erst danach sinnvoll festlegen.
+  const runsRequirements = nodes.some((n) => n.capability?.key === 'requirements.resolve');
+  if (!blueprint && ctx.requirementsAnalyzed === false && runsRequirements && !askedAlready && !onlyUnderstanding) {
+    add({ code: 'REPLAN_AFTER_UNDERSTANDING', check: 12, message: 'Das Ergebnis der Anforderungsprüfung ist beim Planen noch unbekannt. Plane in dieser Revision nur das Verstehen (context.lookup, requirements.resolve) und beende sie mit einem REASSESS-Knoten ohne ausgehende Kante, z. B. {"id":"weiter","type":"REASSESS","title":"Mit dem Ergebnis weiter planen","config":{"replan":true}}; die Rückfrage oder Übergabe planst du danach mit dem Ergebnis.' });
+  }
 
   const valid = !issues.some((i) => i.severity === 'ERROR');
   return { valid, issues, proposal: plan, stats: { nodes: nodes.length, edges: edges.length, externalActions, clarifications } };
