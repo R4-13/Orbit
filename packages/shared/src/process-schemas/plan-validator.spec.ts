@@ -206,7 +206,7 @@ describe('validatePlan (§11.3)', () => {
 
   it('der Entwurf einer Nachricht braucht seinen Zweck (config.purpose) – sonst scheitert er erst bei der Ausführung', () => {
     const plan = clarificationPlan();
-    const draft = plan.nodes.find((n) => n.capability?.key === 'communication.draft')!;
+    const draft = plan.nodes.find((n) => (n as { capability?: { key?: string } }).capability?.key === 'communication.draft') as { config?: Record<string, unknown> };
     draft.config = {};
     expect(codes(validatePlan(plan, ctx({ blueprint: undefined })))).toContain('PURPOSE_MISSING');
     draft.config = { purpose: 'NICHT_VORHANDEN' };
