@@ -30,7 +30,7 @@ describe('Standardabläufe', () => {
   });
   it('jeder Zweig der Frage ist bedingt: der nicht gewählte Zweig läuft nicht nach', () => {
     const plan = buildInformationProcedure({ message: 'Allgemeine Frage – bitte antworten.' });
-    for (const id of ['reply_draft', 'reply_send', 'answered', 'notify_staff', 'human_answers']) {
+    for (const id of ['reply_draft', 'reply_send', 'answered', 'notify_staff', 'plan_further', 'human_answers']) {
       const incoming = plan.edges.filter((e) => e.target === id);
       expect(incoming.length).toBeGreaterThan(0);
       expect(incoming.every((e) => e.condition !== undefined)).toBe(true);

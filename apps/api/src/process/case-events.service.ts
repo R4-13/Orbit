@@ -52,6 +52,8 @@ export const CASE_EVENT_TYPES = {
   COMPLETED: 'case.completed',
   /** Schattenbetrieb: der freie Planer hat zu diesem Vorgang mitgeplant, ohne etwas auszuführen (Bewertung der Planung, kein Plan im Vorgang). */
   SHADOW_PLAN_PROPOSED: 'shadow.plan_proposed',
+  /** Eine Person hat den Umfang der Wirkungen eines frei geplanten Plans freigegeben; spätere Neuplanungen innerhalb dieses Umfangs brauchen keine neue Freigabe. */
+  PLAN_SCOPE_APPROVED: 'plan.scope_approved',
 } as const;
 
 /**

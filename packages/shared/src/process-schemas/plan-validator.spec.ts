@@ -253,6 +253,18 @@ describe('strenge Bindungen für frei geplante Abläufe (Steckbriefe der Fähigk
     expect(codes(validatePlan(plan, strict()))).toContain('CAPABILITY_BLUEPRINT_ONLY');
   });
 
+  it('Rückfragen werden je Vorgang gezählt, nicht je Plan: bereits gestellte zählen bei einer Neuplanung mit (frei geplant)', () => {
+    const ask = (id: string) => [
+      node(id + '_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' } }, config: { purpose: 'CLARIFICATION' } }),
+      node(id + '_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: id + '_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+    ];
+    const plan = { goalKeys: ['x'], nodes: [...ask('a'), wait], edges: [edge('e1', 'a_draft', 'a_send'), edge('e2', 'a_send', 'wait')], conciseExplanation: 'Eine Rückfrage.' };
+    const base = { knownFactKeys: new Set(['contact.email']), limits: { maxSteps: 30, maxExternalActions: 4, maxAutoQuestions: 3 } };
+    expect(codes(validatePlan(plan, strict({ ...base, priorClarifications: 0 })))).not.toContain('LIMIT_QUESTIONS');
+    expect(codes(validatePlan(plan, strict({ ...base, priorClarifications: 2 })))).not.toContain('LIMIT_QUESTIONS');
+    expect(codes(validatePlan(plan, strict({ ...base, priorClarifications: 3 })))).toContain('LIMIT_QUESTIONS');
+  });
+
   it('Planvertrag (FA-09): eine Revision darf die Ziele der ersten Planung ergänzen, aber nicht streichen oder durch leichtere ersetzen', () => {
     const revision = (goalKeys: string[]) => ({
       goalKeys,

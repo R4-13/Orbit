@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CAPABILITIES } from './capability';
-import { isEffectCapability, planNeedsWriteApproval, runsBeforePlanApproval } from './plan-approval';
+import { isEffectCapability, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, runsBeforePlanApproval } from './plan-approval';
 import type { PlanNode, PlanProposal } from './plan';
 
 const catalogue = new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c]));
@@ -29,6 +29,18 @@ describe('Planfreigabe für schreibende Wirkungen unbekannter Vorgänge (D4)', (
   it('eine unbekannte Fähigkeit gilt vorsichtshalber als Wirkung', () => {
     expect(isEffectCapability(undefined)).toBe(true);
     expect(planNeedsWriteApproval(plan([node('x', 'ACTION', 'neu.faehigkeit')]), catalogue)).toBe(true);
+  });
+
+  it('Planumfang: eine Neuplanung mit bereits freigegebenen Wirkungen braucht keine neue Freigabe – eine neue Art von Wirkung schon', () => {
+    const withPurpose = (id: string, purpose: string): PlanNode => ({ ...node(id, 'ACTION', 'email.send'), config: { purpose } });
+    const first = plan([withPurpose('ask', 'CLARIFICATION')]);
+    expect(planEffectKeys(first, catalogue)).toEqual(['email.send/CLARIFICATION']);
+    const approved = new Set(planEffectKeys(first, catalogue));
+
+    expect(planNeedsNewApproval(plan([withPurpose('ask2', 'CLARIFICATION')]), catalogue, approved)).toBe(false); // nächste Rückfrage derselben Art
+    expect(planNeedsNewApproval(plan([withPurpose('answer', 'INFORMATION')]), catalogue, approved)).toBe(true); // neue Art von Wirkung
+    expect(planNeedsNewApproval(plan([node('book', 'ACTION', 'calendar.book')]), catalogue, approved)).toBe(true);
+    expect(planNeedsNewApproval(plan([node('ctx', 'RESOLVE_CONTEXT', 'context.lookup')]), catalogue, new Set())).toBe(false);
   });
 
   it('vor der Planfreigabe laufen nur verstehende/vorbereitende Schritte – nie Wirkung, Warten, Übergabe oder Abschluss', () => {

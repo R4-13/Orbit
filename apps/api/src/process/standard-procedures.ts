@@ -36,6 +36,8 @@ export function buildInformationProcedure(options: { message: string }): PlanPro
       node('reply_send', 'ACTION', 'Antwort senden', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'reply_draft', path: 'draftId' } } }, config: { purpose: 'INFORMATION' } }),
       node('answered', 'COMPLETE', 'Frage beantwortet'),
       node('notify_staff', 'ACTION', 'Zuständige Person informieren', { capability: { key: 'staff.notify' }, inputs: { message: { literal: options.message } } }),
+      node('plan_further', 'REASSESS', 'Weiter planen', { purpose: 'Die Frage ist aus dem Betriebswissen nicht belegt beantwortbar: ORBIT plant frei weiter (Kontext, Rückfragen, Übergabe).', config: { replan: true } }),
+      // Rückfall: gelingt das freie Weiterplanen nicht (z. B. keine KI erreichbar), bleibt der Vorgang bei einer Person – wie bisher.
       node('human_answers', 'MANUAL_TASK', 'Eine Person beantwortet die Frage', { purpose: 'Die Frage ist durch das Betriebswissen nicht belegt beantwortbar; eine Person antwortet.' }),
     ],
     edges: [
@@ -44,7 +46,8 @@ export function buildInformationProcedure(options: { message: string }): PlanPro
       edge('reply_draft', 'reply_send', answerable(true)),
       edge('reply_send', 'answered', answerable(true)),
       edge('know', 'notify_staff', answerable(false)),
-      edge('notify_staff', 'human_answers', answerable(false)),
+      edge('notify_staff', 'plan_further', answerable(false)),
+      edge('plan_further', 'human_answers', answerable(false)),
     ],
     unresolvedRequirements: [],
     assumptions: [],

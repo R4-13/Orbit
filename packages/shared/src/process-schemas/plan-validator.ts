@@ -62,6 +62,8 @@ export interface PlanValidationContext {
    * aber keines streichen oder durch ein leichteres ersetzen (sonst ließe sich ein Vorgang durch Umplanen „erledigen“).
    */
   contractGoalKeys?: readonly string[];
+  /** Bereits gesendete Rückfragen des Vorgangs aus früheren Planungen: die Grenze gilt je Vorgang, nicht je Plan (frei geplante Abläufe). */
+  priorClarifications?: number;
 }
 
 export interface PlanValidationResult {
@@ -392,7 +394,8 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
       if (cap.idempotencyStrategy === 'NONE' || cap.confirmationStrategy === 'NONE') {
         add({ code: 'EFFECT_WITHOUT_IDEMPOTENCY', check: 8, nodeId: node.id, message: `Die externe Wirkung "${cap.key}" hat keine Idempotenz-/Bestätigungsstrategie.` });
       }
-      if (node.config.purpose === 'CLARIFICATION') clarifications += 1;
+      // Eine bereits bestätigte (und im Plan unverändert erhaltene) Rückfrage zählt über `priorClarifications`, nicht ein zweites Mal als neue.
+      if (node.config.purpose === 'CLARIFICATION' && !(ctx.confirmedEffects ?? []).some((effect) => effect.nodeId === node.id)) clarifications += 1;
     }
   }
 
@@ -440,7 +443,8 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   if (nodes.length > maxSteps) add({ code: 'LIMIT_STEPS', check: 11, message: `Der Plan hat ${nodes.length} Schritte, erlaubt sind ${maxSteps}.` });
   if (externalActions > ctx.limits.maxExternalActions) add({ code: 'LIMIT_EXTERNAL_ACTIONS', check: 11, message: `Der Plan enthält ${externalActions} externe Aktionen, erlaubt sind ${ctx.limits.maxExternalActions}.` });
   const maxQuestions = Math.min(ctx.limits.maxAutoQuestions, blueprint?.limits?.maxAutoQuestions ?? ctx.limits.maxAutoQuestions);
-  if (clarifications > maxQuestions) add({ code: 'LIMIT_QUESTIONS', check: 11, message: `Der Plan enthält ${clarifications} Rückfragen, erlaubt sind ${maxQuestions}.` });
+  const priorQuestions = blueprint ? 0 : (ctx.priorClarifications ?? 0);
+  if (clarifications + priorQuestions > maxQuestions) add({ code: 'LIMIT_QUESTIONS', check: 11, message: `Der Plan enthält ${clarifications} Rückfragen${priorQuestions > 0 ? ` (bereits gestellt: ${priorQuestions})` : ''}, erlaubt sind ${maxQuestions} je Vorgang.` });
 
   const valid = !issues.some((i) => i.severity === 'ERROR');
   return { valid, issues, proposal: plan, stats: { nodes: nodes.length, edges: edges.length, externalActions, clarifications } };

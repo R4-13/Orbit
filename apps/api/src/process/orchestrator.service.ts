@@ -12,6 +12,7 @@ import {
   nextActions,
   outageLimitReached,
   outageRetryDelayMs,
+  planEffectKeys,
   runsBeforePlanApproval,
   type BlueprintDefinition,
   type EvalContext,
@@ -248,7 +249,9 @@ export class OrchestratorService {
             return { status: 'IDLE', executed };
           }
         }
-        for (const action of actions) {
+        // Übersprungene Zweige werden zuerst aufgelöst und die Lage danach neu bewertet: Ein Abschluss darf nicht vor dem Auflösen nachgelagerter, nicht gewählter Schritte laufen.
+        const skips = actions.filter((a) => a.action === 'SKIP');
+        for (const action of skips.length > 0 ? skips : actions) {
           const node = graph.nodes.find((n) => n.nodeKey === action.nodeKey);
           if (!node) continue;
           if (action.action === 'SKIP') {
@@ -287,9 +290,17 @@ export class OrchestratorService {
     const fresh: ProcessPlanNode = { ...node, attempts: node.attempts + 1 };
     try {
       switch (def.type) {
+        case 'REASSESS':
+          if (def.config.replan === true) {
+            // Ein fester Ablauf stößt an seine Grenze (z. B. die Frage ist aus dem Betriebswissen nicht belegbar): der Vorgang wird frei weitergeplant, statt nur übergeben zu werden.
+            await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type, replan: true }, 'LIVE');
+            await this.replan(tenantId, caseRow.id, undefined);
+            return;
+          }
+          await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type }, 'LIVE');
+          return;
         case 'INTERPRET':
         case 'DECISION':
-        case 'REASSESS':
           await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type }, 'LIVE');
           return;
         case 'WAIT_EVENT':
@@ -757,6 +768,9 @@ export class OrchestratorService {
     const graph = await this.store.load(tenantId, planId);
     if (graph.plan.status !== 'AWAITING_APPROVAL') throw new NotFoundError('Plan awaits no approval.', { planId });
     await this.activatePlan(tenantId, graph.plan.caseId, planId, userId);
+    // Der freigegebene Umfang der Wirkungen gilt für diesen Vorgang weiter: eine Neuplanung innerhalb dieses Umfangs (z. B. die nächste Rückfrage) wartet nicht erneut.
+    const effects = planEffectKeys({ nodes: graph.nodes.map((n) => n.definition as unknown as PlanNode) }, this.capabilities.catalogue());
+    if (effects.length > 0) await this.events.append(tenantId, graph.plan.caseId, { type: CASE_EVENT_TYPES.PLAN_SCOPE_APPROVED, payload: { planId, approvedByUserId: userId, effects } });
   }
 
   async rejectPlan(tenantId: string, userId: string, planId: string, reason?: string): Promise<void> {

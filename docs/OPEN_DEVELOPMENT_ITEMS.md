@@ -24,7 +24,7 @@ Quelle: [`KONZEPT_FLEXIBLE_AUTONOMIE_2026-10-18.md`](KONZEPT_FLEXIBLE_AUTONOMIE_
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| FX-01 | **Zielarbeit bei unbekannten Vorgängen:** Eingangsbestätigung bzw. Rückfrage statt nur Übergabe; verstehende Fähigkeiten (`facts.extract_from_message`, `requirements.resolve`) für freie Pläne öffnen; allgemeiner Faktenwortschatz | ENG | M | P1 | Messlatte Szenarien 8, 20, 21; Addendum ADD-2.1/2.5 |
+| FX-01 | **Zielarbeit bei unbekannten Vorgängen (19.10.: umgesetzt, mit skriptgesteuerten Modellantworten getestet; mit echtem Modell und im Zielsystem noch nicht nachgewiesen – siehe #623):** Eingangsbestätigung bzw. Rückfrage statt nur Übergabe; verstehende Fähigkeiten (`facts.extract_from_message`, `requirements.resolve`) für freie Pläne öffnen; allgemeiner Faktenwortschatz | ENG | M | P1 | Messlatte Szenarien 8, 20, 21; Addendum ADD-2.1/2.5 |
 | FX-02 | **Mehrere Anliegen aufteilen** und je Teilziel bearbeiten (Ziele im selben Vorgang, bei fachlich getrennten Anliegen verknüpfte Vorgänge) | ENG | M | P1 | Szenario 12; ADD-3.1; hängt an FX-06 |
 | FX-03 | **Allgemeines Geschäftsereignis** (Sonde-/Aufgabenauftrag, Wiedervorlage, Personal-Abwesenheit manuell) über dem vorhandenen Eingang | ENG | L | P1 | FA-03; ADD-1.1–1.3; D6 |
 | FX-04 | **Schattenbetrieb scharf schalten** und auswerten: Flag `planner.shadow` für `musterwerk`, Auswertungsbericht (Planbewertung, Abdeckung gegenüber tatsächlicher Ausführung, Kosten) | ENG | S | P1 | Konzept 9; D9 (≥ 60 Fälle) |

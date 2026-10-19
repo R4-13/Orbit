@@ -1,0 +1,172 @@
+import { randomUUID } from 'node:crypto';
+import type { INestApplication } from '@nestjs/common';
+import { MockLLMProvider } from '@orbit/agent-core';
+import { buildTriageFixture } from '@orbit/shared';
+import { LLM_PROVIDER } from '../src/agent/agent.tokens';
+import { AiProviderResolverService } from '../src/ai-providers/ai-provider-resolver.service';
+import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
+import { IntakeService } from '../src/intake/intake.service';
+import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { OrchestratorService } from '../src/process/orchestrator.service';
+import { TenantsService } from '../src/tenants/tenants.service';
+import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
+
+const SENDER = 'praxis@kunde.example';
+const REQUEST = 'Guten Tag, unsere Zahnarztpraxis zieht Ende Januar um. Wir brauchen drei Behandlungsplätze an Wasser und Druckluft angeschlossen und einen Gasanschluss im Labor. Die Abnahme muss vor dem 3. Februar erfolgt sein. Können Sie das übernehmen?';
+
+/**
+ * FX-01 (Konzept Flexible Autonomie, Entscheidung 19.10.): vollständige Zielarbeit bei einem unbekannten Vorgang ohne Leitfaden – Kontext beschaffen, fehlende Angaben auflösen, handeln,
+ * fortsetzen, bis ein sachlich notwendiger Warte-, Freigabe- oder Übergabepunkt erreicht ist. Zugleich Entscheidung D4: schreibende Wirkungen beginnen erst nach der Planbestätigung;
+ * verstehende und vorbereitende Schritte laufen vorher; der freigegebene Umfang gilt für Neuplanungen innerhalb dieses Umfangs weiter. Modell = Skript-Warteschlange (echte KI simuliert),
+ * Versand = Aufzeichnungs-Double – nichts verlässt den Testprozess.
+ */
+describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
+  jest.setTimeout(120_000);
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let intake: IntakeService;
+  let llm: MockLLMProvider;
+  let sent: OutboundMessage[] = [];
+  const spies: jest.SpyInstance[] = [];
+  const tenants: string[] = [];
+  const connectionByTenant = new Map<string, string>();
+
+  async function newTenant(): Promise<string> {
+    const suffix = randomUUID();
+    const { tenant } = await app.get(TenantsService).bootstrapTenant({ name: `Ziel ${suffix.slice(0, 8)}`, slug: `e2e-ziel-${suffix}`, adminEmail: `admin-${suffix}@e2e-ziel.example`, adminPassword: 'Musterwerk#2026!', adminFirstName: 'A', adminLastName: 'A' });
+    tenants.push(tenant.id);
+    const integration = await prisma.forTenantId(tenant.id).integration.create({ data: { tenantId: tenant.id, connectorType: 'GMAIL', status: 'CONNECTED', externalAccountDisplayName: 'firma@e2e.example', grantedCapabilities: ['email.read', 'email.send'] } });
+    connectionByTenant.set(tenant.id, integration.id);
+    for (const action of ['email.send.clarification', 'email.send.acknowledgement', 'staff.notify']) {
+      await prisma.forTenantId(tenant.id).policyConfig.upsert({ where: { tenantId_action: { tenantId: tenant.id, action } }, create: { tenantId: tenant.id, action, mode: 'AUTONOMOUS' }, update: { mode: 'AUTONOMOUS' } });
+    }
+    await prisma.forTenantId(tenant.id).tenantProfile.create({ data: { tenantId: tenant.id, industry: 'Heizung und Sanitär', description: 'Wir installieren Heizungen und Sanitäranlagen.', services: ['Sanitär'], faqs: [] } });
+    return tenant.id;
+  }
+
+  function seedTool(toolName: string, input: Record<string, unknown>): void {
+    llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName, input }], stopReason: 'tool_use' });
+    llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
+  }
+  const seedTriage = (over: Record<string, unknown> = {}) =>
+    seedTool('submit_triage_result', buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'COMPLAINT_OR_SERVICE', urgency: 'NORMAL', senderRoleHypothesis: 'PROSPECT', conciseReason: 'Anfrage einer Praxis zu einem Umzug.', confidence: { relevance: 0.97, intent: 0.9 }, ...over }) as unknown as Record<string, unknown>);
+  const seedAnalysis = () =>
+    seedTool('submit_request_analysis', {
+      requestType: 'Praxisumzug',
+      summary: 'Umzug einer Zahnarztpraxis: Anschluss von drei Behandlungsplätzen und eines Gasanschlusses, Abnahme vor dem 3. Februar.',
+      knownDetails: [{ key: 'behandlungsplaetze', label: 'Behandlungsplätze', value: '3', evidence: 'drei Behandlungsplätze', confidence: 0.95 }],
+      missingInformation: [{ key: 'standort', label: 'Neuer Standort', question: 'An welcher Adresse liegen die neuen Praxisräume?' }],
+      siteVisit: { recommended: false, reason: '' },
+      nextStep: 'ASK_CUSTOMER',
+    });
+  const seedExtraction = (facts: Array<{ key: string; value: string | number; evidence: string }>) => seedTool('submit_extracted_facts', { facts: facts.map((f) => ({ ...f, confidence: 0.9 })) });
+
+  const node = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, inputs: {}, config: {}, ...extra });
+  const edge = (source: string, target: string) => ({ id: `e_${source}_${target}`, source, target });
+
+  function mail(tenantId: string, over: Partial<NormalizedIntakeEvent> = {}): NormalizedIntakeEvent {
+    return { tenantId, channel: 'SIMULATED', provider: 'simulated', externalEventId: randomUUID(), occurredAt: new Date(), sender: { address: SENDER, displayName: 'Praxis Meier' }, recipients: [{ address: 'info@betrieb.example' }], direction: 'INBOUND', connectionId: connectionByTenant.get(tenantId), subject: 'Praxisumzug', content: REQUEST, threadId: 'thr-1', rfcMessageId: '<m1@kunde.example>', ...over };
+  }
+  const caseOf = (tenantId: string, caseId: string) => prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } });
+  const planStates = async (tenantId: string, caseId: string, status: 'ACTIVE' | 'AWAITING_APPROVAL') => {
+    const plan = await prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId, status }, orderBy: { revision: 'desc' }, include: { nodes: true } });
+    return { plan, state: (key: string) => plan?.nodes.find((n) => n.nodeKey === key)?.state };
+  };
+  async function confirmPlan(tenantId: string, caseId: string): Promise<void> {
+    const waiting = await prisma.forTenantId(tenantId).processPlan.findFirstOrThrow({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
+    await app.get(OrchestratorService).approvePlan(tenantId, 'user-confirm', waiting.id);
+    await app.get(OrchestratorService).advance(tenantId, caseId);
+  }
+
+  beforeAll(async () => {
+    app = await bootstrapE2eApp();
+    prisma = app.get(PrismaService);
+    intake = app.get(IntakeService);
+    llm = app.get(LLM_PROVIDER);
+    const live = { providerName: 'scripted-live', modelName: 'scripted', complete: (request: Parameters<MockLLMProvider['complete']>[0]) => llm.complete(request) };
+    spies.push(jest.spyOn(app.get(AiProviderResolverService), 'resolveForTenant').mockResolvedValue(live as never));
+    spies.push(
+      jest.spyOn(app.get<OutboundMailPort>(OUTBOUND_MAIL), 'send').mockImplementation(async (_tenant, message) => {
+        sent.push(message);
+        return { providerMessageId: `gm-${sent.length}`, threadId: message.threadId ?? 'thr-1', rfcMessageId: `<sent-${sent.length}@mail.example>`, from: 'firma@e2e.example', executionMode: 'SIMULATED' };
+      }),
+    );
+  });
+  beforeEach(() => {
+    sent = [];
+  });
+  afterAll(async () => {
+    for (const spy of spies) spy.mockRestore();
+    for (const id of tenants) await prisma.withRlsBypass((tx) => tx.tenant.deleteMany({ where: { id } }));
+    await app.close();
+  });
+
+  it('Verstehen → Planbestätigung → Rückfrage → Antwort → Neuplanung OHNE erneute Bestätigung → Übergabe mit Zusammenfassung: der Vorgang endet an einem sachlichen Übergabepunkt, nicht nach dem ersten Schritt', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    // Plan 1: Kontext → Anforderungen aus der Nachricht → Rückfrage (nur was fehlt) → warten.
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Verstehen, gezielt nachfragen, auf die Antwort warten.',
+    });
+    seedAnalysis();
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+
+    // D4: nichts geht hinaus, der Plan wartet auf die Bestätigung – aber Verstehen und der Entwurf liefen schon.
+    expect(sent).toEqual([]);
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_APPROVAL');
+    const waiting = await planStates(tenantId, caseId, 'AWAITING_APPROVAL');
+    expect([waiting.state('ctx'), waiting.state('reqs'), waiting.state('ask_draft'), waiting.state('ask_send')]).toEqual(['SUCCEEDED', 'SUCCEEDED', 'SUCCEEDED', 'PLANNED']);
+
+    // Die Person bestätigt den Plan: die Rückfrage geht (Regel: autonom) – gezielt nach dem Standort, ohne Zusagen.
+    await confirmPlan(tenantId, caseId);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.bodyText).toContain('An welcher Adresse liegen die neuen Praxisräume?');
+    expect(sent[0]!.bodyText).not.toMatch(/€|EUR|garantier|Preis/i);
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
+
+    // Antwort der Kundschaft → Neuplanung: Angaben auslesen, prüfen, Person mit Zusammenfassung informieren, Übergabe.
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review', 'staff.informed'],
+      nodes: [
+        // Bereits bestätigte Schritte bleiben unverändert Teil des Plans (keine Wiederholung der Rückfrage).
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('extract', 'PREPARE', { capability: { key: 'facts.extract_from_message' }, inputs: { messageId: { sourceRef: 'inbound.latestMessageId' } } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Praxisumzug: Standort und Umfang sind geklärt, bitte Angebot und Frist prüfen (Abnahme vor 3. Februar).' } } }),
+        node('human', 'MANUAL_TASK', { title: 'Eine Person prüft Umfang, Preis und Frist' }),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'extract'), edge('extract', 'notify'), edge('notify', 'human')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Angaben auslesen, Person informieren, übergeben.',
+    });
+    seedExtraction([{ key: 'ai.standort', value: 'Kölner Str. 12, 50667 Köln', evidence: 'Kölner Str. 12, 50667 Köln' }]);
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12, 50667 Köln.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
+
+    // Kein zweites Mal Planbestätigung: die neue Planung wirkt nur mit Meldung an eine Person und Aufgabe (sicherer Rückfallweg), die Rückfrage-Art war schon freigegeben.
+    const row = await caseOf(tenantId, caseId);
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId, status: 'AWAITING_APPROVAL' } })).toBe(0);
+    expect(await prisma.forTenantId(tenantId).task.count({ where: { caseId } })).toBeGreaterThanOrEqual(1);
+    // Der Planvertrag (Ziele der ersten Planung) blieb erhalten; „Abschluss“ gibt es für ein Ziel bei einer Person nicht – ein Mensch schließt ab.
+    const plans = await prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' } });
+    expect(plans[0]!.goalKeys).toEqual(['human.review']);
+    expect(plans.at(-1)!.goalKeys).toEqual(expect.arrayContaining(['human.review']));
+    expect(row.completedAt).toBeNull();
+  });
+});

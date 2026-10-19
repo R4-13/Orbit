@@ -312,7 +312,7 @@ Zwei Orchestrierungswege bleiben **nur übergangsweise** bestehen (Altweg: 5 Age
 23. **D4:** keine automatische Lockerung der Planfreigabe nach der Pilotphase.
 24. **D7:** Pilot beweist nur den Angebotsbereich; unbekannte Vorgänge und Ereignisse ohne Nachricht sind zusätzlich abzunehmen.
 25. **D9:** Fallzahl ≥ 60 *und* Szenariodeckung; Zeitraum ersetzt keine Fallzahl; Budget vorab (9.2).
-26. **D4 – Auslegung:** „Planfreigabe beibehalten“ bezieht sich auf den **vorhandenen** Mechanismus (Regel `process.plan.activate`: im Grundzustand und in „Vorsichtig“ Freigabe, in „Ausgewogen“/„Hochautomatisiert“ per Voreinstellung autonom, jede Wirkung bleibt durch ihre eigene Regel geschützt). Daran ändert dieses Vorhaben nichts; eine weitere Lockerung gibt es nicht ohne ausdrückliche, begrenzte Entscheidung.
+26. **D4 – Klarstellung (19.10.2026, ersetzt die frühere Auslegung):** Die Planfreigabe für **schreibende Wirkungen** unbekannter Vorgänge gilt **in jeder Autonomiestufe**; die Regel `process.plan.activate` ist eine feste, gesperrte Vorgabe. Verstehende und vorbereitende Schritte laufen vor der Freigabe; die Einzelaktionsregeln gelten nach der Freigabe zusätzlich. Eine Lockerung gibt es nur ausdrücklich, begrenzt nach Mandant, Aktionsumfang und Risiko (siehe 8.1a, 9).
 27. **Bearbeitungsweg** wird abgeleitet statt gespeichert (9.1).
 28. **Abschlussnachweis frei geplanter Abläufe** (5a) ist festes Regelwerk im Code (`adhoc-completion.ts`), nicht Teil des Plans.
 

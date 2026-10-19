@@ -22,6 +22,22 @@ export function planNeedsWriteApproval(proposal: PlanProposal, capabilities: Rea
   return proposal.nodes.some((node) => node.type === 'ACTION' && node.capability !== undefined && isEffectCapability(capabilities.get(node.capability.key)));
 }
 
+/** Die Wirkungen eines Plans als `capability/purpose` (sortiert, eindeutig) – der Umfang, den eine Planfreigabe abdeckt. */
+export function planEffectKeys(proposal: Pick<PlanProposal, 'nodes'>, capabilities: ReadonlyMap<string, CapabilityDefinition>): string[] {
+  const keys = proposal.nodes
+    .filter((node) => node.type === 'ACTION' && node.capability !== undefined && isEffectCapability(capabilities.get(node.capability.key)))
+    .map((node) => `${node.capability!.key}${typeof node.config.purpose === 'string' ? `/${node.config.purpose}` : ''}`);
+  return [...new Set(keys)].sort();
+}
+
+/**
+ * Braucht dieser Plan eine (erneute) Planfreigabe? Nur, wenn er Wirkungen enthält, die der bereits freigegebene Umfang des Vorgangs nicht abdeckt. Eine Neuplanung nach einer Antwort der Kundschaft
+ * (z. B. die nächste Rückfrage derselben Art) wiederholt die Freigabe nicht; jede **neue Art** von Wirkung verlangt sie wieder (Entscheidung D4: begrenzt und ausdrücklich).
+ */
+export function planNeedsNewApproval(proposal: PlanProposal, capabilities: ReadonlyMap<string, CapabilityDefinition>, approvedEffects: ReadonlySet<string>): boolean {
+  return planEffectKeys(proposal, capabilities).some((key) => !approvedEffects.has(key));
+}
+
 /** Knotentypen, die auch vor der Planfreigabe laufen dürfen: verstehen, vorbereiten, entscheiden – nie warten, übergeben, abschließen oder wirken. */
 const PRE_APPROVAL_TYPES: ReadonlySet<string> = new Set(['INTERPRET', 'RESOLVE_CONTEXT', 'EVALUATE_REQUIREMENTS', 'DECISION', 'REASSESS', 'PREPARE']);
 
