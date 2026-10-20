@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type ProcessNodeState, type ProcessPlan, type ProcessPlanEdge, type ProcessPlanNode, type ProcessPlanSource, type ProcessPlanStatus } from '@orbit/domain';
-import { NotFoundError, type PlanNode, type PlanProposal } from '@orbit/shared';
+import { NotFoundError, isReplanPoint, type PlanNode, type PlanProposal } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashOf } from './canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
@@ -168,8 +168,13 @@ export class PlanStoreService {
   /** The newest revision in any state (proposed, awaiting approval, active, ...) — what the orchestration view shows. */
   /** Die Ziele der ersten Planung (Planvertrag): sie gelten für alle Revisionen. */
   async rootGoalKeys(tenantId: string, caseId: string): Promise<string[]> {
-    const first = await this.prisma.forTenantId(tenantId).processPlan.findFirst({ where: { caseId }, orderBy: { revision: 'asc' }, select: { goalKeys: true } });
-    return first?.goalKeys ?? [];
+    const plans = await this.prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' }, select: { goalKeys: true, source: true, nodes: { select: { type: true, definition: true } } } });
+    // Eine Revision, die nur das Verstehen plant und an einer Weiterplanen-Stelle endet (freie Planung, noch ohne Ergebnis der Anforderungsprüfung), wählt ihre Ziele, bevor die Anfrage verstanden ist:
+    // sie sind vorläufig. Der Planvertrag beginnt mit der ersten Revision, die die Ziele nach dem Verstehen wählt (sonst bindet eine blinde Zielwahl die Neuplanung – Live-Fund: die Neuplanung scheiterte
+    // am gestrichenen Ziel „Auskunft erteilt“, obwohl das Verstehen etwas anderes ergab). Feste Verfahren (Notfall, Auskunft, Status) behalten ihre Ziele.
+    const understandingOnly = (p: (typeof plans)[number]): boolean => p.source === 'LLM_PLANNER' && p.nodes.some((n) => isReplanPoint(n.definition as unknown as PlanNode));
+    const substantive = plans.find((p) => !understandingOnly(p));
+    return substantive?.goalKeys ?? [];
   }
 
   /** Der Plan, der auf die Planfreigabe wartet (D4): seine verstehenden Schritte dürfen vorher laufen. */
