@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@orbit/shared": "workspace:*",
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.135.0",
     "openai": "^4.77.0",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.24.1"
