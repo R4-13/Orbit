@@ -132,6 +132,11 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
   });
   afterAll(async () => {
     for (const spy of spies) spy.mockRestore();
+    await prisma.withPlatformScope(async (tx) => {
+      const flag = await tx.platformFeatureFlag.findUniqueOrThrow({ where: { key: 'process.split' } });
+      const overrides = (flag.tenantOverrides as Array<{ tenantId: string; value: boolean }>).filter((o) => !tenants.includes(o.tenantId));
+      await tx.platformFeatureFlag.update({ where: { key: 'process.split' }, data: { tenantOverrides: overrides } });
+    });
     for (const id of tenants) await prisma.withRlsBypass((tx) => tx.tenant.deleteMany({ where: { id } }));
     await app.close();
   });
