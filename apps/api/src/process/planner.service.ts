@@ -284,7 +284,7 @@ export class PlannerService {
         if (!submitted) {
           if (llm.providerName.toLowerCase().includes('mock')) return { status: 'UNAVAILABLE', reason: 'Kein KI-Provider verbunden: der simulierte Provider hat keinen Plan hinterlegt.' };
         } else if (submitted.result?.status === 'SUCCEEDED') {
-          const validation = validatePlan(submitted.output, context);
+          const validation = validatePlan(this.normalizeProposal(submitted.output), context);
           lastValidation = validation;
           lastProposal = validation.proposal as PlanProposal | undefined;
           if (validation.valid) return { status: 'PROPOSED', proposal: validation.proposal as PlanProposal, validation };
@@ -314,6 +314,20 @@ export class PlannerService {
    *  - das Modell plant hinter die Anforderungsprüfung, deren Ergebnis es noch nicht kennt → der Plan wird auf das Verstehen reduziert und endet an einer Weiterplanen-Stelle.
    * Nur wenn danach alles gültig ist; sonst bleibt es beim Reparaturversuch mit dem Modell.
    */
+  /**
+   * Formfragen, die sich ohne Spielraum beheben lassen: ein zu langer fester Text für die interne Meldung (höchstens 400 Zeichen) wird gekürzt, statt den Plan erst bei der Ausführung scheitern zu lassen
+   * (Live-Fund: Neuplanung fiel an `message: String must contain at most 400 character(s)`).
+   */
+  private normalizeProposal(output: unknown): unknown {
+    const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }> } | null;
+    if (!proposal || !Array.isArray(proposal.nodes)) return output;
+    for (const node of proposal.nodes) {
+      const message = node.capability?.key === 'staff.notify' ? (node.inputs?.message as { literal?: unknown } | undefined) : undefined;
+      if (message && typeof message.literal === 'string' && message.literal.length > 400) message.literal = `${message.literal.slice(0, 397)}…`;
+    }
+    return output;
+  }
+
   private repairDeterministically(proposal: PlanProposal, validation: PlanValidationResult, context: PlanValidationContext, parent: PlanGraph | undefined): PlanValidationResult | undefined {
     const repairable = new Set(['REPLAN_DROPS_CONFIRMED_EFFECT', 'REPLAN_AFTER_UNDERSTANDING', 'PLAN_BEHIND_WAIT', 'DEAD_END', 'NO_TERMINAL']);
     const errors = validation.issues.filter((i) => i.severity === 'ERROR');
@@ -503,6 +517,7 @@ Rate keinen Wert. Hängt eine Wirkung oder ein Angebot davon ab, frage vorher ge
       `Verfügbare Fähigkeiten:\n${capabilityLines}`,
       `${await this.profileContext.promptFor(tenantId).catch(() => '') || 'Betriebsprofil: nicht hinterlegt.'}`,
       parentText,
+      (context.contractGoalKeys ?? []).length > 0 ? `Planvertrag: goalKeys MÜSSEN mindestens enthalten: ${(context.contractGoalKeys ?? []).join(', ')} (weitere Ziele darfst du ergänzen, keines streichen).` : '',
       `confirmedEffects: ${JSON.stringify(context.confirmedEffects ?? [])}`,
       `Limits: maxSteps=${context.limits.maxSteps}, maxExternalActions=${context.limits.maxExternalActions}, maxAutoQuestions=${context.limits.maxAutoQuestions}`,
       `Prompt-Version: ${PLANNER_PROMPT_VERSION}; Kontext-Hash: ${hashOf({ facts: facts.map((f) => [f.key, f.revision]) }).slice(0, 12)}`,

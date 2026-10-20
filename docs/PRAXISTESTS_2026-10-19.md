@@ -90,3 +90,31 @@ Rohdaten: `docs/evidence/serie-b-206e327.txt`. 11 Vorgänge + 4 Korrektur-Antwor
 | **Neuer Fund** | Eine vertagende Antwort („Welcher der Termine passt, sage ich Ihnen noch.“) wurde als `appointment.agreed` gespeichert und bereitete in 2 Fäden eine **Kalenderbuchung** vor (`calendar.book` wartete auf Freigabe – nie freigegeben, gesperrt durch die Freigaberegel). Behoben: eine Terminwahl braucht eine konkrete Angabe (`isConcreteAppointmentChoice`). |
 
 Mit der Codeänderung nach Serie B beginnt die Serie neu (Abschnitt 5); A und B bleiben als frühere Läufe dokumentiert.
+
+### 4.4 Wiederholungsserie C (Stand `6bfc5f2`; Gesamtlauf `74/74` grün)
+
+Rohdaten: `docs/evidence/serie-c-6bfc5f2.txt`. 38 Vorgänge (einschließlich Teilvorgänge), Bereinigung ID-genau nach Export und Sicherung (`backups/orbit-20261020-151950.dump`). Modell `gpt-6-luna`, Reasoning `none`. Planfreigabe nur für zwei Praxisumzug-Vorgänge (Skript `approve-test-plan.ts`, nur E-Mail an Tom); keine Aktion wurde einzeln freigegeben, **0 Kalenderbuchungen**.
+
+| Szenario | Läufe | Ergebnis |
+|---|---|---|
+| Wartungsvertrag (+ Variante) | 4 | Eignungsprüfung lief 3 von 3 Mal, wo ein Leitfaden infrage kam: 2× „passt“ (Rückfrage + Vor-Ort-Termin), 1× „passt nicht“ → freie Planung, Plan wartet auf Freigabe, ohne Formfehler. 1× Einstufung `SALES_INQUIRY` → fester Vertriebsweg (Aufgabe + **HubSpot-Deal `529012989146`**, bleibt bestehen). **Schwankung bleibt:** über A–C landet ein Wartungsvertrag in 7 von 12 Läufen im Leitfaden mit Vor-Ort-Termin; ob das gewünscht ist, ist eine fachliche Entscheidung (siehe Bericht an den Auftraggeber). |
+| Elektroarbeiten (+ Variante) | 3 | 3 von 3 „Standardverfahren passt nicht“ → freie Planung; **kein Formfehler** (A: 2 von 3). 1× Plan wartet auf die Freigabe, 2× geplante Entscheidung durch eine Person (Aufgabe) – die Kundschaft erhält in diesen beiden Fällen **noch keine** Auskunft „nicht im Angebot“. |
+| Badangebot (+ Variante), Terminvorschläge | 3 | Leitfaden passt 3 von 3; Terminvorschläge an Tom wie bisher. |
+| Korrektur 7→8 m² bzw. 6→7 m² (1. Antwort) | 3 | **2 von 3 übernommen** (Verlauf erhalten). 1× keine Änderung gemeldet (`fact.update_assessed`: leere Vorschlagsliste) → daraus folgt die einmalige gezielte Nachfrage bei Korrekturhinweis (nach Serie C eingebaut). |
+| Korrektur 8→12 m² bzw. 7→11 m² (2. Antwort) | 3 | **3 von 3 übernommen**, auch der Faden mit dem Widerspruch 7/8 (`CONFLICTED`) wurde durch die eindeutige Selbstkorrektur aufgelöst; Kette 7→8→12 bzw. 6→7→11 im Verlauf. |
+| Vertagende Terminaussage („entscheide ich später“) | 3 | 0 Terminfakten, 0 Buchungsvorbereitungen (Fund aus Serie B behoben). |
+| Fünf Anliegen (+ Variante) mit `process.split` im Testfenster | 4 | **4 von 4 geteilt** (vorher abhängig vom Einstufungsmerkmal: 1 von 2). 5/5/5/**6** Teilvorgänge: im sechsten Lauf kürzte das Modell einen Auszug („Samstags telefonisch erreichbar?“), der Auszug galt als unbelegt und die Frage wurde zusätzlich als eigenes Anliegen geführt (Dublette, nichts verloren) → nach Serie C: gekürzte Auszüge gelten als belegt, wenn alle Wörter in derselben Reihenfolge in der Nachricht stehen. Jeder Teilvorgang plant nur sein Anliegen (eigene Ziele: z. B. „Wartungstermin verschieben“ → keine automatische Umbuchung, Person; „Rechnungskopie“ → keine Fähigkeit, Person informiert; „Heizungsregler“ → Angebotsleitfaden/Rückfrage). Hauptvorgänge bleiben offen, solange Teilvorgänge bei Personen liegen. |
+| Praxisumzug (+ Variante), Planfreigabe → Rückfrage → Antwort → Neuplanung | 3 | 3 von 3 „Standardverfahren passt nicht“; 2× Rückfrage-Plan (nach Freigabe: Rückfrage **nur an Tom**), 1× direkt Entscheidung durch eine Person (Planer hielt die Angaben für ausreichend). Nach der Antwort: (a) Neuplanung fragte **erneut nach der soeben genannten Adresse** (der Plan las das Ergebnis der Anforderungsprüfung von vor der Antwort) → nach Serie C: veraltete Ergebnisse werden abgewiesen (`STALE_STEP_OUTPUT`) und der Planer prüft neu; (b) Neuplanung scheiterte an einem Formfehler (`BINDING_UNKNOWN_NODE`) → begründete Übergabe (Aufgabe) – die Fehlermeldung nennt jetzt die vorhandenen Knoten. |
+| Mehrdeutige Beschreibungen | – | Der Korrekturdienst stufte weitere Beschreibungen (z. B. „Druckluft kommt von einem Kompressor im Keller“) teils als Widerspruch ein; das führte zu unnötigen Konflikten → nach Serie C: lange Freitexte erzeugen keinen Widerspruch. |
+
+Mit den Änderungen nach Serie C beginnt die Serie für die betroffenen Szenarien (Korrekturen, Aufteilung, Praxisumzug-Antwort) neu: Abschnitt 5.
+
+## 5. Wiederholungsserie D (Stand `9055186`, Gesamtlauf 74/74 grün)
+
+Rohdaten: `docs/evidence/serie-d-9055186.txt`. 30 Vorgänge, bereinigt ID-genau (Sicherung `backups/orbit-20261020-164242.dump`); 0 Kalenderbuchungen, keine Einzelfreigaben.
+
+| Szenario | Ergebnis |
+|---|---|
+| Aufteilung „Fünf Anliegen“ (+ Variante), `process.split` im Testfenster | **4 von 4 geteilt, jedes Mal genau 5 Teilvorgänge, keine ergänzte Dublette** (Serie C: 5/5/5/6) |
+| Korrektur 7→8 m² / 6→7 m² (1. Antwort, Terminaussage vertagt) | **3 von 3 übernommen** (Serie C: 2 von 3), 0 Terminfakten, 0 Buchungsvorbereitungen. Nebenbefund: dieselbe Aussage in anderen Worten („8 m²“ / „8 m², nicht 7“) erzeugte in einem Faden einen unnötigen Widerspruch → nach Serie D: Umschreibungen sind kein Widerspruch (zusätzliche, nicht verneinte Zahlen bleiben einer) |
+| Praxisumzug nach Freigabe und Antwort | Die zweite Rückfrage fragt jetzt **nur noch nach dem Fehlenden** („Frist für die Abnahme?“; die Adresse wird nicht erneut erfragt). Aber: 1× Neuplanung scheiterte, weil sie ein Ziel des Planvertrags (`request.handed_over`) strich → begründete Übergabe; 1× scheiterte die interne Meldung an einem zu langen festen Text (> 400 Zeichen). Beides nach Serie D behoben: der Planer erhält die Ziele des Planvertrags ausdrücklich genannt, überlange Meldungstexte werden gekürzt. Ein dritter Vorgang ging direkt an eine Person (Planer hielt die Angaben für ausreichend). |

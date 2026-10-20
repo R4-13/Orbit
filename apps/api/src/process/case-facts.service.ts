@@ -41,6 +41,24 @@ export interface FactInput {
  * - Every change bumps `Case.revision`, so commands and events that carry an
  *   expected revision detect stale views (§12.3).
  */
+/**
+ * Dieselbe Aussage in anderen Worten ist kein Widerspruch: Der kürzere Text steht als zusammenhängende Wortfolge im längeren („8 m²“ und „8 m², nicht 7“; „ca. 7 m²“ und „7 m²“ nicht – dort fehlt „ca.“, aber
+ * „7 m²“ steht in „ca. 7 m²“). Verglichen wird Wort für Wort (Zahlen ganz: „7“ ist nicht in „17“ enthalten); nur Texte, keine Zahlen.
+ */
+export function isRestatement(a: unknown, b: unknown): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const tokens = (text: string): string[] => text.toLowerCase().replace(/[.,;:!?"„“]+/g, ' ').split(/\s+/).filter((t) => t.length > 0);
+  const [short, long] = tokens(a).length <= tokens(b).length ? [tokens(a), tokens(b)] : [tokens(b), tokens(a)];
+  if (short.length === 0 || short.length === long.length && short.every((t, i) => t === long[i])) return short.length > 0;
+  // Nennt der längere Text eine weitere Zahl, die nicht verneint ist („8 m², nicht 7“), ist es eine andere Angabe („nicht 7 m², sondern 12“), kein Umschreiben.
+  const extraNumber = long.some((token, index) => /\d/.test(token) && !short.includes(token) && long[index - 1] !== 'nicht');
+  if (extraNumber) return false;
+  for (let start = 0; start + short.length <= long.length; start += 1) {
+    if (short.every((token, offset) => long[start + offset] === token)) return true;
+  }
+  return false;
+}
+
 @Injectable()
 export class CaseFactsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -73,8 +91,8 @@ export class CaseFactsService {
     const scoped = this.prisma.forTenantId(tenantId);
     const current = await scoped.caseFact.findMany({ where: { caseId, key: input.key, isCurrent: true } });
 
-    // Same value already standing: nothing to record.
-    if (current.some((fact) => factValuesEqual(fact.value, input.value))) return [];
+    // Same value already standing (or the same assertion in other words): nothing to record.
+    if (current.some((fact) => factValuesEqual(fact.value, input.value) || isRestatement(fact.value, input.value))) return [];
 
     const nextRevision = (current.reduce((max, fact) => Math.max(max, fact.revision), 0) || 0) + 1;
     const hasStanding = current.length > 0;
