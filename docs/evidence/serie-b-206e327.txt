@@ -1,0 +1,94 @@
+# Wiederholungsserie B auf Stand 206e327 (Modell gpt-6-luna, Reasoning none, Betrieb musterwerk, 20.10.2026 10:54-11:20 UTC) - Rohauszug je Vorgang
+# Reihenfolge der Mails: 3x unbekannt-wartungsvertrag, wartungsvertrag-variante, 2x elektroarbeiten, elektroarbeiten-variante, 3x angebot-bad, angebot-bad-variante; danach 4 Korrektur-Antworten (versehentlich gingen zwei Antworten in denselben Faden, die Variante erhielt keine).
+=== 2482c7d9-857e-45cd-bca0-a27930cc35a1
+10:56:55 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine Frage nach Betriebswissen, sondern fragt an, ob ein konkreter Elektro-Arbeitsumfang (drei Steckdosen und eine Lichtleitung) angeboten bzw. ausgeführt wird. Der Leitfaden zur
+ziele | human.review,inquiry.answered,staff.informed
+ereignisse | 
+=== ecc0b9f4-f6ac-4a0a-9ab6-38e53c3764bd
+10:58:43 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Servicepartner für unser Mehrfamilienhaus | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Anfrage betrifft eine dauerhafte Servicepartnerschaft, nicht einen einzelnen Einsatz. Der Leitfaden kann sie aufnehmen und mit Angaben zu Umfang, Rufbereitschaft, Kostenfrage und gewünschtem Start
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Servicepartner für unser Mehrfamilienhaus gesucht“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich bei der Heizungsanlage um eine Gas- oder Ölheizung? 2. Welche regelmäßigen Wartungs- oder Betreuungsleistungen sollen neben der Woc
+ereignisse | 
+=== c1a27f3d-edb2-492d-84e9-e713fedc0a0b
+10:59:31 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Anfrage betrifft einen laufenden Wartungsvertrag mit Bereitschaftsdienst und fragt nach Konditionen sowie Startmöglichkeit. Der Leitfaden erfasst Angaben und übergibt die Anfrage an die zuständige
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich bei der Heizungsanlage um eine Gas- oder Ölheizung? 2. In welcher Stadt befindet sich das Haus?  Für eine verlässliche Einschätzung schauen wir 
+ereignisse | 
+=== aa03b91a-cde1-488d-bb50-f122f8ccf243
+11:00:05 | IN_PROGRESS | (frei) | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | 
+ziele | 
+aufgabe | Neuen Lead kontaktieren: Tom Orbit
+ereignisse | 
+=== bc3527e0-ab46-49e7-9e28-69388eb0fd2a
+11:00:45 | WAITING_FOR_APPROVAL | (frei) | Angebotsanfrage: Wartungsvertrag für 12 Wohneinheiten | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | REQUEST_FOR_QUOTE | Die Kundschaft sucht einen laufenden Wartungsvertrag mit Wochenend-Bereitschaftsdienst und fragt nach Konditionen sowie möglichem Start. Der Leitfaden ist auf Aufnahme und Übergabe einer Anfrage ohne 
+ziele | human.review,quote.delivered,staff.informed,task.created
+ereignisse | 
+=== 8952253f-9938-4b15-bdd4-06cbfcffbb55
+11:03:29 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badezimmer erneuern – was kostet das? | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Der Kunde möchte eine konkrete Badmodernisierung anfragen, einen Vor-Ort-Termin zur Besichtigung vereinbaren und eine ungefähre Preisorientierung erhalten. Der Leitfaden passt zur Aufnahme und Übergab
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026,
+ereignisse | 
+=== 72efdef0-e03e-47e3-8afe-cf010e632389
+11:04:07 | WAITING_FOR_APPROVAL | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Gewählten Termin im Kalender buchen: Freigabe erforderlich.; Eine neue Nachricht ist eingegangen, auf die kein Schritt wartet.
+fit | true | true | REQUEST_FOR_QUOTE | Der Kern ist eine konkrete Anfrage zur Badsanierung mit Bitte um Angebot und Besichtigung. Der Leitfaden nimmt die Anfrage auf, klärt fehlende Übergabeangaben, kann bei angebundenem Kalender einen ben
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00
+ereignisse | fact.corrected
+=== b85f611b-6859-45f8-b496-edf8f35f04e3
+11:04:48 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person bittet um ein Angebot für eine konkrete Badsanierung und fragt nach einem Besichtigungstermin. Der Leitfaden ist darauf ausgelegt, die Anfrageangaben zu klären und an die zuständige Person 
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ereignisse | fact.corrected
+=== 99164805-5207-44ce-a64a-637064db4579
+11:05:32 | WAITING_FOR_APPROVAL | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Gewählten Termin im Kalender buchen: Freigabe erforderlich.
+fit | true | true | REQUEST_FOR_QUOTE | Der Kunde bittet um ein Angebot für eine konkrete Badsanierung und fragt nach einem Besichtigungstermin. Der Leitfaden ist dafür geeignet: Er erfasst und klärt Angaben, kann bei angebundenem Kalender 
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00
+ereignisse | 
+=== d1e4d832-e6b1-4ab5-8f4b-2de9409ac069
+11:06:06 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Elektrik im Badezimmer | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Person stellt eine konkrete Frage, ob der Anbieter zusätzlich zu einer Badezimmersanierung Elektroarbeiten (Steckdosen und Zuleitung) anbietet. Der Leitfaden könnte passen, sofern dieses Angebot i
+ziele | human.review,inquiry.answered,staff.informed
+ereignisse | 
+=== f20a5dc5-4cd0-47c0-bcc9-e3734cdfcdf1
+11:07:45 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt eine konkrete Leistungsanfrage zur Badsanierung (drei Steckdosen und eine Lichtleitung), nicht eine Frage nach Betriebswissen. Der Leitfaden würde eine Wissensauskunft vorsehen, s
+ziele | human.review,inquiry.answered,staff.informed
+ereignisse | 
+
+## Fakten der Badangebote
+== 2482c7d9-857e-45cd-bca0-a27930cc35a1 WAITING_FOR_APPROVAL
+1
+== 8952253f-9938-4b15-bdd4-06cbfcffbb55 WAITING_FOR_INFORMATION
+ai.badflaeche | "etwa 6 Quadratmeter" | CONFIRMED | t | 1
+badezimmerflaeche | 6 | CANDIDATE | t | 1
+1
+== 72efdef0-e03e-47e3-8afe-cf010e632389 WAITING_FOR_APPROVAL
+Badfläche | 7 | CANDIDATE | f | 1
+Badfläche | 8 | CONFIRMED | t | 2
+appointment.agreed | "Den Termin sage ich Ihnen noch." | CONFIRMED | t | 1
+fact.corrected | {"key": "Badfläche", "current": 8, "previous": 7, "messageId": "f9ef2798-97d7-43da-aebe-714de0a76118"}
+3
+== b85f611b-6859-45f8-b496-edf8f35f04e3 WAITING_FOR_INFORMATION
+Badezimmerfläche | 7 | CANDIDATE | f | 1
+Badezimmerfläche | 8 | CONFIRMED | t | 2
+fact.corrected | {"key": "Badezimmerfläche", "current": 8, "previous": 7, "messageId": "3d811ae0-0910-43ac-843d-168da3c14e5d"}
+2
+== 99164805-5207-44ce-a64a-637064db4579 WAITING_FOR_APPROVAL
+appointment.agreed | "Welcher der Termine passt, sage ich Ihnen noch." | CONFIRMED | t | 1
+bathroom_area | 7 | CANDIDATE | t | 1
+2
+== d1e4d832-e6b1-4ab5-8f4b-2de9409ac069 WAITING_FOR_APPROVAL
+1
+== f20a5dc5-4cd0-47c0-bcc9-e3734cdfcdf1 WAITING_FOR_APPROVAL
+1
+## Vorgaenge mit ausstehender Kalenderbuchung (nie freigegeben):
+99164805-5207-44ce-a64a-637064db4579 | calendar.book | AWAITING_APPROVAL | {"input": {"choice": "Welcher der Termine passt, sage ich Ihnen noch."}, "purpose": null, "capability": "calendar.book"}
+72efdef0-e03e-47e3-8afe-cf010e632389 | calendar.book | AWAITING_APPROVAL | {"input": {"choice": "Den Termin sage ich Ihnen noch."}, "purpose": null, "capability": "calendar.book"}

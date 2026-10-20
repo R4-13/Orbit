@@ -130,7 +130,11 @@ ${knownLines}`,
     await this.runs.complete(tenantId, run.id, turn);
     const submitted = [...turn.toolCallOutcomes.filter((o) => o.toolName === FACT_UPDATES_TOOL)].reverse().find((o) => o.result?.status === 'SUCCEEDED');
     const parsed = FactUpdatesSchema.safeParse(submitted?.output);
-    if (!parsed.success || parsed.data.updates.length === 0) return EMPTY;
+    const knownKeys = [...new Set(known.map((f) => f.key))];
+    if (!parsed.success || parsed.data.updates.length === 0) {
+      await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.FACT_UPDATE_ASSESSED, payload: { messageId: message.id, knownKeys, proposals: [], valid: parsed.success }, dedupeKey: `fact.update_assessed:${message.id}` });
+      return EMPTY;
+    }
 
     const haystack = normalizeForMatch(text);
     const sender = message.fromAddress.trim().toLowerCase();
@@ -181,6 +185,11 @@ ${knownLines}`,
         reason: update.kind === 'CORRECTION' ? 'Die Korrektur stammt nicht nachweislich von derselben Person wie die frühere Angabe.' : update.reason || 'Unklar, welcher Wert gilt.',
       });
     }
+    await this.events.append(tenantId, caseId, {
+      type: CASE_EVENT_TYPES.FACT_UPDATE_ASSESSED,
+      payload: { messageId: message.id, knownKeys, proposals: parsed.data.updates.map((u) => ({ key: u.key, kind: u.kind, newValue: u.newValue })), corrected: outcome.corrected.length, conflicts: outcome.conflicts.length, ignored: outcome.ignored },
+      dedupeKey: `fact.update_assessed:${message.id}`,
+    });
     for (const c of outcome.corrected) {
       await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.FACT_CORRECTED, payload: { ...c, messageId: message.id }, dedupeKey: `fact.corrected:${message.id}:${c.key}` });
     }

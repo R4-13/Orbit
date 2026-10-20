@@ -238,3 +238,12 @@ describe('Weitere Mitteilungen', () => {
     expect(appointmentConfirmationBody({ kind: 'PHONE_CALL', label: 'Fr., 16.10.2026, 09:00 Uhr', companyName: 'Muster GmbH' })).toContain('Telefontermin ist bestätigt');
   });
 });
+
+describe('Terminwahl: nur eine konkrete Angabe zählt', () => {
+  it('eine vertagende Antwort ist keine Wahl; konkrete Angaben sind es', async () => {
+    const { isConcreteAppointmentChoice } = await import('./request-analysis');
+    for (const text of ['Welcher der Termine passt, sage ich Ihnen noch.', 'Den Termin sage ich Ihnen noch.', 'Ich melde mich später mit einem Termin.', 'Das weiß ich noch nicht.', '']) expect(isConcreteAppointmentChoice(text)).toBe(false);
+    for (const text of ['Der erste Termin passt mir gut', 'Mittwoch, 21.10. um 9 Uhr', 'Donnerstag Nachmittag wäre gut', 'Am 22.10. ab 14 Uhr', 'Ich bin vormittags erreichbar']) expect(isConcreteAppointmentChoice(text)).toBe(true);
+    expect(isConcreteAppointmentChoice('Der zweite Termin passt, den Rest sage ich Ihnen noch.')).toBe(true);
+  });
+});

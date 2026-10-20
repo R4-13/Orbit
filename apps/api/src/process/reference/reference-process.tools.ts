@@ -19,7 +19,7 @@ import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
-import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isAppointmentSchedulingRequirement, isSafeCustomerText } from './request-analysis';
+import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
@@ -245,7 +245,7 @@ export class ReferenceProcessTools implements OnModuleInit {
           const shown = JSON.stringify(f.value).slice(0, 80);
           allowed.set(f.key, { type: typeof f.value === 'number' ? 'number' : 'string', description: `bereits genannt: ${shown}; nur angeben, wenn die Nachricht einen anderen Wert nennt (Korrektur)` });
         }
-        if (analysed && appointmentKindOf(analysed.nextStep)) allowed.set(APPOINTMENT_AGREED_KEY, { type: 'string', description: 'Der von der Person gewählte Termin bzw. Terminwunsch (Datum, Uhrzeit) oder ihre Erreichbarkeit.' });
+        if (analysed && appointmentKindOf(analysed.nextStep)) allowed.set(APPOINTMENT_AGREED_KEY, { type: 'string', description: 'Der von der Person KONKRET gewählte Termin bzw. Terminwunsch (welcher der vorgeschlagenen Termine, Datum, Uhrzeit) oder ihre konkrete Erreichbarkeit. Eine vertagende Antwort („sage ich Ihnen noch“, „melde mich“) ist KEINE Wahl: dann nichts angeben.' });
 
         const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
           if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
@@ -289,6 +289,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           if (!check.valid) reason = `ungültig (${definition.type})`;
           else if (!evidenceFound) reason = 'Beleg steht nicht wörtlich in der Nachricht';
           else if (item.key === 'request.product_sku' && !catalog.some((c) => c.sku === item.value)) reason = 'SKU nicht im Katalog';
+          else if (item.key === APPOINTMENT_AGREED_KEY && !isConcreteAppointmentChoice(String(item.value))) reason = 'keine konkrete Terminwahl';
           else if (definition.type === 'number' && typeof item.value === 'number' && !normalize(item.evidence).includes(String(item.value).replace('.', ',')) && !normalize(item.evidence).includes(String(item.value))) reason = 'Zahl steht nicht im Beleg';
           if (reason) {
             rejected.push({ key: item.key, reason });

@@ -74,6 +74,8 @@ export const CASE_EVENT_TYPES = {
   FACT_CORRECTED: 'fact.corrected',
   /** Eine neue Nachricht widerspricht einer früheren Angabe, und es ist nicht eindeutig, welcher Wert gilt: beide stehen sichtbar im Widerspruch, die Planung fragt gezielt nach. */
   FACT_CONFLICT_DETECTED: 'fact.conflict_detected',
+  /** Die Prüfung einer neuen Nachricht auf Korrekturen früherer Angaben lief (welche Angaben bekannt waren, was die KI vorschlug, was verworfen wurde) – Nachweis auch dann, wenn nichts geändert wurde. */
+  FACT_UPDATE_ASSESSED: 'fact.update_assessed',
 } as const;
 
 /**

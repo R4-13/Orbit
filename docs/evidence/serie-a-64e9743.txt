@@ -1,0 +1,41 @@
+# Wiederholungsserie A auf Stand 64e9743 (Modell gpt-6-luna, Reasoning none, Betrieb musterwerk, 20.10.2026 09:57-10:10 UTC) - Rohauszug je Vorgang
+# Quelle: ORBIT-Datenbank (cases, case_events, email_messages, tasks); Vorgangs-IDs unten; bereinigt wird ID-genau nach dem Export.
+=== 44b94c12-6a0c-4fe6-a3e3-f2b03c6da9e9
+09:59:29 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person sucht einen dauerhaften Wartungsvertrag samt Bereitschaftsdienst und fragt nach Konditionen sowie Startzeitpunkt. Der Leitfaden soll die Anfrage und fehlende Angaben für die Übergabe an die
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich um eine Gas- oder Ölheizung?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folge
+ereignisse | 
+=== c7860d95-ccff-44fd-999f-bc734f847aa4
+10:01:38 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Elektrik im Badezimmer | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Person stellt keine allgemeine Frage aus dem Betriebswissen, sondern möchte klären, ob Sie eine konkrete zusätzliche Elektroarbeit im Rahmen der Badsanierung anbieten.
+ziele | inquiry.answered,staff.informed,task.created
+ereignisse | 
+=== 186799b7-6df1-4731-915c-e91cfa42c2f8
+10:03:04 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: Invalid input for tool "submit_process_plan": nodes.3.preconditions.0: Invalid input; edges.2.condit
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine Wissensfrage zu Profil oder häufigen Fragen, sondern fragt nach der Ausführung konkreter Elektroarbeiten im Rahmen einer Badsanierung und verlangt damit eine Bestätigung des
+ziele | inquiry.answered,staff.informed,task.created
+ereignisse | plan.replan_unavailable
+=== 0886548d-a6dc-46bf-945b-2b3c250131a2
+10:04:49 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: [GOAL_CONTRACT_VIOLATION] Die Ziele der ersten Planung gelten weiter und dürfen nicht gestrichen wer
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine allgemeine Wissensfrage, sondern fragt nach der Ausführung konkreter Elektroarbeiten im Rahmen einer Badsanierung. Der Leitfaden würde eine Betriebswissensauskunft vorsehen 
+ziele | inquiry.answered,staff.informed,task.created
+ereignisse | plan.replan_unavailable
+=== ef0b0265-fde3-417c-b723-109ade49e3a4
+10:06:08 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Servicepartner für unser Mehrfamilienhaus | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person sucht dauerhaft einen Servicepartner mit Wochenend-Rufbereitschaft und fragt nach Kosten sowie Startzeitpunkt. Der Leitfaden nimmt die Anfrage auf, klärt fehlende Übergabeangaben und übergi
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Servicepartner für unser Mehrfamilienhaus gesucht“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Wird Ihre Heizungsanlage mit Gas oder Öl betrieben? 2. Wünschen Sie regelmäßige Wartung, Reparaturen bei Bedarf oder beides?  Für eine verlässliche
+ereignisse | 
+=== 0ac0f5fb-7ebd-4617-b7c7-77d372ec7de8
+10:07:41 | MANUAL_REVIEW | (frei) | Angebotsanfrage: Wartungsvertrag für 12 Wohneinheiten | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: [INPUT_UNKNOWN] "communication.draft" kennt die Eingabe "config.purpose" nicht. Erlaubt: to, missing
+fit | false | true | REQUEST_FOR_QUOTE | Die Nachricht fragt nach einem dauerhaften Wartungsvertrag mit Wochenendbereitschaft sowie nach Konditionen und möglichem Start. Der Leitfaden ist auf Aufnahme und Übergabe einer Anfrage ausgelegt, üb
+ziele | quote.delivered,staff.informed
+ereignisse | plan.replan_unavailable
+=== 3dc5d34f-5a8d-4007-8824-5e76a012a786
+10:09:45 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Kundschaft sucht eine dauerhaft laufende Heizungswartung mit Bereitschaftsdienst und fragt nach Konditionen sowie möglichem Start. Der Leitfaden ist auf Aufnahme, Klärung und Übergabe solcher Anfr
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich um eine Gas- oder Ölheizung? 2. In welcher Stadt oder Gemeinde befindet sich das Haus?  Für eine verlässliche Einschätzung schauen wir uns die S
+ereignisse | 
+Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht.  Nein, Elektroarbeiten bieten wir nicht an. Badsanierungen führen wir im Raum Köln aus.  Bei weiteren Fragen melden Sie sich gern.  Mit freundlichen Grüßen Musterwerk GmbH
