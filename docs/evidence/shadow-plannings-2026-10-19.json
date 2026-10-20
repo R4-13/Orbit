@@ -1,0 +1,1152 @@
+{
+  "source": "backups/orbit-20261020-021024.dump (pg_restore in Wegwerf-Datenbank, nur gelesen, Datenbank danach verworfen)",
+  "extractedAt": "2026-10-20T07:25:01.614Z",
+  "count": 12,
+  "rows": [
+    {
+      "caseId": "8878811f-98be-46a4-9421-cd428381dfc8",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "review",
+            "type": "MANUAL_TASK",
+            "purpose": null,
+            "capability": null
+          },
+          {
+            "id": "notify",
+            "type": "ACTION",
+            "purpose": null,
+            "capability": "staff.notify"
+          },
+          {
+            "id": "task",
+            "type": "ACTION",
+            "purpose": null,
+            "capability": "task.create"
+          },
+          {
+            "id": "done",
+            "type": "COMPLETE",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "request.handed_over",
+              "known": true,
+              "label": "Anfrage übergeben",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": true
+            }
+          ],
+          "passed": false,
+          "actions": [
+            {
+              "mode": "AUTONOMOUS",
+              "nodeId": "notify",
+              "capability": "staff.notify",
+              "actionClass": "AUTONOMOUS",
+              "policyAction": "staff.notify"
+            },
+            {
+              "mode": "AUTONOMOUS",
+              "nodeId": "task",
+              "capability": "task.create",
+              "actionClass": "AUTONOMOUS",
+              "policyAction": "task.create"
+            }
+          ],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Anfrage übergeben“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "PARTIAL"
+          },
+          "endStates": [
+            "COMPLETE"
+          ],
+          "violations": [
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Anfrage übergeben“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "COMPLETE_WITHOUT_GOAL_PROOF",
+              "nodeId": "done",
+              "message": "Der Plan endet an „Abschluss“, obwohl mindestens ein Ziel nicht belegbar ist bzw. bei einer Person liegt."
+            }
+          ],
+          "plansHandover": true,
+          "plannedEffects": [
+            "staff.notify",
+            "task.create"
+          ],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "request.handed_over",
+          "task.created"
+        ],
+        "available": true,
+        "edgeCount": 5,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zuerst Absenderkontext und erforderliche Angaben und übergebe anschließend Leistungsumfang, Voraussetzungen und Machbarkeit an eine zuständige Person. Eine Übernahme oder Frist wird nicht zugesagt; die Fachprüfung bleibt beim Betrieb."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T20:54:13.583"
+    },
+    {
+      "caseId": "a81dfdf3-9648-4cdc-8fea-90f1e575bf99",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "notify",
+            "type": "ACTION",
+            "purpose": null,
+            "capability": "staff.notify"
+          },
+          {
+            "id": "task",
+            "type": "ACTION",
+            "purpose": null,
+            "capability": "task.create"
+          },
+          {
+            "id": "human",
+            "type": "MANUAL_TASK",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": true
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": true
+            },
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": true
+            }
+          ],
+          "passed": true,
+          "actions": [
+            {
+              "mode": "AUTONOMOUS",
+              "nodeId": "notify",
+              "capability": "staff.notify",
+              "actionClass": "AUTONOMOUS",
+              "policyAction": "staff.notify"
+            },
+            {
+              "mode": "AUTONOMOUS",
+              "nodeId": "task",
+              "capability": "task.create",
+              "actionClass": "AUTONOMOUS",
+              "policyAction": "task.create"
+            }
+          ],
+          "goalFit": {
+            "reasons": [
+              "Eine Auskunft oder die Übergabe an eine Person ist vorgesehen."
+            ],
+            "verdict": "FITS"
+          },
+          "endStates": [
+            "MANUAL_TASK"
+          ],
+          "violations": [],
+          "plansHandover": true,
+          "plannedEffects": [
+            "staff.notify",
+            "task.create"
+          ],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "staff.informed",
+          "task.created",
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 4,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zuerst Absenderkontext und die für die Leistung nötigen Angaben und lasse anschließend eine zuständige Person Leistungsumfang, Abnahmebedingungen und Machbarkeit beurteilen. Eine Person muss die fachliche Übernahmeentscheidung treffen; es werden keine Ausführung, Preise oder Termine zugesagt."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T21:21:15.418"
+    },
+    {
+      "caseId": "bd9d7356-0073-4959-b1c2-a96264af4984",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            },
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient.",
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "staff.informed",
+          "task.created",
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zunächst werden Absender und frühere Vorgänge geprüft und die für diesen Auftrag erforderlichen Angaben anhand freigegebener Regeln ermittelt. Da das Ergebnis der Anforderungsprüfung noch fehlt und Umfang, Einsatzgebiet sowie Gas- und Abnahmeanforderungen fachlich zu klären sind, wird anschließend neu geplant, bevor Kundenkontakt oder Zusagen erfolgen."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T22:12:12.316"
+    },
+    {
+      "caseId": "9ddbcd56-5cd4-4899-ac2d-c1c865d19402",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            },
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient.",
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "staff.informed",
+          "task.created",
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zunächst werden Absender und Vorgangskontext geprüft und anschließend die für diese konkrete Leistung erforderlichen Angaben ermittelt. Da das Ergebnis der Anforderungsprüfung noch nicht vorliegt, endet diese Revision mit einer Neuplanung; die fachliche Eignung und mögliche Zusagen bleiben beim Betrieb."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T22:27:13.095"
+    },
+    {
+      "caseId": "e1c6ef09-8135-408d-8299-657ffc0196a0",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "human.review",
+          "task.created"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zunächst den Absender- und Vorgangskontext sowie die für die konkrete Leistung erforderlichen Angaben. Da Leistungsumfang und Machbarkeit fachlich sowie terminlich nicht bestätigt sind, erfolgt die weitere Planung nach diesen Ergebnissen."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T22:35:14.604"
+    },
+    {
+      "caseId": "c7ae6253-1226-42cf-b2f7-7cb57751c3b7",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            },
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient.",
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "staff.informed",
+          "task.created",
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zuerst den Absender- und Vorgangskontext sowie die erforderlichen Angaben. Sobald die Anforderungsprüfung vorliegt, wird gezielt entschieden, ob Angaben bei der Kundschaft erfragt oder fachlich an eine Person übergeben werden müssen."
+      },
+      "caseTitle": "Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse",
+      "recordedAt": "2026-10-19T23:00:21.623"
+    },
+    {
+      "caseId": "615f2248-22e0-4e45-9fb4-716c8884dd81",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "inquiry.answered",
+              "known": true,
+              "label": "Anfrage beantwortet",
+              "served": false
+            },
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Anfrage beantwortet“ wird vom Plan nicht bedient.",
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Anfrage beantwortet“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "inquiry.answered",
+          "staff.informed"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zunächst werden Absender und möglicher früherer Vorgang geprüft und die nötigen Angaben ermittelt. Danach wird neu geplant, da die Anforderungsprüfung noch kein Ergebnis geliefert hat."
+      },
+      "caseTitle": "Allgemeine Anfrage: Wie ist der Stand?",
+      "recordedAt": "2026-10-19T23:06:13.408"
+    },
+    {
+      "caseId": "c0c06af1-0895-41a3-a336-897452d0a923",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "quote.delivered",
+              "known": true,
+              "label": "Angebot zugestellt",
+              "served": false
+            },
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Angebot zugestellt“ wird vom Plan nicht bedient.",
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Angebot zugestellt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "REQUEST_FOR_QUOTE",
+        "goalKeys": [
+          "quote.delivered",
+          "staff.informed",
+          "task.created"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zunächst werden Absender und Vorgang im vorhandenen Kontext geprüft und die fachlich noch nötigen Angaben ermittelt. Da die Anforderungsprüfung noch kein Ergebnis hat und Konditionen sowie Startzusage nicht ohne Betriebsprüfung genannt werden dürfen, wird danach mit ihrem Ergebnis neu geplant."
+      },
+      "caseTitle": "Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten",
+      "recordedAt": "2026-10-19T23:07:40.664"
+    },
+    {
+      "caseId": "0bb3c7cb-5692-45ca-b24a-41c9f48a1de9",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "INVOICE_RECEIVED",
+        "goalKeys": [
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zuerst werden Absender- und Vorgangskontext sowie die erforderlichen Angaben für die Rechnungsbearbeitung ermittelt. Da das Prüfergebnis noch fehlt und die Zahlungsfreigabe einer Person vorbehalten sein kann, wird anschließend neu geplant."
+      },
+      "caseTitle": "Rechnungseingang: Rechnung Nr. 89675",
+      "recordedAt": "2026-10-19T23:09:14.394"
+    },
+    {
+      "caseId": "90493eba-f6ef-4735-86cb-0bbdbb5dcff5",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "staff.informed",
+              "known": true,
+              "label": "Zuständige Person informiert",
+              "served": false
+            },
+            {
+              "goal": "task.created",
+              "known": true,
+              "label": "Aufgabe angelegt",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Zuständige Person informiert“ wird vom Plan nicht bedient.",
+              "Ziel „Aufgabe angelegt“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Zuständige Person informiert“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Aufgabe angelegt“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "GENERAL_INQUIRY",
+        "goalKeys": [
+          "staff.informed",
+          "task.created"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zunächst den Absenderkontext und lasse die fachlich erforderlichen Angaben ermitteln. Sobald dieses Ergebnis vorliegt, wird der Vorgang mit den konkreten Anforderungen weitergeplant."
+      },
+      "caseTitle": "Allgemeine Anfrage: Steckdosen im Bad",
+      "recordedAt": "2026-10-19T23:09:22.159"
+    },
+    {
+      "caseId": "175659ab-2636-4a6c-a73d-f714c49206a4",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "quote.delivered",
+              "known": true,
+              "label": "Angebot zugestellt",
+              "served": false
+            },
+            {
+              "goal": "appointment.booked",
+              "known": true,
+              "label": "Termin gebucht",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Angebot zugestellt“ wird vom Plan nicht bedient.",
+              "Ziel „Termin gebucht“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Angebot zugestellt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Termin gebucht“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": "REQUEST_FOR_QUOTE",
+        "goalKeys": [
+          "quote.delivered",
+          "appointment.booked"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Ich prüfe zuerst den Absender und ermittle die für die Badsanierung noch benötigten Angaben; anschließend wird anhand dieser Ergebnisse neu geplant. Preise oder Besichtigungstermine werden in dieser Revision nicht zugesagt."
+      },
+      "caseTitle": "Neue Anfrage: Badsanierung – bitte um Angebot",
+      "recordedAt": "2026-10-19T23:12:14.46"
+    },
+    {
+      "caseId": "ebf1c032-324c-4817-b028-3e1e1dcf1993",
+      "tenant": "musterwerk",
+      "payload": {
+        "nodes": [
+          {
+            "id": "context",
+            "type": "RESOLVE_CONTEXT",
+            "purpose": null,
+            "capability": "context.lookup"
+          },
+          {
+            "id": "requirements",
+            "type": "EVALUATE_REQUIREMENTS",
+            "purpose": null,
+            "capability": "requirements.resolve"
+          },
+          {
+            "id": "reassess",
+            "type": "REASSESS",
+            "purpose": null,
+            "capability": null
+          }
+        ],
+        "stage": "DONE",
+        "valid": true,
+        "rating": {
+          "goals": [
+            {
+              "goal": "receipt.acknowledged",
+              "known": true,
+              "label": "Eingang bestätigt",
+              "served": false
+            },
+            {
+              "goal": "appointment.booked",
+              "known": true,
+              "label": "Termin gebucht",
+              "served": false
+            },
+            {
+              "goal": "quote.delivered",
+              "known": true,
+              "label": "Angebot zugestellt",
+              "served": false
+            },
+            {
+              "goal": "inquiry.answered",
+              "known": true,
+              "label": "Anfrage beantwortet",
+              "served": false
+            },
+            {
+              "goal": "human.review",
+              "known": true,
+              "label": "Prüfung durch eine Person",
+              "served": false
+            }
+          ],
+          "passed": false,
+          "actions": [],
+          "goalFit": {
+            "reasons": [
+              "Ziel „Eingang bestätigt“ wird vom Plan nicht bedient.",
+              "Ziel „Termin gebucht“ wird vom Plan nicht bedient.",
+              "Ziel „Angebot zugestellt“ wird vom Plan nicht bedient.",
+              "Ziel „Anfrage beantwortet“ wird vom Plan nicht bedient.",
+              "Ziel „Prüfung durch eine Person“ wird vom Plan nicht bedient."
+            ],
+            "verdict": "MISSES"
+          },
+          "endStates": [
+            "REASSESS"
+          ],
+          "violations": [
+            {
+              "code": "NO_TERMINAL_END_STATE",
+              "nodeId": "reassess",
+              "message": "Der Schritt \"reassess\" (REASSESS) beendet den Plan, ohne Abschluss, Wartepunkt, Freigabe oder Übergabe zu sein."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Eingang bestätigt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Termin gebucht“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Angebot zugestellt“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Anfrage beantwortet“, plant aber keinen Schritt, der es belegen könnte."
+            },
+            {
+              "code": "GOAL_NOT_SERVED",
+              "message": "Der Plan nennt das Ziel „Prüfung durch eine Person“, plant aber keinen Schritt, der es belegen könnte."
+            }
+          ],
+          "plansHandover": false,
+          "plannedEffects": [],
+          "needsPlanApproval": false
+        },
+        "category": null,
+        "goalKeys": [
+          "receipt.acknowledged",
+          "appointment.booked",
+          "quote.delivered",
+          "inquiry.answered",
+          "human.review"
+        ],
+        "available": true,
+        "edgeCount": 2,
+        "issueCodes": [],
+        "explanation": "Zunächst werden Absender und frühere Vorgänge geprüft und anschließend die für die fünf Anliegen nötigen Angaben ermittelt. Danach wird anhand der festgestellten Lücken eine gezielte Folgerevision geplant; nach außen wirkende Schritte erfolgen erst gemäß den Betriebsregeln."
+      },
+      "caseTitle": "Allgemeine Anfrage: Fünf Dinge auf einmal",
+      "recordedAt": "2026-10-19T23:21:10.65"
+    }
+  ]
+}

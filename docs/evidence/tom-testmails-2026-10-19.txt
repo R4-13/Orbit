@@ -1,0 +1,31 @@
+# Testmails vom 19./20.10.2026 in Toms Postfach (Zuordnung: ORBIT-Datenbank, email_messages mit Tom als Absender oder Empfänger, ab 2026-10-19; Quelle: Sicherung orbit-20261020-021024 und laufende Datenbank, beide 29 Zeilen)
+# Spalten: Richtung | Zeit (lokal) | RFC-Message-ID | Betreff. INBOUND = von Tom gesendet; OUTBOUND = von ORBIT an Tom gesendet.
+INBOUND|10-19 20:54|<CABG-=TYhJ+93tKZv9JQX5Qk=X287uimFQxAt0wVomScHjzD8Yg@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND|10-19 21:21|<CABG-=TZByr1rtEP_dGX4B6==2H6txVTWkwnPB7hvHZbanPEXmQ@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND|10-19 22:12|<CABG-=TZMUZOYynZP_1S+OrV8sRXkhVDMAo78n6EVpCHQaq=UyQ@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND|10-19 22:27|<CABG-=Tay1yWv0uxAhTJMGNj0KV1dc+chK4npxMPpD6ChyttFXw@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND|10-19 22:35|<CABG-=Ta+6nArrjVfkVY_J4DPhU1orw2w11R4JTOHi7QjL32PqQ@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+OUTBOUND|10-19 22:37|<CAHbdD1xUMZHEvZEZZQuD0t0PSL9b6kqraXeKM3a1OykRD69YUQ@mail.gmail.com>|Re: Praxisumzug – Wasser- und Gasanschlü
+INBOUND|10-19 22:40|<CABG-=TYUMX+qBBhwhCEoPYorHwPzhAy0rB+ETit03D6Lb1uJpQ@mail.gmail.com>|Re: Praxisumzug – Wasser- und Gasanschlü
+INBOUND|10-19 23:00|<CABG-=TZP2OUuMk7fUfsMxLVo7qGYzs-jVdDGP4TcDrR9EpDPnw@mail.gmail.com>|Praxisumzug – Wasser- und Gasanschlüsse
+OUTBOUND|10-19 23:03|<CAHbdD1w5XFtehCr2O_H5j5hNGVAm=6p+itdkMecFeOZAau5kcg@mail.gmail.com>|Re: Praxisumzug – Wasser- und Gasanschlü
+INBOUND|10-19 23:04|<CABG-=Tbio40AyqD2V_wcpW3Ox+Fu5jHT1e70c-7++wQQA2nsbQ@mail.gmail.com>|Re: Praxisumzug – Wasser- und Gasanschlü
+OUTBOUND|10-19 23:04|<CAHbdD1zcw1Ff_Y_ijAmApx6bTgH2W12zEDm3FsEnrSfazxp7+A@mail.gmail.com>|Re: Praxisumzug – Wasser- und Gasanschlü
+INBOUND|10-19 23:06|<CABG-=TaeVuYpApfXm2bsdvFBH3nQfJMm3hLokiegbdcRoNb-yA@mail.gmail.com>|Wie ist der Stand?
+INBOUND|10-19 23:07|<CABG-=TaqDGYCTZi_wdzvDZz_xab3QeTjp0Q_iSrgxJpWNXdBmg@mail.gmail.com>|Wartungsvertrag für 12 Wohneinheiten
+OUTBOUND|10-19 23:07|<CAHbdD1x-6-DLGs3BRt-fHMn8TBF4jyZtjMYK9W6A7kGiC_bPJg@mail.gmail.com>|Re: Wartungsvertrag für 12 Wohneinheiten
+INBOUND|10-19 23:09|<CABG-=TakgJ9jz__aRxOvp2UBew4L06YVC=hgd1Rno700n+i_bw@mail.gmail.com>|Rechnung Nr. 89675
+INBOUND|10-19 23:09|<CABG-=TaLxcP5X-=fgmnMk71F0O4kQYRzWOFjbrOuwb1bdHNFJw@mail.gmail.com>|Steckdosen im Bad
+INBOUND|10-19 23:12|<CABG-=TbRw5HFFDvqbzvQgnbSRWo0inqMKUK_aGudLQT5zJVfKA@mail.gmail.com>|Badsanierung – bitte um Angebot
+OUTBOUND|10-19 23:12|<CAHbdD1xdj1oss+nngjLAdmnL+OyX=uFaoBuqM-MP59kchdCrrg@mail.gmail.com>|Re: Badsanierung – bitte um Angebot
+INBOUND|10-19 23:14|<CABG-=Ta8rA4h-zzLuNoVdVDM6R+ZJ+JYAXH1HujnPzjNBNODSg@mail.gmail.com>|Re: Badsanierung – bitte um Angebot
+OUTBOUND|10-19 23:14|<CAHbdD1wRbDBX_rqywftJVXEZWT7k+mVPK1Yvd9n18QN2yhr-1Q@mail.gmail.com>|Re: Badsanierung – bitte um Angebot
+INBOUND|10-19 23:16|<CABG-=TZr54hZvLAf4q93t+qxkZzD495jV8Cf0YCmdg2hEV-iOg@mail.gmail.com>|Re: Badsanierung – bitte um Angebot
+OUTBOUND|10-19 23:16|<CAHbdD1yrqLD0e6XbGM-S-FYh8Z-1Vyzyi2A0J6MxirKLNjPbEQ@mail.gmail.com>|Re: Badsanierung – bitte um Angebot
+INBOUND|10-19 23:18|<CABG-=TZghC6Vq-GF6B6OGKSExjgdE63znL0vc5vLiMkjXOMvVA@mail.gmail.com>|Fünf Dinge auf einmal
+OUTBOUND|10-19 23:26|<CAHbdD1y5auc96i-0dCH4N3xiVdndTAOsrTb6acE0taTihTkNAw@mail.gmail.com>|Re: Fünf Dinge auf einmal
+OUTBOUND|10-19 23:27|<CAHbdD1x8-ijOpimpDvRbam4RCorpNSA7FaSOJQX62oTcXfoa=g@mail.gmail.com>|Re: Fünf Dinge auf einmal
+OUTBOUND|10-19 23:27|<CAHbdD1yp_eaaxxKxkyEDi9KoYsKhX-5jK8F+geh189Ax7GUu_w@mail.gmail.com>|Re: Fünf Dinge auf einmal
+OUTBOUND|10-19 23:28|<CAHbdD1x_7RzqCzBLAdNBU+rBVA=V-au11_VFLhMFaVifUm4VVg@mail.gmail.com>|Re: Fünf Dinge auf einmal
+INBOUND|10-19 23:30|<CABG-=Tb6mC7Prebo+onjM+zmdmmZDA2jL61sTcSBOvuRULAq4Q@mail.gmail.com>|Re: Fünf Dinge auf einmal
+INBOUND|10-19 23:52|<CABG-=TY4yGos0du9dG45cYgPYXRbFcY-2CmyFbif3T5VY_TVbA@mail.gmail.com>|Fünf Dinge auf einmal

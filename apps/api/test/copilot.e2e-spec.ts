@@ -125,6 +125,7 @@ describe('Copilot / Sonde (e2e)', () => {
         'create_contact',
         'create_lead',
         'send_email',
+        'create_internal_order',
       ],
     });
     // UI v2 §8.6: „Bereit“ kommt aus der Laufzeit, nicht aus der Konfigurationsart.

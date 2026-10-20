@@ -36,6 +36,7 @@ const SENDER = 'petra.adaptiv@kunde.example';
  * Testdoubles (SIMULATED) – der Live-Status dieser Pfade wird getrennt berichtet.
  */
 describe('Adaptive orchestration (Amendment 02 v1.2, e2e)', () => {
+  jest.setTimeout(60_000); // mehrere Abläufe brauchen auf einem normal ausgelasteten Rechner knapp 20 s
   let app: INestApplication;
   let prisma: PrismaService;
   let intake: IntakeService;

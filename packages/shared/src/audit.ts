@@ -114,6 +114,8 @@ export const AUDIT_EVENT_TYPES = [
   'CASE_COMMAND_EXECUTED',
   /** UI v2 §18.2 — ein Nutzer hat ein nicht unterstütztes System als Anfrage erfasst (kein erfundener Connector). */
   'CONNECTOR_REQUESTED',
+  /** Eine Schattenplanung (Messlauf `planner.shadow`) wurde verbraucht – zählt für die Obergrenze je Mandant, auch wenn der Vorgang später gelöscht wird (Payload: Vorgang, Ereignis). */
+  'SHADOW_PLAN_CONSUMED',
   /** Amendment 03 §19 — Ereignisse der Plattform-Domäne (`AuditLog.domain = PLATFORM`, ohne Mandant). */
   ...PLATFORM_AUDIT_EVENT_TYPES,
 ] as const;

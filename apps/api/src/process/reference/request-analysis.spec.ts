@@ -1,9 +1,9 @@
-import { AI_FACT_PREFIX, RequestAnalysisSchema, isAppointmentSchedulingRequirement, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysis } from './request-analysis';
+import { AI_FACT_PREFIX, RequestAnalysisSchema, isAppointmentSchedulingRequirement, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysisInput } from './request-analysis';
 import { clarificationBody } from './communication-templates';
 
 const MESSAGE = 'Guten Tag, wir möchten unsere alte Ölheizung im Einfamilienhaus (Baujahr 1985, ca. 140 m²) gegen eine Wärmepumpe tauschen. Bitte um ein Angebot. Viele Grüße, Thomas Meier';
 
-const proposal = (over: Partial<RequestAnalysis> = {}): RequestAnalysis => ({
+const proposal = (over: Partial<RequestAnalysisInput> = {}): RequestAnalysisInput => ({
   requestType: 'Heizungstausch im Einfamilienhaus',
   summary: 'Tausch der Ölheizung gegen eine Wärmepumpe.',
   knownDetails: [
@@ -81,6 +81,38 @@ describe('Anforderungsanalyse', () => {
     expect(RequestAnalysisSchema.safeParse(proposal()).success).toBe(true);
     expect(RequestAnalysisSchema.safeParse(proposal({ missingInformation: [{ key: 'Ungültig Mit Leerzeichen', label: 'x', question: 'Eine ausreichend lange Frage?' }] })).success).toBe(false);
     expect(RequestAnalysisSchema.safeParse({ ...proposal(), nextStep: 'DELETE_EVERYTHING' }).success).toBe(false);
+  });
+});
+
+describe('Rückfragen nur, wenn sie gebraucht werden und nicht beschaffbar sind', () => {
+  it('klar außerhalb des Leistungsumfangs gibt es keine Detailfragen zur Ausführung – die Einschätzung bleibt am Ergebnis', () => {
+    const result = evaluateAnalysis(proposal({ withinOffering: 'NO' }), MESSAGE, new Set());
+    expect(result.requirements.filter((r) => !r.key.startsWith('ai.baujahr') && !r.key.startsWith('ai.gebaeudeart'))).toEqual([]);
+    expect(result.rejected.map((r) => r.reason)).toContain('Anfrage liegt klar außerhalb des Leistungsumfangs: keine Detailfragen');
+    expect(result.withinOffering).toBe('NO');
+  });
+
+  it('im Zweifel (UNSURE) oder bei passendem Angebot wird wie bisher gefragt', () => {
+    for (const withinOffering of ['UNSURE', 'YES'] as const) {
+      expect(evaluateAnalysis(proposal({ withinOffering }), MESSAGE, new Set()).requirements.map((r) => r.key)).toEqual(expect.arrayContaining(['ai.daemmung', 'ai.heizkoerper']));
+    }
+    expect(evaluateAnalysis(proposal(), MESSAGE, new Set()).requirements.map((r) => r.key)).toContain('ai.daemmung'); // ohne Angabe = UNSURE
+  });
+
+  it('eine Angabe, die für den nächsten Schritt nicht gebraucht wird oder aus vorhandenen Quellen beschaffbar ist, wird der Kundschaft nicht abgefragt', () => {
+    const result = evaluateAnalysis(
+      proposal({
+        missingInformation: [
+          { key: 'daemmung', label: 'Dämmung', question: 'Wie ist das Gebäude gedämmt (z. B. Fassade, Dach, Fenster)?', neededNow: true, lookupPossible: false },
+          { key: 'farbe', label: 'Wunschfarbe', question: 'Welche Farbe sollen die Heizkörper haben?', neededNow: false, lookupPossible: false },
+          { key: 'anschrift', label: 'Anschrift', question: 'Wie lautet Ihre Rechnungsanschrift?', neededNow: true, lookupPossible: true },
+        ],
+      }),
+      MESSAGE,
+      new Set(),
+    );
+    expect(result.requirements.filter((r) => r.key.startsWith('ai.') && !['ai.baujahr', 'ai.gebaeudeart'].includes(r.key)).map((r) => r.key)).toEqual(['ai.daemmung']);
+    expect(result.rejected.map((r) => r.reason)).toEqual(expect.arrayContaining(['wird für den nächsten Schritt nicht gebraucht', 'ist aus vorhandenen Quellen beschaffbar: die Kundschaft wird nicht gefragt']));
   });
 });
 

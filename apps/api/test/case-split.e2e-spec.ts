@@ -63,7 +63,13 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName, input }], stopReason: 'tool_use' });
     llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
   }
-  const seedTriage = (intents: string[]) =>
+  /** Die Zerlegung der Nachricht (Erkennung mehrerer Anliegen) liefert hier keine verwertbare Antwort: es gilt die Einstufung. Die gezielten Tests dazu stehen unten. */
+  const seedNoSegmentation = () => llm.seedResponse({ text: 'keine Zerlegung', toolCalls: [], stopReason: 'end_turn' });
+  const seedTriage = (intents: string[], withSegmentationFallback = true) => {
+    seedTriageOnly(intents);
+    if (withSegmentationFallback) seedNoSegmentation();
+  };
+  const seedTriageOnly = (intents: string[]) =>
     seedTool(
       'submit_triage_result',
       buildTriageFixture({
@@ -188,7 +194,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
 
   it('ohne das Betreiber-Flag wird nicht aufgeteilt – der Vorgang läuft wie bisher als ein Vorgang', async () => {
     const tenantId = await newTenant(false);
-    seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION']);
+    seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION'], false);
     const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
     expect(await children(tenantId, result.case!.id)).toEqual([]);
     expect(await prisma.forTenantId(tenantId).case.count({ where: { parentCaseId: { not: null } } })).toBe(0);
@@ -322,5 +328,101 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(familyIds).toEqual(expect.arrayContaining([kids[0]!.id, result.case!.id]));
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
+  });
+  describe('Erkennung und Abgrenzung der Anliegen unabhängig vom Merkmal der Einstufung', () => {
+    const MULTI =
+      'Guten Tag, wir ziehen zum 1. Dezember um. Bitte ändern Sie unsere Rechnungsanschrift auf Hauptstraße 5 in Berlin. Außerdem möchten wir einen Wartungsvertrag für die Heizung. Was würde der pro Jahr kosten? Könnten Sie uns zusätzlich mitteilen, wann der Schornsteinfeger kommt? Viele Grüße Karl';
+    const concerns = () => ({
+      concerns: [
+        { title: 'Rechnungsanschrift ändern', category: 'UNKNOWN', goal: 'Rechnungsanschrift geändert', excerpt: 'Bitte ändern Sie unsere Rechnungsanschrift auf Hauptstraße 5 in Berlin.' },
+        { title: 'Wartungsvertrag', category: 'UNKNOWN', goal: 'Konditionen für einen Wartungsvertrag genannt', excerpt: 'Außerdem möchten wir einen Wartungsvertrag für die Heizung. Was würde der pro Jahr kosten?' },
+      ],
+      sharedContext: 'wir ziehen zum 1. Dezember um.',
+    });
+    const fact = (key: string, value: string) => ({ key, value, confidence: 0.9, evidenceRefs: ['body'] });
+    const seedUnflaggedTriage = () =>
+      seedTool(
+        'submit_triage_result',
+        buildTriageFixture({
+          businessRelevance: 'RELEVANT',
+          category: 'UNKNOWN',
+          urgency: 'NORMAL',
+          senderRoleHypothesis: 'CUSTOMER',
+          intents: [{ key: 'ADDRESS_CHANGE', confidence: 0.9, evidenceRefs: ['body'] }], // die Einstufung sieht nur EIN Anliegen und setzt MULTIPLE_INTENTS nicht
+          riskFlags: [],
+          extractedFactCandidates: [fact('billing.address', 'Hauptstraße 5 in Berlin'), fact('move.date', '1. Dezember'), fact('contact.name', 'Karl')],
+          confidence: { relevance: 0.97, intent: 0.9 },
+        }) as unknown as Record<string, unknown>,
+      );
+    const multiMail = (tenantId: string): NormalizedIntakeEvent => ({ ...mail(tenantId), subject: 'Umzug und mehr', content: MULTI, rfcMessageId: '<multi@kunde.example>' });
+
+    it('die Einstufung nennt nur ein Anliegen (kein MULTIPLE_INTENTS): die Zerlegung erkennt drei – eines ergänzt, weil seine Frage sonst keinem Anliegen zugeordnet wäre', async () => {
+      const tenantId = await newTenant(true);
+      seedUnflaggedTriage();
+      seedTool('submit_concerns', concerns());
+      for (let i = 0; i < 3; i += 1) seedPlan(notifyPlan());
+      const result = await intake.handleIntakeEvent(tenantId, undefined, multiMail(tenantId));
+      const kids = await children(tenantId, result.case!.id);
+      expect(kids).toHaveLength(3);
+      expect(kids.map((k) => k.businessGoals[0])).toEqual(['Rechnungsanschrift geändert', 'Konditionen für einen Wartungsvertrag genannt', expect.stringContaining('übrigen Fragen und Wünsche')]);
+      const split = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: result.case!.id, type: 'case.split' } });
+      expect((split.payload as { coverage: { supplemented: string[] } }).coverage.supplemented).toEqual([expect.stringContaining('Schornsteinfeger')]);
+      const from = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[2]!.id, type: 'case.split_from' } });
+      expect((from.payload as { segment: string }).segment).toContain('Schornsteinfeger');
+      expect((from.payload as { sharedContext: string }).sharedContext).toContain('1. Dezember');
+    });
+
+    it('Angaben werden nicht ungeprüft anderen Teilvorgängen zugeordnet: jede Angabe gehört zu ihrem Anliegen oder zum gemeinsamen Kontext, der Rest bleibt am Hauptvorgang', async () => {
+      const tenantId = await newTenant(true);
+      seedUnflaggedTriage();
+      seedTool('submit_concerns', concerns());
+      for (let i = 0; i < 3; i += 1) seedPlan(notifyPlan());
+      const result = await intake.handleIntakeEvent(tenantId, undefined, multiMail(tenantId));
+      const kids = await children(tenantId, result.case!.id);
+      const keysOf = async (caseId: string) => (await prisma.forTenantId(tenantId).caseFact.findMany({ where: { caseId } })).map((f) => f.key).sort();
+      expect(await keysOf(kids[0]!.id)).toEqual(['billing.address', 'move.date']);
+      expect(await keysOf(kids[1]!.id)).toEqual(['move.date']); // die Anschrift gehört nicht zum Wartungsvertrag
+      expect(await keysOf(kids[2]!.id)).toEqual(['move.date']);
+      expect(await keysOf(result.case!.id)).toEqual(['contact.name']); // in keinem Auszug: nicht verloren, aber auch keinem Anliegen zugeschrieben
+    });
+
+    it('der Teilvorgang plant mit seinem Auszug: sein Anliegen und der gemeinsame Kontext stehen vorn, die ganze Nachricht nur als Verständnishilfe', async () => {
+      const tenantId = await newTenant(true);
+      seedUnflaggedTriage();
+      seedTool('submit_concerns', concerns());
+      for (let i = 0; i < 3; i += 1) seedPlan(notifyPlan());
+      const before = llm.getRequests().length;
+      await intake.handleIntakeEvent(tenantId, undefined, multiMail(tenantId));
+      const planningPrompts = llm
+        .getRequests()
+        .slice(before)
+        .map((r) => JSON.stringify(r.messages))
+        .filter((m) => m.includes('DEIN ANLIEGEN'));
+      const forGoal = (goal: string) => planningPrompts.find((m) => m.includes(`DEIN ANLIEGEN (maßgeblich): ${goal}`));
+      for (const goal of ['Rechnungsanschrift geändert', 'Konditionen für einen Wartungsvertrag genannt']) {
+        const prompt = forGoal(goal);
+        expect(prompt).toBeDefined();
+        expect(prompt).toContain('GEMEINSAMER KONTEXT');
+        expect(prompt).toContain('GANZE NACHRICHT (nur zum Verständnis');
+      }
+      // Das Anliegen „Wartungsvertrag“ liest seinen Auszug, nicht den der Anschrift, als maßgeblichen Teil.
+      expect(forGoal('Konditionen für einen Wartungsvertrag genannt')).toContain('Was würde der pro Jahr kosten?');
+    });
+
+    it('erfundene Auszüge zählen nicht als Beleg', async () => {
+      const tenantId = await newTenant(true);
+      seedTool(
+        'submit_triage_result',
+        buildTriageFixture({ businessRelevance: 'RELEVANT', category: 'UNKNOWN', urgency: 'NORMAL', senderRoleHypothesis: 'CUSTOMER', intents: ['A', 'B'].map((key) => ({ key, confidence: 0.9, evidenceRefs: [] })), riskFlags: ['MULTIPLE_INTENTS'], confidence: { relevance: 0.97, intent: 0.9 } }) as unknown as Record<string, unknown>,
+      );
+      seedTool('submit_concerns', { concerns: [{ title: 'Erfunden', category: 'UNKNOWN', goal: 'Etwas, das nicht in der Nachricht steht', excerpt: 'Bitte senden Sie sofort einen Monteur nach Hamburg.' }, concerns().concerns[1]], sharedContext: '' });
+      for (let i = 0; i < 4; i += 1) seedPlan(notifyPlan());
+      const result = await intake.handleIntakeEvent(tenantId, undefined, multiMail(tenantId));
+      const kids = await children(tenantId, result.case!.id);
+      const first = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[0]!.id, type: 'case.split_from' } });
+      expect(first.payload).not.toHaveProperty('segment'); // nicht belegt → kein Auszug
+      const split = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: result.case!.id, type: 'case.split' } });
+      expect((split.payload as { coverage: { ungrounded: string[] } }).coverage.ungrounded).toEqual(['Erfunden']);
+    });
   });
 });

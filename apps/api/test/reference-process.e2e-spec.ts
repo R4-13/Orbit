@@ -27,6 +27,7 @@ const SENDER = 'thomas.meier@firma-meier.example';
  * replaced by scripted doubles (clearly SIMULATED — the live status of these paths is reported separately).
  */
 describe('Reference process: request for quote (e2e)', () => {
+  jest.setTimeout(60_000); // der längste Ablauf braucht auf einem normal ausgelasteten Rechner knapp 20 s
   let app: INestApplication;
   let prisma: PrismaService;
   let intake: IntakeService;

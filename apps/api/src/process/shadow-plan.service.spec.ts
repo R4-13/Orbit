@@ -4,7 +4,7 @@ import { ShadowPlanService } from './shadow-plan.service';
 
 const catalogue = new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c]));
 
-function build(options: { flag?: boolean; propose?: unknown; duplicate?: boolean; used?: number }) {
+function build(options: { flag?: boolean; propose?: unknown; duplicate?: boolean; used?: number; audited?: number }) {
   const platformControl = { flagEnabled: jest.fn(async () => options.flag === true) };
   const planner = { shadowPropose: jest.fn(async () => options.propose) };
   const capabilities = { catalogue: () => catalogue, policyModesFor: jest.fn(async () => new Map([['email.send.information', 'AUTONOMOUS']])) };
@@ -14,10 +14,12 @@ function build(options: { flag?: boolean; propose?: unknown; duplicate?: boolean
     forTenantId: () => ({
       intakeEvent: { findFirst: async () => ({ decision: { result: { category: 'GENERAL_INQUIRY' } } }) },
       caseEvent: { update, count: async () => options.used ?? 1 },
+      auditLog: { count: async () => options.audited ?? 0 },
     }),
   };
-  const service = new ShadowPlanService(platformControl as never, planner as never, capabilities as never, events as never, prisma as never);
-  return { service, platformControl, planner, events, update };
+  const audit = { record: jest.fn(async () => undefined) };
+  const service = new ShadowPlanService(platformControl as never, planner as never, capabilities as never, events as never, prisma as never, audit as never);
+  return { service, platformControl, planner, events, update, audit };
 }
 
 const node = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [], ...extra });
@@ -70,6 +72,13 @@ describe('ShadowPlanService – der Plan wird bewertet, nichts wird ausgeführt 
     expect(await service.record('t1', 'c1')).toBe('LIMIT_REACHED');
     expect(planner.shadowPropose).not.toHaveBeenCalled();
     expect(finalPayload(update)).toMatchObject({ available: false, limit: SHADOW_PLAN_LIMIT_PER_TENANT });
+  });
+
+  it('verbrauchte Planungen zählen dauerhaft: auch wenn die Vorgänge (und ihre Ereignisse) gelöscht wurden, hält der Audit-Zähler die Obergrenze', async () => {
+    const { service, planner, audit } = build({ flag: true, used: 3, audited: SHADOW_PLAN_LIMIT_PER_TENANT + 1, propose: proposed(goodProposal) });
+    expect(await service.record('t1', 'c1')).toBe('LIMIT_REACHED');
+    expect(planner.shadowPropose).not.toHaveBeenCalled();
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 't1', eventType: 'SHADOW_PLAN_CONSUMED', entityId: 'c1' }));
   });
 
   it('genau auf der Grenze (60. Planung) wird noch geplant', async () => {

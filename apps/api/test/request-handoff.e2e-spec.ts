@@ -61,7 +61,11 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName, input }], stopReason: 'tool_use' });
     llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
   }
-  const seedTriage = () => seedTool('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);
+  /** Eingestuft als Angebotsanfrage; danach die Eignungsprüfung des Leitfadens (FX-18): hier passt er. */
+  const seedTriage = () => {
+    seedTool('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine klassische Angebotsanfrage.' });
+  };
   const seedExtraction = (facts: Array<{ key: string; value: string | number; evidence: string }> = []) => seedTool('submit_extracted_facts', { facts: facts.map((f) => ({ ...f, confidence: 0.9 })) });
   const seedAnalysis = (over: Record<string, unknown> = {}) =>
     seedTool('submit_request_analysis', {

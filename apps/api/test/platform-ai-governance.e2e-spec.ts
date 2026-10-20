@@ -5,6 +5,7 @@ import { AiProviderUnavailableError, PLATFORM_ROLES, type PlatformRole } from '@
 import request from 'supertest';
 import { AiAdapterRegistry } from '../src/ai-governance/ai-adapter-registry.service';
 import { AiProviderResolverService } from '../src/ai-providers/ai-provider-resolver.service';
+import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PlatformAuthService } from '../src/platform/auth/platform-auth.service';
 import { PlatformIdentityService } from '../src/platform/identity/platform-identity.service';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -320,9 +321,22 @@ describe('Platform AI governance (e2e)', () => {
     });
   });
 
+  /** Setzt/entfernt den Mandanten-Override des Flags `ai.byok` (Betreiberfreigabe) nur für den Test-Mandanten. */
+  async function setByokOverride(forTenantId: string, enabled: boolean): Promise<void> {
+    await prisma.withPlatformScope(async (tx) => {
+      const flag = await tx.platformFeatureFlag.findUniqueOrThrow({ where: { key: 'ai.byok' } });
+      const overrides = (flag.tenantOverrides as Array<{ tenantId: string; value: boolean }>).filter((o) => o.tenantId !== forTenantId);
+      if (enabled) overrides.push({ tenantId: forTenantId, value: true });
+      await tx.platformFeatureFlag.update({ where: { key: 'ai.byok' }, data: { tenantOverrides: overrides } });
+    });
+    app.get(PlatformControlService).invalidate();
+  }
+
   describe('Mandanten-BYOK: kein stiller Fallback (OAI-07/OPS-10)', () => {
     it('ein BYOK-Mandant, dessen Schlüssel ausfällt, bekommt einen Fehler statt der Plattform; nach ausdrücklichem Trennen läuft er wieder über ORBIT Managed', async () => {
       const tenant = await bootstrapTenant('byok');
+      // Eigene Schlüssel gelten nur mit der Betreiberfreigabe `ai.byok` (seit 18.10.): ohne sie bedient ORBIT Managed – das ist hier nicht das, was geprüft wird.
+      await setByokOverride(tenant.id, true);
       const encrypted = new Uint8Array(Buffer.from('cipher'));
       await prisma.forTenantId(tenant.id).aIProviderConnection.create({ data: { tenantId: tenant.id, providerKey: 'OPENAI', status: 'ERROR', encryptedCredentials: encrypted, model: 'gpt-x', byokActiveSince: new Date() } });
       const resolver = app.get(AiProviderResolverService);
@@ -337,6 +351,7 @@ describe('Platform AI governance (e2e)', () => {
       const after = await resolver.resolveProfile(tenant.id, 'AGENT_TOOL_USE');
       expect(after.source).toBe('ENV_BOOTSTRAP');
       expect(after.provider).toBeInstanceOf(MockLLMProvider);
+      await setByokOverride(tenant.id, false);
     });
   });
 });

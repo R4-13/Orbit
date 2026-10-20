@@ -251,3 +251,19 @@ test('Befehlszeile: „antworten“ braucht einen Text, sendet nie ohne Zugang u
   assert.match(noToken.stderr, /SIM_REFRESH_TOKEN/);
   assert.match(run(['antworten', '--text', 'Ja.'], { SIM_FROM: 'tom@example.com' }).stderr, /SIM_ALLOWED_RECIPIENTS/);
 });
+
+test('Aufräumen nach Nachrichten-ID: headers() liest nur Kopfzeilen, trash() legt genau die genannte Nachricht in den Papierkorb', async () => {
+  const calls = [];
+  const gmail = createGmail({
+    getToken: async () => 'token',
+    fetchImpl: async (url, init) => {
+      calls.push(`${init?.method ?? 'GET'} ${String(url).replace(/^.*\/users\/me/, '')}`);
+      return String(url).includes('/messages/abc?format=metadata')
+        ? json(200, { labelIds: ['SENT'], payload: { headers: [{ name: 'From', value: 'Tom <tom@example.com>' }, { name: 'To', value: 'a@example.com' }, { name: 'Subject', value: 'Test' }, { name: 'Message-ID', value: '<m1@x>' }] } })
+        : json(200, {});
+    },
+  });
+  assert.deepEqual(await gmail.headers('abc'), { id: 'abc', from: 'Tom <tom@example.com>', to: 'a@example.com', subject: 'Test', messageId: '<m1@x>', labels: ['SENT'] });
+  await gmail.trash('abc');
+  assert.deepEqual(calls, ['GET /messages/abc?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Message-ID', 'POST /messages/abc/trash']);
+});

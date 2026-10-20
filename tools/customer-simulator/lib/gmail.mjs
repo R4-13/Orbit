@@ -62,6 +62,12 @@ export function createGmail({ getToken, fetchImpl = fetch }) {
       }
       return rows;
     },
+    /** Absender, Empfänger, Betreff und Message-ID einer einzelnen Nachricht (nur lesend). */
+    async headers(messageId) {
+      const message = await call('GET', `/messages/${encodeURIComponent(messageId)}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Message-ID`);
+      const header = (name) => message.payload?.headers?.find((h) => h.name.toLowerCase() === name)?.value ?? '';
+      return { id: messageId, from: header('from'), to: header('to'), subject: header('subject'), messageId: header('message-id'), labels: message.labelIds ?? [] };
+    },
     trash: (messageId) => call('POST', `/messages/${encodeURIComponent(messageId)}/trash`),
   };
 }

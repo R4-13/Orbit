@@ -260,6 +260,7 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
       await prisma.forTenantId(tenantId).policyConfig.upsert({ where: { tenantId_action: { tenantId, action } }, create: { tenantId, action, mode: 'AUTONOMOUS' }, update: { mode: 'AUTONOMOUS' } });
     }
     seedTriage({ category: 'GENERAL_INQUIRY' });
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
     seedTool('submit_knowledge_answer', { answerable: false, answer: '', sources: [], confidence: 0.2 });
     // Das freie Weiterplanen lässt „notify_staff“ weg (bereits ausgeführt) und setzt die Anforderungsprüfung mit Weiterplanen-Stelle an.
     seedTool('submit_process_plan', {
@@ -282,5 +283,63 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     const second = plans[1]!;
     expect(second.nodes.find((n) => n.nodeKey === 'notify_staff')?.state).toBe('SUCCEEDED'); // wiederhergestellt, nicht wiederholt
     expect(second.nodes.some((n) => n.nodeKey === 'weiter')).toBe(true);
+  });
+  it('FX-20 im Ablauf: eine Antwort, die eine frühere Angabe selbst korrigiert, wird vor dem Weiterlaufen übernommen – die Neuplanung sieht den aktuellen Stand, der alte Wert bleibt als Verlauf', async () => {
+    process.env.FACT_CORRECTION_ENABLED = 'true';
+    try {
+      const tenantId = await newTenant();
+      seedTriage();
+      seedTool('submit_process_plan', {
+        goalKeys: ['human.review'],
+        nodes: [
+          node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+          node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+          node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+          node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+          node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+        ],
+        edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+        unresolvedRequirements: [],
+        assumptions: [],
+        conciseExplanation: 'Verstehen, gezielt nachfragen, auf die Antwort warten.',
+      });
+      seedAnalysis();
+      const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+      const caseId = first.case!.id;
+      await confirmPlan(tenantId, caseId);
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
+
+      // Die Antwort nennt den Standort und nimmt die frühere Angabe (drei Behandlungsplätze) selbst zurück. Reihenfolge der KI-Aufrufe: erst die Prüfung auf Korrekturen, dann die Neuplanung.
+      seedTool('submit_fact_updates', { updates: [{ key: 'ai.behandlungsplaetze', newValue: '4', evidence: 'doch vier Behandlungsplätze', kind: 'CORRECTION', reason: 'nimmt die frühere Zahl zurück' }] });
+      seedTool('submit_process_plan', {
+        goalKeys: ['human.review'],
+        nodes: [
+          node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+          node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+          node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+          node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+          node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Praxisumzug: Standort geklärt, vier Behandlungsplätze – bitte Angebot und Frist prüfen.' } } }),
+          node('human', 'MANUAL_TASK', { title: 'Eine Person prüft Umfang, Preis und Frist' }),
+        ],
+        edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'notify'), edge('notify', 'human')],
+        unresolvedRequirements: [],
+        assumptions: [],
+        conciseExplanation: 'Person mit dem aktuellen Stand informieren, übergeben.',
+      });
+      const before = llm.getRequests().length;
+      await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12, 50667 Köln. Und doch vier Behandlungsplätze, nicht drei.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
+
+      const history = await prisma.forTenantId(tenantId).caseFact.findMany({ where: { caseId, key: 'ai.behandlungsplaetze' }, orderBy: { revision: 'asc' } });
+      expect(history.map((f) => [f.value, f.isCurrent])).toEqual([['3', false], ['4', true]]);
+      expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'fact.corrected' } })).toBe(1);
+      // Die Neuplanung (nach der Prüfung) erhält den aktuellen Stand.
+      const planning = llm.getRequests().slice(before).map((r) => JSON.stringify(r.messages)).find((m) => m.includes('Neuplanung wegen neuer Informationen'));
+      expect(planning).toBeDefined();
+      expect(planning).toContain('ai.behandlungsplaetze (CONFIRMED, EMAIL): \\"4\\"');
+      expect(planning).not.toContain('ai.behandlungsplaetze (CONFIRMED, EMAIL): \\"3\\"');
+      expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('MANUAL_REVIEW');
+    } finally {
+      process.env.FACT_CORRECTION_ENABLED = 'false';
+    }
   });
 });

@@ -7,6 +7,8 @@ import { ApprovalsModule } from '../approvals/approvals.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { StorageModule } from '../storage/storage.module';
 import { ActionLedgerService } from './action-ledger.service';
+import { BlueprintFitService } from './blueprint-fit.service';
+import { FactCorrectionService } from './fact-correction.service';
 import { CaseRollupService } from './case-rollup.service';
 import { ChildCaseStarterService } from './child-case-starter.service';
 import { CHILD_CASE_STARTER } from './child-case-starter.token';
@@ -63,6 +65,8 @@ import { ShadowPlanService } from './shadow-plan.service';
     PlanStoreService,
     ActionLedgerService,
     CaseRollupService,
+    BlueprintFitService,
+    FactCorrectionService,
     ChildCaseStarterService,
     { provide: CHILD_CASE_STARTER, useExisting: ChildCaseStarterService },
     InternalOrderService,
@@ -90,6 +94,8 @@ import { ShadowPlanService } from './shadow-plan.service';
     CustomerRecordService,
   ],
   exports: [
+    BlueprintFitService,
+    FactCorrectionService,
     ChildCaseStarterService,
     AdHocIntakeService,
     CaseFactsService,

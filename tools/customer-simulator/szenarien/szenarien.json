@@ -227,6 +227,51 @@
       "betreff": "Fünf Dinge auf einmal",
       "text": "Guten Tag,\n\nich habe fünf Anliegen: Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer. Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben. Drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren. Viertens: Sind Sie samstags telefonisch erreichbar? Fünftens tropft im Gäste-WC der Wasserhahn, bitte um einen Reparaturtermin.\n\nDanke, Tom Orbit",
       "erwartung": "Fünf Anliegen erkannt; bei aktivierter Aufteilung fünf Teilvorgänge, vier werden bearbeitet, das fünfte bleibt offen und wird nachgezogen; der Hauptvorgang schließt erst mit allen."
+    },
+    {
+      "id": "wartungsvertrag-variante",
+      "art": "anfrage",
+      "titel": "Variante (sprachlich verändert): Dauerhafter Servicevertrag für ein Mehrfamilienhaus",
+      "absender": "Tom Orbit",
+      "betreff": "Servicepartner für unser Mehrfamilienhaus gesucht",
+      "text": "Guten Tag,\n\nfür unser Mehrfamilienhaus mit zwölf Wohnungen (Heizungsanlage von 2009) suchen wir einen verlässlichen Servicepartner mit Rufbereitschaft an den Wochenenden – dauerhaft, nicht für einen einzelnen Einsatz. Was würde das bei Ihnen kosten, und ab wann könnten Sie damit anfangen? Ich freue mich auf Ihre Rückmeldung.\n\nTom Orbit, Hausverwaltung",
+      "erwartung": "Wie unbekannt-wartungsvertrag, anders formuliert: kein Einzelangebot, kein erfundener Preis, Zuständige benennen, Rückfrage/Wartepunkt oder begründete Übergabe."
+    },
+    {
+      "id": "elektroarbeiten-variante",
+      "art": "anfrage",
+      "titel": "Variante (sprachlich verändert): Anfrage außerhalb des Angebots (Elektrik im Bad)",
+      "absender": "Tom Orbit",
+      "betreff": "Elektrik im Badezimmer",
+      "text": "Guten Morgen,\n\nzusätzlich zur Sanierung unseres Badezimmers soll auch die Elektrik erneuert werden: drei Steckdosen und eine neue Zuleitung zum Spiegelschrank. Bieten Sie so etwas ebenfalls an?\n\nBeste Grüße\nTom Orbit",
+      "erwartung": "Außerhalb des Angebots (Elektroarbeiten): keine Detailfragen zur Ausführung; ehrliche Auskunft oder Entscheidung durch einen Menschen."
+    },
+    {
+      "id": "fuenf-anliegen-variante",
+      "art": "anfrage",
+      "titel": "Variante (sprachlich verändert, ohne Aufzählungswörter): Fünf Anliegen in einer Mail",
+      "absender": "Tom Orbit",
+      "betreff": "Einiges auf einmal",
+      "text": "Hallo zusammen,\n\nich schreibe wegen mehrerer Dinge. Für meine Steuererklärung bräuchte ich eine Kopie der Rechnung vom letzten Einsatz. Außerdem muss ich den Wartungstermin am 28.10. leider auf den 4.11. verlegen. Interessant wäre für uns zudem ein Angebot für neue Thermostate an allen Heizkörpern. Dann noch eine Frage: Wie lange sind Sie freitags telefonisch erreichbar? Und im Gäste-WC tropft der Wasserhahn, könnten Sie dafür einen Reparaturtermin anbieten?\n\nVielen Dank, Tom Orbit",
+      "erwartung": "Fünf Anliegen erkannt (ohne Aufzählungswörter) und – bei aktivierter Aufteilung – fünf Teilvorgänge mit eigenem Ziel; das fünfte bleibt offen und wird nachgezogen."
+    },
+    {
+      "id": "angebot-bad-variante",
+      "art": "anfrage",
+      "titel": "Variante (sprachlich verändert): Badsanierung mit späteren Flächenkorrekturen",
+      "absender": "Tom Orbit",
+      "betreff": "Badezimmer erneuern – was kostet das?",
+      "text": "Guten Tag,\n\nwir möchten unser Badezimmer (etwa 6 Quadratmeter) komplett erneuern lassen: ebenerdige Dusche, neue Fliesen, Waschtisch und WC. Könnten Sie sich das bei uns ansehen? Und womit müssten wir preislich ungefähr rechnen?\n\nFreundliche Grüße\nTom Orbit",
+      "erwartung": "Angebotsanfrage; Korrekturen der Fläche (6 → 7 → 11 m²) werden übernommen bzw. gezielt nachgefragt; kein Preis ohne Grundlage."
+    },
+    {
+      "id": "unbekannt-leitung-umzug-variante",
+      "art": "anfrage",
+      "titel": "Variante (sprachlich verändert): Praxisumzug mit Anschlüssen",
+      "absender": "Tom Orbit",
+      "betreff": "Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas",
+      "text": "Guten Tag,\n\nEnde Januar zieht unsere Zahnarztpraxis um. In den neuen Räumen brauchen drei Behandlungsplätze Anschlüsse für Wasser und Druckluft, und für das Labor muss eine Gasleitung gelegt werden. Vor der Eröffnung am 3. Februar muss alles vom Prüfer abgenommen sein. Übernehmen Sie so etwas, und wie gehen Sie vor?\n\nMit freundlichen Grüßen\nTom Orbit",
+      "erwartung": "Unbekannte Vorgangsart: Verstehen, gezielte Rückfrage, Antwort auswerten, begründete Übergabe; keine Zusage zur Frist, kein Preis."
     }
   ]
 }

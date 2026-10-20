@@ -33,6 +33,7 @@ const HELP = `Kunden-Simulator (Testwerkzeug)
   node simulator.mjs antworten --text "…" [--nr 1] [--senden]
                                                    Tom antwortet im selben Faden auf eine empfangene Mail (Probelauf ohne --senden)
   node simulator.mjs aufraeumen [--seit <ISO>] [--senden]   gesendete Mails (mit --seit: nur seit dann, dazu die Antworten der erlaubten Empfänger) in Toms Postfach in den Papierkorb legen
+  node simulator.mjs aufraeumen --nachrichten <Datei> [--senden]   nur die in der Datei genannten Nachrichten (RFC-Message-IDs, nachgewiesene Testzuordnung) – ein Zeitfenster allein genügt nie
 
 Auswahl:  --szenario <Kennung> | --art <Art>   (ohne Angabe: zufällig)      --anzahl N (höchstens ${MAX_PER_COMMAND})
           --an <Adresse> (muss in SIM_ALLOWED_RECIPIENTS stehen)   --abstand <Sekunden> (Pause zwischen Mails, Standard 20)
@@ -149,6 +150,7 @@ async function commandCleanup(values) {
   requireConfig(config, ['clientId', 'from', 'refreshToken']);
   const gmail = gmailFor(config);
   await assertAccount(gmail, config);
+  if (values.nachrichten) return cleanupByMessageIds(gmail, config, String(values.nachrichten), send);
   const labelId = await gmail.ensureLabel(config.label);
   let ids;
   if (values.seit) {
@@ -168,6 +170,42 @@ async function commandCleanup(values) {
   }
   for (const id of ids) await gmail.trash(id);
   say(`${ids.length} Mail(s) in den Papierkorb gelegt. Das Etikett bleibt bestehen (in Gmail löschbar).\nDie Kopien im Postfach des Empfängers und alles, was ORBIT daraus gemacht hat, bleiben unberührt (siehe README.md, „Entfernen“).`);
+}
+
+/**
+ * Aufräumen anhand konkreter Nachrichten: Die Datei nennt RFC-Message-IDs (Zeilen mit `|`-Spalten: die dritte Spalte; Zeilen mit # sind Kommentar). Jede ID wird in Toms Postfach gesucht;
+ * gelöscht (Papierkorb) wird eine Nachricht nur, wenn ihre Message-ID genau übereinstimmt UND Tom Absender oder Empfänger ist. Alles andere bleibt unberührt und wird gemeldet.
+ */
+async function cleanupByMessageIds(gmail, config, file, send) {
+  const wanted = readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => (line.includes('|') ? line.split('|')[2] : line).trim())
+    .filter(Boolean);
+  const isTom = (value) => String(value).toLowerCase().includes(config.from.toLowerCase());
+  const found = [];
+  const unmatched = [];
+  for (const rfc of wanted) {
+    const ids = await gmail.search(`rfc822msgid:${rfc.replace(/^<|>$/g, '')}`);
+    let matched = false;
+    for (const id of ids) {
+      const h = await gmail.headers(id);
+      if (h.messageId.trim() === rfc && (isTom(h.from) || isTom(h.to))) {
+        found.push(h);
+        matched = true;
+      }
+    }
+    if (!matched) unmatched.push(rfc);
+  }
+  say(`${wanted.length} Nachricht(en) in der Datei, ${found.length} in Toms Postfach eindeutig zugeordnet${unmatched.length ? `, ${unmatched.length} nicht gefunden (bereits entfernt oder nicht in diesem Postfach)` : ''}.`);
+  for (const h of found) say(`  • ${h.subject} | von ${h.from.replace(/<.*>/, '<…>')} | ${h.id}`);
+  if (!send) {
+    say('Probelauf: nichts verändert. Zum Aufräumen --senden angeben (Papierkorb, 30 Tage wiederherstellbar).');
+    return;
+  }
+  for (const h of found) await gmail.trash(h.id);
+  say(`${found.length} Nachricht(en) in den Papierkorb gelegt. Nicht genannte Nachrichten bleiben unberührt.`);
 }
 
 async function commandAuth(values) {
@@ -256,7 +294,7 @@ async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({
     args: rest,
-    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' }, text: { type: 'string' }, datei: { type: 'string' }, nr: { type: 'string' }, seit: { type: 'string' } },
+    options: { senden: { type: 'boolean' }, szenario: { type: 'string' }, art: { type: 'string' }, an: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, 'alle-minuten': { type: 'string' }, stunden: { type: 'string' }, port: { type: 'string' }, 'ohne-hinweis': { type: 'boolean' }, text: { type: 'string' }, datei: { type: 'string' }, nr: { type: 'string' }, seit: { type: 'string' }, nachrichten: { type: 'string' } },
     strict: true,
   });
   switch (command) {

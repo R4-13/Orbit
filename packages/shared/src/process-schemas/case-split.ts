@@ -17,6 +17,12 @@ export interface SplitChild {
   intentKey: string;
   /** Das Ziel dieses Teilvorgangs. */
   goal: string;
+  /** Kurzbezeichnung des Anliegens (aus der Zerlegung der Nachricht). */
+  title?: string;
+  /** Die wörtlichen Sätze der Nachricht, die zu diesem Anliegen gehören (belegt); ohne Auszug bleibt nur das Ziel. */
+  segment?: string;
+  /** Gemeinsamer Kontext der Nachricht (für alle Anliegen zugänglich). */
+  sharedContext?: string;
 }
 
 export interface SplitDecision {

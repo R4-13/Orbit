@@ -34,6 +34,7 @@ node simulator.mjs antworten --text "Ja, auch das Warmwasser."   # PROBELAUF: To
 node simulator.mjs antworten --text "…" --nr 2 --senden           # wirklich senden (auf die zweitneueste Mail)
 node simulator.mjs aufraeumen            # Probelauf: wie viele Mails hat das Werkzeug in Toms Postfach?
 node simulator.mjs aufraeumen --senden   # in den Papierkorb legen
+node simulator.mjs aufraeumen --nachrichten <Datei> [--senden]   # nur die in der Datei genannten Nachrichten (RFC-Message-IDs, z. B. aus der ORBIT-Datenbank); Treffer nur bei exakter Message-ID UND Tom als Absender/Empfänger
 node pruefen-entfernbar.mjs              # ist das Werkzeug restlos entfernbar?
 ```
 

@@ -67,7 +67,11 @@ describe('Request analysis in the reference process (e2e)', () => {
     llm.seedResponse({ toolCalls: [{ toolCallId: randomUUID(), toolName, input: input as Record<string, unknown> }], stopReason: 'tool_use' });
     llm.seedResponse({ text: 'ok', toolCalls: [], stopReason: 'end_turn' });
   };
-  const seedTriage = () => script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE'));
+  /** Eingestuft als Angebotsanfrage; danach die Eignungsprüfung des Leitfadens (FX-18): hier passt er. */
+  const seedTriage = () => {
+    script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE'));
+    script('submit_blueprint_fit', { fits: true, reason: 'Eine klassische Angebotsanfrage.' });
+  };
   const seedExtraction = (list: Array<{ key: string; value: string | number; evidence: string }>) => script('submit_extracted_facts', { facts: list.map((f) => ({ ...f, confidence: 0.9 })) });
   const analysis = (over: Record<string, unknown> = {}) => ({
     requestType: 'Heizungstausch im Einfamilienhaus',

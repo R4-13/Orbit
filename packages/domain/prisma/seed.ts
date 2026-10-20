@@ -677,7 +677,7 @@ async function createCrmCompany(
   tenantId: string,
   input: { name: string; domain: string; industry: string },
 ) {
-  const crmCompany = await crmConnector.upsertCompany(input);
+  const crmCompany = await crmConnector.upsertCompany({ tenantId, ...input });
   const company = await tx.company.create({
     data: { tenantId, ...input, crmExternalId: crmCompany.externalId },
   });
@@ -690,7 +690,7 @@ async function createCrmContact(
   tenantId: string,
   input: { firstName: string; lastName: string; email: string; companyId?: string },
 ) {
-  const crmContact = await crmConnector.upsertContact(input);
+  const crmContact = await crmConnector.upsertContact({ tenantId, ...input });
   const contact = await tx.contact.create({
     data: { tenantId, ...input, crmExternalId: crmContact.externalId },
   });

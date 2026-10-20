@@ -38,3 +38,6 @@ globalThis.fetch = ((input: Parameters<typeof fetch>[0], init?: Parameters<typeo
 process.env.LIVE_UPGRADE_ENABLED ??= 'false';
 // Meldungen an Mitarbeiter laufen im Test nur dort, wo sie ausdrücklich geprüft werden (sie würden sonst über den globalen Sweep an echte Adressen gehen).
 process.env.ESCALATION_ENABLED ??= 'false';
+
+// Die Prüfung neuer Nachrichten auf Korrekturen früherer Angaben (FX-20) ist ein zusätzlicher KI-Aufruf je Antwort; die Suiten mit skriptgesteuertem Modell zählen ihre Aufrufe. Sie läuft im Test nur dort, wo sie ausdrücklich geprüft wird.
+process.env.FACT_CORRECTION_ENABLED ??= 'false';

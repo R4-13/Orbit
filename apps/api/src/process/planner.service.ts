@@ -33,7 +33,7 @@ import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseFactsService } from './case-facts.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
-import { messageCaseIds } from './case-scope';
+import { focusedMessageText, messageCaseIds, splitFocus } from './case-scope';
 import { isAppointmentSchedulingRequirement } from './reference/request-analysis';
 
 export const SUBMIT_PLAN_TOOL = 'submit_process_plan';
@@ -45,7 +45,8 @@ export type PlanTrigger = 'INITIAL' | 'REPLAN';
 
 export type PlanOutcome =
   | { status: 'PLANNED'; graph: PlanGraph; validation: PlanValidationResult; source: ProcessPlanSource; needsHumanApproval: boolean; usedFallback: boolean }
-  | { status: 'REVIEW_REQUIRED'; reason: string; validation?: PlanValidationResult };
+  /** `transient`: die KI war vorübergehend nicht erreichbar (kein Fehler des Plans) – die Planung wird begrenzt und zeitversetzt wiederholt (FX-19). */
+  | { status: 'REVIEW_REQUIRED'; reason: string; validation?: PlanValidationResult; transient?: boolean };
 
 export interface PlanRequest {
   trigger: PlanTrigger;
@@ -148,7 +149,7 @@ export class PlannerService {
         proposal = this.instantiate(definition);
         usedFallback = true;
       } else {
-        return { status: 'REVIEW_REQUIRED', reason: proposed.reason, validation: proposed.validation };
+        return { status: 'REVIEW_REQUIRED', reason: proposed.reason, validation: proposed.validation, ...(proposed.transient ? { transient: true } : {}) };
       }
     }
 
@@ -248,7 +249,7 @@ export class PlannerService {
     context: PlanValidationContext,
     parent: PlanGraph | undefined,
     runPurpose = 'process-planning',
-  ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult }> {
+  ): Promise<{ status: 'PROPOSED'; proposal: PlanProposal; validation: PlanValidationResult } | { status: 'UNAVAILABLE'; reason: string; validation?: PlanValidationResult; transient?: boolean }> {
     if (await this.platformControl.killSwitchEngaged(KILL_SWITCHES.ADAPTIVE_PLANNER)) {
       return { status: 'UNAVAILABLE', reason: 'Der KI-Planer ist plattformweit vorübergehend gestoppt (Kill Switch).' };
     }
@@ -256,7 +257,7 @@ export class PlannerService {
     try {
       llm = await this.aiProviders.resolveForTenant(tenantId, 'COMPLEX_REASONING');
     } catch (error) {
-      if (error instanceof AiProviderUnavailableError) return { status: 'UNAVAILABLE', reason: 'Die KI-Planung ist derzeit nicht verfügbar (kein freigegebenes Modell). Es wird bewusst nicht auf einen anderen Anbieter ausgewichen.' };
+      if (error instanceof AiProviderUnavailableError) return { status: 'UNAVAILABLE', transient: true, reason: 'Die KI-Planung ist derzeit nicht verfügbar (kein freigegebenes Modell). Es wird bewusst nicht auf einen anderen Anbieter ausgewichen.' };
       throw error;
     }
     const policyMode = await this.policy.resolveMode(tenantId, 'process.plan');
@@ -298,7 +299,7 @@ export class PlannerService {
         }
       } catch (error) {
         await this.runs.fail(tenantId, run.id, error instanceof Error ? error.message : String(error));
-        return { status: 'UNAVAILABLE', reason: 'Der KI-Dienst für die Planung ist momentan nicht verfügbar.' };
+        return { status: 'UNAVAILABLE', transient: true, reason: 'Der KI-Dienst für die Planung ist momentan nicht verfügbar.' };
       }
       messages.push({ role: 'assistant', content: '' });
       messages.push({ role: 'user', content: `Dein Plan wurde abgelehnt: ${lastIssue} Korrigiere genau diese Punkte und rufe ${SUBMIT_PLAN_TOOL} genau einmal erneut auf.` });
@@ -376,13 +377,13 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
    * Das Ergebnis der Anforderungsprüfung (gespeicherte Analyse): was bekannt ist und welche Angaben noch fehlen, die nur die Kundschaft kennt. Eine Anforderung gilt als erfüllt, sobald ein bestätigter
    * Fakt mit ihrem Schlüssel vorliegt; Terminfragen und die Antwortadresse zählen nicht (der Termin wird gesondert vereinbart). `undefined`, solange die Prüfung noch nicht gelaufen ist.
    */
-  private async requirementsState(tenantId: string, caseId: string): Promise<{ summary: string; known: Array<{ label: string; value: string | number }>; missing: Array<{ key: string; question: string }> } | undefined> {
+  private async requirementsState(tenantId: string, caseId: string): Promise<{ summary: string; withinOffering?: string; known: Array<{ label: string; value: string | number }>; missing: Array<{ key: string; question: string }> } | undefined> {
     const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: 'requirements.analyzed' }, orderBy: { sequence: 'desc' }, select: { payload: true } });
-    const analysis = (event?.payload as { analysis?: { summary?: string; known?: Array<{ label?: string; value?: string | number }>; requirements?: Array<{ key: string; label: string; question: string }> } } | null | undefined)?.analysis;
+    const analysis = (event?.payload as { analysis?: { summary?: string; withinOffering?: string; known?: Array<{ label?: string; value?: string | number }>; requirements?: Array<{ key: string; label: string; question: string }> } } | null | undefined)?.analysis;
     if (!analysis) return undefined;
     const confirmed = new Set((await this.facts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => f.key));
     const missing = (analysis.requirements ?? []).filter((r) => r.key !== 'contact.email' && !confirmed.has(r.key) && !isAppointmentSchedulingRequirement(r)).map((r) => ({ key: r.key, question: r.question }));
-    return { summary: analysis.summary ?? '', known: (analysis.known ?? []).map((k) => ({ label: k.label ?? '', value: k.value ?? '' })), missing };
+    return { summary: analysis.summary ?? '', withinOffering: analysis.withinOffering, known: (analysis.known ?? []).map((k) => ({ label: k.label ?? '', value: k.value ?? '' })), missing };
   }
 
   private async openCustomerQuestions(tenantId: string, caseId: string): Promise<number> {
@@ -400,7 +401,7 @@ ${wrapUntrustedContent(`Zusammenfassung: ${state.summary}
 Bekannt:
 ${known}
 Fehlend (nur die Kundschaft kann das beantworten):
-${missing}`)}`;
+${missing}`)}${state.withinOffering === 'NO' ? '\nLeistungsumfang: Die Anfrage liegt laut Analyse klar außerhalb des Leistungsumfangs des Betriebs. Stelle keine Detailfragen; sorge dafür, dass die Person ehrlich darüber informiert wird (Auskunft, sofern erlaubt) und eine Person entscheidet.' : ''}`;
   }
 
   /**
@@ -415,6 +416,21 @@ ${missing}`)}`;
     return `Teilvorgang einer Nachricht mit mehreren Anliegen. Dein Anliegen (nur dieses bearbeitest du): "${payload.goal}". Die übrigen Anliegen der Nachricht bearbeiten eigene Teilvorgänge – plane dafür nichts und wähle keine Ziele, die nur sie betreffen (z. B. kein Angebot, keinen Termin, keine Antwort auf ihre Fragen), es sei denn, dein Anliegen verlangt es:
 ${siblings}
 Die Nachricht der Kundschaft enthält alle Anliegen; lies nur den Teil, der zu deinem Anliegen gehört. Eine Eingangsbestätigung gehört der ganzen Nachricht und wird nur einmal gesendet (ein weiterer Teilvorgang ist damit abgedeckt).`;
+  }
+
+  /**
+   * FX-20: Widersprechen sich Angaben der Kundschaft und ist nicht eindeutig, welcher Wert gilt (eine eindeutige Selbstkorrektur wurde bereits übernommen), darf nichts auf einem geratenen Wert aufbauen:
+   * Die Planung fragt gezielt nach, bevor eine davon abhängige Wirkung ausgeführt wird.
+   */
+  private async conflictBlock(tenantId: string, caseId: string): Promise<string> {
+    const conflicted = (await this.facts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFLICTED');
+    if (conflicted.length === 0) return '';
+    const byKey = new Map<string, unknown[]>();
+    for (const fact of conflicted) byKey.set(fact.key, [...(byKey.get(fact.key) ?? []), fact.value]);
+    const lines = [...byKey].map(([key, values]) => `- ${key}: ${values.map((v) => JSON.stringify(v).slice(0, 80)).join(' ↔ ')}`).join('\n');
+    return `Widersprüchliche Angaben der Kundschaft (nicht eindeutig, welcher Wert gilt – eindeutige Selbstkorrekturen sind bereits übernommen):
+${lines}
+Rate keinen Wert. Hängt eine Wirkung oder ein Angebot davon ab, frage vorher gezielt nach (Rückfrage mit beiden Werten: „Sie nannten zuerst …, später …: welcher Wert gilt?“); eine Wirkung, die nicht davon abhängt, bleibt möglich.`;
   }
 
   /** Ein interner Auftrag hat keine Nachricht der Kundschaft: kein Absender, kein Kundenkontakt – das Ziel ergibt sich aus der Anweisung (und ihrer Frist). */
@@ -435,7 +451,9 @@ Die Nachricht der Kundschaft enthält alle Anliegen; lies nur den Teil, der zu d
       const order = await this.prisma.forTenantId(tenantId).case.findFirst({ where: { id: caseId }, select: { title: true, description: true } });
       return order?.description ? `Interner Auftrag (von einer Person erteilt): ${order.title}\n${order.description.slice(0, 3000)}` : '(keine Nachricht)';
     }
-    return `Betreff: ${message.subject ?? ''}\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, 3000)}`;
+    const full = (message.bodyText ?? message.bodyPreview ?? '').slice(0, 3000);
+    const focus = await splitFocus(this.prisma, tenantId, caseId);
+    return `Betreff: ${message.subject ?? ''}\n${focus ? focusedMessageText(focus, full) : full}`;
   }
 
   private async buildUserMessage(tenantId: string, caseRow: Case, request: PlanRequest, context: PlanValidationContext, parent: PlanGraph | undefined): Promise<string> {
@@ -461,13 +479,14 @@ Die Nachricht der Kundschaft enthält alle Anliegen; lies nur den Teil, der zu d
       ? `Bisheriger Plan (Revision ${parent.plan.revision}), Knotenzustände: ${parent.nodes.map((n) => `${n.nodeKey}=${n.state}`).join(', ')}`
       : 'Es gibt noch keinen Plan.';
     return [
-      `Anlass: ${request.trigger === 'INITIAL' ? 'Erstplanung' : 'Neuplanung wegen neuer Informationen'}`,
+      `Anlass: ${request.trigger === 'INITIAL' ? 'Erstplanung' : 'Neuplanung wegen neuer Informationen – bewerte zuerst das Geschäftsziel neu: Ist es durch die neuen Informationen erreicht, verändert oder außer Reichweite? Welche Angaben fehlen jetzt tatsächlich noch, und welche sind inzwischen bekannt oder anderweitig beschaffbar? Frage nichts erneut, was bereits beantwortet wurde.'}`,
       blueprintText,
       `Absichtsbeschreibung:\n${wrapUntrustedContent(request.intentSummary ?? caseRow.title)}`,
       `Letzte Nachricht der Kundschaft (UNTRUSTED):\n${wrapUntrustedContent(await this.latestInboundText(tenantId, caseRow.id))}`,
       await this.requirementsBlock(tenantId, caseRow.id),
       await this.orderBlock(tenantId, caseRow.id),
       await this.splitBlock(tenantId, caseRow.id),
+      await this.conflictBlock(tenantId, caseRow.id),
       `Bekannte Fakten (UNTRUSTED, aus externen Nachrichten):\n${wrapUntrustedContent(factLines)}`,
       `Verfügbare Fähigkeiten:\n${capabilityLines}`,
       `${await this.profileContext.promptFor(tenantId).catch(() => '') || 'Betriebsprofil: nicht hinterlegt.'}`,

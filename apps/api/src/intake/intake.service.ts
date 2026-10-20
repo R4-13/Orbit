@@ -16,6 +16,9 @@ import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
+import { BlueprintFitService, type BlueprintFitResult } from '../process/blueprint-fit.service';
+import { FactCorrectionService } from '../process/fact-correction.service';
+import { CASE_EVENT_TYPES, CaseEventsService } from '../process/case-events.service';
 import { CaseSplitService } from './case-split.service';
 import { ShadowPlanService } from '../process/shadow-plan.service';
 import type { OcrProvider } from '@orbit/integration-core';
@@ -128,6 +131,9 @@ export class IntakeService {
     private readonly attachmentTexts: AttachmentTextService,
     private readonly shadow: ShadowPlanService,
     private readonly splitter: CaseSplitService,
+    private readonly fit: BlueprintFitService,
+    private readonly caseEvents: CaseEventsService,
+    private readonly corrections: FactCorrectionService,
     @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
@@ -426,10 +432,9 @@ export class IntakeService {
   ): Promise<IntakeResult> {
     const scoped = this.prisma.forTenantId(tenantId);
     const { intakeEventId, inboundEmailId, documentIds } = persisted;
-    const route = routeForCategory(triage.category);
-
+    let route = routeForCategory(triage.category);
     // Mehrere getrennte Anliegen (nur mit Betreiber-Flag `process.split`): jedes Anliegen wird ein eigener Teilvorgang, der Hauptvorgang trägt die Nachricht (ADD-3.1).
-    const splitDecision = await this.splitter.decide(tenantId, triage);
+    const splitDecision = await this.splitter.decide(tenantId, triage, { subject: event.subject ?? '', text: event.content ?? '' });
     if (splitDecision.split) {
       await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
       const parent = await this.cases.create(tenantId, actorUserId ?? '', { type: 'GENERAL', title: `Mehrere Anliegen: ${event.subject ?? '(ohne Betreff)'}`, description: event.content?.slice(0, 1000) });
@@ -442,18 +447,32 @@ export class IntakeService {
       return { case: fresh, category: 'OTHER', agentRunIds: [], intakeEventId };
     }
 
+    // FX-18: Bevor ein hinterlegter Leitfaden den Ablauf bestimmt, wird seine fachliche Eignung für diesen konkreten Fall geprüft. Eine grobe Kategorie (SALES, Angebotsanfrage …) erzwingt keinen
+    // unpassenden Ablauf: fehlt die Eignung, wird wie bei einem Fall ohne Prozess frei weitergeplant. Kann nicht geprüft werden (keine KI), gilt das bisherige Verhalten.
+    let fitAssessment: ({ blueprintKey: string } & BlueprintFitResult) | undefined;
+    if (route && !splitDecision.split) {
+      const candidate = await this.blueprints.findActiveForIntent(tenantId, triage.category);
+      if (candidate) {
+        fitAssessment = { blueprintKey: candidate.row.key, ...(await this.fit.assess(tenantId, candidate, { category: triage.category, subject: event.subject ?? '', text: event.content ?? '' })) };
+        if (!fitAssessment.fits) route = undefined;
+      }
+    }
+
     // A relevant business input with no configured process is NOT filtered out (Amendment 02 §6.1, E11-E14/E24).
     if (!route) {
       await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { classification: triage.category } });
       // Jede geschäftlich relevante Nachricht wird ein Vorgang – auch ohne hinterlegten Prozess (Beschwerde, Notfall, Bewerbung …). Ein Vorgang ist die Grundlage dafür,
       // dass die zuständige Person informiert, erinnert und notfalls eskaliert wird (AttentionService) und dass der Eingang nachverfolgbar bleibt.
-      const reason = `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`;
+      const reason = fitAssessment && !fitAssessment.fits
+        ? `Geschäftlich relevant (Kategorie ${triage.category}); der hinterlegte Leitfaden ${fitAssessment.blueprintKey} passt fachlich nicht zu diesem Fall (${fitAssessment.reason}). Begründung der KI: ${triage.conciseReason}`
+        : `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`;
       const reviewCase = await this.cases.create(tenantId, actorUserId ?? '', {
         type: 'GENERAL',
         title: `${triage.urgency === 'CRITICAL' ? 'Notfall' : categoryLabel(triage.category)}: ${event.subject ?? '(ohne Betreff)'}`,
         description: event.content?.slice(0, 1000),
       });
       await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: reviewCase.id } });
+      if (fitAssessment) await this.caseEvents.append(tenantId, reviewCase.id, { type: CASE_EVENT_TYPES.BLUEPRINT_FIT_ASSESSED, payload: { ...fitAssessment } });
       if (documentIds.length > 0) await scoped.document.updateMany({ where: { id: { in: documentIds } }, data: { caseId: reviewCase.id } });
       await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: reviewCase.id } });
       await this.lifecycle.setGoals(tenantId, reviewCase.id, { businessGoals: triage.proposedBusinessGoals, currentIntent: triage.intents[0]?.key });
@@ -499,6 +518,7 @@ export class IntakeService {
       description: event.content?.slice(0, 1000),
     });
     await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: businessCase.id } });
+    if (fitAssessment) await this.caseEvents.append(tenantId, businessCase.id, { type: CASE_EVENT_TYPES.BLUEPRINT_FIT_ASSESSED, payload: { ...fitAssessment } });
     if (documentIds.length > 0) {
       await scoped.document.updateMany({ where: { id: { in: documentIds } }, data: { caseId: businessCase.id } });
     }
@@ -659,6 +679,8 @@ export class IntakeService {
 
     let failure: string | undefined;
     try {
+      // FX-20: Jede neue Nachricht wird – unabhängig vom Prozessschritt – auf Korrekturen früher genannter Angaben geprüft, bevor der Vorgang weiterläuft: Planung und Aktionen sehen den aktuellen Stand.
+      await this.corrections.processInboundSafely(tenantId, matched.id, inboundEmailId);
       await this.orchestrator.receiveInbound(tenantId, matched.id, {
         type: 'communication.received',
         payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: result.rule },
@@ -673,6 +695,7 @@ export class IntakeService {
           select: { id: true },
         });
         for (const sibling of siblings) {
+          await this.corrections.processInboundSafely(tenantId, sibling.id, inboundEmailId);
           await this.orchestrator.receiveInbound(tenantId, sibling.id, {
             type: 'communication.received',
             payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: 'SIBLING_FAN_OUT', fanOutFromCaseId: matched.id },

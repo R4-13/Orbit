@@ -169,6 +169,28 @@ export class CaseFactsService {
     return created;
   }
 
+  /**
+   * FX-20: The same person corrects their own earlier statement (eindeutige Selbstkorrektur). The new value supersedes every current row for the key — the old values stay as history
+   * (`isCurrent=false`, linked by `supersedesFactId`) — and counts as confirmed because the declared value type validates and the caller verified a literal quote. The caller decides
+   * *whether* it is an unambiguous self-correction; this method only records it. A conflict for the key is resolved the same way.
+   */
+  async supersedeBySelfCorrection(tenantId: string, caseId: string, input: FactInput & { valueType: string }): Promise<{ created: CaseFact; previous: CaseFact[] }> {
+    const validation = validateFactValue(input.valueType, input.value);
+    if (!validation.valid) {
+      throw new ValidationFailedError(`Value does not satisfy the "${input.valueType}" type: ${validation.reason}`, { key: input.key });
+    }
+    const scoped = this.prisma.forTenantId(tenantId);
+    const current = await scoped.caseFact.findMany({ where: { caseId, key: input.key, isCurrent: true } });
+    const latest = [...current].sort((a, b) => b.revision - a.revision)[0];
+    const history = await scoped.caseFact.findFirst({ where: { caseId, key: input.key }, orderBy: { revision: 'desc' } });
+    if (current.length > 0) await scoped.caseFact.updateMany({ where: { id: { in: current.map((f) => f.id) } }, data: { isCurrent: false } });
+    const created = await scoped.caseFact.create({
+      data: { ...this.toCreateData(tenantId, caseId, input, (history?.revision ?? 0) + 1, 'CONFIRMED'), verifiedBy: 'schema+self-correction', supersedesFactId: latest?.id },
+    });
+    await this.bumpRevision(tenantId, caseId);
+    return { created, previous: current };
+  }
+
   /** Rejects a proposal: it stays as history but no longer counts. */
   async reject(tenantId: string, factId: string, userId: string): Promise<CaseFact> {
     const fact = await this.requireFact(tenantId, factId);

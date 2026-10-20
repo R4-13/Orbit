@@ -11,7 +11,7 @@ import { CaseFactsService } from '../case-facts.service';
 import { REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, analysisPrompt, evaluateAnalysis, type AnalysisResult, type RequestAnalysis } from './request-analysis';
 import { ReferenceProcessService } from './reference-process.service';
 import { ProfileContextService } from '../../organization/profile-context.service';
-import { messageCaseIds } from '../case-scope';
+import { focusedMessageText, messageCaseIds, splitFocus } from '../case-scope';
 
 const MAX_BODY_CHARS = 12_000;
 
@@ -90,7 +90,11 @@ export class RequestAnalysisService {
     const tenant = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: ctx.tenantId }, select: { name: true } }));
     const catalog = await this.reference.catalog(ctx.tenantId);
     const attachmentBlock = await this.attachmentTexts.blockForMessage(ctx.tenantId, message.id).catch(() => '');
-    const text = `Betreff: ${message.subject ?? ''}\n\n${(message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS)}${attachmentBlock ? `\n\n${attachmentBlock}` : ''}`;
+    const fullBody = (message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS);
+    // Teilvorgang einer zerlegten Nachricht: das eigene Anliegen steht vorn; belegt werden darf eine Angabe nur aus dem eigenen Auszug und dem gemeinsamen Kontext.
+    const focus = await splitFocus(this.prisma, ctx.tenantId, ctx.caseId);
+    const text = `Betreff: ${message.subject ?? ''}\n\n${focus ? focusedMessageText(focus, fullBody) : fullBody}${attachmentBlock ? `\n\n${attachmentBlock}` : ''}`;
+    const evidenceText = focus ? `${focus.segment}\n${focus.sharedContext}${attachmentBlock ? `\n${attachmentBlock}` : ''}` : text;
     const runtime = new AgentRuntime(llm, this.registry.subset([REQUEST_ANALYSIS_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));
     const system = buildLayeredSystemPrompt(
       analysisPrompt({ catalog: catalog.map((c) => `${c.name} (${c.category})`).join('; '), reservedRequirements: reserved.description, companyName: tenant?.name ?? 'dem Betrieb', profile: await this.profileContext.promptFor(ctx.tenantId).catch(() => '') }),
@@ -103,7 +107,7 @@ export class RequestAnalysisService {
     const submitted = [...turn.toolCallOutcomes.filter((o) => o.toolName === REQUEST_ANALYSIS_TOOL)].reverse().find((o) => o.result?.status === 'SUCCEEDED');
     if (!submitted) throw new ToolFailedError('Die KI hat keine gültige Analyse geliefert.', { errorCode: 'INVALID_ANALYSIS', retryable: true });
 
-    const result = evaluateAnalysis(RequestAnalysisSchema.parse(submitted.output), text, reserved.keys);
+    const result = evaluateAnalysis(RequestAnalysisSchema.parse(submitted.output), evidenceText, reserved.keys);
 
     // Entnommene Angaben: nur mit wörtlichem Beleg (bereits in evaluateAnalysis geprüft) und gültigem Typ als bestätigter Fakt.
     for (const item of result.known) {

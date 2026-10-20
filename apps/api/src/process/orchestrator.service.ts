@@ -62,8 +62,13 @@ export interface StartCaseOptions {
   intentSummary?: string;
 }
 
+/** Wartezeiten vor den Wiederholungen der Planung bei einem vorübergehenden KI-Ausfall (Minuten). Danach geht der Vorgang mit Begründung an eine Person. */
+export const PLAN_RETRY_DELAYS_MINUTES: readonly number[] = [1, 5, 15, 30, 60, 120];
+const PLAN_RETRY_EVENT = 'plan.retry';
+
 export interface StartCaseResult {
-  outcome: 'RUNNING' | 'AWAITING_PLAN_APPROVAL' | 'MANUAL_REVIEW';
+  /** `RETRY_SCHEDULED`: die KI war vorübergehend nicht erreichbar; die Planung wird persistent und zeitversetzt wiederholt. */
+  outcome: 'RUNNING' | 'AWAITING_PLAN_APPROVAL' | 'MANUAL_REVIEW' | 'RETRY_SCHEDULED';
   planId?: string;
   blueprint?: { key: string; version: string };
   reasons: string[];
@@ -148,6 +153,11 @@ export class OrchestratorService {
   private async planAndActivate(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2]): Promise<StartCaseResult> {
     const outcome = await this.planner.plan(tenantId, caseId, request);
     const blueprintRef = request.blueprint ? { key: request.blueprint.key, version: request.blueprint.version } : undefined;
+    if (outcome.status === 'REVIEW_REQUIRED' && outcome.transient && !request.procedure) {
+      const retry = await this.schedulePlanRetry(tenantId, caseId, request, outcome.reason);
+      if (retry.scheduled) return { outcome: 'RETRY_SCHEDULED', blueprint: blueprintRef, reasons: [retry.message] };
+      outcome.reason = retry.message;
+    }
     if (outcome.status === 'REVIEW_REQUIRED') {
       const reasons = [outcome.reason, ...(outcome.validation?.issues.filter((i) => i.severity === 'ERROR').slice(0, 3).map((i) => i.message) ?? [])];
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: reasons });
@@ -159,6 +169,32 @@ export class OrchestratorService {
     }
     await this.activatePlan(tenantId, caseId, outcome.graph.plan.id, request.userId);
     return { outcome: 'RUNNING', planId: outcome.graph.plan.id, blueprint: blueprintRef, reasons: [] };
+  }
+
+  /**
+   * FX-19: ein vorübergehender KI-Ausfall beim Planen ist kein Grund, den Vorgang sofort an eine Person zu geben. Die Planung wird begrenzt (`PLAN_RETRY_DELAYS_MINUTES`), zeitversetzt und persistent
+   * (Wartebedingung `plan.retry` mit Frist; der Sweep nimmt sie auf) wiederholt. Wiederholt wird nur das Planen – bereits ausgeführte Wirkungen bleiben im Plan erhalten und werden nie wiederholt.
+   * Nach Ausschöpfen der Grenze geht der Vorgang mit nachvollziehbarer Begründung an eine Person.
+   */
+  private async schedulePlanRetry(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2], reason: string): Promise<{ scheduled: boolean; message: string }> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const used = await scoped.waitSubscription.count({ where: { caseId, eventType: PLAN_RETRY_EVENT } });
+    if (used >= PLAN_RETRY_DELAYS_MINUTES.length) {
+      const message = `Die KI-Planung war auch nach ${used} zeitversetzten Wiederholungen nicht erreichbar (${reason}); bitte prüfen.`;
+      await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.PLAN_RETRY_EXHAUSTED, payload: { attempts: used, reason } });
+      return { scheduled: false, message };
+    }
+    const delayMinutes = PLAN_RETRY_DELAYS_MINUTES[used] as number;
+    const retryAt = new Date(Date.now() + delayMinutes * 60_000);
+    await this.prisma.inTenantTransaction(tenantId, async (tx) => {
+      await tx.waitSubscription.create({
+        data: { tenantId, caseId, eventType: PLAN_RETRY_EVENT, correlation: asJson({ trigger: request.trigger, userId: request.userId ?? null, intentSummary: request.intentSummary ?? null }), deadlineAt: retryAt },
+      });
+      await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.PLAN_RETRY_SCHEDULED, payload: { attempt: used + 1, of: PLAN_RETRY_DELAYS_MINUTES.length, retryAt: retryAt.toISOString(), reason } });
+    });
+    const message = `Die KI-Planung ist vorübergehend nicht erreichbar; ORBIT versucht es automatisch erneut (Versuch ${used + 1} von ${PLAN_RETRY_DELAYS_MINUTES.length}, nächster Versuch ${retryAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr).`;
+    await this.lifecycle.transition(tenantId, caseId, { to: 'WAITING_FOR_EXTERNAL_SYSTEM', attentionReasons: [message] });
+    return { scheduled: true, message };
   }
 
   /** Activates a validated plan: replaced work is cancelled (open approvals void, nothing already confirmed is touched). */
@@ -303,10 +339,13 @@ export class OrchestratorService {
         case 'REASSESS':
           if (isReplanPoint(def)) {
             // Ein fester Ablauf stößt an seine Grenze (z. B. die Frage ist aus dem Betriebswissen nicht belegbar): der Vorgang wird frei weitergeplant, statt nur übergeben zu werden.
-            await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type, replan: true }, 'LIVE');
+            // Der Schritt wartet, bis das Weiterplanen entschieden ist: erst dann gilt (bei Misserfolg) der feste Rückfallweg zur Person.
+            await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'WAITING' });
             const replanned = await this.replan(tenantId, caseRow.id, undefined);
-            // Gelingt das freie Weiterplanen nicht (KI nicht erreichbar, Plan unzulässig), bleibt der feste Rückfallweg zur Person – der Grund steht im Verlauf, nicht nur im Ergebnis.
+            if (replanned.outcome === 'RETRY_SCHEDULED') return; // vorübergehender KI-Ausfall: der Schritt bleibt wartend, die Planung wird wiederholt (FX-19)
+            // Gelingt das freie Weiterplanen nicht (Plan unzulässig, Wiederholungen ausgeschöpft), bleibt der feste Rückfallweg zur Person – der Grund steht im Verlauf, nicht nur im Ergebnis.
             if (replanned.outcome === 'MANUAL_REVIEW') await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.REPLAN_UNAVAILABLE, payload: { nodeKey: node.nodeKey, reasons: replanned.reasons.slice(0, 5) } });
+            await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['WAITING'], { state: 'SUCCEEDED', output: asJson({ marker: def.type, replan: true, outcome: replanned.outcome }), executionMode: 'LIVE', completedAt: new Date() });
             return;
           }
           await this.succeed(tenantId, caseRow.id, graph, node, { marker: def.type }, 'LIVE');
@@ -711,7 +750,8 @@ export class OrchestratorService {
 
   /** Waits whose deadline passed: the awaiting node fails per its policy, visibly (§13.4). */
   private async expireWaits(tenantId: string, caseRow: Case): Promise<boolean> {
-    const due = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', deadlineAt: { lt: new Date() } } });
+    const due = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', deadlineAt: { lt: new Date() } }, orderBy: { deadlineAt: 'asc' } });
+    if (due?.eventType === PLAN_RETRY_EVENT) return this.retryPlanning(tenantId, caseRow, due);
     if (!due || !due.planId || !due.nodeKey) return false;
     if (due.eventType === TIME_REACHED_EVENT) {
       // Der Zeitpunkt ist erreicht: der Warteschritt gelingt und der Ablauf geht weiter.
@@ -734,6 +774,25 @@ export class OrchestratorService {
     const node = graph?.nodes.find((n) => n.nodeKey === due.nodeKey);
     if (graph && node) {
       await this.failNode(tenantId, caseRow, graph, node, node.definition as unknown as PlanNode, 'WAIT_TIMEOUT', 'Die erwartete Antwort ist nicht rechtzeitig eingegangen.', ['WAITING']);
+    }
+    return true;
+  }
+
+  /** Die Frist einer zeitversetzten Wiederholung der Planung ist erreicht (FX-19): erneut planen; bei erneutem Ausfall folgt die nächste Frist, nach der letzten die Übergabe an eine Person. */
+  private async retryPlanning(tenantId: string, caseRow: Case, due: { id: string; correlation: unknown }): Promise<boolean> {
+    await this.prisma.inTenantTransaction(tenantId, async (tx) => {
+      await tx.waitSubscription.updateMany({ where: { id: due.id, status: 'WAITING' }, data: { status: 'SATISFIED', resolvedAt: new Date() } });
+      await this.events.appendInTx(tx, tenantId, caseRow.id, { type: CASE_EVENT_TYPES.WAIT_SATISFIED, payload: { reason: PLAN_RETRY_EVENT } });
+    });
+    const correlation = (due.correlation ?? {}) as { trigger?: 'INITIAL' | 'REPLAN'; userId?: string | null; intentSummary?: string | null };
+    await this.ensureInProgress(tenantId, caseRow.id);
+    const result = await this.planAndActivate(tenantId, caseRow.id, { trigger: correlation.trigger ?? 'REPLAN', userId: correlation.userId ?? undefined, intentSummary: correlation.intentSummary ?? undefined });
+    if (result.outcome === 'RETRY_SCHEDULED') return true;
+    // Ein wartender Weiterplanen-Schritt eines festen Ablaufs gilt jetzt als entschieden: Erfolg (der alte Plan ist abgelöst) oder fester Rückfallweg zur Person.
+    const active = await this.store.getActive(tenantId, caseRow.id);
+    for (const node of active?.nodes.filter((n) => n.state === 'WAITING' && isReplanPoint(n.definition as unknown as PlanNode)) ?? []) {
+      if (result.outcome === 'MANUAL_REVIEW') await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.REPLAN_UNAVAILABLE, payload: { nodeKey: node.nodeKey, reasons: result.reasons.slice(0, 5) } });
+      await this.store.transitionNode(tenantId, caseRow.id, active!.plan.id, node.nodeKey, ['WAITING'], { state: 'SUCCEEDED', output: asJson({ replan: true, outcome: result.outcome }), executionMode: 'LIVE', completedAt: new Date() });
     }
     return true;
   }
@@ -763,6 +822,12 @@ export class OrchestratorService {
   /** Derives the case state when nothing can run: what is the case waiting for? */
   private async settle(tenantId: string, caseRow: Case, graph: PlanGraph): Promise<void> {
     const states = graph.nodes.map((n) => n.state);
+    // Steht eine zeitversetzte Wiederholung der Planung aus, wartet der Vorgang auf das System, nicht auf eine Antwort.
+    const retryPending = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', eventType: PLAN_RETRY_EVENT } });
+    if (retryPending) {
+      await this.lifecycle.transition(tenantId, caseRow.id, { to: 'WAITING_FOR_EXTERNAL_SYSTEM', attentionReasons: caseRow.attentionReasons.length > 0 ? caseRow.attentionReasons : ['Die KI-Planung wird automatisch wiederholt.'] });
+      return;
+    }
     let target: { to: 'WAITING_FOR_APPROVAL' | 'WAITING_FOR_INFORMATION' | 'MANUAL_REVIEW' | 'WAITING_FOR_EXTERNAL_SYSTEM'; reason: string } | undefined;
     if (states.includes('AWAITING_APPROVAL')) target = { to: 'WAITING_FOR_APPROVAL', reason: 'Eine Freigabe ist offen.' };
     else if (states.includes('OUTCOME_UNKNOWN')) target = { to: 'MANUAL_REVIEW', reason: 'Das Ergebnis einer Aktion ist ungewiss.' };

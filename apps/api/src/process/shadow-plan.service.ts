@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@orbit/domain';
 import { FEATURE_FLAGS, SHADOW_PLAN_LIMIT_PER_TENANT, rateShadowPlan } from '@orbit/shared';
+import { AuditService } from '../audit/audit.service';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CapabilityRegistryService } from './capability-registry.service';
@@ -29,6 +30,7 @@ export class ShadowPlanService {
     private readonly capabilities: CapabilityRegistryService,
     private readonly events: CaseEventsService,
     private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
   ) {}
 
   /** Ohne Rückgabewert und ohne Ausnahme – für den Aufruf aus dem Eingang ohne Warten (`void`). */
@@ -57,8 +59,14 @@ export class ShadowPlanService {
     const finish = (payload: Record<string, unknown>) =>
       this.prisma.forTenantId(tenantId).caseEvent.update({ where: { id: eventId }, data: { payload: payload as Prisma.InputJsonValue } });
 
-    // 2. Zählen (inklusive des eigenen Ereignisses): über der Grenze wird nicht geplant.
-    const used = await this.prisma.forTenantId(tenantId).caseEvent.count({ where: { tenantId, type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED } });
+    // 2. Zählen (inklusive des eigenen Ereignisses): über der Grenze wird nicht geplant. Die Zählung ist **dauerhaft**: jede verbrauchte Planung hinterlässt zusätzlich einen Audit-Eintrag, der das
+    //    Löschen des Vorgangs überlebt – wer Testvorgänge löscht, setzt den Zähler nicht zurück. Maßgeblich ist der größere der beiden Werte.
+    await this.audit.record({ tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: eventId } });
+    const scoped = this.prisma.forTenantId(tenantId);
+    const used = Math.max(
+      await scoped.caseEvent.count({ where: { tenantId, type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED } }),
+      await scoped.auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } }),
+    );
     if (used > SHADOW_PLAN_LIMIT_PER_TENANT) {
       await finish({ stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht.`, limit: SHADOW_PLAN_LIMIT_PER_TENANT });
       return 'LIMIT_REACHED';

@@ -25,15 +25,30 @@ export const RequestAnalysisSchema = z
       .max(20),
     /** Angaben, ohne die kein verlässliches Angebot möglich ist und die noch fehlen. */
     missingInformation: z
-      .array(z.object({ key: slug, label: z.string().trim().min(1).max(80), question: z.string().trim().min(8).max(240), why: z.string().trim().max(200).optional() }).strict())
+      .array(z.object({
+          key: slug,
+          label: z.string().trim().min(1).max(80),
+          question: z.string().trim().min(8).max(240),
+          why: z.string().trim().max(200).optional(),
+          /** Wird die Antwort für den nächsten zulässigen Schritt gebraucht? `false`: nice to have – wird nicht erfragt. */
+          neededNow: z.boolean().default(true),
+          /** Lässt sich die Angabe aus vorhandenen Quellen beschaffen (Kundenstamm, frühere Nachrichten, Betriebswissen)? `true`: nicht die Kundschaft fragen. */
+          lookupPossible: z.boolean().default(false),
+        })
+        .strict(),
+    )
       .max(8),
     /** Braucht ein verlässliches Angebot einen Termin vor Ort? */
     siteVisit: z.object({ recommended: z.boolean(), reason: z.string().trim().max(300) }).strict(),
     /** Der sinnvolle nächste Schritt gegenüber der Kundschaft. */
     nextStep: z.enum(['ASK_CUSTOMER', 'PROPOSE_SITE_VISIT', 'PROPOSE_PHONE_CALL']),
+    /** Liegt die Anfrage laut Betriebsprofil im Leistungsumfang? `NO`: klar außerhalb – keine Detailfragen zur Ausführung. `UNSURE`: im Zweifel wie bisher bearbeiten. */
+    withinOffering: z.enum(['YES', 'NO', 'UNSURE']).default('UNSURE'),
   })
   .strict();
 export type RequestAnalysis = z.infer<typeof RequestAnalysisSchema>;
+/** Eingabeform: Felder mit Standardwert (neededNow, lookupPossible, withinOffering) dürfen fehlen. */
+export type RequestAnalysisInput = z.input<typeof RequestAnalysisSchema>;
 
 /** Die ausgewertete Analyse, wie sie am Vorgang festgehalten wird. */
 export interface AnalysisResult {
@@ -45,6 +60,8 @@ export interface AnalysisResult {
   requirements: Array<{ key: string; label: string; question: string; type: 'string' | 'number'; blocking: boolean }>;
   siteVisit: { recommended: boolean; reason: string };
   nextStep: 'ASK_CUSTOMER' | 'PROPOSE_SITE_VISIT' | 'PROPOSE_PHONE_CALL';
+  /** Leistungsumfang laut Analyse (`NO`: keine Detailfragen gestellt). */
+  withinOffering?: 'YES' | 'NO' | 'UNSURE';
   /** Vorschläge der KI, die nicht übernommen wurden, mit Grund (für die Nachvollziehbarkeit). */
   rejected: Array<{ what: string; reason: string }>;
 }
@@ -80,7 +97,7 @@ function typeOf(value: string | number): 'string' | 'number' {
  * Prüft den Vorschlag der KI. `messageText` ist der Text, in dem die Belege stehen müssen; `reservedKeys` sind Angaben, die feste Regeln bereits abfragen
  * (z. B. Menge) – sie werden nicht ein zweites Mal gefragt.
  */
-export function evaluateAnalysis(proposal: RequestAnalysis, messageText: string, reservedKeys: ReadonlySet<string>, reservedLabelsLower: readonly string[] = []): AnalysisResult {
+export function evaluateAnalysis(proposal: RequestAnalysisInput, messageText: string, reservedKeys: ReadonlySet<string>, reservedLabelsLower: readonly string[] = []): AnalysisResult {
   const haystack = normalize(messageText);
   const rejected: AnalysisResult['rejected'] = [];
   const known: AnalysisResult['known'] = [];
@@ -118,6 +135,19 @@ export function evaluateAnalysis(proposal: RequestAnalysis, messageText: string,
       rejected.push({ what: item.label, reason: 'Der Termin wird gesondert vereinbart' });
       continue;
     }
+    // Nur fragen, was für einen zulässigen nächsten Schritt gebraucht wird und nicht aus vorhandenen Quellen zu beschaffen ist; klar außerhalb des Leistungsumfangs gibt es keine Detailfragen.
+    if (proposal.withinOffering === 'NO') {
+      rejected.push({ what: item.label, reason: 'Anfrage liegt klar außerhalb des Leistungsumfangs: keine Detailfragen' });
+      continue;
+    }
+    if (item.neededNow === false) {
+      rejected.push({ what: item.label, reason: 'wird für den nächsten Schritt nicht gebraucht' });
+      continue;
+    }
+    if (item.lookupPossible === true) {
+      rejected.push({ what: item.label, reason: 'ist aus vorhandenen Quellen beschaffbar: die Kundschaft wird nicht gefragt' });
+      continue;
+    }
     const safe = isSafeCustomerText(item.question);
     if (!safe.safe) {
       rejected.push({ what: item.label, reason: `Rückfrage nicht übernommen: ${safe.reason}` });
@@ -132,7 +162,7 @@ export function evaluateAnalysis(proposal: RequestAnalysis, messageText: string,
   const nextStep = siteVisit.recommended ? 'PROPOSE_SITE_VISIT' : proposal.nextStep;
   const reasonSafe = isSafeCustomerText(siteVisit.reason).safe;
 
-  return { requestType: proposal.requestType, summary: proposal.summary, known, requirements, siteVisit: { recommended: siteVisit.recommended, reason: reasonSafe ? siteVisit.reason : '' }, nextStep, rejected };
+  return { requestType: proposal.requestType, summary: proposal.summary, known, requirements, siteVisit: { recommended: siteVisit.recommended, reason: reasonSafe ? siteVisit.reason : '' }, nextStep, withinOffering: proposal.withinOffering, rejected };
 }
 
 /** Ein Termin gilt erst als abgeschlossen, wenn sein Ergebnis vorliegt – ohne Aufmaß/Befund bzw. Gesprächsergebnis gibt es kein verlässliches Angebot (interne Anforderung, wird nicht erfragt). */
@@ -152,6 +182,8 @@ Vorgehen:
 2. Entnimm alle Angaben, die bereits in der Anfrage stehen (knownDetails), jeweils mit einem WÖRTLICHEN Zitat aus der Anfrage in "evidence". Nichts raten, nichts ergänzen.
 3. Überlege, welche weiteren Angaben ein Fachbetrieb für ein VERLÄSSLICHES Angebot dieser konkreten Leistung wirklich braucht (missingInformation) – Angaben, die schon in der Anfrage stehen, nie erneut erfragen. Stelle nur die wenigen entscheidenden Fragen (höchstens 6), konkret und höflich, jede in einem Satz, ohne Links, Adressen, Kontonummern oder Zahlungsaufforderungen.
 4. Entscheide, ob für ein verlässliches Angebot ein Termin vor Ort nötig ist (z. B. Aufmaß, Besichtigung der baulichen Situation, Beratung bei Heizung/Sanitär/Elektro/Fenster/Dach), und wähle den sinnvollen nächsten Schritt: ASK_CUSTOMER (Fragen genügen), PROPOSE_SITE_VISIT (Vor-Ort-Termin vorschlagen) oder PROPOSE_PHONE_CALL (zuerst kurz telefonieren, um offene Punkte oder den Vor-Ort-Termin zu klären).
+5. Frage nur, was für den NÄCHSTEN zulässigen Schritt gebraucht wird (neededNow=true) und was nur die Kundschaft weiß; lässt sich eine Angabe aus vorhandenen Quellen beschaffen (Kundenstamm, frühere Nachrichten, Betriebswissen), setze lookupPossible=true statt zu fragen.
+6. Setze withinOffering: YES, wenn die Anfrage zum Angebot des Betriebs passt, NO, wenn sie klar außerhalb liegt (andere Branche/Leistung, die der Betrieb laut Profil nicht erbringt), sonst UNSURE. Der Leistungsumfang betrifft nur Anfragen nach einer Leistung: Mitteilungen, Bestätigungen, Änderungen von Kontaktdaten und andere organisatorische Anliegen sind NICHT außerhalb des Leistungsumfangs (UNSURE). Bei NO fragst du keine Details zur Ausführung.
 Fragen nach den Terminzeiten der Kundschaft (wann sie Zeit hat) gehören NICHT in missingInformation: den Termin vereinbart ORBIT gesondert mit konkreten Vorschlägen.
 Bereits durch feste Regeln abgefragt (nicht erneut fragen): ${input.reservedRequirements || '(keine)'}.
 Leistungen des Betriebs: ${input.catalog || '(Katalog leer)'}.

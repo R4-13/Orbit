@@ -22,3 +22,4 @@ export * from './adhoc-completion';
 export * from './plan-approval';
 export * from './shadow-rating';
 export * from './case-split';
+export * from './concerns';

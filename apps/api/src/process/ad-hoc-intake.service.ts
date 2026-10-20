@@ -1,14 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Case } from '@orbit/domain';
-import type { TriageResult } from '@orbit/shared';
+import type { PlanProposal, TriageResult } from '@orbit/shared';
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { BlueprintFitService, type GuideDescription } from './blueprint-fit.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { buildEmergencyProcedure } from './emergency-procedure';
 import { buildInformationProcedure, buildStatusProcedure } from './standard-procedures';
 import { OrchestratorService, type StartCaseResult } from './orchestrator.service';
+import { messageCaseIds } from './case-scope';
 import { ShadowPlanService } from './shadow-plan.service';
 
 const REFERENCE_WINDOW_DAYS = 60;
@@ -37,6 +39,7 @@ export class AdHocIntakeService {
     private readonly facts: CaseFactsService,
     private readonly events: CaseEventsService,
     private readonly shadow: ShadowPlanService,
+    private readonly fit: BlueprintFitService,
   ) {}
 
   /** Startet die Bearbeitung und treibt sie voran. Wirft nie: bei jedem Fehler bleibt der Vorgang bei einer Person. */
@@ -83,11 +86,25 @@ export class AdHocIntakeService {
     const executability = await this.capabilities.executabilityFor(tenantId);
     const ready = (...keys: string[]) => keys.every((key) => executability.get(key)?.executable === true);
     const reference = await this.prisma.forTenantId(tenantId).caseFact.findFirst({ where: { caseId, key: 'case.reference', isCurrent: true, status: 'CONFIRMED' } });
-    if (reference && ready('email.send', 'communication.draft') && (await this.policy.resolveMode(tenantId, 'email.send.acknowledgement')) !== 'DISABLED') return buildStatusProcedure();
-    if (ready('email.send', 'communication.draft', 'knowledge.answer') && (await this.policy.resolveMode(tenantId, 'email.send.information')) !== 'DISABLED' && (await this.policy.resolveMode(tenantId, 'knowledge.answer')) !== 'DISABLED') {
-      return buildInformationProcedure({ message: `Allgemeine Frage „${subject.slice(0, 120)}“ – aus dem Betriebswissen nicht belegt beantwortbar, bitte persönlich antworten.` });
+    let candidate: { procedure: PlanProposal; guide: GuideDescription } | undefined;
+    if (reference && ready('email.send', 'communication.draft') && (await this.policy.resolveMode(tenantId, 'email.send.acknowledgement')) !== 'DISABLED') {
+      candidate = {
+        procedure: buildStatusProcedure(),
+        guide: { key: 'STANDARD_STATUS', title: 'Nachfrage zum Stand einer früheren Anfrage', goals: ['Anfrage beantwortet'], scope: 'Der Absender erhält den Stand seines früheren Vorgangs mitgeteilt', steps: ['Absender prüfen', 'Statusauskunft zum früheren Vorgang vorbereiten und senden'] },
+      };
+    } else if (ready('email.send', 'communication.draft', 'knowledge.answer') && (await this.policy.resolveMode(tenantId, 'email.send.information')) !== 'DISABLED' && (await this.policy.resolveMode(tenantId, 'knowledge.answer')) !== 'DISABLED') {
+      candidate = {
+        procedure: buildInformationProcedure({ message: `Allgemeine Frage „${subject.slice(0, 120)}“ – aus dem Betriebswissen nicht belegt beantwortbar, bitte persönlich antworten.` }),
+        guide: { key: 'STANDARD_INFORMATION', title: 'Allgemeine Frage aus dem Betriebswissen beantworten', goals: ['Anfrage beantwortet'], scope: 'Eine Frage der Kundschaft wird aus dem freigegebenen Betriebswissen (Profil, häufige Fragen) beantwortet', steps: ['Absender prüfen', 'Antwort aus dem Betriebswissen ermitteln', 'Antwort senden – oder, wenn nicht belegt beantwortbar, zuständige Person informieren'] },
+      };
     }
-    return undefined;
+    if (!candidate) return undefined;
+    // FX-18 (auch für feste Standardverfahren): Die Kategorie „Allgemeine Anfrage“ allein macht aus einer Mitteilung oder Bitte keine Frage, die aus dem Betriebswissen zu beantworten ist. Das Verfahren gilt nur,
+    // wenn es den konkreten Fall trägt; sonst plant ORBIT frei (mit den Zielen, die die Nachricht wirklich verlangt – der Planvertrag bindet an die Ziele der ersten Planung, nicht an die des Verfahrens).
+    const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { bodyText: true, bodyPreview: true } });
+    const assessment = await this.fit.assessGuide(tenantId, candidate.guide, { category: triage.category, subject, text: message?.bodyText ?? message?.bodyPreview ?? '' });
+    await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.BLUEPRINT_FIT_ASSESSED, payload: { blueprintKey: candidate.guide.key, procedure: true, ...assessment }, dedupeKey: `blueprint.fit:${caseId}:${candidate.guide.key}` });
+    return assessment.fits ? candidate.procedure : undefined;
   }
 
   private async canAcknowledge(tenantId: string, triage: TriageResult): Promise<boolean> {

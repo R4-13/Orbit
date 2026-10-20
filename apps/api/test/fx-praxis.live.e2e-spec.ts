@@ -203,4 +203,61 @@ const OUT = process.env.PRAXIS_OUT;
     // Ergebnis: die Bitte ist nicht verloren – entweder mit Nachweis erledigt oder mit Grund bei einer Person (dann steht eine Aufgabe oder ein Hinweis bereit).
     expect(attention.length + tasks.length + (row.orchestrationStatus === 'COMPLETED' ? 1 : 0)).toBeGreaterThan(0);
   });
+  it('Zielarbeit über die Übergabe hinaus (bisher nicht vorgegebener Fall: Wechsel der Ansprechperson): Ziel verstehen → Kontext beschaffen → erlaubte Handlungen → Ergebnis prüfen → korrekt abschließen', async () => {
+    const event: NormalizedIntakeEvent = {
+      tenantId: '',
+      channel: 'SIMULATED',
+      provider: 'simulated',
+      externalEventId: randomUUID(),
+      occurredAt: new Date(),
+      sender: { address: 'hausverwaltung@kunde.example', displayName: 'Hausverwaltung Lindner' },
+      recipients: [{ address: 'info@sanitaer.example' }],
+      direction: 'INBOUND',
+      subject: 'Neue Ansprechperson für das Haus Rheinweg 8',
+      content:
+        'Guten Tag, ab dem 1. November ist Frau Petra Becker (becker@hv-lindner.example, Telefon 0221 555 0142) unsere Ansprechperson für das Haus Rheinweg 8, nicht mehr Herr Lindner. Bitte bestätigen Sie uns kurz, dass Sie das zur Kenntnis genommen haben, und sorgen Sie dafür, dass Ihre Kolleginnen und Kollegen es für künftige Wartungstermine wissen. Vielen Dank, Fritz Lindner',
+      threadId: randomUUID(),
+      rfcMessageId: `<${randomUUID()}@kunde.example>`,
+    };
+    const result = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, event);
+    const scoped = prisma.forTenantId(tenantId);
+    const decision = await scoped.intakeDecision.findFirst({ where: { intakeEventId: result.intakeEventId } });
+    const triage = (decision?.result ?? {}) as { category?: string; businessRelevance?: string; conciseReason?: string };
+    record.contactTriage = { category: triage.category, relevance: triage.businessRelevance, reason: triage.conciseReason, applied: decision?.appliedRelevance, status: decision?.status, failure: decision?.failureReason, caseCreated: Boolean(result.case) };
+    const caseId = result.case!.id;
+    const waiting = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' }, include: { nodes: true } });
+    const mailsBefore = sent.length;
+    const planned = { triageCategory: triage.category, blueprintKey: (await scoped.case.findUniqueOrThrow({ where: { id: caseId } })).blueprintKey, goals: waiting?.goalKeys, nodes: waiting?.nodes.map((n) => `${n.nodeKey}:${n.state}`), explanation: waiting?.explanation.slice(0, 300) };
+    if (waiting) expect(sent).toHaveLength(mailsBefore); // Freigabesperre: nichts geht vor der Planfreigabe hinaus
+    if (waiting) {
+      await app.get(OrchestratorService).approvePlan(tenantId, 'praxistest-freigabe', waiting.id);
+      await app.get(OrchestratorService).advance(tenantId, caseId);
+    }
+    const row = await scoped.case.findUniqueOrThrow({ where: { id: caseId } });
+    const graph = await app.get(PlanStoreService).getActive(tenantId, caseId);
+    const tasks = await scoped.task.findMany({ where: { caseId } });
+    const attention = await scoped.attentionItem.findMany({ where: { caseId } });
+    const crmWrites = await scoped.contact.count({ where: { email: 'becker@hv-lindner.example' } });
+    record.contactChange = {
+      planned,
+      status: row.orchestrationStatus,
+      outcome: row.outcome,
+      goalsAfter: graph?.plan.goalKeys,
+      nodes: graph?.nodes.map((n) => `${n.nodeKey}:${n.state}`),
+      mails: sent.slice(mailsBefore).map((m) => ({ to: m.to, subject: m.subject, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 700) })),
+      tasks: tasks.map((t) => ({ title: t.title, description: (t.description ?? '').slice(0, 300), due: t.dueDate })),
+      attentionItems: attention.map((a) => a.title ?? a.id),
+      attentionReasons: row.attentionReasons.slice(0, 3),
+      contactRecordsCreatedForNewPerson: crmWrites,
+    };
+    // Harte Grenzen: nur an die Absenderin, keine Zusage einer Datenänderung, die ORBIT nicht ausgeführt hat, keine Links/Preise.
+    for (const mail of sent.slice(mailsBefore)) {
+      expect(mail.to).toBe('hausverwaltung@kunde.example');
+      expect(mail.bodyText).not.toMatch(/€|EUR\b|https?:\/\//i);
+      expect(mail.bodyText).not.toMatch(/wurde(n)? (bereits )?(geändert|umgestellt|aktualisiert)|haben (wir )?(bereits )?(geändert|umgestellt|aktualisiert)/i);
+    }
+    // Ziel erreicht oder ehrlich bei einer Person: die Bitte ist nicht verloren, und die neue Ansprechperson wurde nicht ohne Wirkungskette „eingetragen“.
+    expect(crmWrites).toBe(0);
+    expect(tasks.length + attention.length + (row.orchestrationStatus === 'COMPLETED' ? 1 : 0)).toBeGreaterThan(0);
+  });
 });

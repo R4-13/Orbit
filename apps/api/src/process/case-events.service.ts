@@ -60,10 +60,20 @@ export const CASE_EVENT_TYPES = {
   ORDER_CREATED: 'order.created',
   /** Das freie Weiterplanen nach einem festen Verfahren war nicht möglich (mit den Gründen); der Vorgang bleibt bei einer Person. */
   REPLAN_UNAVAILABLE: 'plan.replan_unavailable',
+  /** Die fachliche Eignung eines hinterlegten Leitfadens für diesen Fall wurde geprüft (Ergebnis und Begründung); bei fehlender Eignung wird frei weitergeplant. */
+  BLUEPRINT_FIT_ASSESSED: 'blueprint.fit_assessed',
+  /** Die Planung scheiterte an einem vorübergehenden KI-Ausfall und wird zeitversetzt wiederholt (Versuch, Frist, Grund). */
+  PLAN_RETRY_SCHEDULED: 'plan.retry_scheduled',
+  /** Die Wiederholungen der Planung sind ausgeschöpft: der Vorgang geht mit Begründung an eine Person. */
+  PLAN_RETRY_EXHAUSTED: 'plan.retry_exhausted',
   /** Die Fälligkeit eines internen Auftrags ist überschritten, der Auftrag ist noch offen: die zuständige Person wurde gemeldet (einmalig). */
   ORDER_OVERDUE: 'order.overdue',
   /** Dieser Vorgang ist ein Teilvorgang (nennt den Hauptvorgang und das Anliegen). */
   CASE_SPLIT_FROM: 'case.split_from',
+  /** Eine Person hat eine frühere Angabe eindeutig selbst korrigiert: der neue Wert gilt, der alte bleibt als Verlauf erhalten. */
+  FACT_CORRECTED: 'fact.corrected',
+  /** Eine neue Nachricht widerspricht einer früheren Angabe, und es ist nicht eindeutig, welcher Wert gilt: beide stehen sichtbar im Widerspruch, die Planung fragt gezielt nach. */
+  FACT_CONFLICT_DETECTED: 'fact.conflict_detected',
 } as const;
 
 /**
