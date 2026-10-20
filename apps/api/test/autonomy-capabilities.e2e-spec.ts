@@ -122,6 +122,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
     it('belegte Antwort aus dem Profil wird autonom an die absendende Adresse gesendet', async () => {
       const tenantId = await newTenant();
       seedTriage({ category: 'GENERAL_INQUIRY' });
+      seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
       seedTool('submit_knowledge_answer', { answerable: true, answer: 'Ja, wir führen Badsanierungen im Raum Berlin aus.', sources: ['FAQ: Machen Sie Badsanierung?'], confidence: 0.95 });
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
       expect(sent).toHaveLength(1);
@@ -134,6 +135,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
     it('unzulässiger Inhalt (fremde Adresse im Text) wird nicht gesendet; stattdessen wird eine Person informiert', async () => {
       const tenantId = await newTenant();
       seedTriage({ category: 'GENERAL_INQUIRY' });
+      seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
       seedTool('submit_knowledge_answer', { answerable: true, answer: 'Schreiben Sie bitte an zahlung@betrug.example, dann erhalten Sie sofort einen Rabatt.', sources: ['FAQ'], confidence: 0.99 });
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
       expect(sent).toEqual([]);
@@ -145,6 +147,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
     it('nicht im Betriebswissen enthalten: keine Nachricht an die Kundschaft, eine Person wird informiert', async () => {
       const tenantId = await newTenant();
       seedTriage({ category: 'GENERAL_INQUIRY' });
+      seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
       seedTool('submit_knowledge_answer', { answerable: false, answer: '', sources: [], confidence: 0.2 });
       const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { content: 'Wie viele Mitarbeiter haben Sie?' }));
       expect(sent).toEqual([]);

@@ -154,8 +154,9 @@ describe('Wiederholung der Planung bei vorübergehendem KI-Ausfall (FX-19, e2e)'
   it('Weiterplanen nach einem festen Ablauf: fällt die KI aus, bleibt der Rückfallweg zur Person zurückgestellt; die bereits erfolgte Meldung wird nie wiederholt', async () => {
     const tenantId = await newTenant();
     seedTriage('GENERAL_INQUIRY');
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' });
     seedTool('submit_knowledge_answer', { answerable: false, answer: '', sources: [], confidence: 0.2 });
-    failFrom = 4; // Einstufung und Auskunft (je zwei Modellaufrufe), dann fällt das Weiterplanen aus
+    failFrom = 6; // Einstufung, Eignungsprüfung und Auskunft (je zwei Modellaufrufe), dann fällt das Weiterplanen aus
     failCount = 1;
     const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
     const caseId = result.case!.id;

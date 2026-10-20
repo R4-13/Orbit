@@ -6,7 +6,7 @@ import { AdHocIntakeService } from './ad-hoc-intake.service';
 import { BlueprintFitService } from './blueprint-fit.service';
 import { BlueprintRegistryService } from './blueprint-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
-import { messageCaseIds } from './case-scope';
+import { messageCaseIds, splitFocus } from './case-scope';
 import { CaseLifecycleService } from './case-lifecycle.service';
 import { OrchestratorService } from './orchestrator.service';
 
@@ -36,7 +36,9 @@ export class ChildCaseStarterService {
       if (blueprint) {
         // FX-18: ein Leitfaden gilt nur, wenn er den konkreten Fall fachlich trägt.
         const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, childCase.id) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' } });
-        const assessment = await this.fit.assess(tenantId, blueprint, { category: triage.category, subject: subject, text: message?.bodyText ?? childCase.description ?? '' });
+        // Beurteilt wird das Anliegen dieses Teilvorgangs (sein Auszug), nicht die ganze Nachricht mit allen Anliegen.
+        const focus = await splitFocus(this.prisma, tenantId, childCase.id);
+        const assessment = await this.fit.assess(tenantId, blueprint, { category: triage.category, subject: subject, text: focus?.segment ?? message?.bodyText ?? childCase.description ?? '' });
         await this.events.append(tenantId, childCase.id, { type: CASE_EVENT_TYPES.BLUEPRINT_FIT_ASSESSED, payload: { blueprintKey: blueprint.row.key, ...assessment } });
         if (!assessment.fits) blueprint = null;
       }

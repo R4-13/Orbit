@@ -10,7 +10,7 @@ import { CaseFactsService } from './case-facts.service';
 import { buildEmergencyProcedure } from './emergency-procedure';
 import { buildInformationProcedure, buildStatusProcedure } from './standard-procedures';
 import { OrchestratorService, type StartCaseResult } from './orchestrator.service';
-import { messageCaseIds } from './case-scope';
+import { messageCaseIds, splitFocus } from './case-scope';
 import { ShadowPlanService } from './shadow-plan.service';
 
 const REFERENCE_WINDOW_DAYS = 60;
@@ -102,7 +102,8 @@ export class AdHocIntakeService {
     // FX-18 (auch für feste Standardverfahren): Die Kategorie „Allgemeine Anfrage“ allein macht aus einer Mitteilung oder Bitte keine Frage, die aus dem Betriebswissen zu beantworten ist. Das Verfahren gilt nur,
     // wenn es den konkreten Fall trägt; sonst plant ORBIT frei (mit den Zielen, die die Nachricht wirklich verlangt – der Planvertrag bindet an die Ziele der ersten Planung, nicht an die des Verfahrens).
     const message = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { bodyText: true, bodyPreview: true } });
-    const assessment = await this.fit.assessGuide(tenantId, candidate.guide, { category: triage.category, subject, text: message?.bodyText ?? message?.bodyPreview ?? '' });
+    const focus = await splitFocus(this.prisma, tenantId, caseId); // Teilvorgang: beurteilt wird sein Anliegen, nicht die ganze Nachricht
+    const assessment = await this.fit.assessGuide(tenantId, candidate.guide, { category: triage.category, subject, text: focus?.segment ?? message?.bodyText ?? message?.bodyPreview ?? '' });
     await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.BLUEPRINT_FIT_ASSESSED, payload: { blueprintKey: candidate.guide.key, procedure: true, ...assessment }, dedupeKey: `blueprint.fit:${caseId}:${candidate.guide.key}` });
     return assessment.fits ? candidate.procedure : undefined;
   }

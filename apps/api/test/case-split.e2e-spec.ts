@@ -150,6 +150,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
   it('zwei Anliegen → zwei verknüpfte Teilvorgänge mit eigenem Ziel; jedes erreicht sein Ziel, der Hauptvorgang schließt mit beiden', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION']);
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
     seedTool('submit_knowledge_answer', { answerable: true, answer: 'Ja, wir führen Badsanierungen im Raum Berlin aus.', sources: ['FAQ: Machen Sie Badsanierung?'], confidence: 0.95 });
     seedPlan(notifyPlan());
     const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
@@ -182,6 +183,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
   it('der Hauptvorgang bleibt offen, solange ein Teilvorgang nicht erledigt ist', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION']);
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
     seedTool('submit_knowledge_answer', { answerable: true, answer: 'Ja, wir führen Badsanierungen im Raum Berlin aus.', sources: ['FAQ: Machen Sie Badsanierung?'], confidence: 0.95 });
     // Anliegen 2: kein brauchbarer Plan → der Teilvorgang geht zur Prüfung an eine Person.
     seedTool('submit_process_plan', { goalKeys: ['x'], nodes: [], edges: [], unresolvedRequirements: [], assumptions: [], conciseExplanation: 'leer' });

@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
+import { ConcernSegmentationService } from '../src/intake/concern-segmentation.service';
 import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbound-mail.port';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -259,5 +260,40 @@ const OUT = process.env.PRAXIS_OUT;
     // Ziel erreicht oder ehrlich bei einer Person: die Bitte ist nicht verloren, und die neue Ansprechperson wurde nicht ohne Wirkungskette „eingetragen“.
     expect(crmWrites).toBe(0);
     expect(tasks.length + attention.length + (row.orchestrationStatus === 'COMPLETED' ? 1 : 0)).toBeGreaterThan(0);
+  });
+  it('Zerlegung mehrerer Anliegen mit dem echten Modell – unabhängig von der Einstufung: drei Wiederholungen je Formulierung, belegte Auszüge, jede tragende Aussage zugeordnet', async () => {
+    const segmenter = app.get(ConcernSegmentationService);
+    const texts: Record<string, { subject: string; text: string; expectAtLeast: number }> = {
+      fuenfAnliegen: {
+        subject: 'Fünf Dinge auf einmal',
+        text: 'Guten Tag,\n\nich habe fünf Anliegen: Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer. Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben. Drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren. Viertens: Sind Sie samstags telefonisch erreichbar? Fünftens tropft im Gäste-WC der Wasserhahn, bitte um einen Reparaturtermin.\n\nDanke, Tom Orbit',
+        expectAtLeast: 5,
+      },
+      fuenfAnliegenVariante: {
+        subject: 'Einiges auf einmal',
+        text: 'Hallo zusammen,\n\nich schreibe wegen mehrerer Dinge. Für meine Steuererklärung bräuchte ich eine Kopie der Rechnung vom letzten Einsatz. Außerdem muss ich den Wartungstermin am 28.10. leider auf den 4.11. verlegen. Interessant wäre für uns zudem ein Angebot für neue Thermostate an allen Heizkörpern. Dann noch eine Frage: Wie lange sind Sie freitags telefonisch erreichbar? Und im Gäste-WC tropft der Wasserhahn, könnten Sie dafür einen Reparaturtermin anbieten?\n\nVielen Dank, Tom Orbit',
+        expectAtLeast: 5,
+      },
+      einAnliegen: {
+        subject: 'Badsanierung',
+        text: 'Guten Tag, wir möchten unser Bad (ca. 7 m²) komplett sanieren lassen: bodengleiche Dusche, neue Fliesen, Waschtisch und WC. Wann hätten Sie Zeit für eine Besichtigung? Und was kostet so etwas ungefähr? Danke, Tom Orbit',
+        expectAtLeast: 1,
+      },
+    };
+    const report: Record<string, unknown> = {};
+    for (const [name, { subject, text, expectAtLeast }] of Object.entries(texts)) {
+      const runs: Array<{ concerns: number; supplemented: number; ungrounded: number; unassigned: number; titles: string[] }> = [];
+      for (let i = 0; i < 3; i += 1) {
+        const verified = await segmenter.segment(tenantId, { subject, text });
+        expect(verified).toBeDefined();
+        runs.push({ concerns: verified!.concerns.length, supplemented: verified!.concerns.filter((c) => c.supplemented).length, ungrounded: verified!.coverage.ungrounded.length, unassigned: verified!.coverage.unassigned.length, titles: verified!.concerns.map((c) => c.title) });
+        // Belegt: alle Auszüge stehen in der Nachricht (sonst sind sie nicht belegt und werden nicht verwendet) – nichts Erfundenes darf als Auszug durchgehen.
+        for (const c of verified!.concerns) if (c.grounded) for (const sentence of c.excerpt.split(/(?<=[.!?])\s+/)) expect(text.replace(/\s+/g, ' ')).toContain(sentence.replace(/\s+/g, ' ').trim().slice(0, 40));
+      }
+      report[name] = runs;
+      if (name === 'einAnliegen') for (const run of runs) expect(run.concerns).toBeLessThanOrEqual(3); // ein zusammenhängendes Anliegen wird nicht in viele zerlegt
+      else for (const run of runs) expect(run.concerns).toBeGreaterThanOrEqual(expectAtLeast);
+    }
+    record.segmentation = report;
   });
 });
