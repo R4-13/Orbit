@@ -1,0 +1,127 @@
+# Wiederholungsserie E auf Stand ea31fe2 (Modell gpt-6-luna, Reasoning none, Betrieb musterwerk, 20.10.2026 15:10-15:45 UTC) - Rohauszug je Vorgang
+# Szenarien: Badangebot x2 + Variante (Korrekturrunde 1: 8 bzw. 7 m2; Runde 2: 12 bzw. 11 m2), Praxisumzug x2 + Variante (ein Vorgang mit Planfreigabe und Antwort).
+=== 9b0f2287-2cce-4b6f-8174-a033683eb38a
+15:11:16 | IN_PROGRESS | (frei) | Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für W | - | 
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft fragt nicht nach allgemeinem Betriebswissen, sondern nach Übernahme und Vorgehen bei einem konkreten Installationsprojekt mit Termin- und Abnahmebedarf. Der Leitfaden zur Beantwortung e
+ziele | human.review,inquiry.answered,staff.informed,task.created
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas“. Wir haben sie so verstanden: Eine Zahnarztpraxis fragt nach Wasser- und Druckluftanschlüssen für drei Behandlungsplätze sowie einer Gasleitung für das Labor und deren Abnahme vor der Praxiseröffnung am 3. Februar; sie möchte w
+ereignisse | fact.conflict_detected
+=== 6736424b-9926-4253-88fd-37cdb6f5cee0
+15:12:26 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: [INPUT_UNKNOWN] "communication.draft" kennt die Eingabe "config" nicht. Erlaubt: to, missing, quoteI
+fit | false | true | STANDARD_INFORMATION | Die Nachricht fragt nicht nach einer Auskunft aus dem Betriebswissen, sondern nach Übernahme und Vorgehen für konkrete Installations-, Verlegungs- und Abnahmearbeiten mit Termin. Der Leitfaden würde l
+ziele | human.review,staff.informed,task.created
+ereignisse | plan.replan_unavailable
+=== 02b3f355-79f3-48cc-a3c5-75b57772cb63
+15:13:54 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: [BINDING_UNKNOWN_NODE] Eingabe "missing" verweist auf den unbekannten Knoten "requirements". Vorhand
+fit | false | true | STANDARD_INFORMATION | Die Nachricht zielt auf die Übernahme und Planung konkreter Installations- und Abnahmearbeiten für einen Praxisumzug. Der Leitfaden ist auf Auskünfte aus allgemeinem Betriebswissen beschränkt und deck
+ziele | human.review,staff.informed
+ereignisse | plan.replan_unavailable
+=== 64cfe9e1-ba8b-48ed-81f9-b6bd73640d78
+15:15:17 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badezimmer erneuern – was kostet das? | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Kundschaft möchte eine konkrete Badezimmer-Erneuerung, fragt nach einer groben Preiseinschätzung und bittet um eine Besichtigung. Der Leitfaden dient dazu, die Anfrage samt nötigen Angaben aufzune
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026,
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ereignisse | fact.corrected fact.corrected
+=== e2094ff2-2c24-4526-a779-cb5c454e99d3
+15:15:46 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person möchte ein Angebot für eine konkrete Badsanierung und fragt nach einer Besichtigung. Der Leitfaden passt: Er erfasst die Anfrage, klärt fehlende Angaben und kann einen Termin vereinbaren, w
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer? 2. Bleiben Dusche, Waschtisch und WC an ihren bisherigen Positionen, oder sollen Anschlüsse verlegt werden?  Für eine ve
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer? 2. Bleiben Dusche, Waschtisch und WC an ihren bisherigen Positionen, oder sollen Anschlüsse verlegt werden?  Für eine verlässliche Einschätzung schauen wir u
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer? 2. Bleiben Dusche, Waschtisch und WC an ihren bisherigen Positionen, oder sollen Anschlüsse verlegt werden?  Für eine verlässliche Einschätzung schauen wir u
+ereignisse | fact.corrected fact.corrected
+=== 02b433b0-630b-4843-a116-99a5fbe4ab5e
+15:17:10 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person möchte eine Komplettsanierung angeboten bekommen und fragt ausdrücklich nach einer Besichtigung sowie einer ungefähren Kosteneinschätzung. Der Leitfaden passt für die Aufnahme und Übergabe 
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ereignisse | fact.corrected fact.corrected
+
+## Fakten der Badangebote
+== 64cfe9e1-ba8b-48ed-81f9-b6bd73640d78 WAITING_FOR_INFORMATION
+Badezimmerfläche | 6 | CANDIDATE | f | 1
+Badezimmerfläche | 7 | CONFIRMED | f | 2
+Badezimmerfläche | 11 | CONFIRMED | t | 3
+fact.corrected | {"key": "Badezimmerfläche", "current": 7, "previous": 6, "messageId": "30344164-2b45-400c-afda-fdc5a5537d86"}
+fact.corrected | {"key": "Badezimmerfläche", "current": 11, "previous": 7, "messageId": "ee1de70d-59e9-4098-868d-fecfdbc53bc1"}
+3
+== e2094ff2-2c24-4526-a779-cb5c454e99d3 WAITING_FOR_INFORMATION
+bathroom_area | 7 | CANDIDATE | f | 1
+bathroom_area | 8 | CONFIRMED | f | 2
+bathroom_area | 12 | CONFIRMED | t | 3
+fact.corrected | {"key": "bathroom_area", "current": 8, "previous": 7, "messageId": "083cd03d-f810-4fdd-adf4-1f63d1aa37ab"}
+fact.corrected | {"key": "bathroom_area", "current": 12, "previous": 8, "messageId": "efccf6bd-dd17-41a3-a65d-b0bd7b0eae64"}
+3
+== 02b433b0-630b-4843-a116-99a5fbe4ab5e WAITING_FOR_INFORMATION
+Badfläche | 7 | CANDIDATE | f | 1
+Badfläche | 8 | CONFIRMED | f | 2
+Badfläche | 12 | CONFIRMED | t | 3
+fact.corrected | {"key": "Badfläche", "current": 8, "previous": 7, "messageId": "e6798016-b583-4e18-9aeb-946c23baf973"}
+fact.corrected | {"key": "Badfläche", "current": 12, "previous": 8, "messageId": "013f361e-ce9a-435c-bd71-d91aac5e2b3b"}
+3
+## Praxisumzug (freigegebener Vorgang): Verlauf
+case.status_changed | 15:11:16
+blueprint.fit_assessed | 15:11:22
+plan.created | 15:11:34
+plan.activated | 15:11:34
+case.status_changed | 15:11:34
+node.state_changed | 15:11:34
+customer.record_checked | 15:11:35
+node.state_changed | 15:11:35
+node.state_changed | 15:11:35
+requirements.analyzed | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:45
+context.resolution_attempted | 15:11:46
+context.resolution_attempted | 15:11:46
+context.resolution_attempted | 15:11:46
+node.state_changed | 15:11:46
+node.state_changed | 15:11:46
+node.state_changed | 15:11:46
+plan.created | 15:12:11
+case.status_changed | 15:12:12
+node.state_changed | 15:12:12
+plan.superseded | 15:22:10
+plan.activated | 15:22:10
+case.status_changed | 15:22:10
+plan.scope_approved | 15:22:10
+node.state_changed | 15:22:10
+node.state_changed | 15:22:11
+node.state_changed | 15:22:11
+node.state_changed | 15:22:11
+node.state_changed | 15:22:12
+action.prepared | 15:22:12
+appointment.proposed | 15:22:12
+action.confirmed | 15:22:12
+node.state_changed | 15:22:12
+node.state_changed | 15:22:13
+action.prepared | 15:22:13
+action.confirmed | 15:22:14
+node.state_changed | 15:22:14
+node.state_changed | 15:22:14
+wait.started | 15:22:14
+node.state_changed | 15:22:14
+case.status_changed | 15:22:14
+fact.update_assessed | 15:27:52
+fact.conflict_detected | 15:27:52
+communication.received | 15:27:52
+wait.satisfied | 15:27:52
+node.state_changed | 15:27:52
+case.status_changed | 15:27:52
+plan.created | 15:28:34
+plan.superseded | 15:28:34
+plan.activated | 15:28:34
+case.status_changed | 15:28:34
+node.state_changed | 15:28:34
+node.state_changed | 15:28:35
+node.state_changed | 15:28:35
+node.state_changed | 15:28:35

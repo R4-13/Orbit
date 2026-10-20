@@ -117,6 +117,7 @@ export class PlannerService {
       contractGoalKeys: !blueprint && options.withGoalContract !== false ? await this.store.rootGoalKeys(tenantId, caseId) : undefined,
       priorClarifications: !blueprint && options.withGoalContract !== false ? confirmed.filter((c) => c.capabilityKey === 'email.send' && c.purpose === 'CLARIFICATION').length : undefined,
       staleStepNodes: !blueprint && options.withGoalContract !== false ? await this.staleStepNodes(tenantId, caseId) : undefined,
+      satisfiedWaitNodes: !blueprint && options.withGoalContract !== false ? await this.satisfiedWaitNodes(tenantId, caseId) : undefined,
       customerQuestionsOpen: !blueprint && options.withGoalContract !== false ? await this.openCustomerQuestions(tenantId, caseId) : undefined,
       requirementsAnalyzed: !blueprint && options.withGoalContract !== false ? (await this.prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'requirements.analyzed' } })) > 0 : undefined,
     };
@@ -341,7 +342,7 @@ export class PlannerService {
       const byId = new Map(originals.map((def) => [def.id, def] as const));
       candidate = { ...candidate, nodes: [...candidate.nodes.map((n) => byId.get(n.id) ?? n), ...originals.filter((def) => !candidate.nodes.some((n) => n.id === def.id))] };
     }
-    if (errors.some((i) => i.code === 'PLAN_BEHIND_WAIT')) candidate = stripBehindWait(candidate, new Set((context.confirmedEffects ?? []).map((c) => c.nodeId))) ?? candidate;
+    if (errors.some((i) => i.code === 'PLAN_BEHIND_WAIT')) candidate = stripBehindWait(candidate, new Set((context.confirmedEffects ?? []).map((c) => c.nodeId)), new Set(context.satisfiedWaitNodes ?? [])) ?? candidate;
     let result = validatePlan(candidate, context);
     if (result.valid) return result;
     const remaining = result.issues.filter((i) => i.severity === 'ERROR');
@@ -409,6 +410,12 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
     const latest = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } });
     if (!latest) return [];
     const nodes = await scoped.processPlanNode.findMany({ where: { plan: { caseId }, state: 'SUCCEEDED', type: 'EVALUATE_REQUIREMENTS', completedAt: { lt: latest.createdAt } }, select: { nodeKey: true } });
+    return [...new Set(nodes.map((n) => n.nodeKey))];
+  }
+
+  /** Warteknoten, die ihre Antwort bereits bekommen haben (Zustand „erfolgreich“): hinter ihnen darf die Reaktion auf die Antwort geplant werden. */
+  private async satisfiedWaitNodes(tenantId: string, caseId: string): Promise<string[]> {
+    const nodes = await this.prisma.forTenantId(tenantId).processPlanNode.findMany({ where: { plan: { caseId }, state: 'SUCCEEDED', type: 'WAIT_EVENT' }, select: { nodeKey: true } });
     return [...new Set(nodes.map((n) => n.nodeKey))];
   }
 

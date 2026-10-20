@@ -342,4 +342,40 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
       process.env.FACT_CORRECTION_ENABLED = 'false';
     }
   });
+  it('Neuplanung, die das erfüllte Warten behält und die Reaktion auf die Antwort dahinter plant: die Reaktion läuft (Person informiert, Aufgabe), der Vorgang bleibt nicht stumm in Bearbeitung', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    const askNodes = () => [
+      node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+      node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+      node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+      node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+      node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+    ];
+    const askEdges = [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')];
+    seedTool('submit_process_plan', { goalKeys: ['human.review'], nodes: askNodes(), edges: askEdges, unresolvedRequirements: [], assumptions: [], conciseExplanation: 'Verstehen, nachfragen, warten.' });
+    seedAnalysis();
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    await confirmPlan(tenantId, caseId);
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
+
+    // Die Neuplanung behält alle bisherigen Knoten – auch das jetzt erfüllte Warten – und plant die Reaktion auf die Antwort dahinter.
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review'],
+      nodes: [...askNodes(), node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Antwort erhalten: Standort geklärt, bitte Angebot und Frist prüfen.' } } }), node('human', 'MANUAL_TASK', { title: 'Eine Person prüft Umfang und Frist' })],
+      edges: [...askEdges, edge('wait', 'notify'), edge('notify', 'human')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Auf die Antwort reagieren.',
+    });
+    seedExtraction([{ key: 'ai.standort', value: 'Kölner Str. 12, 50667 Köln', evidence: 'Kölner Str. 12, 50667 Köln' }]);
+    await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Re: Praxisumzug', content: 'Die neuen Räume sind in der Kölner Str. 12, 50667 Köln.', rfcMessageId: '<m2@kunde.example>', inReplyTo: '<sent-1@mail.example>', references: ['<m1@kunde.example>', '<sent-1@mail.example>'] }));
+
+    const row = await caseOf(tenantId, caseId);
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(await prisma.forTenantId(tenantId).task.count({ where: { caseId } })).toBeGreaterThanOrEqual(1);
+    const notify = await prisma.forTenantId(tenantId).processPlanNode.findFirst({ where: { nodeKey: 'notify', plan: { caseId, status: 'ACTIVE' } } });
+    expect(notify?.state).toBe('SUCCEEDED');
+  });
 });

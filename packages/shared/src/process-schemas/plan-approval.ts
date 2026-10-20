@@ -117,8 +117,9 @@ export function reduceToUnderstanding(
  * Schneidet alles ab, was hinter einem Warten auf eine Antwort der Kundschaft geplant wurde (außer bereits ausgeführten Schritten): was dann zu tun ist, hängt vom Inhalt der Antwort ab; ORBIT plant nach der
  * Antwort neu. `undefined`, wenn nichts abzuschneiden ist.
  */
-export function stripBehindWait(proposal: PlanProposal, executedNodeIds: ReadonlySet<string>): PlanProposal | undefined {
-  const waits = proposal.nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config?.eventType === 'communication.received');
+export function stripBehindWait(proposal: PlanProposal, executedNodeIds: ReadonlySet<string>, satisfiedWaitNodeIds: ReadonlySet<string> = new Set()): PlanProposal | undefined {
+  // Ein Warten, das die Antwort schon bekommen hat (erfüllt), ist kein offenes Warten: was dahinter geplant wird, ist die Reaktion auf diese Antwort.
+  const waits = proposal.nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config?.eventType === 'communication.received' && !satisfiedWaitNodeIds.has(n.id));
   const behind = new Set<string>();
   const visit = (id: string): void => {
     for (const edge of proposal.edges.filter((e) => e.source === id)) {

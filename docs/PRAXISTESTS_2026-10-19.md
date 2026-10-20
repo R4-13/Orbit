@@ -118,3 +118,14 @@ Rohdaten: `docs/evidence/serie-d-9055186.txt`. 30 Vorgänge, bereinigt ID-genau 
 | Aufteilung „Fünf Anliegen“ (+ Variante), `process.split` im Testfenster | **4 von 4 geteilt, jedes Mal genau 5 Teilvorgänge, keine ergänzte Dublette** (Serie C: 5/5/5/6) |
 | Korrektur 7→8 m² / 6→7 m² (1. Antwort, Terminaussage vertagt) | **3 von 3 übernommen** (Serie C: 2 von 3), 0 Terminfakten, 0 Buchungsvorbereitungen. Nebenbefund: dieselbe Aussage in anderen Worten („8 m²“ / „8 m², nicht 7“) erzeugte in einem Faden einen unnötigen Widerspruch → nach Serie D: Umschreibungen sind kein Widerspruch (zusätzliche, nicht verneinte Zahlen bleiben einer) |
 | Praxisumzug nach Freigabe und Antwort | Die zweite Rückfrage fragt jetzt **nur noch nach dem Fehlenden** („Frist für die Abnahme?“; die Adresse wird nicht erneut erfragt). Aber: 1× Neuplanung scheiterte, weil sie ein Ziel des Planvertrags (`request.handed_over`) strich → begründete Übergabe; 1× scheiterte die interne Meldung an einem zu langen festen Text (> 400 Zeichen). Beides nach Serie D behoben: der Planer erhält die Ziele des Planvertrags ausdrücklich genannt, überlange Meldungstexte werden gekürzt. Ein dritter Vorgang ging direkt an eine Person (Planer hielt die Angaben für ausreichend). |
+
+## 6. Wiederholungsserie E (Stand `ea31fe2`, Gesamtlauf 74/74 grün)
+
+Rohdaten: `docs/evidence/serie-e-ea31fe2.txt`; 6 Vorgänge, bereinigt ID-genau.
+
+| Szenario | Ergebnis |
+|---|---|
+| Korrekturen (Badangebot ×2 + Variante), 1. und 2. Antwort | **3 von 3 in beiden Runden** übernommen (7→8→12, 6→7→11 bzw. 7→8→12), ohne Widerspruch, alte Werte als Verlauf, vertagende Terminaussage → 0 Terminfakten, **0 Buchungen** |
+| Praxisumzug (2 Vorgänge direkt an Person, 1 Vorgang mit Freigabe → Rückfrage → Antwort) | Der freigegebene Vorgang blieb nach der Antwort **stumm „in Bearbeitung“**: die Neuplanung behielt das erfüllte Warten und plante die Reaktion dahinter, die Planprüfung (`PLAN_BEHIND_WAIT`) schnitt sie ab → ein Plan nur aus bereits ausgeführten Schritten. **Fund, danach behoben:** ein bereits erfülltes Warten ist kein offenes Warten mehr (die Reaktion auf die Antwort darf dahinter stehen), und ein Plan, dessen Schritte alle erledigt sind, ohne Abschluss oder Übergabe, geht jetzt mit Begründung an eine Person (Sicherheitsnetz im Orchestrator). |
+
+Mit dieser Änderung beginnt die Serie für die Praxisumzug-Antwort neu (Serie F).

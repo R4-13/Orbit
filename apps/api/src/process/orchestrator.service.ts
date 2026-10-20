@@ -845,6 +845,11 @@ export class OrchestratorService {
             ? { to: 'WAITING_FOR_INFORMATION', reason: 'Es fehlen Angaben für den nächsten Schritt.' }
             : { to: 'MANUAL_REVIEW', reason: 'Ein Schritt ist blockiert oder fehlgeschlagen.' };
     }
+    // Sicherheitsnetz: Ist jeder Schritt des Plans erledigt, ohne dass ein Abschluss erreicht oder an eine Person übergeben wurde, bleibt der Vorgang nicht stumm „in Bearbeitung“ (Live-Fund: eine Neuplanung
+    // bestand nur aus bereits ausgeführten Schritten), sondern geht mit Begründung an eine Person.
+    else if (!target && caseRow.orchestrationStatus === 'IN_PROGRESS' && graph.nodes.length > 0 && states.every((s) => ['SUCCEEDED', 'SKIPPED', 'CANCELLED', 'SUPERSEDED'].includes(s)) && !graph.nodes.some((n) => n.type === 'COMPLETE' && n.state === 'SUCCEEDED')) {
+      target = { to: 'MANUAL_REVIEW', reason: 'Der Plan ist vollständig ausgeführt, ohne dass das Ziel nachgewiesen oder der Vorgang übergeben wurde; bitte prüfen.' };
+    }
     if (target && caseRow.orchestrationStatus !== target.to) {
       await this.lifecycle.transition(tenantId, caseRow.id, { to: target.to, attentionReasons: caseRow.attentionReasons.length > 0 ? caseRow.attentionReasons : [target.reason] });
     }

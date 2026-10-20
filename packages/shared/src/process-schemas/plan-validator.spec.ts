@@ -380,3 +380,22 @@ describe('veraltete Ergebnisse nach einer Antwort (Live-Fund: zweite Rückfrage 
     expect(result.issues.find((i) => i.code === 'BINDING_UNKNOWN_NODE')?.message).toMatch(/Vorhandene Knoten: reqs, draft, wait/);
   });
 });
+
+describe('Warten, das seine Antwort bereits bekommen hat (Live-Fund: die Reaktion auf die Antwort wurde abgeschnitten, der Vorgang blieb stumm „in Bearbeitung“)', () => {
+  const freeCtx = (over: Partial<PlanValidationContext> = {}) => ctx({ blueprint: undefined, strictBindings: true, policyModes: new Map([['requirements.resolve', 'AUTONOMOUS'], ['staff.notify', 'AUTONOMOUS']]), ...over });
+  const plan = () => ({
+    goalKeys: ['human.review'],
+    nodes: [
+      node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+      node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Antwort erhalten, bitte prüfen.' } } }),
+      node('human', 'MANUAL_TASK', { title: 'Person prüft' }),
+    ],
+    edges: [edge('e1', 'wait', 'notify'), edge('e2', 'notify', 'human')],
+    conciseExplanation: 'Auf die Antwort reagieren.',
+  });
+
+  it('hinter einem offenen Warten wird nichts geplant; hinter einem erfüllten Warten schon', () => {
+    expect(codes(validatePlan(plan(), freeCtx()))).toContain('PLAN_BEHIND_WAIT');
+    expect(codes(validatePlan(plan(), freeCtx({ satisfiedWaitNodes: ['wait'] })))).not.toContain('PLAN_BEHIND_WAIT');
+  });
+});

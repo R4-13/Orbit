@@ -113,3 +113,21 @@ describe('Nichts hinter dem Warten auf eine Antwort', () => {
     expect(stripBehindWait(plan([node('ask', 'ACTION', 'email.send'), wait()]), new Set())).toBeUndefined(); // nichts dahinter
   });
 });
+
+describe('stripBehindWait mit erfülltem Warten', () => {
+  it('schneidet hinter einem erfüllten Warten nichts ab', () => {
+    const proposal = {
+      goalKeys: ['human.review'],
+      nodes: [
+        { id: 'wait', type: 'WAIT_EVENT', title: 'w', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: { eventType: 'communication.received' }, evidenceRefs: [] },
+        { id: 'human', type: 'MANUAL_TASK', title: 'h', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [] },
+      ],
+      edges: [{ id: 'e', source: 'wait', target: 'human' }],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'x',
+    } as unknown as Parameters<typeof stripBehindWait>[0];
+    expect(stripBehindWait(proposal, new Set())?.nodes.map((n) => n.id)).toEqual(['wait']);
+    expect(stripBehindWait(proposal, new Set(), new Set(['wait']))).toBeUndefined();
+  });
+});

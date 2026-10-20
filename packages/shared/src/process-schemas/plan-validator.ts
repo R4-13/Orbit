@@ -56,6 +56,8 @@ export interface PlanValidationContext {
    * Stand gelesen werden: die Prüfung gehört in einen neuen Knoten (Live-Fund: die zweite Rückfrage fragte erneut nach der gerade genannten Adresse).
    */
   staleStepNodes?: readonly string[];
+  /** Warteknoten früherer Revisionen, die ihre Antwort bereits bekommen haben: hinter ihnen darf die Reaktion auf diese Antwort geplant werden (kein offenes Warten mehr). */
+  satisfiedWaitNodes?: readonly string[];
   limits: { maxSteps: number; maxExternalActions: number; maxAutoQuestions: number };
   /**
    * Strenge Bindungsprüfung für frei geplante Abläufe (ohne Blueprint): Eingaben müssen im Steckbrief der Fähigkeit stehen, Pflichteingaben fehlen nicht, Fakten
@@ -486,7 +488,7 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   // Hinter dem Warten auf eine Antwort der Kundschaft wird nichts geplant: was dann zu tun ist, hängt vom Inhalt der Antwort ab (Live-Fund: die Antwort wurde ohne Auswertung an eine Person gegeben). Nach der
   // Antwort plant ORBIT neu – mit der ausgelesenen Antwort. Ein hinterlegter Prozess legt seine Fortsetzung selbst fest.
   if (!blueprint) {
-    const waits = nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config.eventType === 'communication.received' && (out.get(n.id) ?? []).length > 0);
+    const waits = nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config.eventType === 'communication.received' && (out.get(n.id) ?? []).length > 0 && !(ctx.satisfiedWaitNodes ?? []).includes(n.id));
     for (const wait of waits) add({ code: 'PLAN_BEHIND_WAIT', check: 12, nodeId: wait.id, message: `Hinter dem Warten "${wait.id}" auf eine Antwort wird nichts geplant: ORBIT plant nach der Antwort neu und liest sie dabei aus. Beende die Revision am Warteknoten ohne ausgehende Kante.` });
   }
 
