@@ -280,6 +280,7 @@ const OUT = process.env.PRAXIS_OUT;
         expectAtLeast: 1,
       },
     };
+    const plain = (t: string) => t.toLowerCase().replace(/[^a-zäöüß0-9]+/g, ' ').trim(); // Satzzeichen zählen nicht (wie in der Prüfung der Auszüge)
     const report: Record<string, unknown> = {};
     for (const [name, { subject, text, expectAtLeast }] of Object.entries(texts)) {
       const runs: Array<{ concerns: number; supplemented: number; ungrounded: number; unassigned: number; titles: string[] }> = [];
@@ -288,10 +289,10 @@ const OUT = process.env.PRAXIS_OUT;
         expect(verified).toBeDefined();
         runs.push({ concerns: verified!.concerns.length, supplemented: verified!.concerns.filter((c) => c.supplemented).length, ungrounded: verified!.coverage.ungrounded.length, unassigned: verified!.coverage.unassigned.length, titles: verified!.concerns.map((c) => c.title) });
         // Belegt: alle Auszüge stehen in der Nachricht (sonst sind sie nicht belegt und werden nicht verwendet) – nichts Erfundenes darf als Auszug durchgehen.
-        for (const c of verified!.concerns) if (c.grounded) for (const sentence of c.excerpt.split(/(?<=[.!?])\s+/)) expect(text.replace(/\s+/g, ' ')).toContain(sentence.replace(/\s+/g, ' ').trim().slice(0, 40));
+        for (const c of verified!.concerns) if (c.grounded) for (const sentence of c.excerpt.split(/(?<=[.!?])\s+/)) expect(plain(text)).toContain(plain(sentence).slice(0, 40));
       }
       report[name] = runs;
-      if (name === 'einAnliegen') for (const run of runs) expect(run.concerns).toBeLessThanOrEqual(3); // ein zusammenhängendes Anliegen wird nicht in viele zerlegt
+      if (name === 'einAnliegen') for (const run of runs) expect(run.concerns).toBe(1); // ein zusammenhängendes Anliegen (Angebot, Besichtigung und Preisfrage zur selben Leistung) wird nicht zerlegt
       else for (const run of runs) expect(run.concerns).toBeGreaterThanOrEqual(expectAtLeast);
     }
     record.segmentation = report;
