@@ -1,0 +1,33 @@
+# Wiederholungsserie F auf Stand 27dcc9a (Modell gpt-6-luna, Reasoning none, Betrieb musterwerk, 20.10.2026 16:18-16:40 UTC) - Rohauszug je Vorgang
+# Szenarien: Praxisumzug x2 + Variante; zwei Vorgaenge mit Planfreigabe, Rueckfrage an Tom, Antwort.
+=== 89909bf6-8f3f-4f17-a14d-4954237f53a2
+16:20:25 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für W | - | Fachliche Zuständigkeit und sichere Ausführbarkeit prüfen: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht fragt nicht nach einer allgemeinen Auskunft aus dem Betriebswissen, sondern nach Übernahme und Vorgehen für ein konkretes Installations- und Abnahmeprojekt mit Frist. Der Leitfaden würde
+ziele | human.review,staff.informed,task.created
+aufgabe | Fachliche Zuständigkeit und sichere Ausführbarkeit prüfen
+ereignisse | 
+=== 709fbe20-9d60-4ce9-a6c9-7ab0ff0a6dea
+16:22:18 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Bestätigten Rückfrageentwurf beibehalten: Es gibt nichts, was die Kundschaft beantworten müsste; die Anfrage braucht eine Prüfung durch einen Mitarbeiter (z. B.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft stellt nicht lediglich eine Frage zum Betriebswissen, sondern fragt nach Übernahme und Vorgehen für konkrete Installations- und Verlegearbeiten samt fristgerechter Abnahme. Der Leitfade
+ziele | human.review,request.handed_over,staff.informed,task.created
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Praxisumzug – Wasser- und Gasanschlüsse“. Wir haben sie so verstanden: Eine Zahnarztpraxis fragt, ob der Betrieb drei Behandlungsplätze in neuen Räumen an Wasser und Druckluft anschließen und einen Gasanschluss fürs Labor verlegen kann; die Abnahme soll vor der Eröffnung am 3. Februar er
+ereignisse | 
+=== 577a1bb2-fe58-493b-add2-1830c6ac931c
+16:23:58 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft stellt nicht lediglich eine aus dem Betriebswissen zu beantwortende Frage, sondern bittet um Übernahme und Vorgehensweise für konkrete Anschluss-, Verlegungs- und Abnahmearbeiten mit fe
+ziele | human.review,receipt.acknowledged,staff.informed,task.created
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Praxisumzug – Wasser- und Gasanschlüsse“. Wir haben sie so verstanden: Eine Zahnarztpraxis fragt nach Wasser- und Druckluftanschlüssen für drei Behandlungsplätze sowie der Verlegung eines Gasanschlusses für das Labor; die Abnahme soll vor der Eröffnung am 3. Februar erfolgen. Druckluft- 
+ereignisse | fact.conflict_detected
+
+## Verlauf nach der Antwort
+577a1bb2 | WAITING_FOR_APPROVAL | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+709fbe20 | MANUAL_REVIEW | Bestätigten Rückfrageentwurf beibehalten: Es gibt nichts, was die Kundschaft beantworten müsste; die Anfrage braucht eine Prüfung durch einen Mitarbeiter (z. B. Leistung zuordnen, Preis ermitteln).
+89909bf6 | MANUAL_REVIEW | Fachliche Zuständigkeit und sichere Ausführbarkeit prüfen: Bitte manuell bearbeiten.
+577a1bb2 | 1 | SUPERSEDED | {staff.informed,task.created,human.review}
+577a1bb2 | 2 | ACTIVE | {receipt.acknowledged,human.review}
+577a1bb2 | 3 | AWAITING_APPROVAL | {receipt.acknowledged,human.review}
+709fbe20 | 1 | SUPERSEDED | {staff.informed,human.review,task.created}
+709fbe20 | 2 | SUPERSEDED | {human.review,request.handed_over}
+709fbe20 | 3 | ACTIVE | {human.review,request.handed_over,staff.informed}
+89909bf6 | 1 | SUPERSEDED | {staff.informed,task.created,human.review}
+89909bf6 | 2 | ACTIVE | {staff.informed,human.review}

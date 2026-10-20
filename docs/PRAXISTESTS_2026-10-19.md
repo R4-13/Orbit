@@ -129,3 +129,19 @@ Rohdaten: `docs/evidence/serie-e-ea31fe2.txt`; 6 Vorgänge, bereinigt ID-genau.
 | Praxisumzug (2 Vorgänge direkt an Person, 1 Vorgang mit Freigabe → Rückfrage → Antwort) | Der freigegebene Vorgang blieb nach der Antwort **stumm „in Bearbeitung“**: die Neuplanung behielt das erfüllte Warten und plante die Reaktion dahinter, die Planprüfung (`PLAN_BEHIND_WAIT`) schnitt sie ab → ein Plan nur aus bereits ausgeführten Schritten. **Fund, danach behoben:** ein bereits erfülltes Warten ist kein offenes Warten mehr (die Reaktion auf die Antwort darf dahinter stehen), und ein Plan, dessen Schritte alle erledigt sind, ohne Abschluss oder Übergabe, geht jetzt mit Begründung an eine Person (Sicherheitsnetz im Orchestrator). |
 
 Mit dieser Änderung beginnt die Serie für die Praxisumzug-Antwort neu (Serie F).
+
+## 7. Wiederholungsserie F und Gesamtbild (Stand `27dcc9a`, Gesamtlauf 74/74 grün)
+
+Rohdaten: `docs/evidence/serie-f-27dcc9a.txt`. Praxisumzug ×3 (2 Rückfrage-Pläne, nach Freigabe Rückfrage nur an Tom, Antwort): **kein stummer Stillstand, keine erneute Frage nach der genannten Adresse**. Nach der Antwort 1× neuer Plan mit eigener Freigabe (neue Wirkung „Eingangsbestätigung“ liegt außerhalb des früher freigegebenen Umfangs → wartet), 1× begründete Übergabe an eine Person („nichts mehr zu beantworten; Prüfung durch einen Mitarbeiter“) mit einem überflüssigen, fehlgeschlagenen Entwurfsknoten im Plan (kosmetisch).
+
+### Gesamtbild nach den Serien A–F (jeweils auf dem damals bereitgestellten Stand; frühere Fehlläufe bleiben stehen)
+
+| Bereich | Verlauf über die Serien | Stand |
+|---|---|---|
+| Aufteilung mehrerer Anliegen | vorher 1 von 2 | C: 4/4 (eine Dublette), **D: 4/4 ohne Dublette** |
+| Korrekturen (Selbstkorrektur) | B: 2 von 3, C: 2 von 3 (1. Runde) / 3 von 3 (2. Runde), D: 3 von 3, **E: 3 von 3 in beiden Runden** | 0 Buchungen aus vertagenden Terminaussagen seit Behebung (C–E) |
+| Neuplanung nach Antwort (Praxisumzug) | A: Formfehler/Zielstreichung, C: 1 veraltete Wiederfrage + 1 Formfehler, D: 1 Zielstreichung + 1 zu langer Text, E: 1 stummer Stillstand, **F: keine** | jeder Fund wurde behoben und mit Test belegt; Stichprobe klein (n = 2 je Serie) |
+| Eignung des Leitfadens (Wartungsvertrag) | über A–C: 7 von 12 „passt“ (Rückfrage + Vor-Ort-Termin), 3 „passt nicht“ (freie Planung), 2 fester Vertriebsweg (Einstufung `SALES_INQUIRY`) | **fachliche Entscheidung offen** (siehe Bericht) |
+| Elektroarbeiten | A: 2 von 3 Neuplanungen scheiterten, B/C: 0 von 6 | Auskunft „nicht im Angebot“ erreicht die Kundschaft nur nach Einzelfreigabe der Auskunftsregel; in 2 von 3 Läufen (C) entschied stattdessen eine Person |
+
+**Nicht nachgewiesen / bewusst offen:** die inhaltliche Prüfung eines Angebots („Prüfe bis morgen …“) · Kalenderbuchung (in dieser Runde ausgeschlossen) · Wirkung der HubSpot-Anlage im festen Vertriebsweg (zwei Deals `528735152377`, `529012989146` entstanden und blieben bestehen) · FX-21 (Bündelung von Rückfragen mehrerer Teilvorgänge).
