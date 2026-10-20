@@ -116,6 +116,7 @@ export class PlannerService {
       strictBindings: !blueprint,
       contractGoalKeys: !blueprint && options.withGoalContract !== false ? await this.store.rootGoalKeys(tenantId, caseId) : undefined,
       priorClarifications: !blueprint && options.withGoalContract !== false ? confirmed.filter((c) => c.capabilityKey === 'email.send' && c.purpose === 'CLARIFICATION').length : undefined,
+      staleStepNodes: !blueprint && options.withGoalContract !== false ? await this.staleStepNodes(tenantId, caseId) : undefined,
       customerQuestionsOpen: !blueprint && options.withGoalContract !== false ? await this.openCustomerQuestions(tenantId, caseId) : undefined,
       requirementsAnalyzed: !blueprint && options.withGoalContract !== false ? (await this.prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'requirements.analyzed' } })) > 0 : undefined,
     };
@@ -361,6 +362,7 @@ Zielarbeit bei unbekannten Vorgängen (kein hinterlegter Prozess): Arbeite wie e
 - Liegt unten ein Ergebnis der Anforderungsprüfung mit fehlenden Angaben vor, die nur die Kundschaft kennt: stelle EINE gebündelte Rückfrage (communication.draft mit missing = Ergebnis "missing" von requirements.resolve, dann email.send, purpose CLARIFICATION) und warte darauf (WAIT_EVENT). Übergib nicht ohne Rückfrage – es sei denn, es geht um einen Notfall, um Zusagen, Preise oder Rechtliches, oder die Kundschaft kann nichts dazu liefern. Eine Eingangsbestätigung allein ersetzt die Rückfrage nicht. Informiere die zuständige Person zusätzlich (staff.notify), damit sie den Stand kennt.
 - Bestätige den Eingang nur, wenn die Kundschaft sonst lange nichts hört (purpose ACKNOWLEDGEMENT).
 - Reichen Kontext und Angaben nicht für eine sichere Antwort, oder entscheidet eine Person (Zusagen, Preise, Rechtliches): staff.notify mit Zusammenfassung (was ist bekannt, was fehlt, was ist erfolgt) und MANUAL_TASK – das ist ein zulässiger Endpunkt, kein Scheitern. Nenne nie Preise oder Fristen, die nicht belegt sind.
+- Nach einer Antwort der Kundschaft prüfst du die Anforderungen NEU: lege dafür einen neuen Knoten EVALUATE_REQUIREMENTS mit neuer Kennung an (z. B. "reqs_2") und binde spätere Entwürfe (missing) an ihn – das Ergebnis eines früheren Prüfknotens ist veraltet. Frage nie nach Angaben, die die Antwort bereits enthält.
 - Plane nur Schritte, deren Ergebnis du für das Ziel brauchst; jeder Plan endet an COMPLETE (Ziel nachweisbar), WAIT_EVENT, APPROVAL oder MANUAL_TASK.
 Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausführbar sind):
 - Beginne mit RESOLVE_CONTEXT (context.lookup): es prüft den Absender und legt bei Bedarf den Kunden an.
@@ -385,6 +387,15 @@ Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausfüh
     const confirmed = new Set((await this.facts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => f.key));
     const missing = (analysis.requirements ?? []).filter((r) => r.key !== 'contact.email' && !confirmed.has(r.key) && !isAppointmentSchedulingRequirement(r)).map((r) => ({ key: r.key, question: r.question }));
     return { summary: analysis.summary ?? '', withinOffering: analysis.withinOffering, known: (analysis.known ?? []).map((k) => ({ label: k.label ?? '', value: k.value ?? '' })), missing };
+  }
+
+  /** Verstehende Knoten, die vor der neuesten Nachricht der Kundschaft ausgeführt wurden: ihr Ergebnis ist veraltet und darf nicht für neue Entwürfe gelesen werden. */
+  private async staleStepNodes(tenantId: string, caseId: string): Promise<string[]> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const latest = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } });
+    if (!latest) return [];
+    const nodes = await scoped.processPlanNode.findMany({ where: { plan: { caseId }, state: 'SUCCEEDED', type: 'EVALUATE_REQUIREMENTS', completedAt: { lt: latest.createdAt } }, select: { nodeKey: true } });
+    return [...new Set(nodes.map((n) => n.nodeKey))];
   }
 
   private async openCustomerQuestions(tenantId: string, caseId: string): Promise<number> {

@@ -45,3 +45,48 @@ Sicherung vorab: `backups/orbit-20261020-021024.dump` (außerhalb von Git). Bere
 wurde im Zielsystem angelegt, kein Kalendereintrag, kein HubSpot-Eintrag. Vorher/nachher: 22 Vorgänge des Betriebs (unverändert), 9 offene Hinweise (unverändert, nicht von den Tests).
 **Bleibt:** Eingänge und Nachrichten (Nachweis, Schutz vor erneutem Einlesen), Dokument `Rechnung-89675.pdf`, Protokoll. **Nachträglich (20.10.):** Toms Postfach – die 29 Mails wurden anhand ihrer konkreten RFC-Message-IDs (Liste `docs/evidence/tom-testmails-2026-10-19.txt`, aus der ORBIT-Datenbank; Treffer nur bei exakter Message-ID und Tom als Absender/Empfänger) in den Papierkorb gelegt, danach 0 Treffer. **Nicht bereinigt:** das Postfach des Betriebs. Mit den Vorgängen sind auch die **Schattenplanungen** (Ereignis `shadow.plan_proposed`) gelöscht worden; es waren **12** (nicht ~18). Sie wurden nachträglich aus der Sicherung in einer Wegwerf-Datenbank gelesen und als `docs/evidence/shadow-plannings-2026-10-19.json` gesichert (1 von 12 bestanden die Planbewertung). Das Löschen hatte außerdem den Zähler für die Obergrenze von 60 zurückgesetzt – das ist behoben (dauerhafter Zähler, 12 nachgetragen; ASSUMPTIONS #628).
 Flags: `process.split` für `musterwerk` wieder auf Standard AUS (Plattform-Audit); `planner.shadow` bleibt AN. Aufgeräumt wurden außerdem 55 Mandanten-Overrides von `process.split` gelöschter Testmandanten.
+
+## 4. Kernfehler-Runde vom 20.10. (Eigentümerentscheidung „zuerst Kernfehler beheben und gezielt erneut prüfen“)
+
+Änderungen: siehe `ASSUMPTIONS.md` #628. Bewertungsebenen wie oben (U/S/M/Z). Vor der Serie lief der **vollständige E2E-Lauf** in einer vom Worker getrennten Umgebung (`scripts/e2e-isolated.sh`, eigener Test-Redis):
+
+| Stand | Ergebnis | Anmerkung |
+|---|---|---|
+| `bee00c3` | 71 von 74 Suiten grün, 3 rot | rot: `autonomy-capabilities`, `case-split`, `plan-retry` – die Tests kannten die neue Eignungsprüfung der Standardverfahren nicht (Testseeds); gezielt angepasst und wiederholt: 33/33 |
+| `206e327` | **74 von 74 Suiten grün** (570 Tests, 36 übersprungen = Live-Tests ohne `LIVE_AI`) | Qualitätstor (`typecheck lint test`): 32/32 |
+| `6bfc5f2` | siehe Abschnitt 5 | |
+
+Beim Isolieren wurden **seit 18.10. unbemerkt rote Tests** gefunden und korrigiert (BYOK-Test ohne Betreiberfreigabe `ai.byok`, Copilot-Werkzeugliste), außerdem ein nicht mehr kompilierender Seed. Der einmalige Fehler des Live-Abgleich-Tests ließ sich im isolierten Lauf nicht wieder erzeugen; ob die Wechselwirkung mit dem Worker die Ursache war, ist **nicht bewiesen**.
+
+### 4.1 Mit dem echten Modell ohne Postfach (eigener Testbetrieb, Versand als Double; Modell `gpt-6-luna`, Reasoning `none`)
+
+| Prüfung | Ergebnis |
+|---|---|
+| Zerlegung mehrerer Anliegen, unabhängig von der Einstufung, je 3 Wiederholungen | fünf Anliegen (Aufzählungswörter): 5/5/5 · sprachlich veränderte Variante ohne Aufzählungswörter: 5/5/5 · ein zusammenhängendes Badangebot (Angebot + Besichtigung + Preis): zuerst 2/2/2 (Fund: über-zerlegt), nach Schärfung des Auftrags **1/1/1**. In allen Läufen waren alle Auszüge belegt, keine nicht zugeordnete Aussage |
+| Bisher nicht vorgegebener Fall „Wechsel der Ansprechperson“ (Hausverwaltung) | 1. Lauf: das feste Verfahren „Allgemeine Anfrage“ erzwang das Ziel „Frage beantwortet“ → keine Bestätigung an die Absenderin (**Fund**, derselbe Fehler wie FX-18, jetzt auch für Standardverfahren geprüft). 2. Lauf: Eignungsprüfung → freie Planung mit den Zielen Eingang bestätigt + Person informiert + Prüfung durch Person; Eingangsbestätigung **nur an die Absenderin**, keine Zusage einer Änderung, Meldung an die zuständige Person, Aufgabe; kein Kundenstammeintrag. **Nicht erreicht:** die Änderung selbst – es gibt keine Fähigkeit, Ansprechpersonen im Kundenverzeichnis zu ändern; der Vorgang liegt deshalb begründet bei einer Person (Status `MANUAL_REVIEW`). |
+| „Prüfe bis morgen 10 Uhr, ob das Angebot …“ | **Frist und Auftragsart korrekt verstanden = nachgewiesen** (20.10., Aufgabe, Fälligkeit 10:00 Berlin). **Die inhaltliche Prüfung selbst ist nicht nachgewiesen und mit den vorhandenen Fähigkeiten nicht möglich** (ORBIT kann keine Angebote/Dokumente inhaltlich prüfen); fehlende Fähigkeit: „Dokument/Angebot prüfen“. |
+
+### 4.2 Wiederholungsserie A (Betrieb `musterwerk`, echte Mails Tom → Betrieb, Stand `64e9743`)
+
+Rohdaten: `docs/evidence/serie-a-64e9743.txt`. 7 Vorgänge (Wartungsvertrag ×4 einschl. sprachlicher Variante, Elektroarbeiten ×3 einschl. Variante). Alle Planfreigaben und Aktionen waren **nicht** freigegeben; Bereinigung ID-genau nach Export.
+
+| Szenario | Ergebnis |
+|---|---|
+| Wartungsvertrag (×4) | Eignungsprüfung lief in 4 von 4 Fällen und steht im Verlauf: 3× „passt“ (Leitfaden „Anfrage aufnehmen und übergeben“ → gezielte Rückfrage + Vorschlag eines 90-Minuten-Vor-Ort-Termins), 1× „passt nicht“ → freie Planung, die an der Neuplanung scheiterte (Formfehler im Plan) → `MANUAL_REVIEW`. **Der Befund „Wartungsvertrag landet im Terminablauf“ ist damit nicht grundsätzlich behoben:** die Eignung wird fallweise entschieden und schwankt. |
+| Elektroarbeiten (×3) | 3 von 3: Standardverfahren „Allgemeine Frage aus dem Betriebswissen“ als **nicht passend** erkannt → freie Planung. Neuplanung gelang 1×, 2× `MANUAL_REVIEW` (Ziel „Auskunft erteilt“ aus der blinden ersten Zielwahl wurde gestrichen bzw. Formfehler im Plan). Im gelungenen Fall lautet der Entwurf an die Kundschaft sinngemäß: „Nein, Elektroarbeiten bieten wir nicht an. Badsanierungen führen wir im Raum Köln aus.“ – er wartete auf die Einzelfreigabe der Regel `email.send.information` und wurde **nicht** gesendet. |
+
+Ursachen und Änderungen daraus (Stand `206e327`): der Planvertrag (Ziele) beginnt jetzt erst mit der ersten Revision, die die Ziele *nach* dem Verstehen wählt; der Planer-Auftrag nennt das Format von Bedingungen und den Ort von `config.purpose`.
+
+### 4.3 Wiederholungsserie B (Stand `206e327`, nach grünem Gesamtlauf)
+
+Rohdaten: `docs/evidence/serie-b-206e327.txt`. 11 Vorgänge + 4 Korrektur-Antworten.
+
+| Szenario | Ergebnis |
+|---|---|
+| Wartungsvertrag (×4) | 2× „Leitfaden passt“ (Rückfrage + Vor-Ort-Termin), 1× „passt nicht“ → freie Planung mit sinnvollem Plan (gebündelte Rückfrage nach der Heizungsart, Meldung an die zuständige Person, Warten), wartet auf die Planfreigabe; 1× Einstufung `SALES_INQUIRY` → **fester Vertriebsweg** (Aufgabe „Neuen Lead kontaktieren“, **ein HubSpot-Deal „Anfrage (EMAIL)“ wurde angelegt** und bleibt – das Bereinigungsskript entfernt keine HubSpot-Einträge). |
+| Elektroarbeiten (×3) | 3 von 3 „Standardverfahren passt nicht“ → freie Planung; 2× Plan wartet auf die Freigabe (Auskunft „nicht im Angebot“ + Person informiert + Aufgabe), 1× in Bearbeitung; **keine** Neuplanung scheiterte mehr (A: 2 von 3). |
+| Badangebot (×4, Terminvorschlag) | 4 von 4 wie bisher: Eignung „passt“, Terminvorschläge (90 Minuten) an Tom. |
+| Korrekturen (7 → 8 m², live) | **2 von 3 auswertbaren Fäden:** der Wert 8 wurde als Selbstkorrektur übernommen, 7 blieb als Verlauf (`fact.corrected`). **1 Faden ohne Korrektur** (Wert 7 blieb stehen, kein Ereignis; Ursache ohne Nachweisereignis nicht rekonstruierbar → eingebaut: `fact.update_assessed`). Wegen eines Versehens beim Antworten erhielt ein Faden zwei Antworten und die Variante keine; die zweite Korrektur (12 m²) wurde in diesem Lauf nicht gesendet. |
+| **Neuer Fund** | Eine vertagende Antwort („Welcher der Termine passt, sage ich Ihnen noch.“) wurde als `appointment.agreed` gespeichert und bereitete in 2 Fäden eine **Kalenderbuchung** vor (`calendar.book` wartete auf Freigabe – nie freigegeben, gesperrt durch die Freigaberegel). Behoben: eine Terminwahl braucht eine konkrete Angabe (`isConcreteAppointmentChoice`). |
+
+Mit der Codeänderung nach Serie B beginnt die Serie neu (Abschnitt 5); A und B bleiben als frühere Läufe dokumentiert.

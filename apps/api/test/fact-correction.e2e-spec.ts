@@ -134,4 +134,32 @@ describe('Korrekturen früher genannter Angaben (FX-20, e2e)', () => {
     expect(noFacts).toEqual({ corrected: [], conflicts: [], ignored: [] });
     expect(llm.getRequests().length).toBe(requestsBefore);
   });
+  it('meldet die KI trotz Korrekturhinweis („doch“, „nicht … sondern“) nichts, wird einmal gezielt nachgefragt; ohne Hinweis nicht', async () => {
+    const { tenantId, caseId } = await setup();
+    seedUpdates([]); // erste Antwort: keine Änderung
+    seedUpdates([{ key: 'bathroom.area_m2', newValue: 8, evidence: 'doch 8 m²', kind: 'CORRECTION', reason: 'nimmt 7 zurück' }]); // zweite Antwort nach dem Hinweis
+    const before = llm.getRequests().length;
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, 'Ich habe nachgemessen: es sind doch 8 m², nicht 7.'));
+    expect(outcome.corrected).toEqual([{ key: 'bathroom.area_m2', previous: 7, current: 8 }]);
+    expect(llm.getRequests().length - before).toBe(4); // zwei Fragen à zwei Modellaufrufe
+    const assessed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId, type: 'fact.update_assessed' } });
+    expect((assessed.payload as { corrected: number }).corrected).toBe(1);
+
+    const other = await setup();
+    seedUpdates([]);
+    const calls = llm.getRequests().length;
+    await service.processInbound(other.tenantId, other.caseId, await message(other.tenantId, other.caseId, TOM, 'Danke, das passt so. Bis bald.'));
+    expect(llm.getRequests().length - calls).toBe(2); // kein Korrekturhinweis → keine zweite Frage
+  });
+  it('eine weitere Beschreibung (langer Freitext) steht nicht im Widerspruch zur früheren – nur Zahlen und kurze Angaben können sich widersprechen', async () => {
+    const { tenantId, caseId } = await setup();
+    const first = await message(tenantId, caseId, TOM, 'Die Druckluft für drei Behandlungsplätze wird benötigt.');
+    await facts.propose(tenantId, caseId, [{ key: 'ai.druckluft', value: 'Anschluss von drei Behandlungsplätzen an Druckluft benötigt', valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${first}` }]);
+    const longText = 'Die Druckluft kommt von einem Kompressor im Keller des Gebäudes, Leitungen sind teilweise vorhanden';
+    seedUpdates([{ key: 'ai.druckluft', newValue: longText, evidence: longText, kind: 'AMBIGUOUS', reason: 'weitere Beschreibung' }]);
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, `Zur Technik: ${longText}.`));
+    expect(outcome.conflicts).toEqual([]);
+    expect(outcome.ignored[0]!.reason).toMatch(/frühere Angabe bleibt gültig/);
+    expect((await facts.getCurrent(tenantId, caseId)).filter((f) => f.key === 'ai.druckluft').map((f) => f.status)).not.toContain('CONFLICTED');
+  });
 });

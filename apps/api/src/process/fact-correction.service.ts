@@ -42,6 +42,8 @@ export interface FactCorrectionOutcome {
   ignored: Array<{ key: string; kind: string; reason: string }>;
 }
 
+const CORRECTION_CUE = /\b(doch|korrigier\w*|korrektur|eigentlich|stimmt\s+nicht|falsch|vertan|geirrt|verwechselt)\b|\bnicht\b[^.!?]{0,40}\bsondern\b/i;
+
 const EMPTY: FactCorrectionOutcome = { corrected: [], conflicts: [], ignored: [] };
 
 /**
@@ -125,11 +127,18 @@ ${knownLines}`,
     const runtime = new AgentRuntime(llm, this.registry.subset([FACT_UPDATES_TOOL]), (action, c) => this.policy.resolveMode(c.tenantId, action));
     const run = await this.runs.start({ tenantId, agentType: 'ORCHESTRATOR', triggerType: 'MANUAL', input: { purpose: 'fact-corrections', caseId } });
     const text = `Betreff: ${message.subject ?? ''}\n\n${body.slice(0, MAX_TEXT)}`;
-    const turn = await runtime.runTurn({ tenantId, agentRunId: run.id }, { systemPrompt: system, messages: [{ role: 'user', content: wrapUntrustedContent(text) }], maxToolIterations: 2 });
-    await this.runs.recordToolCalls(tenantId, run.id, turn.toolCallOutcomes);
-    await this.runs.complete(tenantId, run.id, turn);
-    const submitted = [...turn.toolCallOutcomes.filter((o) => o.toolName === FACT_UPDATES_TOOL)].reverse().find((o) => o.result?.status === 'SUCCEEDED');
-    const parsed = FactUpdatesSchema.safeParse(submitted?.output);
+    // Enthält die Nachricht einen Korrekturhinweis („doch“, „nicht … sondern“, „Korrektur“ …) und die KI meldet nichts, wird einmal gezielt nachgefragt (Live-Fund: in 1 von 3 Fäden kam beim ersten Mal keine Änderung).
+    const ask = async (extra = '') => {
+      const turn = await runtime.runTurn({ tenantId, agentRunId: run.id }, { systemPrompt: system, messages: [{ role: 'user', content: wrapUntrustedContent(text) + extra }], maxToolIterations: 2 });
+      await this.runs.recordToolCalls(tenantId, run.id, turn.toolCallOutcomes);
+      await this.runs.complete(tenantId, run.id, turn);
+      const submitted = [...turn.toolCallOutcomes.filter((o) => o.toolName === FACT_UPDATES_TOOL)].reverse().find((o) => o.result?.status === 'SUCCEEDED');
+      return FactUpdatesSchema.safeParse(submitted?.output);
+    };
+    let parsed = await ask();
+    if ((!parsed.success || parsed.data.updates.length === 0) && CORRECTION_CUE.test(body)) {
+      parsed = await ask('\n\nHinweis: Die Nachricht enthält einen Korrekturhinweis. Prüfe jede Angabe aus der Liste „Bereits genannt“ noch einmal genau gegen den Wortlaut und melde eine Änderung, wenn die Person einen anderen Wert nennt.');
+    }
     const knownKeys = [...new Set(known.map((f) => f.key))];
     if (!parsed.success || parsed.data.updates.length === 0) {
       await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.FACT_UPDATE_ASSESSED, payload: { messageId: message.id, knownKeys, proposals: [], valid: parsed.success }, dedupeKey: `fact.update_assessed:${message.id}` });
@@ -165,7 +174,9 @@ ${knownLines}`,
         outcome.ignored.push({ key: update.key, kind: update.kind, reason: 'gleicher Wert' });
         continue;
       }
-      if (update.kind === 'ADDITIONAL') {
+      // Beschreibende Freitexte (Sätze) widersprechen einander nicht wie Zahlen oder kurze Angaben: eine weitere Beschreibung ergänzt die frühere. Nur kurze Angaben und Zahlen können im Widerspruch stehen.
+      const descriptive = typeof update.newValue === 'string' && update.newValue.length > 60;
+      if (update.kind === 'ADDITIONAL' || (update.kind === 'AMBIGUOUS' && descriptive)) {
         outcome.ignored.push({ key: update.key, kind: 'ADDITIONAL', reason: 'weiterer Gegenstand: frühere Angabe bleibt gültig' });
         continue;
       }

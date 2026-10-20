@@ -47,3 +47,22 @@ describe('Erkennung und Abgrenzung mehrerer Anliegen', () => {
     expect(shouldSegment('Bitte rufen Sie mich zurück, es geht um den Termin am Freitag in der Werkstatt, danke und viele Grüße aus Hamburg.')).toBe(false);
   });
 });
+
+describe('Belegung leicht gekürzter Auszüge', () => {
+  const message = 'Viertens: Sind Sie samstags telefonisch erreichbar? Fünftens tropft im Gäste-WC der Wasserhahn, bitte um einen Reparaturtermin.';
+  it('ein gekürzter Auszug mit denselben Wörtern in derselben Reihenfolge ist belegt und erzeugt kein doppeltes Anliegen', () => {
+    const verified = verifyConcerns(message, {
+      concerns: [
+        { title: 'Erreichbarkeit', category: 'UNKNOWN', goal: 'Erreichbarkeit genannt', excerpt: 'Samstags telefonisch erreichbar?' },
+        { title: 'Wasserhahn', category: 'UNKNOWN', goal: 'Reparaturtermin', excerpt: 'Fünftens tropft im Gäste-WC der Wasserhahn, bitte um einen Reparaturtermin.' },
+      ],
+      sharedContext: '',
+    });
+    expect(verified.concerns.map((c) => c.grounded)).toEqual([true, true]);
+    expect(verified.concerns).toHaveLength(2);
+  });
+  it('ein erfundener oder umgestellter Auszug bleibt unbelegt', () => {
+    const verified = verifyConcerns(message, { concerns: [{ title: 'x', category: 'UNKNOWN', goal: 'x', excerpt: 'Erreichbar telefonisch samstags Sie' }, { title: 'y', category: 'UNKNOWN', goal: 'y', excerpt: 'Wir brauchen sofort einen Monteur in Hamburg' }], sharedContext: '' });
+    expect(verified.concerns.slice(0, 2).map((c) => c.grounded)).toEqual([false, false]);
+  });
+});

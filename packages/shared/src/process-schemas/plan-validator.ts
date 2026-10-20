@@ -51,6 +51,11 @@ export interface PlanValidationContext {
   policyModes: ReadonlyMap<string, PolicyMode>;
   /** Effects with a confirmed receipt in earlier revisions — they must survive a replan unchanged (§11.3 item 9). */
   confirmedEffects?: readonly ConfirmedEffect[];
+  /**
+   * Knoten früherer Revisionen, deren Ergebnis vor der letzten Nachricht der Kundschaft entstand (z. B. die Anforderungsprüfung vor einer Antwort). Ihr Ergebnis darf in einer Neuplanung nicht als aktueller
+   * Stand gelesen werden: die Prüfung gehört in einen neuen Knoten (Live-Fund: die zweite Rückfrage fragte erneut nach der gerade genannten Adresse).
+   */
+  staleStepNodes?: readonly string[];
   limits: { maxSteps: number; maxExternalActions: number; maxAutoQuestions: number };
   /**
    * Strenge Bindungsprüfung für frei geplante Abläufe (ohne Blueprint): Eingaben müssen im Steckbrief der Fähigkeit stehen, Pflichteingaben fehlen nicht, Fakten
@@ -252,7 +257,8 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     for (const [name, operand] of Object.entries(node.inputs)) {
       if ('stepOutput' in operand) {
         const ref = operand.stepOutput.node;
-        if (!planNodeIds.has(ref)) add({ code: 'BINDING_UNKNOWN_NODE', check: 3, nodeId: node.id, message: `Eingabe "${name}" verweist auf den unbekannten Knoten "${ref}".` });
+        if (!planNodeIds.has(ref)) add({ code: 'BINDING_UNKNOWN_NODE', check: 3, nodeId: node.id, message: `Eingabe "${name}" verweist auf den unbekannten Knoten "${ref}". Vorhandene Knoten: ${[...planNodeIds].join(", ")}.` });
+        else if ((ctx.staleStepNodes ?? []).includes(ref) && !(ctx.confirmedEffects ?? []).some((effect) => effect.nodeId === node.id) && !blueprint) add({ code: 'STALE_STEP_OUTPUT', check: 3, nodeId: node.id, message: `Eingabe "${name}" liest das Ergebnis von "${ref}", das vor der letzten Antwort der Kundschaft entstand. Lege die Prüfung als NEUEN Knoten mit neuer Kennung an (z. B. "${ref}_2", gleiche Fähigkeit) und binde die Eingabe daran.` });
         else if (!ancestors.has(ref)) add({ code: 'BINDING_NOT_UPSTREAM', check: 3, nodeId: node.id, message: `Eingabe "${name}" liest aus "${ref}", das nicht vor diesem Schritt liegt.` });
       }
     }

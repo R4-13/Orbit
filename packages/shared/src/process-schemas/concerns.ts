@@ -58,6 +58,23 @@ export interface VerifiedConcerns {
   coverage: ConcernCoverage;
 }
 
+/**
+ * Auch ein leicht gekürzter Auszug ist belegt (z. B. „Samstags telefonisch erreichbar?“ statt „Viertens: Sind Sie samstags telefonisch erreichbar?“): jedes seiner Wörter (mindestens drei) steht in der
+ * Nachricht, in derselben Reihenfolge. Nichts Hinzugefügtes, nichts Umgestelltes – ein erfundener Auszug besteht diese Prüfung nicht.
+ */
+export function isOrderedSubsequence(candidate: string, haystack: string): boolean {
+  const words = candidate.split(' ').filter((w) => w.length > 0);
+  if (words.length < 3) return false;
+  const source = haystack.split(' ');
+  let position = 0;
+  for (const word of words) {
+    const index = source.indexOf(word, position);
+    if (index < 0) return false;
+    position = index + 1;
+  }
+  return true;
+}
+
 /** Zerlegt Text in Sätze/Zeilen; Aufzählungszeichen und Nummerierung werden entfernt. */
 export function splitSentences(text: string): string[] {
   return text
@@ -94,7 +111,7 @@ export function verifyConcerns(message: string, segmentation: ConcernSegmentatio
   const inMessage = (text: string): boolean => {
     const sentences = splitSentences(text).map(normalizeForMatch).filter((s) => s.length > 0);
     if (sentences.length === 0) return false;
-    const found = sentences.filter((s) => haystack.includes(s)).length;
+    const found = sentences.filter((s) => haystack.includes(s) || isOrderedSubsequence(s, haystack)).length;
     return found / sentences.length >= 0.8;
   };
   const concerns: VerifiedConcern[] = segmentation.concerns.map((c) => ({ ...c, grounded: inMessage(c.excerpt) }));

@@ -1,0 +1,268 @@
+# Wiederholungsserie C auf Stand 6bfc5f2 (Modell gpt-6-luna, Reasoning none, Betrieb musterwerk, 20.10.2026 11:50-13:20 UTC) - Rohauszug je Vorgang
+# Szenarien: Wartungsvertrag x3 + Variante, Elektroarbeiten x2 + Variante, Badangebot x2 + Variante (Korrekturen 7->8->12 bzw. 6->7->11), Fuenf Anliegen x3 + Variante (process.split im Testfenster), Praxisumzug x2 + Variante mit Planfreigabe (2 Vorgaenge) und Antwort.
+=== 00c44336-d973-4b5a-94a2-b94d5b2bd7fa
+11:52:18 | IN_PROGRESS | (frei) | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | 
+ziele | 
+aufgabe | Neuen Lead kontaktieren: Tom Orbit
+ereignisse | 
+=== bdc845db-d5b2-420e-ba77-2d9069e9686d
+11:52:47 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Kundschaft sucht dauerhaft einen Wartungsvertrag für eine Heizungsanlage und möchte Konditionen sowie den möglichen Start klären. Der Leitfaden soll die Anfrage und nötigen Angaben aufnehmen und a
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich um eine Gas- oder Ölheizung? 2. In welcher Stadt befindet sich das Haus? 3. Welche Wartungsleistungen sollen regelmäßig umfasst sein?  Für eine 
+ereignisse | 
+=== 5067203a-f960-4226-bc2d-8ea9be56b674
+11:53:26 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Kundschaft sucht einen laufenden Wartungsvertrag mit Wochenend-Bereitschaftsdienst. Der Leitfaden dient dazu, solche Anfragen aufzunehmen, fehlende Angaben zu klären und an die zuständige Person z
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich bei der Heizungsanlage um eine Gas- oder Ölheizung? 2. Können Sie Hersteller und Modell der Heizungsanlage nennen?  Für eine verlässliche Einsch
+ereignisse | 
+=== 80b18bcb-0690-4cad-b3b9-c0824ed7da4d
+11:55:20 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Menschliche Entscheidung über Antwort oder Weiterleitung: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine allgemeine Wissensfrage, sondern fragt nach der Übernahme konkreter Elektroarbeiten im Rahmen einer Badsanierung. Der Leitfaden würde eine Wissensauskunft statt der benötigt
+ziele | human.review,inquiry.answered,staff.informed,task.created
+aufgabe | Menschliche Entscheidung über Antwort oder Weiterleitung
+ereignisse | 
+=== ae591e88-9cf9-4552-be76-8da25b671634
+11:57:34 | WAITING_FOR_APPROVAL | (frei) | Angebotsanfrage: Servicepartner für unser Mehrfamilienh | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | REQUEST_FOR_QUOTE | Gesucht wird ein dauerhafter Servicevertrag mit Wochenend-Rufbereitschaft inklusive Preis und möglichem Start. Der Leitfaden nimmt eine Anfrage auf und übergibt sie, ohne Angebot oder Preis zu erstell
+ziele | human.review,quote.delivered,staff.informed,task.created
+ereignisse | 
+=== 2523c956-e132-404c-8d65-c27e7ad16b3b
+12:00:21 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badezimmer erneuern – was kostet das? | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person möchte die Badsanierung anfragen, eine Besichtigung vereinbaren und eine grobe Preisorientierung erhalten. Der Leitfaden passt zur Aufnahme, Klärung und Übergabe der Anfrage; er sieht ausdr
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026,
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit
+ereignisse | fact.corrected fact.corrected fact.corrected fact.corrected
+=== f0a1493f-9473-4192-af77-6f2fe7041a81
+12:01:41 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person möchte eine Badsanierung anfragen und bittet um eine Besichtigung sowie eine ungefähre Kosteneinschätzung. Der Leitfaden ist für das Aufnehmen, Klären und Übergeben solcher Anfragen ausgele
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende T
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 2
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 2
+ereignisse | fact.corrected
+=== 7adcf0fc-276f-4573-8c09-3af9ed13d4ff
+12:02:56 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Neue Anfrage: Badsanierung – bitte um Angebot | - | Auf Antwort warten: Wartet auf eine Antwort.
+fit | true | true | REQUEST_FOR_QUOTE | Der Kunde möchte ein individuelles Angebot für eine konkrete Badsanierung und fragt nach einer Besichtigung. Der Leitfaden passt: Er erfasst und klärt die Angaben, kann bei angebundenem Kalender einen
+ziele | request.handed_over
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. In welchem Ort befindet sich das Bad?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine 
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Bad?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.20
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. In welchem Ort befindet sich das Bad?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.20
+ereignisse | fact.corrected fact.corrected fact.corrected fact.corrected
+=== 1d2cf33b-b9a4-44aa-bc42-25e35a427d48
+12:03:50 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Elektrik im Badezimmer | - | Entscheidung zur Anfrage und Kundeninformation: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft erfragt, ob die zusätzliche Elektroinstallation als Leistung angeboten wird. Das ist eine Leistungs-/Angebotsanfrage und keine Frage, die sich aus allgemeinem Betriebswissen beantworten
+ziele | human.review,inquiry.answered,staff.informed
+aufgabe | Entscheidung zur Anfrage und Kundeninformation
+ereignisse | 
+=== 56f98727-c4ba-4d2f-990b-f85e5e4a9564
+12:05:12 | WAITING_FOR_APPROVAL | (frei) | Allgemeine Anfrage: Steckdosen im Bad | - | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt zwar eine Frage zu angebotenen Arbeiten, zielt aber auf die Durchführung von Elektroarbeiten im Rahmen einer Badsanierung. Der Leitfaden sieht lediglich eine Auskunft aus dem Betr
+ziele | human.review,inquiry.answered,staff.informed,task.created
+ereignisse | 
+=== c4d8ccf5-1820-46cb-9c98-b634729b3e22
+12:15:29 | IN_PROGRESS | (frei) | Mehrere Anliegen: Fünf Dinge auf einmal | - | Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.; Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfun
+ziele | 
+ereignisse | case.split
+=== 3f15c1fa-66d1-4ec7-ad64-8ead13b11be8
+12:15:29 | MANUAL_REVIEW | (frei) | Kopie der letzten Rechnung: Fünf Dinge auf einmal | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Letzte Rechnung prüfen und Kopie bereitstellen: Bitte manuell bearbeiten.
+ziele | request.handed_over,task.created
+aufgabe | Letzte Rechnung prüfen und Kopie bereitstellen
+ereignisse | case.split_from
+=== 8aef4a18-e9ff-4cff-8e45-10063f4e3850
+12:15:29 | MANUAL_REVIEW | (frei) | Wartungstermin verschieben: Fünf Dinge auf einmal | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Bestehende Buchung prüfen und Verschiebung bearbeiten: Bitte manuell bearbeiten.
+ziele | appointment.booked,human.review
+aufgabe | Bestehende Buchung prüfen und Verschiebung bearbeiten
+ereignisse | case.split_from
+=== 3f94bde9-7df8-430b-8d39-1bdeb2cad067
+12:15:30 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Angebot für neuen Heizungsregler: Fünf Dinge auf einmal | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Angaben aus der Anfrage entnehmen: Es fehlen Angaben: messageId.
+fit | true | true | REQUEST_FOR_QUOTE | Der konkrete Anliegenkern ist eine Angebotsanfrage für einen neuen Heizungsregler. Der Leitfaden nimmt Anfragen auf und übergibt sie mit den erforderlichen Angaben an eine zuständige Person bzw. das C
+ziele | request.handed_over
+ereignisse | case.split_from
+=== 901b5a60-7178-4aa0-849a-9daf3bd05701
+12:15:30 | WAITING_FOR_APPROVAL | (frei) | Samstags telefonisch erreichbar?: Fünf Dinge auf einmal | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | STANDARD_INFORMATION | Neben einer allgemeinen Wissensfrage zur samstäglichen Erreichbarkeit verlangt die Kundschaft konkrete Vorgänge: eine Rechnungskopie, Terminverschiebung, ein Angebot und einen Reparaturtermin. Der Wis
+ziele | inquiry.answered
+ereignisse | case.split_from
+=== c54bcfb3-693b-45cb-ae21-c84c0ddd7424
+12:15:30 | MANUAL_REVIEW | (frei) | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge a | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Reparaturtermin manuell abstimmen: Bitte manuell bearbeiten.
+ziele | appointment.booked,human.review,staff.informed
+aufgabe | Reparaturtermin manuell abstimmen
+ereignisse | case.split_from
+=== a5c58e6a-709a-415a-a3f3-716541d13e18
+12:15:30 | MANUAL_REVIEW | (frei) | Weitere Fragen und Wünsche der Nachricht: Fünf Dinge au | c4d8ccf5-1820-46cb-9c98-b634729b3e22 | Menschliche Klärung erforderlich: Bitte manuell bearbeiten.
+ziele | human.review,staff.informed,task.created
+aufgabe | Menschliche Klärung erforderlich
+ereignisse | case.split_from
+=== 1d14b185-e8d8-4d03-8835-a6b232a768fc
+12:18:18 | IN_PROGRESS | (frei) | Mehrere Anliegen: Fünf Dinge auf einmal | - | Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.; Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfun
+ziele | 
+ereignisse | case.split
+=== 1674b408-a8b3-49bb-b208-6bcc99c94740
+12:18:19 | MANUAL_REVIEW | (frei) | Kopie der letzten Rechnung: Fünf Dinge auf einmal | 1d14b185-e8d8-4d03-8835-a6b232a768fc | Letzte Rechnungskopie prüfen und bereitstellen: Bitte manuell bearbeiten.
+ziele | human.review
+aufgabe | Letzte Rechnungskopie prüfen und bereitstellen
+ereignisse | case.split_from
+=== e9d60c80-5833-4575-a5dd-b9826b1cd891
+12:18:19 | MANUAL_REVIEW | (frei) | Wartungstermin verschieben: Fünf Dinge auf einmal | 1d14b185-e8d8-4d03-8835-a6b232a768fc | Wartungstermin manuell auf Verschiebbarkeit und Umbuchung prüfen: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine Wissensfrage, sondern bittet konkret darum, einen bestehenden Wartungstermin zu verschieben. Der Leitfaden zur Beantwortung allgemeiner Fragen aus dem Betriebswissen deckt d
+ziele | appointment.booked,human.review,staff.informed
+aufgabe | Wartungstermin manuell auf Verschiebbarkeit und Umbuchung prüfen
+ereignisse | case.split_from
+=== 298c09dd-79a9-4e1d-81c2-17241c37595b
+12:18:19 | WAITING_FOR_APPROVAL | (frei) | Angebot für Heizungsregler: Fünf Dinge auf einmal | 1d14b185-e8d8-4d03-8835-a6b232a768fc | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | false | true | REQUEST_FOR_QUOTE | Die Nachricht nennt nur Interesse an einem Angebot für einen neuen Heizungsregler. Der Leitfaden nimmt die Anfrage auf und übergibt sie, erstellt aber ausdrücklich kein Angebot und ermittelt keinen Pr
+ziele | quote.delivered,staff.informed
+ereignisse | case.split_from
+=== 5ea62b84-a93e-418a-a834-eec03466dd6a
+12:18:19 | WAITING_FOR_APPROVAL | (frei) | Samstags telefonisch erreichbar: Fünf Dinge auf einmal | 1d14b185-e8d8-4d03-8835-a6b232a768fc | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | true | true | STANDARD_INFORMATION | Die Nachricht enthält eine konkrete Frage zur telefonischen Erreichbarkeit am Samstag. Das passt zum Leitfaden, diese Auskunft aus dem freigegebenen Betriebswissen zu ermitteln und entweder zu beantwo
+ziele | human.review,inquiry.answered
+ereignisse | case.split_from
+=== 6bc59c7c-414e-4eab-a793-f554291037d2
+12:18:19 | WAITING_FOR_APPROVAL | (frei) | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge a | 1d14b185-e8d8-4d03-8835-a6b232a768fc | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+ziele | appointment.booked,human.review
+ereignisse | case.split_from
+=== ec46e292-5f75-4469-b857-73f33c8ed4ad
+12:22:25 | IN_PROGRESS | (frei) | Mehrere Anliegen: Einiges auf einmal | - | Teilvorgang „Rechnungskopie für den letzten Einsatz: Einiges auf einmal“ braucht Prüfung.; Teilvorgang „Wartungstermin verschieben: Einiges auf einmal“ braucht 
+ziele | 
+ereignisse | case.split
+=== 0db9ac74-0735-4c66-850b-831dc3934e00
+12:22:25 | MANUAL_REVIEW | (frei) | Rechnungskopie für den letzten Einsatz: Einiges auf ein | ec46e292-5f75-4469-b857-73f33c8ed4ad | Der Ablauf ist durchgelaufen, aber „Anfrage übergeben“, „Aufgabe angelegt“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft stellt keine Wissensfrage, sondern verlangt konkret die Zusendung einer Rechnungskopie. Der Leitfaden zur Beantwortung aus Betriebswissen passt daher nicht zum gewünschten Vorgang.
+ziele | receipt.acknowledged,request.handed_over,task.created
+ereignisse | case.split_from
+=== 278e6a13-2aa7-4ce2-8f43-45fbdb9533e0
+12:22:25 | MANUAL_REVIEW | (frei) | Wartungstermin verschieben: Einiges auf einmal | ec46e292-5f75-4469-b857-73f33c8ed4ad | Terminverschiebung manuell prüfen und bearbeiten: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht stellt keine Frage aus dem Betriebswissen, sondern bittet um eine Änderung eines bestehenden Wartungstermins. Der Leitfaden zur Beantwortung von Wissensfragen passt daher nicht zum Anlie
+ziele | human.review
+aufgabe | Terminverschiebung manuell prüfen und bearbeiten
+ereignisse | case.split_from
+=== 444f0b94-d95f-40af-aa90-e344638e97bc
+12:22:25 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Angebot für neue Thermostate: Einiges auf einmal | ec46e292-5f75-4469-b857-73f33c8ed4ad | Angaben aus der Anfrage entnehmen: Es fehlen Angaben: messageId.
+fit | true | true | REQUEST_FOR_QUOTE | Die Nachricht äußert Interesse an einem konkreten Angebot für Thermostate. Der Leitfaden passt für die Aufnahme der Anfrage und deren Übergabe an die zuständige Person; die Preisermittlung bzw. Angebo
+ziele | request.handed_over
+ereignisse | case.split_from
+=== a4729ad2-71da-4d72-be28-8499f8c24f59
+12:22:25 | WAITING_FOR_APPROVAL | (frei) | Telefonische Erreichbarkeit freitags: Einiges auf einma | ec46e292-5f75-4469-b857-73f33c8ed4ad | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.
+fit | true | true | STANDARD_INFORMATION | Die Kundschaft stellt eine konkrete Frage zu den telefonischen Erreichbarkeitszeiten am Freitag. Der Leitfaden ist darauf ausgelegt, eine solche Frage aus freigegebenem Betriebswissen zu beantworten o
+ziele | inquiry.answered
+ereignisse | case.split_from
+=== 08996f12-44ba-4380-8bc0-df62e6684049
+12:22:25 | MANUAL_REVIEW | (frei) | Reparaturtermin für tropfenden Wasserhahn: Einiges auf  | ec46e292-5f75-4469-b857-73f33c8ed4ad | Terminmöglichkeiten prüfen und der Kundschaft anbieten: Bitte manuell bearbeiten.
+ziele | appointment.booked,staff.informed
+aufgabe | Terminmöglichkeiten prüfen und der Kundschaft anbieten
+ereignisse | case.split_from
+=== 60f53e33-4905-4216-86d9-170804d11f11
+12:24:59 | IN_PROGRESS | (frei) | Mehrere Anliegen: Fünf Dinge auf einmal | - | Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.; Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfun
+ziele | 
+ereignisse | case.split
+=== f442c576-384a-44f6-99ad-7ffb25523edc
+12:24:59 | MANUAL_REVIEW | (frei) | Kopie der letzten Rechnung: Fünf Dinge auf einmal | 60f53e33-4905-4216-86d9-170804d11f11 | Manuelle Prüfung und Bereitstellung der Rechnungskopie: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht ist keine allgemeine Wissensfrage, sondern eine konkrete Bitte um Übersendung einer Kopie der letzten Rechnung. Dafür müsste die Rechnung gefunden und bereitgestellt bzw. zuständig weite
+ziele | human.review,task.created
+aufgabe | Manuelle Prüfung und Bereitstellung der Rechnungskopie
+ereignisse | case.split_from
+=== 1c8a1b1f-3da1-4057-924c-c8b9aa5195c1
+12:24:59 | MANUAL_REVIEW | (frei) | Wartungstermin verschieben: Fünf Dinge auf einmal | 60f53e33-4905-4216-86d9-170804d11f11 | Bestehenden Wartungstermin manuell prüfen und verschieben: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Nachricht verlangt eine konkrete Änderung eines bestehenden Wartungstermins. Das ist keine Frage, die aus freigegebenem Betriebswissen beantwortet werden soll; der Leitfaden passt daher nicht zum 
+ziele | appointment.booked,human.review
+aufgabe | Bestehenden Wartungstermin manuell prüfen und verschieben
+ereignisse | case.split_from
+=== 16b4bb7b-3328-4eb7-b3f7-8c54dc239b14
+12:24:59 | WAITING_FOR_INFORMATION | REQUEST_FOR_QUOTE | Angebot für Heizungsregler: Fünf Dinge auf einmal | 60f53e33-4905-4216-86d9-170804d11f11 | Angaben aus der Anfrage entnehmen: Es fehlen Angaben: messageId.
+fit | true | true | REQUEST_FOR_QUOTE | Die Person äußert den konkreten Wunsch nach einem Angebot für einen neuen Heizungsregler. Der Leitfaden ist für die Aufnahme, Klärung fehlender Angaben und Übergabe einer Anfrage zuständig; Angebot un
+ziele | request.handed_over
+ereignisse | case.split_from
+=== 37b671fc-7535-4f85-913e-d584033f63c9
+12:24:59 | MANUAL_REVIEW | (frei) | Samstags telefonisch erreichbar: Fünf Dinge auf einmal | 60f53e33-4905-4216-86d9-170804d11f11 | Eine Person beantwortet die Frage: Bitte manuell bearbeiten.
+fit | true | true | STANDARD_INFORMATION | Die Nachricht stellt eine konkrete Informationsfrage zur telefonischen Erreichbarkeit am Samstag. Das entspricht dem Leitfaden, eine Frage aus dem freigegebenen Betriebswissen zu beantworten oder bei 
+ziele | human.review,inquiry.answered
+aufgabe | Eine Person beantwortet die Frage
+ereignisse | case.split_from
+=== 0c88d6f9-15d6-44a3-b1af-fe84502102d9
+12:24:59 | MANUAL_REVIEW | (frei) | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge a | 60f53e33-4905-4216-86d9-170804d11f11 | Terminbearbeitung durch zuständige Person übernehmen: Bitte manuell bearbeiten.
+ziele | appointment.booked,human.review
+aufgabe | Terminbearbeitung durch zuständige Person übernehmen
+ereignisse | case.split_from
+=== fc627330-cd31-491d-8673-df677248589f
+12:54:55 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für W | - | Der Plan blieb auch nach einem Reparaturversuch unzulässig: [BINDING_UNKNOWN_NODE] Eingabe "missing" verweist auf den unbekannten Knoten "requirement".; [DEAD_E
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft fragt nach Übernahme und Vorgehen für konkrete Installationsarbeiten samt Abnahme vor einem festen Eröffnungstermin. Das ist keine allgemeine Wissensfrage aus Profil/FAQ; der Leitfaden 
+ziele | human.review,staff.informed,task.created
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas“. Wir haben sie so verstanden: Tom Orbit fragt, ob der Betrieb Anschlüsse für Wasser und Druckluft an drei Behandlungsplätzen sowie eine Gasleitung fürs Labor in den neuen Praxisräumen installieren kann; vor der Eröffnung am 3. 
+aufgabe | Fachliche Prüfung der Anfrage
+ereignisse | 
+=== 63cdefd2-46f4-49ae-a4c0-ce2541f54cc7
+12:56:17 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Fachliche Entscheidung durch zuständige Person abwarten: Bitte manuell bearbeiten.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft stellt keine allgemeine Wissensfrage, sondern fragt nach Übernahme und Vorgehen für konkrete Anschluss- und Verlegearbeiten samt termingebundener Abnahme. Der Leitfaden würde eine Wisse
+ziele | human.review,staff.informed,task.created
+aufgabe | Fachliche Entscheidung durch zuständige Person abwarten
+ereignisse | 
+=== 9a8ba01e-fd18-416a-8c02-344704549af4
+12:58:46 | MANUAL_REVIEW | (frei) | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschl | - | Auf die Antwort der Kundschaft warten: Wartet auf eine Antwort.
+fit | false | true | STANDARD_INFORMATION | Die Kundschaft fragt nach Übernahme und Vorgehen für konkrete Umzugs- und Anschlussarbeiten mit Abnahmefrist. Der Leitfaden beantwortet allgemeine Wissensfragen aus dem Betriebswissen und deckt die Kl
+ziele | human.review,staff.informed,task.created
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Anfrage „Praxisumzug – Wasser- und Gasanschlüsse“. Wir haben sie so verstanden: Eine Zahnarztpraxis benötigt beim Umzug bis vor der Eröffnung am 3. Februar Wasser- und Druckluftanschlüsse für drei Behandlungsplätze sowie die Verlegung eines Labor-Gasanschlusses und eine anschließende Prüferabnahm
+ausgehend | {tomorbit777@gmail.com} | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihnen ein passendes Angebot erstellen können, fehlen uns noch folgende Angaben:  1. Abnahmefrist? 2. An welcher Adresse befinden sich die neuen Praxisräume? 3. Können Sie vorhandene Wasser-, Gas- und Druckluftanschlüsse sowie die geplanten Leitungswege kurz beschreiben oder pa
+aufgabe | Fachliche Prüfung und Klärung durch eine Person
+ereignisse | fact.conflict_detected fact.conflict_detected
+
+## Fakten der Badangebote
+== 80b18bcb-0690-4cad-b3b9-c0824ed7da4d MANUAL_REVIEW
+1
+== 2523c956-e132-404c-8d65-c27e7ad16b3b WAITING_FOR_INFORMATION
+Badezimmerfläche | 6 | CANDIDATE | f | 1
+Badezimmerfläche | 7 | CONFIRMED | f | 2
+Badezimmerfläche | 11 | CONFIRMED | t | 3
+ai.bathroom_area | "etwa 6 Quadratmeter" | CONFIRMED | f | 1
+ai.bathroom_area | "7 Quadratmeter" | CONFIRMED | f | 2
+ai.bathroom_area | "11 Quadratmeter" | CONFIRMED | t | 3
+fact.corrected | {"key": "Badezimmerfläche", "current": 7, "previous": 6, "messageId": "a715690d-f414-459e-8a28-eb5a7ad9714c"}
+fact.corrected | {"key": "ai.bathroom_area", "current": "7 Quadratmeter", "previous": "etwa 6 Quadratmeter", "messageId": "a715690d-f414-459e-8a28-eb5a7ad9714c"}
+fact.corrected | {"key": "Badezimmerfläche", "current": 11, "previous": 7, "messageId": "e9479327-6e76-4987-8045-7ea337de35c8"}
+fact.corrected | {"key": "ai.bathroom_area", "current": "11 Quadratmeter", "previous": "7 Quadratmeter", "messageId": "e9479327-6e76-4987-8045-7ea337de35c8"}
+3
+== f0a1493f-9473-4192-af77-6f2fe7041a81 WAITING_FOR_INFORMATION
+badflaeche | 7 | CONFLICTED | f | 1
+badflaeche | 8 | CONFLICTED | f | 2
+badflaeche | 12 | CONFIRMED | t | 3
+fact.corrected | {"key": "badflaeche", "current": 12, "previous": 8, "messageId": "f71ffe16-9b1d-4b5e-af0a-d3e40c264598"}
+3
+== 7adcf0fc-276f-4573-8c09-3af9ed13d4ff WAITING_FOR_INFORMATION
+Badezimmerfläche | 7 | CANDIDATE | f | 1
+Badezimmerfläche | 8 | CONFIRMED | f | 2
+Badezimmerfläche | 12 | CONFIRMED | t | 3
+ai.bathroom_area | "ca. 7 m²" | CONFIRMED | f | 1
+ai.bathroom_area | "8 m²" | CONFIRMED | f | 2
+ai.bathroom_area | "12 m²" | CONFIRMED | t | 3
+fact.corrected | {"key": "Badezimmerfläche", "current": 8, "previous": 7, "messageId": "df37cda3-7690-4c9a-a23f-3827d362549a"}
+fact.corrected | {"key": "ai.bathroom_area", "current": "8 m²", "previous": "ca. 7 m²", "messageId": "df37cda3-7690-4c9a-a23f-3827d362549a"}
+fact.corrected | {"key": "Badezimmerfläche", "current": 12, "previous": 8, "messageId": "0146134b-9c68-49df-a1e2-ee20301f3ade"}
+fact.corrected | {"key": "ai.bathroom_area", "current": "12 m²", "previous": "8 m²", "messageId": "0146134b-9c68-49df-a1e2-ee20301f3ade"}
+3
+== 1d2cf33b-b9a4-44aa-bc42-25e35a427d48 MANUAL_REVIEW
+1
+== 56f98727-c4ba-4d2f-990b-f85e5e4a9564 WAITING_FOR_APPROVAL
+1
+## Beurteilung Zerlegung (case.split)
+c4d8ccf5 | {"ungrounded": ["Samstags telefonisch erreichbar?"], "substantive": 6, "supplemented": ["telefonisch erreichbar?"]} | 6 getrennte Anliegen in der Nachricht erkannt (nicht zugeordnete Aussagen wurden als eigenes Anliegen ergänzt).
+1d14b185 | {"ungrounded": [], "substantive": 6, "supplemented": []} | 5 getrennte Anliegen in der Nachricht erkannt.
+ec46e292 | {"ungrounded": [], "substantive": 6, "supplemented": []} | 5 getrennte Anliegen in der Nachricht erkannt.
+60f53e33 | {"ungrounded": [], "substantive": 6, "supplemented": []} | 5 getrennte Anliegen in der Nachricht erkannt.
+## Praxisumzug: Verlauf der Nachrichten
+63cdefd2 | INBOUND | 12:55 | Guten Tag,  unsere Zahnarztpraxis zieht Ende Januar in neue Räume um. Dort müssen drei Behandlungsplätze an Wasser und Druckluft angeschlossen und ein Gasanschluss für das Labor verlegt werden. Die Abnahme durch den Prüfer muss vor der Eröffnung am 3. Februar erfolgt sein. Können Sie das übernehmen und wie würden Sie vorgehen?  Viele Grüße Tom Orbit  [Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage (customer-simulator). 
+9a8ba01e | INBOUND | 12:57 | Guten Tag,  unsere Zahnarztpraxis zieht Ende Januar in neue Räume um. Dort müssen drei Behandlungsplätze an Wasser und Druckluft angeschlossen und ein Gasanschluss für das Labor verlegt werden. Die Abnahme durch den Prüfer muss vor der Eröffnung am 3. Februar erfolgt sein. Können Sie das übernehmen und wie würden Sie vorgehen?  Viele Grüße Tom Orbit  [Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage (customer-simulator). 
+9a8ba01e | OUTBOUND | 13:04 | Guten Tag,  vielen Dank für Ihre Anfrage „Praxisumzug – Wasser- und Gasanschlüsse“. Wir haben sie so verstanden: Eine Zahnarztpraxis benötigt beim Umzug bis vor der Eröffnung am 3. Februar Wasser- und Druckluftanschlüsse für drei Behandlungsplätze sowie die Verlegung eines Labor-Gasanschlusses und eine anschließende Prüferabnahme; Druckluftinstallation und Prüferabnahme sind im Betriebsprofil nicht ausdrücklich aufgeführt.  Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben:  1. An welcher Adresse befinden sich die neuen Praxisräume? 2. Können Sie vorhandene Wasser-, Gas- und Druckluftanschlüsse sowie die geplanten Leitungswege kurz beschreiben oder p
+9a8ba01e | INBOUND | 13:05 | Die neuen Räume sind in der Kölner Straße 12 in 50667 Köln, Erdgeschoss. Die Druckluft kommt von einem Kompressor im Keller, die Gasleitung für das Labor muss ca. 8 Meter verlegt werden. Der Prüfer kommt am 29. Januar.  [Simulation] Diese Nachricht stammt aus einem Testwerkzeug. 
+9a8ba01e | OUTBOUND | 13:06 | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihnen ein passendes Angebot erstellen können, fehlen uns noch folgende Angaben:  1. Abnahmefrist? 2. An welcher Adresse befinden sich die neuen Praxisräume? 3. Können Sie vorhandene Wasser-, Gas- und Druckluftanschlüsse sowie die geplanten Leitungswege kurz beschreiben oder passende Pläne bereitstellen? 4. Wer führt die geforderte Abnahme durch, und welche konkreten Prüfungen oder Nachweise werden verlangt?  Für ein verlässliches Angebot schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwoch, 21.10.2026, 09:00–10:30 Uhr - Donnerstag, 22.10.2026, 14:00–15:30 Uhr - Freitag, 23.1
+fc627330 | INBOUND | 12:54 | Guten Tag,  Ende Januar zieht unsere Zahnarztpraxis um. In den neuen Räumen brauchen drei Behandlungsplätze Anschlüsse für Wasser und Druckluft, und für das Labor muss eine Gasleitung gelegt werden. Vor der Eröffnung am 3. Februar muss alles vom Prüfer abgenommen sein. Übernehmen Sie so etwas, und wie gehen Sie vor?  Mit freundlichen Grüßen Tom Orbit  [Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage (customer-simulator). 
+fc627330 | OUTBOUND | 13:02 | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas“. Wir haben sie so verstanden: Tom Orbit fragt, ob der Betrieb Anschlüsse für Wasser und Druckluft an drei Behandlungsplätzen sowie eine Gasleitung fürs Labor in den neuen Praxisräumen installieren kann; vor der Eröffnung am 3. Februar ist eine Abnahme erforderlich, und er fragt nach dem Vorgehen.  Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben:  1. In welcher Stadt befinden sich die neuen Praxisräume?  Für ein verlässliches Angebot schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Mittwo
+fc627330 | INBOUND | 13:08 | Die neuen Räume sind in der Kölner Straße 12 in 50667 Köln, Erdgeschoss. Die Druckluft kommt von einem Kompressor im Keller, die Gasleitung für das Labor muss ca. 8 Meter verlegt werden. Der Prüfer kommt am 29. Januar.  [Simulation] Diese Nachricht stammt aus einem Testwerkzeug. 
+ | OUTBOUND | 13:01 | Guten Tag Frank,  4 Vorgänge brauchen Ihre Aufmerksamkeit:  • „Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse“ braucht Ihre Aufmerksamkeit. Grund: Neue Anfrage einer Zahnarztpraxis: Drei Behandlungsplätze sollen an Wasser und Druckluft angeschlossen und ein Gasanschluss fürs Labor verlegt werden; Abnahme vor der Eröffnung am 3. Februar. Die Eignung dieser Praxisinstallationen und eine sichere Vorgehensweise sind aus dem Leistungsprofil nicht bestätigt; bitte fachlich prüfen und über die mögliche Übernahme entscheiden.   http://localhost:3000/cases/63cdefd2-46f4-49ae-a4c0-ce2541f54cc7 • „Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse“ wartet auf eine Freigabe. Grund:
+ | OUTBOUND | 13:03 | Guten Tag Frank,  Der Vorgang „Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas“ braucht Ihre Prüfung. Grund: Auf Antwort zum Standort warten: Wartet auf eine Antwort.  Vorgang öffnen: http://localhost:3000/cases/fc627330-cd31-491d-8673-df677248589f  Project ORBIT wartet nicht untätig: Es prüft laufend, ob sich der Stand ändert, und meldet sich bei ausbleibender Reaktion erneut.
+ | OUTBOUND | 13:03 | Guten Tag Frank,  Der Vorgang „Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas“ braucht Ihre Aufmerksamkeit. Grund: Tom Orbit fragt nach Wasser- und Druckluftanschlüssen für drei Behandlungsplätze sowie einer Gasleitung fürs Labor in neuen Zahnarztpraxisräumen; Abnahme ist vor der Eröffnung am 3. Februar gewünscht. Die Stadt der neuen Räume fehlt noch; bitte Leistungsumfang, Abnahme und Zeitplan fachlich prüfen.  Vorgang öffnen: http://localhost:3000/cases/fc627330-cd31-491d-8673-df677248589f  Project ORBIT wartet nicht untätig: Es prüft laufend, ob sich der Stand ändert, und meldet sich bei ausbleibender Reaktion erneut.
+ | OUTBOUND | 13:08 | Guten Tag Frank,  Der Vorgang „Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse“ braucht Ihre Aufmerksamkeit. Grund: Neue Angaben zur Praxisverlegung: Kölner Straße 12, 50667 Köln, Erdgeschoss; Druckluft vom Kompressor im Keller; Labor-Gasleitung ca. 8 m zu verlegen. Prüfertermin 29. Januar widerspricht der zuvor genannten Abnahmefrist vor dem 3. Februar; außerdem fehlen Angaben zu Leitungswegen und Prüfumfang. Bitte fachlich prüfen und klären, ob die Arbeiten übernommen werden können.  Vorgang öffnen: http://localhost:3000/cases/9a8ba01e-fd18-416a-8c02-344704549af4  Project ORBIT wartet nicht untätig: Es prüft laufend, ob sich der Stand ändert, und meldet sich bei ausbleibender R
+ | OUTBOUND | 13:08 | Guten Tag Frank,  Der Vorgang „Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse“ braucht Ihre Prüfung. Grund: Auf die Antwort der Kundschaft warten: Wartet auf eine Antwort.  Vorgang öffnen: http://localhost:3000/cases/9a8ba01e-fd18-416a-8c02-344704549af4  Project ORBIT wartet nicht untätig: Es prüft laufend, ob sich der Stand ändert, und meldet sich bei ausbleibender Reaktion erneut.

@@ -354,3 +354,29 @@ describe('strenge Bindungen für frei geplante Abläufe (Steckbriefe der Fähigk
     expect(validatePlan(clarificationPlan(), ctx()).valid).toBe(true);
   });
 });
+
+describe('veraltete Ergebnisse nach einer Antwort (Live-Fund: zweite Rückfrage fragte erneut nach der genannten Adresse)', () => {
+  const freeCtx = (over: Partial<PlanValidationContext> = {}) => ctx({ blueprint: undefined, strictBindings: true, policyModes: new Map([['requirements.resolve', 'AUTONOMOUS'], ['email.draft', 'AUTONOMOUS'], ['email.send.clarification', 'AUTONOMOUS']]), ...over });
+  const plan = (reqsId: string) => ({
+    goalKeys: ['human.review'],
+    nodes: [
+      node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+      ...(reqsId === 'reqs' ? [] : [node(reqsId, 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } })]),
+      node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'sender.email' }, missing: { stepOutput: { node: reqsId, path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+      node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+    ],
+    edges: reqsId === 'reqs' ? [edge('e1', 'reqs', 'draft'), edge('e2', 'draft', 'wait')] : [edge('e0', 'reqs', reqsId), edge('e1', reqsId, 'draft'), edge('e2', 'draft', 'wait')],
+    conciseExplanation: 'Neu prüfen und gezielt nachfragen.',
+  });
+
+  it('ein Entwurf, der das Ergebnis eines vor der Antwort ausgeführten Prüfknotens liest, wird abgewiesen – ein neuer Prüfknoten ist zulässig', () => {
+    expect(codes(validatePlan(plan('reqs'), freeCtx({ staleStepNodes: ['reqs'] })))).toContain('STALE_STEP_OUTPUT');
+    expect(codes(validatePlan(plan('reqs_2'), freeCtx({ staleStepNodes: ['reqs'] })))).not.toContain('STALE_STEP_OUTPUT');
+    expect(codes(validatePlan(plan('reqs'), freeCtx()))).not.toContain('STALE_STEP_OUTPUT'); // ohne Antwort ist nichts veraltet
+  });
+
+  it('der Verweis auf einen unbekannten Knoten nennt die vorhandenen Knoten', () => {
+    const result = validatePlan({ ...plan('reqs'), nodes: plan('reqs').nodes.map((n) => (n.id === 'draft' ? { ...n, inputs: { to: { fact: 'sender.email' }, missing: { stepOutput: { node: 'requirement', path: 'missing' } } } } : n)) }, freeCtx());
+    expect(result.issues.find((i) => i.code === 'BINDING_UNKNOWN_NODE')?.message).toMatch(/Vorhandene Knoten: reqs, draft, wait/);
+  });
+});
