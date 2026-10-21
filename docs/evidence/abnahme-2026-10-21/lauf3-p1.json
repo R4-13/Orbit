@@ -1,0 +1,62 @@
+{
+  "preisfrage": [
+    {
+      "subject": "Preis Heizkörper",
+      "status": "WAITING_FOR_EXTERNAL_SYSTEM",
+      "gruende": [
+        "Erforderliche Angaben für eine verlässliche Preisauskunft ermitteln: Der KI-Dienst ist für die Anfrageanalyse nicht verfügbar. ORBIT versucht es automatisch erneut (nächster Versuch 19:37 Uhr)."
+      ],
+      "offeneSchritte": [],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Kosten Heizkörpertausch",
+      "status": "COMPLETED",
+      "gruende": [],
+      "offeneSchritte": [],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Kosten Heizkörpertausch“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme d1f5a9"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Warmwasserspeicher",
+      "status": "MANUAL_REVIEW",
+      "gruende": [
+        "Preisfrage zum Warmwasserspeicher fachlich prüfen und Kundschaft beantworten: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "manual:WAITING",
+        "send:BLOCKED:MISSING_INPUT:Es fehlen Angaben: draftId."
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Preisrahmen Thermostate",
+      "status": "MANUAL_REVIEW",
+      "gruende": [
+        "Der Plan blieb auch nach einem Reparaturversuch unzulässig: [WAIT_WITHOUT_TIMEOUT] Ein WAIT_EVENT-Knoten braucht eine Frist (timeout) oder eine Blueprint-Wait-Regel mit Timeout-Policy.",
+        "Ein WAIT_EVENT-Knoten braucht eine Frist (timeout) oder eine Blueprint-Wait-Regel mit Timeout-Policy."
+      ],
+      "offeneSchritte": [],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Armaturen im Bad",
+      "status": "WAITING_FOR_INFORMATION",
+      "gruende": [
+        "Auf Antwort warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "wait1:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Armaturen im Bad“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Sind die drei neuen Armaturen bereits vorhanden, oder sollen wir diese bereitstellen? 2. Um welche Armaturen handelt es sich genau, zum Beispiel Waschtisch-, Dusch- oder Badewannenarmaturen? Sie können einfach auf diese E-Mail antworten. Mit freundliche"
+      ],
+      "appointmentsProposed": 0
+    }
+  ]
+}

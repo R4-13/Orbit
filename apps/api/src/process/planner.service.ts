@@ -322,6 +322,11 @@ export class PlannerService {
   private normalizeProposal(output: unknown): unknown {
     const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }> } | null;
     if (!proposal || !Array.isArray(proposal.nodes)) return output;
+    for (const node of proposal.nodes as Array<{ type?: string; timeout?: unknown }>) {
+      // Warten ohne Frist: die Standardfrist für Antworten der Kundschaft (72 Stunden) wird eingesetzt, statt den Plan wegen einer Formfrage zu verwerfen (Live-Fund: Plan blieb nach dem Reparaturversuch an
+      // „WAIT_WITHOUT_TIMEOUT“ unzulässig, der Vorgang ging ohne Zielarbeit an eine Person).
+      if (node.type === 'WAIT_EVENT' && !node.timeout) node.timeout = { hours: 72 };
+    }
     for (const node of proposal.nodes) {
       const message = node.capability?.key === 'staff.notify' ? (node.inputs?.message as { literal?: unknown } | undefined) : undefined;
       if (message && typeof message.literal === 'string' && message.literal.length > 400) message.literal = `${message.literal.slice(0, 397)}…`;

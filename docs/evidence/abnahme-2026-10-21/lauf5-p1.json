@@ -1,0 +1,155 @@
+{
+  "preisfrage": [
+    {
+      "subject": "Preis Heizkörper",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "COMPLETION_CRITERIA_MET",
+        "evidenceRefs": [
+          "facts.extract_from_message",
+          "crm.lead.create/CRM_HANDOFF",
+          "staff.notify",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-1"
+        ]
+      },
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "extract",
+        "lead",
+        "notify",
+        "interpret",
+        "context",
+        "reqs",
+        "ack_draft",
+        "ack",
+        "done"
+      ],
+      "gruende": [],
+      "offeneSchritte": [],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Preis Heizkörper“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme 240e83"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Kosten Heizkörpertausch",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "COMPLETION_CRITERIA_MET",
+        "evidenceRefs": [
+          "facts.extract_from_message",
+          "crm.lead.create/CRM_HANDOFF",
+          "staff.notify",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-2"
+        ]
+      },
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "interpret",
+        "context",
+        "done",
+        "lead",
+        "notify",
+        "ack",
+        "extract",
+        "reqs",
+        "ack_draft"
+      ],
+      "gruende": [],
+      "offeneSchritte": [],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Kosten Heizkörpertausch“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme 240e83"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Warmwasserspeicher",
+      "status": "WAITING_FOR_INFORMATION",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:quote.delivered,staff.informed:Ich prüfe zuerst den Absenderkontext und ermittle die für die angefragte Kostenauskunft erforderlichen Angaben. Da das Ergebnis der Anforderungsprüfung noch feh",
+        "2:ACTIVE:human.review:Die Kundschaft fragt nach ungefähren Kosten, aber der Umfang und die Speichergröße fehlen. Ich frage beides gebündelt ab und warte auf die Antwort; danach wird "
+      ],
+      "erledigt": [
+        "context",
+        "reassess",
+        "requirements",
+        "context",
+        "requirements",
+        "question",
+        "send_question"
+      ],
+      "gruende": [
+        "Auf Antwort der Kundschaft warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "wait_reply:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Warmwasserspeicher“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Soll sich Ihre Preisfrage nur auf das Gerät oder auch auf den Austausch und die Montage beziehen? 2. Welche Größe oder welches Fassungsvermögen soll der neue Speicher haben? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Abnahm"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Preisrahmen Thermostate",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:human.review:Zuerst verstehen (Absender, Anforderungen); danach wird mit dem Ergebnis weitergeplant (Rückfrage oder Übergabe).",
+        "2:ACTIVE:human.review,staff.informed,task.created:Die neuen Informationen belegen weder, dass der Betrieb Thermostate tauscht, noch einen Preisrahmen; kundenseitige Angaben fehlen laut Prüfung nicht, deshalb wi"
+      ],
+      "erledigt": [
+        "context",
+        "weiter_planen",
+        "requirements",
+        "context",
+        "answer",
+        "answerable",
+        "notify",
+        "requirements",
+        "task"
+      ],
+      "gruende": [
+        "Person prüft Leistungsumfang und entscheidet über zulässige Preisangabe: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "send:BLOCKED:MISSING_INPUT:Es fehlen Angaben: draftId.",
+        "human:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Armaturen im Bad",
+      "status": "WAITING_FOR_INFORMATION",
+      "outcome": null,
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "ask1_draft",
+        "extract",
+        "interpret",
+        "context",
+        "reqs",
+        "ask1"
+      ],
+      "gruende": [
+        "Auf Antwort warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "wait1:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Armaturen im Bad“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Sind die drei neuen Armaturen bereits vorhanden, oder sollen wir diese für Sie bereitstellen? 2. Passen die neuen Armaturen zu den vorhandenen Anschlüssen, oder sind Ihnen Besonderheiten beziehungsweise Schäden an den Anschlüssen bekannt? Sie können ein"
+      ],
+      "appointmentsProposed": 0
+    }
+  ]
+}

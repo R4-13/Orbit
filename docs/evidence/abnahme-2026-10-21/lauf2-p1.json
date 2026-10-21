@@ -1,0 +1,40 @@
+{
+  "preisfrage": [
+    {
+      "subject": "Preis Heizkörper",
+      "status": "WAITING_FOR_INFORMATION",
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Preis Heizkörper“. Wir haben sie so verstanden: Tom möchte eine ungefähre Preisauskunft für den Austausch von vier Heizkörpern; der Betrieb bietet Heizungsleistungen an. Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben: 1. Können Sie uns bitte Maße und Typ der vier vorhandenen Heizkörper nennen und mitteilen, ob Si"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Kosten Heizkörpertausch",
+      "status": "WAITING_FOR_INFORMATION",
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Kosten Heizkörpertausch“. Wir haben sie so verstanden: A. Lindner bittet um eine Kosteneinschätzung für den Austausch von sechs Heizkörpern; das Betriebsprofil nennt diese Leistung nicht ausdrücklich, daher ist die Zuordnung zum Angebot unsicher. Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben: 1. Sollen die sechs"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Warmwasserspeicher",
+      "status": "MANUAL_REVIEW",
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Preisrahmen Thermostate",
+      "status": "WAITING_FOR_EXTERNAL_SYSTEM",
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Armaturen im Bad",
+      "status": "WAITING_FOR_INFORMATION",
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Armaturen im Bad“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welche drei Armaturen handelt es sich (zum Beispiel Waschtisch-, Dusch- oder Badewannenarmatur)? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Abnahme c127ba"
+      ],
+      "appointmentsProposed": 0
+    }
+  ]
+}

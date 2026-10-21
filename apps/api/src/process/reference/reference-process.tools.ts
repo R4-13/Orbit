@@ -465,7 +465,10 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           const proposal = kind
             ? await this.appointments.propose(ctx.tenantId, kind, { ...(analysed?.appointmentMinutes ? { minutes: analysed.appointmentMinutes } : {}), exclude: earlier?.proposedStarts ?? [] })
             : undefined;
-          const handoff = (await this.blueprintOfCase(ctx.tenantId, caseId))?.dynamicRequirements?.outcome === 'HANDOFF';
+          // „Angebot“ und die KI-Zusammenfassung (dritte Person, kann Aussagen aus dem Betriebsprofil enthalten) gehören nur in die Rückfrage eines Prozesses, der wirklich ein Angebot erstellt. Ohne hinterlegten
+          // Prozess (freie Planung) und bei einer Übergabe fragt die Nachricht neutral (Live-Fund der Abnahmeprüfung: „… daher ist die Zuordnung zum Angebot unsicher“ stand in einer Kundenmail).
+          const blueprintHere = await this.blueprintOfCase(ctx.tenantId, caseId);
+          const handoff = !blueprintHere || blueprintHere.dynamicRequirements?.outcome === 'HANDOFF';
           const previousRounds = await this.prisma.forTenantId(ctx.tenantId).actionIntent.count({ where: { caseId, status: 'CONFIRMED', capabilityKey: 'email.send', purpose: 'CLARIFICATION' } });
           const questions = input.missing.filter((q) => q.key !== APPOINTMENT_AGREED_KEY);
           bodyText = clarificationBody({

@@ -101,12 +101,17 @@ const OUT = process.env.ABNAHME_OUT;
   });
 
   /** Neue Anfrage: der Lauf wird vollständig durchgespielt (Freigaben des Testbetriebs eingeschlossen); liefert, was für die Bewertung nötig ist. */
-  async function submit(subject: string, content: string): Promise<{ caseId: string; first: typeof sent; threadId: string; rfc: string }> {
+  async function submit(subject: string, content: string): Promise<{ caseId: string; first: typeof sent; threadId: string; rfc: string; intakeStatus?: string }> {
     const before = sent.length;
     const threadId = randomUUID();
     const rfc = `<${randomUUID()}@kunde.example>`;
     const result = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject, content, threadId, rfcMessageId: rfc }));
-    const caseId = result.case!.id;
+    // Ohne Vorgang (der Eingang liegt in der Prüfliste) gibt es nichts zu bearbeiten; der Aufrufer bewertet das (Mails und Terminvorschläge bleiben aus).
+    if (!result.case) {
+      const intake = await scoped().intakeEvent.findUnique({ where: { id: result.intakeEventId }, select: { status: true } });
+      return { caseId: '', first: sent.slice(before), threadId, rfc, intakeStatus: intake?.status };
+    }
+    const caseId = result.case.id;
     const waiting = await scoped().processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
     if (waiting) {
       await app.get(OrchestratorService).approvePlan(tenantId, 'abnahme-freigabe', waiting.id);
@@ -138,10 +143,18 @@ const OUT = process.env.ABNAHME_OUT;
     ];
     const runs: Array<Record<string, unknown>> = [];
     for (const [subject, content] of wordings) {
-      const { caseId, first } = await submit(subject, content);
+      const { caseId, first, intakeStatus } = await submit(subject, content);
+      if (!caseId) {
+        runs.push({ subject, ohneVorgang: intakeStatus ?? 'unbekannt', mails: first.length });
+        expect(first).toHaveLength(0); // ohne Vorgang geht nichts an die Kundschaft
+        continue;
+      }
       const proposed = await events(caseId, 'appointment.proposed');
       const row = await scoped().case.findUniqueOrThrow({ where: { id: caseId } });
-      runs.push({ subject, status: row.orchestrationStatus, mails: first.map((m) => m.bodyText.replace(/\s+/g, ' ').slice(0, 400)), appointmentsProposed: proposed.length });
+      const openNodes = (await scoped().processPlanNode.findMany({ where: { plan: { caseId } }, select: { nodeKey: true, state: true, errorCode: true, errorMessage: true } })).filter((n) => !['SUCCEEDED', 'PLANNED', 'SKIPPED', 'SUPERSEDED'].includes(n.state)).map((n) => `${n.nodeKey}:${n.state}${n.errorCode ? `:${n.errorCode}:${(n.errorMessage ?? '').slice(0, 120)}` : ''}`);
+      const plans = await scoped().processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' }, select: { revision: true, status: true, goalKeys: true, explanation: true } });
+      const done = (await scoped().processPlanNode.findMany({ where: { plan: { caseId }, state: 'SUCCEEDED' }, select: { nodeKey: true } })).map((n) => n.nodeKey);
+      runs.push({ subject, status: row.orchestrationStatus, outcome: row.outcome, plaene: plans.map((pl) => `${pl.revision}:${pl.status}:${pl.goalKeys.join(',')}:${pl.explanation.slice(0, 160)}`), erledigt: done, gruende: row.attentionReasons.slice(0, 2), offeneSchritte: openNodes, mails: first.map((m) => m.bodyText.replace(/\s+/g, ' ').slice(0, 400)), appointmentsProposed: proposed.length });
       for (const mail of first) {
         expect(mail.to).toBe('hausverwaltung@kunde.example');
         expect(mail.bodyText).not.toMatch(/€|\bEUR\b|\bEuro\b/); // kein erfundener Preis
@@ -151,6 +164,8 @@ const OUT = process.env.ABNAHME_OUT;
       expect(row.orchestrationStatus).not.toBe('FAILED');
     }
     record.preisfrage = runs;
+    // Der Aufbau muss zustande gekommen sein (ein Vorgang mit Bearbeitung), sonst beweist der Pfad nichts.
+    expect(runs.filter((r) => !('ohneVorgang' in r)).length).toBeGreaterThanOrEqual(4);
   });
 
   // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

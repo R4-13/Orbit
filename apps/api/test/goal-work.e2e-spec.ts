@@ -135,6 +135,7 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0]!.bodyText).toContain('An welcher Adresse liegen die neuen Praxisräume?');
     expect(sent[0]!.bodyText).not.toMatch(/€|EUR|garantier|Preis/i);
+    expect(sent[0]!.bodyText).not.toMatch(/Angebot erstellen|Wir haben sie so verstanden/); // ohne hinterlegten Prozess: neutrale Rückfrage, keine interne Zusammenfassung, kein Angebotsversprechen
     expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
 
     // Antwort der Kundschaft → Neuplanung: Angaben auslesen, prüfen, Person mit Zusammenfassung informieren, Übergabe.
@@ -283,6 +284,36 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     const second = plans[1]!;
     expect(second.nodes.find((n) => n.nodeKey === 'notify_staff')?.state).toBe('SUCCEEDED'); // wiederhergestellt, nicht wiederholt
     expect(second.nodes.some((n) => n.nodeKey === 'weiter')).toBe(true);
+  });
+  it('ein Schritt, der nur am Ergebnis eines übersprungenen Schritts hängt, entfällt (statt „blockiert“): der Vorgang geht nicht wegen dieses Formmangels an eine Person, sondern an seinen eigentlichen Übergabepunkt (Abnahmeprüfung 21.10.)', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    seedTool('submit_process_plan', {
+      goalKeys: ['human.review', 'staff.informed'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        // Der Entwurf entfällt (keine belegte Antwort), der Versand hängt nur an seinem Ergebnis.
+        node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' } }, config: { purpose: 'ACKNOWLEDGEMENT' }, preconditions: [{ exists: { fact: 'case.reference' } }] }),
+        node('send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'draft', path: 'draftId' } } }, config: { purpose: 'ACKNOWLEDGEMENT' } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Preisfrage zum Warmwasserspeicher: bitte fachlich prüfen und die Kundschaft beantworten.' } } }),
+        node('manual', 'MANUAL_TASK', { title: 'Eine Person prüft die Preisfrage und antwortet' }),
+      ],
+      edges: [edge('ctx', 'draft'), edge('draft', 'send'), edge('send', 'notify'), edge('notify', 'manual')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Eingang bestätigen (falls belegt), Person informieren, übergeben.',
+    });
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Preis Warmwasserspeicher', content: 'Was kostet ein neuer Warmwasserspeicher ungefähr?' }));
+    const caseId = result.case!.id;
+    await confirmPlan(tenantId, caseId);
+    const states = await planStates(tenantId, caseId, 'ACTIVE');
+    expect(states.state('draft')).toBe('SKIPPED');
+    expect(states.state('send')).toBe('SKIPPED'); // vorher: BLOCKED, „Es fehlen Angaben: draftId“
+    expect(states.state('notify')).toBe('SUCCEEDED');
+    expect(sent).toEqual([]);
+    const row = await caseOf(tenantId, caseId);
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW'); // die Person ist der Übergabepunkt …
+    expect(row.attentionReasons.join(' ')).toContain('Eine Person prüft die Preisfrage'); // … und der Grund ist der fachliche, nicht ein fehlender Entwurf
   });
   it('FX-20 im Ablauf: eine Antwort, die eine frühere Angabe selbst korrigiert, wird vor dem Weiterlaufen übernommen – die Neuplanung sieht den aktuellen Stand, der alte Wert bleibt als Verlauf', async () => {
     process.env.FACT_CORRECTION_ENABLED = 'true';

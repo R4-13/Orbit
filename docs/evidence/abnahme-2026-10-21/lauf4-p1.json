@@ -1,0 +1,135 @@
+{
+  "preisfrage": [
+    {
+      "subject": "Preis Heizkörper",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:human.review:Ich prüfe zunächst den Absender- und Vorgangskontext sowie die für diese Preisanfrage erforderlichen Angaben. Danach wird mit dem Prüfergebnis neu geplant; eine",
+        "2:ACTIVE:staff.informed,human.review:Die Anforderungsprüfung nennt keine kundenbekannten Angaben, die noch fehlen; die angefragte Menge ist bereits als Kandidatenangabe vorhanden und wird nicht ern"
+      ],
+      "erledigt": [
+        "context",
+        "requirements",
+        "context",
+        "requirements",
+        "notify"
+      ],
+      "gruende": [
+        "Preis für den Austausch fachlich prüfen und Antwortentscheidung treffen: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "manual:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Kosten Heizkörpertausch",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:human.review:Zuerst verstehen (Absender, Anforderungen); danach wird mit dem Ergebnis weitergeplant (Rückfrage oder Übergabe).",
+        "2:ACTIVE:quote.delivered,staff.informed,task.created:Die Kundschaft hat sechs Heizkörper und die gewünschte Leistung bereits genannt; diese Angaben werden nicht erneut erfragt. Eine belastbare Preisantwort fehlt u"
+      ],
+      "erledigt": [
+        "context",
+        "requirements",
+        "weiter_planen",
+        "answer",
+        "notify",
+        "lead",
+        "context",
+        "task"
+      ],
+      "gruende": [
+        "Fachperson prüft Leistung und erstellt gegebenenfalls ein Angebot: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "manual:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Warmwasserspeicher",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:human.review:Zunächst werden Absender und Vorgangskontext geprüft und die für die Kostenanfrage erforderlichen Angaben ermittelt. Da diese Prüfung noch aussteht und Preise n",
+        "2:SUPERSEDED:quote.delivered,staff.informed,task.created,human.review:Die Anfrage ist klar; Name, Kontakt und gewünschte ungefähre Kosten sind bereits bekannt, daher wird nichts erneut erfragt. Betriebswissen wird geprüft; falls e",
+        "3:ACTIVE:staff.informed,task.created,human.review:Die Anfrage ist inhaltlich vollständig: Produkt und gewünschte ungefähre Kostenauskunft sind bekannt; weitere nötige Angaben sind intern zu klären, nicht erneut"
+      ],
+      "erledigt": [
+        "context",
+        "reassess",
+        "requirements",
+        "context",
+        "answer",
+        "context",
+        "reqs",
+        "notify"
+      ],
+      "gruende": [
+        "Fachlich prüfen, ob Warmwasserspeicher angeboten werden und welche Kostenauskunft belegbar ist: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "manual:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Preisrahmen Thermostate",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:inquiry.answered,staff.informed:Ich prüfe zunächst den Absender- und Vorgangskontext sowie, welche Angaben für die Preisfrage erforderlich sind. Da das Ergebnis der Anforderungsprüfung noch ni",
+        "2:ACTIVE:inquiry.answered,staff.informed:Die neue Nachricht beantwortet die offene Mengenfrage: Es geht um zwei Thermostate; weitere Angaben der Kundschaft fehlen nicht. ORBIT prüft, ob der Preisrahmen"
+      ],
+      "erledigt": [
+        "reassess",
+        "context",
+        "requirements",
+        "knowledge",
+        "context",
+        "notify"
+      ],
+      "gruende": [
+        "Preisrahmen für den Tausch von zwei Thermostaten fachlich prüfen und Auskunft festlegen: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "send:BLOCKED:MISSING_INPUT:Es fehlen Angaben: draftId.",
+        "manual:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Armaturen im Bad",
+      "status": "WAITING_FOR_INFORMATION",
+      "outcome": null,
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "interpret",
+        "context",
+        "ask1",
+        "extract",
+        "reqs",
+        "ask1_draft"
+      ],
+      "gruende": [
+        "Auf Antwort warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "wait1:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Armaturen im Bad“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welche drei Armaturen handelt es sich (zum Beispiel Waschtisch-, Dusch- oder Badewannenarmaturen)? 2. Sind die neuen Armaturen bereits vorhanden, oder sollen wir diese ebenfalls bereitstellen? Sie können einfach auf diese E-Mail antworten. Mit freund"
+      ],
+      "appointmentsProposed": 0
+    }
+  ]
+}

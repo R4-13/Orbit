@@ -67,3 +67,13 @@ describe('automatisch reparierte Pläne werden erneut vollständig geprüft', ()
     expect(planner.repairDeterministically(proposal, first, context, undefined)).toBeUndefined();
   });
 });
+
+describe('Formfragen: Warten ohne Frist', () => {
+  it('ein WAIT_EVENT ohne Frist erhält die Standardfrist der Antworten (72 Stunden) und macht den Plan nicht unzulässig', () => {
+    const planner = Object.create(PlannerService.prototype) as { normalizeProposal(output: unknown): unknown };
+    const proposal = { goalKeys: ['human.review'], nodes: [{ id: 'wait', type: 'WAIT_EVENT', config: { eventType: 'communication.received' } }, { id: 'again', type: 'WAIT_EVENT', timeout: { hours: 24 }, config: {} }] };
+    const normalized = planner.normalizeProposal(proposal) as { nodes: Array<{ timeout?: { hours: number } }> };
+    expect(normalized.nodes[0]!.timeout).toEqual({ hours: 72 });
+    expect(normalized.nodes[1]!.timeout).toEqual({ hours: 24 }); // eine gesetzte Frist bleibt
+  });
+});

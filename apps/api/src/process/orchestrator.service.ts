@@ -416,6 +416,18 @@ export class OrchestratorService {
     if (!tool) return this.failNode(tenantId, caseRow, graph, node, def, 'TOOL_MISSING', 'Die Umsetzung der Fähigkeit fehlt.');
 
     const bound = bindInputs(def, ctx);
+    // Hängt der Schritt nur an den Ergebnissen übersprungener Schritte (z. B. „Antwort senden“, obwohl der Entwurf mangels belegter Antwort entfiel), entfällt auch er: er ist nicht „blockiert“, und der Vorgang
+    // geht nicht wegen eines Formmangels an eine Person (Live-Fund der Abnahmeprüfung: send:BLOCKED „Es fehlen Angaben: draftId“).
+    if (bound.missing.length > 0) {
+      const upstreamSkipped = bound.missing.every((name) => {
+        const upstream = (def.inputs[name] as { stepOutput?: { node?: string } } | undefined)?.stepOutput?.node;
+        return upstream !== undefined && graph.nodes.find((n) => n.nodeKey === upstream)?.state === 'SKIPPED';
+      });
+      if (upstreamSkipped) {
+        await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'SKIPPED', errorCode: 'UPSTREAM_SKIPPED', errorMessage: 'Der vorgelagerte Schritt wurde übersprungen; dieser Schritt entfällt.', completedAt: new Date() });
+        return;
+      }
+    }
     if (bound.missing.length > 0) {
       // In einem hinterlegten Prozess beantwortet die Kundschaft (Rückfrage) die fehlenden Angaben. Ein frei geplanter Ablauf hat keine Rückfrage: niemand würde sie liefern,
       // der Vorgang bliebe lautlos liegen – er geht deshalb zur Prüfung an einen Menschen (der dann informiert wird).
