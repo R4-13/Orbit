@@ -340,8 +340,8 @@ describe('Case facts, lifecycle and correlation (e2e)', () => {
       const stored = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } });
       expect(stored.businessGoals).toEqual(['CREATE_AND_DELIVER_QUOTE']);
       expect(stored.currentIntent).toBe('REQUEST_FOR_QUOTE');
-      // The legacy sales workflow only created records: that is not a verified completed process, so the case stays open.
-      expect(stored.orchestrationStatus).toBe('IN_PROGRESS');
+      // The legacy sales workflow only created records: that is not a verified completed process, so the case stays open – as a handover to a person (lead and follow-up task exist), not as "in progress" without anyone responsible.
+      expect(stored.orchestrationStatus).toBe('MANUAL_REVIEW');
       expect(stored.status).toBe('IN_PROGRESS');
       const caseFacts = await facts.getCurrent(tenantId, stored.id);
       expect(caseFacts).toHaveLength(1);
