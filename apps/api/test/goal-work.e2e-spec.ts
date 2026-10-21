@@ -378,4 +378,29 @@ describe('Zielarbeit bei unbekannten Vorgängen (FX-01, e2e)', () => {
     const notify = await prisma.forTenantId(tenantId).processPlanNode.findFirst({ where: { nodeKey: 'notify', plan: { caseId, status: 'ACTIVE' } } });
     expect(notify?.state).toBe('SUCCEEDED');
   });
+  it('eine vom Plan angelegte Aufgabe gehört zum Vorgang: das Ziel „Aufgabe angelegt“ ist nachgewiesen und der Vorgang schließt mit Nachweis ab (Live-Fund: Ablauf lief durch, Ziel blieb unbelegt)', async () => {
+    const tenantId = await newTenant();
+    await prisma.forTenantId(tenantId).policyConfig.upsert({ where: { tenantId_action: { tenantId, action: 'task.create' } }, create: { tenantId, action: 'task.create', mode: 'AUTONOMOUS' }, update: { mode: 'AUTONOMOUS' } });
+    seedTriage();
+    seedTool('submit_process_plan', {
+      goalKeys: ['staff.informed', 'task.created'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Schlüsselbund im Keller vergessen: bitte den Monteur informieren.' } } }),
+        node('task', 'ACTION', { capability: { key: 'task.create' }, inputs: { title: { literal: 'Monteur wegen Schlüsselbund informieren' } } }),
+        node('done', 'COMPLETE'),
+      ],
+      edges: [edge('ctx', 'notify'), edge('notify', 'task'), edge('task', 'done')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Person informieren, Aufgabe anlegen.',
+    });
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = result.case!.id;
+    if ((await caseOf(tenantId, caseId)).orchestrationStatus === 'WAITING_FOR_APPROVAL') await confirmPlan(tenantId, caseId);
+    const row = await caseOf(tenantId, caseId);
+    expect(await prisma.forTenantId(tenantId).task.count({ where: { caseId } })).toBe(1);
+    expect(row.orchestrationStatus).toBe('COMPLETED');
+    expect(row.outcome).toMatchObject({ code: 'ADHOC_GOALS_PROVEN' });
+  });
 });

@@ -1,0 +1,178 @@
+{
+  "exportedAt": "2026-10-21T05:59:44.867Z",
+  "tenant": "musterwerk",
+  "evidence": [
+    {
+      "dealId": "528735152377",
+      "deal": {
+        "id": "528735152377",
+        "properties": {
+          "amount": null,
+          "createdate": "2026-10-20T11:00:15.764Z",
+          "dealname": "Anfrage (EMAIL)",
+          "dealstage": "appointmentscheduled",
+          "hs_lastmodifieddate": "2026-10-20T11:01:29.674Z",
+          "hs_object_id": "528735152377",
+          "hubspot_owner_id": null,
+          "pipeline": "default"
+        },
+        "createdAt": "2026-10-20T11:00:15.764Z",
+        "updatedAt": "2026-10-20T11:01:29.674Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-3/528735152377"
+      },
+      "associations": {
+        "contacts": [
+          {
+            "toObjectId": 896496248018,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 3,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "companies": [
+          {
+            "toObjectId": 454618592481,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 5,
+                "label": "Primary",
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              },
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 341,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "notes": [],
+        "tasks": [],
+        "emails": [],
+        "meetings": [],
+        "calls": []
+      },
+      "contact": {
+        "id": "896496248018",
+        "properties": {
+          "createdate": "2026-10-20T11:00:09.040Z",
+          "email": null,
+          "hs_object_id": "896496248018",
+          "lastmodifieddate": "2026-10-20T18:30:49.290Z"
+        },
+        "createdAt": "2026-10-20T11:00:09.040Z",
+        "updatedAt": "2026-10-20T18:30:49.290Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-1/896496248018"
+      },
+      "contactDeals": 1,
+      "checks": {
+        "lesbar": true,
+        "nach --since angelegt": true,
+        "automatisch vergebener Name": true,
+        "nur mit dem Testkontakt (oder dem gleichzeitig angelegten E-Mail-losen Kontakt) verknüpft": true,
+        "höchstens ein Unternehmen": true,
+        "keine Notizen/Aufgaben/E-Mails/Meetings/Anrufe": true,
+        "von keiner Person bearbeitet (Änderung ≤ 10 Min. nach Anlage)": true,
+        "ohne Besitzer, Standardphase": true
+      }
+    },
+    {
+      "dealId": "529012989146",
+      "deal": {
+        "id": "529012989146",
+        "properties": {
+          "amount": null,
+          "createdate": "2026-10-20T11:52:27.304Z",
+          "dealname": "Anfrage (EMAIL)",
+          "dealstage": "appointmentscheduled",
+          "hs_lastmodifieddate": "2026-10-20T11:53:37.489Z",
+          "hs_object_id": "529012989146",
+          "hubspot_owner_id": null,
+          "pipeline": "default"
+        },
+        "createdAt": "2026-10-20T11:52:27.304Z",
+        "updatedAt": "2026-10-20T11:53:37.489Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-3/529012989146"
+      },
+      "associations": {
+        "contacts": [
+          {
+            "toObjectId": 896544283885,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 3,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "companies": [
+          {
+            "toObjectId": 454566349021,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 5,
+                "label": "Primary",
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              },
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 341,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "notes": [],
+        "tasks": [],
+        "emails": [],
+        "meetings": [],
+        "calls": []
+      },
+      "contact": {
+        "id": "896544283885",
+        "properties": {
+          "createdate": "2026-10-20T11:52:23.928Z",
+          "email": null,
+          "hs_object_id": "896544283885",
+          "lastmodifieddate": "2026-10-20T20:24:49.047Z"
+        },
+        "createdAt": "2026-10-20T11:52:23.928Z",
+        "updatedAt": "2026-10-20T20:24:49.047Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-1/896544283885"
+      },
+      "contactDeals": 1,
+      "checks": {
+        "lesbar": true,
+        "nach --since angelegt": true,
+        "automatisch vergebener Name": true,
+        "nur mit dem Testkontakt (oder dem gleichzeitig angelegten E-Mail-losen Kontakt) verknüpft": true,
+        "höchstens ein Unternehmen": true,
+        "keine Notizen/Aufgaben/E-Mails/Meetings/Anrufe": true,
+        "von keiner Person bearbeitet (Änderung ≤ 10 Min. nach Anlage)": true,
+        "ohne Besitzer, Standardphase": true
+      }
+    }
+  ]
+}

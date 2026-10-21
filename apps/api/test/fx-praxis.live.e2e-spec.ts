@@ -6,6 +6,7 @@ import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { ConcernSegmentationService } from '../src/intake/concern-segmentation.service';
 import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbound-mail.port';
+import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
@@ -52,7 +53,7 @@ const OUT = process.env.PRAXIS_OUT;
     await staff('Vera', 'Büro', 'OFFICE', 'vera@sanitaer.example', ['GENERAL', 'APPOINTMENTS']);
     jest.spyOn(app.get<OutboundMailPort>(OUTBOUND_MAIL), 'send').mockImplementation(async (_t, message) => {
       sent.push(message as never);
-      return { providerMessageId: `x-${sent.length}`, from: 'info@sanitaer.example', executionMode: 'SIMULATED' };
+      return { providerMessageId: `x-${sent.length}`, threadId: (message as { threadId?: string }).threadId ?? `thr-${sent.length}`, rfcMessageId: `<sent-${sent.length}@mail.example>`, from: 'info@sanitaer.example', executionMode: 'SIMULATED' };
     });
     token = ((await api().post('/api/v1/auth/login').send({ email: adminUser.email, password: E2E_PASSWORD }).expect(200)).body.accessToken as string);
   }, 180_000);
@@ -296,5 +297,143 @@ const OUT = process.env.PRAXIS_OUT;
       else for (const run of runs) expect(run.concerns).toBeGreaterThanOrEqual(expectAtLeast);
     }
     record.segmentation = report;
+  });
+  const inbound = (over: Partial<NormalizedIntakeEvent> & { subject: string; content: string }): NormalizedIntakeEvent => ({
+    tenantId: '',
+    channel: 'SIMULATED',
+    provider: 'simulated',
+    externalEventId: randomUUID(),
+    occurredAt: new Date(),
+    sender: { address: 'hausverwaltung@kunde.example', displayName: 'Hausverwaltung Lindner' },
+    recipients: [{ address: 'info@sanitaer.example' }],
+    direction: 'INBOUND',
+    threadId: randomUUID(),
+    rfcMessageId: `<${randomUUID()}@kunde.example>`,
+    ...over,
+  });
+
+  it('Autonomer Abschluss eines bisher nicht vorgegebenen Falls (Hinweis an einen Monteur): Kontext → erlaubte Handlungen → Ergebnis geprüft → Abschluss mit Nachweis – drei Läufe und eine sprachliche Variante', async () => {
+    const body = 'Guten Tag, Ihr Monteur hat gestern bei uns im Haus Rheinweg 8 einen Schlüsselbund im Keller liegen lassen. Bitte sagen Sie ihm Bescheid, damit er ihn bei uns abholt, und bestätigen Sie uns kurz, dass diese Nachricht angekommen ist. Viele Grüße, Fritz Lindner';
+    const texts: Array<[string, string]> = [
+      ['Schlüsselbund im Keller vergessen', body],
+      ['Vergessener Schlüsselbund bei uns im Keller', body],
+      ['Schlüssel im Keller: bitte Monteur informieren', body],
+      ['Liegengebliebene Schlüssel – Rückgabe', 'Hallo, bei der Wartung gestern im Rheinweg 8 ist ein Schlüsselbund im Heizungskeller zurückgeblieben. Könnten Sie dem Techniker ausrichten, dass er ihn abholen kann? Eine kurze Eingangsbestätigung würde uns reichen. Danke, F. Lindner'],
+    ];
+    const runs: Array<Record<string, unknown>> = [];
+    for (const [subject, content] of texts) {
+      const mailsBefore = sent.length;
+      const result = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject, content }));
+      const caseId = result.case!.id;
+      const scoped = prisma.forTenantId(tenantId);
+      const waiting = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' }, include: { nodes: true } });
+      const beforeApproval = { planned: waiting?.nodes.map((n) => n.nodeKey) ?? [], mails: sent.length - mailsBefore };
+      if (waiting) await app.get(OrchestratorService).approvePlan(tenantId, 'praxistest-freigabe', waiting.id);
+      await app.get(OrchestratorService).advance(tenantId, caseId);
+      const row = await scoped.case.findUniqueOrThrow({ where: { id: caseId } });
+      const attention = await scoped.attentionItem.findMany({ where: { caseId } });
+      const graph = await app.get(PlanStoreService).getActive(tenantId, caseId);
+      const decision = await scoped.intakeDecision.findFirst({ where: { intakeEventId: result.intakeEventId } });
+      runs.push({
+        subject,
+        category: (decision?.result as { category?: string } | null)?.category,
+        blueprintKey: row.blueprintKey,
+        beforeApproval,
+        status: row.orchestrationStatus,
+        outcome: row.outcome,
+        goals: graph?.plan.goalKeys,
+        nodes: graph?.nodes.map((n) => `${n.nodeKey}:${n.state}`),
+        mails: sent.slice(mailsBefore).map((m) => ({ to: m.to, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 420) })),
+        attentionItems: attention.length,
+        attentionReasons: row.attentionReasons.slice(0, 2),
+      });
+    }
+    record.autonomousCompletion = runs;
+    for (const run of runs) {
+      expect(run.beforeApproval).toMatchObject({ mails: 0 }); // Freigabesperre
+      for (const mail of run.mails as Array<{ to: string; body: string }>) {
+        expect(mail.to).toBe('hausverwaltung@kunde.example');
+        expect(mail.body).not.toMatch(/€|\bEUR\b|https?:\/\/|abgeholt am|heute|morgen um/i); // keine erfundene Zusage eines Abholtermins
+      }
+    }
+    const completed = runs.filter((r) => r.status === 'COMPLETED' && (r.outcome as { code?: string } | null)?.code === 'ADHOC_GOALS_PROVEN');
+    expect(completed.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Eine Antwort mit Angaben für mehrere Teilvorgänge (korrigierter Stand): jeder Teilvorgang berücksichtigt, was zu seinem Anliegen gehört, fremde Angaben werden nicht ungeprüft übernommen – drei Formulierungen', async () => {
+    const setSplit = async (on: boolean): Promise<void> => {
+      await prisma.withPlatformScope(async (tx) => {
+        const flag = await tx.platformFeatureFlag.findUniqueOrThrow({ where: { key: 'process.split' } });
+        const overrides = (flag.tenantOverrides as Array<{ tenantId: string; value: boolean }>).filter((o) => o.tenantId !== tenantId);
+        if (on) overrides.push({ tenantId, value: true });
+        await tx.platformFeatureFlag.update({ where: { key: 'process.split' }, data: { tenantOverrides: overrides } });
+      });
+      app.get(PlatformControlService).invalidate();
+    };
+    const variants: Array<{ subject: string; content: string }> = [
+      {
+        subject: 'Zwei Dinge: Heizungsregler und Wasserhahn',
+        content: 'Guten Tag, ich habe zwei Anliegen. Erstens interessiert mich ein Angebot für einen neuen Heizungsregler bei uns im Haus Rheinweg 8. Zweitens tropft im Gäste-WC im Haus Rheinweg 8 ein Wasserhahn, bitte um einen Reparaturtermin. Danke, Fritz Lindner',
+      },
+      {
+        subject: 'Reparatur und Angebot Rheinweg 8',
+        content: 'Hallo, im Gäste-WC im Rheinweg 8 tropft der Wasserhahn, könnten Sie dafür einen Reparaturtermin anbieten? Außerdem hätte ich gern ein Angebot für einen neuen Heizungsregler. Viele Grüße, F. Lindner',
+      },
+      {
+        subject: 'Zwei Bitten zum Rheinweg 8',
+        content: 'Guten Morgen, wir brauchen bitte einen Termin für die Reparatur eines tropfenden Wasserhahns im Gäste-WC (Rheinweg 8). Und: Was würde ein neuer Heizungsregler für dieses Haus kosten? Danke, Hausverwaltung Lindner',
+      },
+    ];
+    const results: Array<Record<string, unknown>> = [];
+    await setSplit(true);
+    try {
+      for (const variant of variants) {
+        const scoped = prisma.forTenantId(tenantId);
+        const sentBefore = sent.length;
+        const first = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject: variant.subject, content: variant.content }));
+        const children = await scoped.case.findMany({ where: { parentCaseId: first.case!.id }, orderBy: { createdAt: 'asc' } });
+        for (const child of children) {
+          const waiting = await scoped.processPlan.findFirst({ where: { caseId: child.id, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
+          if (waiting) {
+            await app.get(OrchestratorService).approvePlan(tenantId, 'praxistest-freigabe', waiting.id);
+            await app.get(OrchestratorService).advance(tenantId, child.id);
+          }
+        }
+        const questions = sent.slice(sentBefore).map((m) => ({ to: m.to, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 220) }));
+        const lastSent = await scoped.emailMessage.findFirst({ where: { direction: 'OUTBOUND', caseId: { in: [first.case!.id, ...children.map((c) => c.id)] } }, orderBy: { createdAt: 'desc' } });
+        const waitingBefore = await scoped.waitSubscription.count({ where: { caseId: { in: children.map((c) => c.id) }, status: 'WAITING', eventType: 'communication.received' } });
+        if (lastSent) {
+          // Eine Antwort enthält Angaben zu beiden Anliegen, eine Angabe, die zu keinem gehört (Bad), und eine über eine fremde Person.
+          await app.get(IntakeService).handleIntakeEvent(
+            tenantId,
+            undefined,
+            inbound({
+              subject: `Re: ${lastSent.subject ?? variant.subject}`,
+              content: 'Zum Regler: die Heizung ist von 2012 und ein Vaillant-Gerät. Zum Wasserhahn: es ist der Wasserhahn am Waschbecken, Montagvormittag passt uns gut. Übrigens hat unser Bad 8 m², das ist aber ein anderes Thema. Der Hausmeister heißt Herr Weber, er hat den Schlüssel.',
+              threadId: lastSent.threadId ?? randomUUID(),
+              inReplyTo: lastSent.rfcMessageId ?? undefined,
+              references: lastSent.rfcMessageId ? [lastSent.rfcMessageId] : undefined,
+            }),
+          );
+        }
+        const perChild: Array<{ concern: string; status: string; facts: string[]; waits: string[] }> = [];
+        for (const child of children) {
+          const row = await scoped.case.findUniqueOrThrow({ where: { id: child.id } });
+          const facts = (await scoped.caseFact.findMany({ where: { caseId: child.id, isCurrent: true } })).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 60)}[${f.status}]`);
+          const waits = await scoped.waitSubscription.findMany({ where: { caseId: child.id }, select: { eventType: true, status: true } });
+          perChild.push({ concern: row.title.split(':')[0] ?? '', status: row.orchestrationStatus, facts, waits: waits.map((w) => `${w.eventType}:${w.status}`) });
+        }
+        results.push({ subject: variant.subject, children: children.length, questionsSent: questions.length, childrenWaitingForAnswer: waitingBefore, replySent: Boolean(lastSent), questions, perChild });
+        // Harte Grenze: die Angabe zum Regler (2012/Vaillant) steht nie beim Wasserhahn-Anliegen, die zum Wasserhahn (Montag/Waschbecken) nie beim Regler-Anliegen, und das Bad (8 m²) und der Hausmeister gehören zu keinem.
+        for (const c of perChild) {
+          if (/wasserhahn/i.test(c.concern)) expect(c.facts.join(' ')).not.toMatch(/2012|vaillant/i);
+          if (/regler/i.test(c.concern)) expect(c.facts.join(' ')).not.toMatch(/montag|waschbecken/i);
+          expect(c.facts.join(' ')).not.toMatch(/8 m²|weber/i);
+        }
+      }
+    } finally {
+      await setSplit(false);
+      record.multiChildReply = results;
+    }
   });
 });

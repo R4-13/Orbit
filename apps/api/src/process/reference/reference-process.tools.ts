@@ -26,6 +26,7 @@ import { ReferenceProcessService } from './reference-process.service';
 import { renderSimplePdf, type PdfLine } from './simple-pdf';
 import { CustomerRecordService } from '../customer/customer-record.service';
 import { messageCaseIds } from '../case-scope';
+import { FactCorrectionService } from '../fact-correction.service';
 import { ActionLedgerService } from '../action-ledger.service';
 
 const SUBMIT_FACTS_TOOL = 'submit_extracted_facts';
@@ -86,6 +87,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly customers: CustomerRecordService,
     private readonly attachmentTexts: AttachmentTextService,
     private readonly ledger: ActionLedgerService,
+    private readonly corrections: FactCorrectionService,
   ) {}
 
   onModuleInit(): void {
@@ -277,7 +279,13 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const haystack = normalize(text);
         const recorded: Array<{ key: string; value: unknown; status: string }> = [];
         const rejected: Array<{ key: string; reason: string }> = [];
+        // Angaben, die die Prüfung auf Korrekturen für diese Nachricht schon beurteilt hat (Korrektur, Ergänzung, Widerspruch), werden hier nicht noch einmal – abweichend formuliert – angelegt.
+        const handled = await this.corrections.handledKeys(ctx.tenantId, caseId, message.id);
         for (const item of proposal.facts) {
+          if (handled.has(item.key)) {
+            rejected.push({ key: item.key, reason: 'bereits als Korrektur/Ergänzung/Widerspruch beurteilt' });
+            continue;
+          }
           const definition = allowed.get(item.key);
           if (!definition) {
             rejected.push({ key: item.key, reason: 'Angabe nicht vorgesehen' });

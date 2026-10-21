@@ -492,6 +492,24 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     for (const wait of waits) add({ code: 'PLAN_BEHIND_WAIT', check: 12, nodeId: wait.id, message: `Hinter dem Warten "${wait.id}" auf eine Antwort wird nichts geplant: ORBIT plant nach der Antwort neu und liest sie dabei aus. Beende die Revision am Warteknoten ohne ausgehende Kante.` });
   }
 
+  // Rückfrage und Neubewertung (frei geplant): Ein Rückfrage-Entwurf muss wissen, was er fragen soll – seine Eingabe "missing" kommt aus einem vorgelagerten Prüfschritt. Ohne sie scheitert der Entwurf erst bei
+  // der Ausführung („nichts zu fragen“) und blockiert die Schritte dahinter (Live-Fund Serie F: die Auslese der Antwort blieb aus, die Angaben wurden nicht erfasst).
+  if (!blueprint) {
+    for (const node of nodes) {
+      if (node.capability?.key !== 'communication.draft' || node.config.purpose !== 'CLARIFICATION') continue;
+      const missing = node.inputs.missing;
+      if (!missing || !('stepOutput' in missing)) add({ code: 'CLARIFICATION_NEEDS_MISSING', check: 12, nodeId: node.id, message: `Der Rückfrage-Entwurf "${node.id}" braucht die Eingabe "missing" als Ergebnis eines vorgelagerten Prüfschritts (requirements.resolve, Pfad "missing"); ohne sie weiß er nicht, was zu fragen ist.` });
+    }
+    // Nach einer Antwort: Eine neue Anforderungsprüfung sieht die Antwort nur, wenn deren Angaben vorher ausgelesen wurden (facts.extract_from_message liegt vor ihr).
+    if ((ctx.staleStepNodes ?? []).length > 0) {
+      for (const node of nodes) {
+        if (node.capability?.key !== 'requirements.resolve' || (ctx.staleStepNodes ?? []).includes(node.id)) continue;
+        const hasExtraction = [...ancestorsOf(node.id, edges)].some((ancestor) => nodeById.get(ancestor)?.capability?.key === 'facts.extract_from_message');
+        if (!hasExtraction) add({ code: 'EXTRACT_BEFORE_REEVALUATION', check: 12, nodeId: node.id, message: `Die neue Anforderungsprüfung "${node.id}" kommt nach einer Antwort der Kundschaft: lies die Antwort vorher aus (facts.extract_from_message, messageId = sourceRef inbound.latestMessageId) und verbinde den Auslese-Schritt VOR der Prüfung.` });
+      }
+    }
+  }
+
   // Wer die Anforderungsprüfung erst im Plan ausführt, kennt ihr Ergebnis beim Planen nicht: Übergabe oder Rückfrage lassen sich erst danach sinnvoll festlegen.
   const runsRequirements = nodes.some((n) => n.capability?.key === 'requirements.resolve');
   if (!blueprint && ctx.requirementsAnalyzed === false && runsRequirements && !askedAlready && !onlyUnderstanding) {

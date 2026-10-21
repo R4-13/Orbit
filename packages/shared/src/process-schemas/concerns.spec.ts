@@ -66,3 +66,29 @@ describe('Belegung leicht gekürzter Auszüge', () => {
     expect(verified.concerns.slice(0, 2).map((c) => c.grounded)).toEqual([false, false]);
   });
 });
+
+describe('Gekürzte Auszüge: es zählt der Originalsatz, nie der verkürzte Text', () => {
+  const msg = 'Wir möchten die Heizung tauschen, aber nicht vor dem Winter. Das Gäste-WC im Erdgeschoss hat einen tropfenden Wasserhahn. Termin am 4.11. wäre möglich, wenn der Monteur vormittags kommt.';
+  const one = (excerpt: string) => verifyConcerns(msg, { concerns: [{ title: 't', category: 'UNKNOWN', goal: 'g', excerpt }], sharedContext: '' }).concerns[0]!;
+
+  it('eine ausgelassene Verneinung ändert die Bedeutung nicht: verwendet wird der vollständige Originalsatz', () => {
+    const concern = one('Wir möchten die Heizung tauschen');
+    expect(concern.grounded).toBe(true);
+    expect(concern.excerpt).toBe('Wir möchten die Heizung tauschen, aber nicht vor dem Winter.');
+  });
+
+  it('eine ausgelassene Zuordnung (Gäste-WC) und eine ausgelassene Bedingung („wenn … vormittags“) bleiben im Originalsatz', () => {
+    expect(one('tropfenden Wasserhahn').excerpt).toBe('Das Gäste-WC im Erdgeschoss hat einen tropfenden Wasserhahn.');
+    expect(one('Termin am 4.11. wäre möglich').excerpt).toBe('Termin am 4.11. wäre möglich, wenn der Monteur vormittags kommt.');
+  });
+
+  it('Wörter aus verschiedenen Sätzen ergeben keinen Beleg; hinzugefügte oder umgestellte Wörter ebenso nicht', () => {
+    expect(one('Heizung tauschen tropfenden Wasserhahn').grounded).toBe(false); // zwei Sätze zusammengezogen
+    expect(one('Wir möchten die Heizung sofort tauschen').grounded).toBe(false); // „sofort“ steht nicht in der Nachricht
+    expect(one('Wasserhahn tropfenden einen hat').grounded).toBe(false); // umgestellt
+  });
+
+  it('ein Datum mit Punkt trennt keinen Satz (4.11. wäre möglich …)', () => {
+    expect(splitSentences('Der Termin am 28.10. wird auf den 4.11. verschoben. Danke.')).toEqual(['Der Termin am 28.10. wird auf den 4.11. verschoben.', 'Danke.']);
+  });
+});

@@ -151,15 +151,61 @@ describe('Korrekturen früher genannter Angaben (FX-20, e2e)', () => {
     await service.processInbound(other.tenantId, other.caseId, await message(other.tenantId, other.caseId, TOM, 'Danke, das passt so. Bis bald.'));
     expect(llm.getRequests().length - calls).toBe(2); // kein Korrekturhinweis → keine zweite Frage
   });
-  it('eine weitere Beschreibung (langer Freitext) steht nicht im Widerspruch zur früheren – nur Zahlen und kurze Angaben können sich widersprechen', async () => {
-    const { tenantId, caseId } = await setup();
-    const first = await message(tenantId, caseId, TOM, 'Die Druckluft für drei Behandlungsplätze wird benötigt.');
-    await facts.propose(tenantId, caseId, [{ key: 'ai.druckluft', value: 'Anschluss von drei Behandlungsplätzen an Druckluft benötigt', valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${first}` }]);
-    const longText = 'Die Druckluft kommt von einem Kompressor im Keller des Gebäudes, Leitungen sind teilweise vorhanden';
-    seedUpdates([{ key: 'ai.druckluft', newValue: longText, evidence: longText, kind: 'AMBIGUOUS', reason: 'weitere Beschreibung' }]);
-    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, `Zur Technik: ${longText}.`));
-    expect(outcome.conflicts).toEqual([]);
-    expect(outcome.ignored[0]!.reason).toMatch(/frühere Angabe bleibt gültig/);
-    expect((await facts.getCurrent(tenantId, caseId)).filter((f) => f.key === 'ai.druckluft').map((f) => f.status)).not.toContain('CONFLICTED');
+  describe('Ergänzung, Selbstkorrektur und Widerspruch bleiben unabhängig von der Textlänge unterscheidbar', () => {
+    const LONG_BASE = 'Anschluss von drei Behandlungsplätzen an Druckluft benötigt, die Leitungen sollen in den Wänden verlaufen';
+    async function withLongFact(): Promise<{ tenantId: string; caseId: string }> {
+      const { tenantId, caseId } = await setup();
+      const first = await message(tenantId, caseId, TOM, 'Druckluft für drei Behandlungsplätze.');
+      await facts.propose(tenantId, caseId, [{ key: 'ai.druckluft', value: LONG_BASE, valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${first}` }]);
+      return { tenantId, caseId };
+    }
+    const druckluft = async (tenantId: string, caseId: string) => (await facts.getCurrent(tenantId, caseId)).filter((f) => f.key.startsWith('ai.druckluft')).map((f) => ({ key: f.key.replace(/.ergaenzung..*/, '.ergaenzung'), value: f.value, status: f.status }));
+
+    it('lange Ergänzung: die frühere Angabe bleibt gültig, die neue steht als eigene sichtbare Ergänzung – kein Widerspruch', async () => {
+      const { tenantId, caseId } = await withLongFact();
+      const addition = 'Die Druckluft kommt von einem Kompressor im Keller des Gebäudes, die Leitungen sind teilweise bereits vorhanden';
+      seedUpdates([{ key: 'ai.druckluft', newValue: addition, evidence: addition, kind: 'ADDITIONAL', reason: 'präzisiert die Druckluftversorgung' }]);
+      const messageId = await message(tenantId, caseId, TOM, `Zur Technik: ${addition}.`);
+      const outcome = await service.processInbound(tenantId, caseId, messageId);
+      expect(outcome.conflicts).toEqual([]);
+      expect(await druckluft(tenantId, caseId)).toEqual(expect.arrayContaining([{ key: 'ai.druckluft', value: LONG_BASE, status: 'CANDIDATE' }, { key: 'ai.druckluft.ergaenzung', value: addition, status: 'CANDIDATE' }]));
+      expect(await service.handledKeys(tenantId, caseId, messageId)).toEqual(new Set(['ai.druckluft'])); // die spätere Auslese derselben Nachricht legt den Schlüssel nicht noch einmal an
+    });
+
+    it('lange widersprüchliche Angabe (KI: CONTRADICTION): beide Werte stehen sichtbar im Widerspruch – auch bei langem Text', async () => {
+      const { tenantId, caseId } = await withLongFact();
+      const contradiction = 'Druckluft wird nur für zwei Behandlungsplätze gebraucht, die Leitungen verlaufen sichtbar an der Wand entlang';
+      seedUpdates([{ key: 'ai.druckluft', newValue: contradiction, evidence: contradiction, kind: 'CONTRADICTION', reason: 'andere Anzahl und andere Leitungsführung' }]);
+      const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, `Noch eine Anmerkung: ${contradiction}.`));
+      expect(outcome.conflicts).toHaveLength(1);
+      expect((await druckluft(tenantId, caseId)).map((f) => f.status)).toEqual(['CONFLICTED', 'CONFLICTED']);
+    });
+
+    it('als „Ergänzung“ eingestufte Verneinung wird nicht als Ergänzung akzeptiert, sondern als Widerspruch behandelt', async () => {
+      const { tenantId, caseId } = await withLongFact();
+      const negated = 'Die Leitungen verlaufen nicht in den Wänden, sondern sichtbar an der Decke';
+      seedUpdates([{ key: 'ai.druckluft', newValue: negated, evidence: negated, kind: 'ADDITIONAL', reason: 'zur Leitungsführung' }]);
+      const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, `Hinweis: ${negated}.`));
+      expect(outcome.conflicts).toHaveLength(1);
+    });
+
+    it('lange Selbstkorrektur derselben Person ersetzt die Angabe (Verlauf bleibt), unabhängig von der Länge', async () => {
+      const { tenantId, caseId } = await withLongFact();
+      const corrected = 'Anschluss von zwei Behandlungsplätzen an Druckluft benötigt, die Leitungen sollen sichtbar an der Wand verlaufen';
+      seedUpdates([{ key: 'ai.druckluft', newValue: corrected, evidence: `doch: ${corrected}`, kind: 'CORRECTION', reason: 'nimmt die frühere Angabe zurück' }]);
+      const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, `Ich korrigiere mich, doch: ${corrected}.`));
+      expect(outcome.corrected).toHaveLength(1);
+      expect(await druckluft(tenantId, caseId)).toEqual([{ key: 'ai.druckluft', value: corrected, status: 'CONFIRMED' }]);
+      expect((await facts.getHistory(tenantId, caseId, 'ai.druckluft')).map((f) => f.isCurrent)).toEqual([false, true]);
+    });
+
+    it('Angaben zu unterschiedlichen Objekten (Bad / Gäste-WC) überschreiben und widersprechen sich nicht', async () => {
+      const { tenantId, caseId } = await setup(); // Bad: 7 m²
+      seedUpdates([{ key: 'bathroom.area_m2', newValue: 5, evidence: 'das Gäste-WC hat 5 m²', kind: 'ADDITIONAL', reason: 'anderer Raum' }]);
+      const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, 'Außerdem: das Gäste-WC hat 5 m².'));
+      expect(outcome.conflicts).toEqual([]);
+      expect(await currentValues(tenantId, caseId)).toEqual([{ value: 7, status: 'CONFIRMED' }]);
+      expect((await facts.getCurrent(tenantId, caseId)).some((f) => f.key.startsWith('bathroom.area_m2.ergaenzung.') && f.value === 5)).toBe(true);
+    });
   });
 });

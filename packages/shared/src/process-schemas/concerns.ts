@@ -58,27 +58,10 @@ export interface VerifiedConcerns {
   coverage: ConcernCoverage;
 }
 
-/**
- * Auch ein leicht gekürzter Auszug ist belegt (z. B. „Samstags telefonisch erreichbar?“ statt „Viertens: Sind Sie samstags telefonisch erreichbar?“): jedes seiner Wörter (mindestens drei) steht in der
- * Nachricht, in derselben Reihenfolge. Nichts Hinzugefügtes, nichts Umgestelltes – ein erfundener Auszug besteht diese Prüfung nicht.
- */
-export function isOrderedSubsequence(candidate: string, haystack: string): boolean {
-  const words = candidate.split(' ').filter((w) => w.length > 0);
-  if (words.length < 3) return false;
-  const source = haystack.split(' ');
-  let position = 0;
-  for (const word of words) {
-    const index = source.indexOf(word, position);
-    if (index < 0) return false;
-    position = index + 1;
-  }
-  return true;
-}
-
 /** Zerlegt Text in Sätze/Zeilen; Aufzählungszeichen und Nummerierung werden entfernt. */
 export function splitSentences(text: string): string[] {
   return text
-    .split(/(?<=[.!?…])\s+|\r?\n+/)
+    .split(/(?<=[.!?…])(?<!\d\.)\s+|(?<=\d\.)\s+(?=[A-ZÄÖÜ0-9„"(])|\r?\n+/)
     .map((s) => s.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '').trim())
     .filter((s) => s.length > 0);
 }
@@ -106,16 +89,49 @@ export function isSubstantiveSentence(sentence: string): boolean {
  * Prüft die Zerlegung gegen die Nachricht. Ergibt belegte Anliegen (Reihenfolge der Nachricht bleibt die der KI), den Nachweis der Vollständigkeit und – falls nötig – ein ergänztes Anliegen
  * für Aussagen, die niemand zugeordnet hat.
  */
+function tokensOf(text: string): string[] {
+  return normalizeForMatch(text)
+    .split(' ')
+    .filter((t) => t.length > 0);
+}
+
+function isSubsequenceOf(needle: readonly string[], haystack: readonly string[]): boolean {
+  let position = 0;
+  for (const token of needle) {
+    const index = haystack.indexOf(token, position);
+    if (index < 0) return false;
+    position = index + 1;
+  }
+  return true;
+}
+
 export function verifyConcerns(message: string, segmentation: ConcernSegmentation): VerifiedConcerns {
-  const haystack = normalizeForMatch(message);
-  const inMessage = (text: string): boolean => {
-    const sentences = splitSentences(text).map(normalizeForMatch).filter((s) => s.length > 0);
-    if (sentences.length === 0) return false;
-    const found = sentences.filter((s) => haystack.includes(s) || isOrderedSubsequence(s, haystack)).length;
-    return found / sentences.length >= 0.8;
+  const messageSentences = splitSentences(message).map((raw) => ({ raw, tokens: tokensOf(raw) }));
+  /**
+   * Belegt wird satzweise gegen die Sätze der Nachricht: alle Wörter des Auszugs (mindestens ein Wort; ab drei Wörtern in derselben Reihenfolge, darunter zusammenhängend) müssen in EINEM Satz
+   * der Nachricht stehen. Verwendet wird dann **immer der vollständige Originalsatz**, nie der gekürzte Text der KI: ausgelassene Verneinungen, Bedingungen oder Zuordnungen
+   * („…, aber nicht jetzt“, „im Gäste-WC“) können die Bedeutung also nicht ändern. Ein Auszug, dessen Wörter nicht in einem Satz stehen, ist nicht belegt.
+   */
+  const ground = (text: string): { ok: boolean; expanded: string } => {
+    const parts = splitSentences(text).filter((part) => tokensOf(part).length > 0);
+    const used: string[] = [];
+    let found = 0;
+    for (const part of parts) {
+      const tokens = tokensOf(part);
+      const matches = messageSentences.filter((m) => (tokens.length >= 3 ? isSubsequenceOf(tokens, m.tokens) : m.tokens.join(' ').includes(tokens.join(' '))));
+      const best = [...matches].sort((x, y) => x.tokens.length - y.tokens.length)[0];
+      if (!best) continue;
+      found += 1;
+      if (!used.includes(best.raw)) used.push(best.raw);
+    }
+    return { ok: parts.length > 0 && found / parts.length >= 0.8, expanded: used.join(' ') };
   };
-  const concerns: VerifiedConcern[] = segmentation.concerns.map((c) => ({ ...c, grounded: inMessage(c.excerpt) }));
-  const sharedGrounded = segmentation.sharedContext && inMessage(segmentation.sharedContext) ? segmentation.sharedContext : '';
+  const concerns: VerifiedConcern[] = segmentation.concerns.map((c) => {
+    const grounded = ground(c.excerpt);
+    return { ...c, excerpt: grounded.ok ? grounded.expanded : c.excerpt, grounded: grounded.ok };
+  });
+  const sharedResult = segmentation.sharedContext ? ground(segmentation.sharedContext) : { ok: false, expanded: '' };
+  const sharedGrounded = sharedResult.ok ? sharedResult.expanded : '';
 
   const assigned = new Set<string>();
   for (const c of concerns) if (c.grounded) for (const s of splitSentences(c.excerpt)) assigned.add(normalizeForMatch(s));

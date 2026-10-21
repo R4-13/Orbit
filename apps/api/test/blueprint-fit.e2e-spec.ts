@@ -135,10 +135,24 @@ describe('Fachliche Eignung eines Leitfadens (FX-18, e2e)', () => {
     expect(assessed.payload).toMatchObject({ fits: true, assessed: true });
   });
 
-  it('kann die Eignung nicht geprüft werden (keine verwertbare Antwort der KI), gilt das bisherige Verhalten – und es steht im Verlauf', async () => {
+  const freePlan = () =>
+    seedTool('submit_process_plan', {
+      goalKeys: ['staff.informed', 'human.review'],
+      nodes: [
+        { id: 'notify', type: 'ACTION', title: 'Person informieren', inputs: { message: { literal: 'Anfrage zur Prüfung: Eignung des Ablaufs nicht belegt.' } }, config: {}, capability: { key: 'staff.notify' } },
+        { id: 'human', type: 'MANUAL_TASK', title: 'Eine Person prüft', inputs: {}, config: {} },
+      ],
+      edges: [{ id: 'e1', source: 'notify', target: 'human' }],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Eignung nicht belegt: frei geplant, Person prüft.',
+    });
+
+  it('ein erster ungültiger Prüfversuch wird einmal wiederholt – gelingt der zweite, gilt dessen Ergebnis', async () => {
     const tenantId = await newTenant();
     seedTriage();
-    llm.seedResponse({ text: 'Ich weiß es nicht.', toolCalls: [], stopReason: 'end_turn' });
+    llm.seedResponse({ text: 'Ich weiß es nicht.', toolCalls: [], stopReason: 'end_turn' }); // 1. Versuch: kein Ergebnis
+    seedFit(true, 'Eine klassische Angebotsanfrage.'); // 2. Versuch
     seedTool('submit_extracted_facts', { facts: [] });
     seedTool('submit_request_analysis', {
       requestType: 'Wärmepumpe',
@@ -152,6 +166,43 @@ describe('Fachliche Eignung eines Leitfadens (FX-18, e2e)', () => {
     const row = await caseOf(tenantId, result.case!.id);
     expect(row.blueprintKey).toBe('REQUEST_FOR_QUOTE');
     const assessed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: row.id, type: 'blueprint.fit_assessed' } });
-    expect(assessed.payload).toMatchObject({ fits: true, assessed: false });
+    expect(assessed.payload).toMatchObject({ fits: true, assessed: true, attempts: 2 });
+  });
+
+  it('bleibt die Eignungsprüfung auch nach der Wiederholung ohne Ergebnis, gilt der Leitfaden NICHT als geeignet: kein Leitfaden, keine Fragen und keine Terminvorschläge an die Kundschaft, freie Planung mit Person', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    llm.seedResponse({ text: 'Ich weiß es nicht.', toolCalls: [], stopReason: 'end_turn' });
+    llm.seedResponse({ text: 'Ich weiß es immer noch nicht.', toolCalls: [], stopReason: 'end_turn' });
+    freePlan();
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, OFFER, 'Wärmepumpe'));
+    const row = await caseOf(tenantId, result.case!.id);
+    expect(row.blueprintKey).toBeNull();
+    expect(sent).toEqual([]);
+    const assessed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: row.id, type: 'blueprint.fit_assessed' } });
+    expect(assessed.payload).toMatchObject({ fits: false, assessed: false, attempts: 2, blueprintKey: 'REQUEST_FOR_QUOTE' });
+    expect((assessed.payload as { reason: string }).reason).toMatch(/nicht geeignet|frei geplant/);
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: row.id, type: 'appointment.proposed' } })).toBe(0);
+    expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId: row.id, source: 'LLM_PLANNER' } })).toBeGreaterThanOrEqual(1);
+  });
+
+  it('der feste Vertriebsweg (ohne hinterlegten Leitfaden) wird ebenfalls auf Eignung geprüft: passt er nicht oder ist die Prüfung nicht möglich, entsteht weder Lead noch Aufgabe noch CRM-Eintrag', async () => {
+    for (const unassessed of [false, true]) {
+      const tenantId = await newTenant();
+      seedTool('submit_triage_result', { ...(triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>), category: 'SALES_INQUIRY' });
+      if (unassessed) {
+        llm.seedResponse({ text: 'unklar', toolCalls: [], stopReason: 'end_turn' });
+        llm.seedResponse({ text: 'unklar', toolCalls: [], stopReason: 'end_turn' });
+      } else {
+        seedFit(false, 'Es geht um einen laufenden Vertrag mit Rückfragen, nicht um die Erfassung eines Interessenten.');
+      }
+      freePlan();
+      const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, CONTRACT, 'Wartungsvertrag für 12 Wohneinheiten'));
+      const row = await caseOf(tenantId, result.case!.id);
+      expect(row.type).toBe('GENERAL'); // freie Planung, nicht der Vertriebsweg
+      expect(await prisma.forTenantId(tenantId).lead.count()).toBe(0);
+      const assessed = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: row.id, type: 'blueprint.fit_assessed' } });
+      expect(assessed.payload).toMatchObject({ fits: false, blueprintKey: 'LEGACY_SALES', assessed: !unassessed });
+    }
   });
 });

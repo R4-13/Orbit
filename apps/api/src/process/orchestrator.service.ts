@@ -518,7 +518,9 @@ export class OrchestratorService {
     let output: unknown;
     let contract: ReturnType<typeof normalizeToolOutput>;
     try {
-      output = await this.tools.execute(toolName, input, { tenantId, agentRunId: run.id });
+      // Eine Aufgabe, die ein Plan anlegt, gehört zu diesem Vorgang (sonst fehlt der Nachweis „Aufgabe angelegt“; Live-Fund: der Ablauf lief durch, das Ziel blieb unbelegt).
+      const effectiveInput = capability.key === 'task.create' && input.caseId === undefined ? { ...input, caseId: caseRow.id } : input;
+      output = await this.tools.execute(toolName, effectiveInput, { tenantId, agentRunId: run.id });
       contract = normalizeToolOutput(output);
     } catch (error) {
       contract = classifyThrownToolError(error);

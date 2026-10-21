@@ -399,3 +399,27 @@ describe('Warten, das seine Antwort bereits bekommen hat (Live-Fund: die Reaktio
     expect(codes(validatePlan(plan(), freeCtx({ satisfiedWaitNodes: ['wait'] })))).not.toContain('PLAN_BEHIND_WAIT');
   });
 });
+
+describe('Rückfrage ohne „missing“ und Neubewertung ohne vorherige Auslese (Live-Fund Serie F)', () => {
+  const freeCtx = (over: Partial<PlanValidationContext> = {}) => ctx({ blueprint: undefined, strictBindings: true, policyModes: new Map([['requirements.resolve', 'AUTONOMOUS'], ['email.draft', 'AUTONOMOUS'], ['email.send.clarification', 'AUTONOMOUS']]), ...over });
+  const draft = (withMissing: boolean) =>
+    node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'sender.email' }, ...(withMissing ? { missing: { stepOutput: { node: 'reqs', path: 'missing' } } } : {}) }, config: { purpose: 'CLARIFICATION' } });
+  const base = (withMissing: boolean) => ({
+    goalKeys: ['human.review'],
+    nodes: [node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), draft(withMissing), node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } })],
+    edges: [edge('e1', 'reqs', 'draft'), edge('e2', 'draft', 'wait')],
+    conciseExplanation: 'Gezielt nachfragen.',
+  });
+
+  it('ein Rückfrage-Entwurf ohne gebundenes „missing“ wird abgewiesen', () => {
+    expect(codes(validatePlan(base(false), freeCtx()))).toContain('CLARIFICATION_NEEDS_MISSING');
+    expect(codes(validatePlan(base(true), freeCtx()))).not.toContain('CLARIFICATION_NEEDS_MISSING');
+  });
+
+  it('nach einer Antwort braucht die neue Anforderungsprüfung die vorherige Auslese der Antwort', () => {
+    const withoutExtraction = { ...base(true), nodes: [node('reqs_2', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), { ...draft(true), inputs: { to: { fact: 'sender.email' }, missing: { stepOutput: { node: 'reqs_2', path: 'missing' } } } }, node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } })], edges: [edge('e1', 'reqs_2', 'draft'), edge('e2', 'draft', 'wait')] };
+    expect(codes(validatePlan(withoutExtraction, freeCtx({ staleStepNodes: ['reqs'] })))).toContain('EXTRACT_BEFORE_REEVALUATION');
+    const withExtraction = { ...withoutExtraction, nodes: [node('extract', 'PREPARE', { capability: { key: 'facts.extract_from_message' }, inputs: { messageId: { sourceRef: 'inbound.latestMessageId' } } }), ...withoutExtraction.nodes], edges: [edge('e0', 'extract', 'reqs_2'), ...withoutExtraction.edges] };
+    expect(codes(validatePlan(withExtraction, freeCtx({ staleStepNodes: ['reqs'], policyModes: new Map([['requirements.resolve', 'AUTONOMOUS'], ['email.draft', 'AUTONOMOUS'], ['email.send.clarification', 'AUTONOMOUS'], ['facts.extract_from_message', 'AUTONOMOUS']]) })))).not.toContain('EXTRACT_BEFORE_REEVALUATION');
+  });
+});

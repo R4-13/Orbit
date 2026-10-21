@@ -16,7 +16,7 @@ import { CaseCorrelationService } from '../process/case-correlation.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
-import { BlueprintFitService, type BlueprintFitResult } from '../process/blueprint-fit.service';
+import { BlueprintFitService, LEGACY_SALES_GUIDE, type BlueprintFitResult } from '../process/blueprint-fit.service';
 import { FactCorrectionService } from '../process/fact-correction.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../process/case-events.service';
 import { CaseSplitService } from './case-split.service';
@@ -452,10 +452,14 @@ export class IntakeService {
     let fitAssessment: ({ blueprintKey: string } & BlueprintFitResult) | undefined;
     if (route && !splitDecision.split) {
       const candidate = await this.blueprints.findActiveForIntent(tenantId, triage.category);
+      const text = { category: triage.category, subject: event.subject ?? '', text: event.content ?? '' };
       if (candidate) {
-        fitAssessment = { blueprintKey: candidate.row.key, ...(await this.fit.assess(tenantId, candidate, { category: triage.category, subject: event.subject ?? '', text: event.content ?? '' })) };
-        if (!fitAssessment.fits) route = undefined;
+        fitAssessment = { blueprintKey: candidate.row.key, ...(await this.fit.assess(tenantId, candidate, text)) };
+      } else if (route === 'SALES') {
+        // Auch der feste Vertriebsweg ohne hinterlegten Leitfaden legt Kontakt, Firma, Lead, Aufgabe und (bei verbundenem CRM) einen Deal an: das ist nur für Fälle richtig, in denen genau das gewollt ist.
+        fitAssessment = { blueprintKey: 'LEGACY_SALES', ...(await this.fit.assessGuide(tenantId, LEGACY_SALES_GUIDE, text)) };
       }
+      if (fitAssessment && !fitAssessment.fits) route = undefined;
     }
 
     // A relevant business input with no configured process is NOT filtered out (Amendment 02 §6.1, E11-E14/E24).
@@ -464,7 +468,7 @@ export class IntakeService {
       // Jede geschäftlich relevante Nachricht wird ein Vorgang – auch ohne hinterlegten Prozess (Beschwerde, Notfall, Bewerbung …). Ein Vorgang ist die Grundlage dafür,
       // dass die zuständige Person informiert, erinnert und notfalls eskaliert wird (AttentionService) und dass der Eingang nachverfolgbar bleibt.
       const reason = fitAssessment && !fitAssessment.fits
-        ? `Geschäftlich relevant (Kategorie ${triage.category}); der hinterlegte Leitfaden ${fitAssessment.blueprintKey} passt fachlich nicht zu diesem Fall (${fitAssessment.reason}). Begründung der KI: ${triage.conciseReason}`
+        ? `Geschäftlich relevant (Kategorie ${triage.category}); der Ablauf ${fitAssessment.blueprintKey} ${fitAssessment.assessed ? 'passt fachlich nicht zu diesem Fall' : 'konnte nicht auf Eignung geprüft werden und wird deshalb nicht verwendet'} (${fitAssessment.reason}). Begründung der KI: ${triage.conciseReason}`
         : `Geschäftlich relevant (Kategorie ${triage.category}), aber für diese Kategorie ist kein Prozess hinterlegt. Begründung der KI: ${triage.conciseReason}`;
       const reviewCase = await this.cases.create(tenantId, actorUserId ?? '', {
         type: 'GENERAL',
