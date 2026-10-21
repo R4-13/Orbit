@@ -1,0 +1,302 @@
+{
+  "longCorrections": {
+    "ergaenzung": [
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"758ee251-8f5b-4ef4-abad-21dfa4c44c83\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"b24c1656-a54b-451f-b6bc-fea3478d00d0\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"88c6f6a1-3c0a-4a44-a833-ac428f83680e\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "widerspruch": [
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12},{\"key\":\"bathroom.area_m2\",\"kind\":\"ADDITIONAL\",\"evidence\":\"weil wir die ",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12},{\"key\":\"bathroom.area_m2\",\"kind\":\"ADDITIONAL\",\"evidence\":\"weil wir die ",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"ADDITIONAL\",\"reason\":\"ungültiger Wert\"}],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"ac399531-af94-45e5-9eec-97e3db6c56a3\",\"proposals\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"newValue\":12},{\"key\":\"bathroom.area_m2\",\"kind\":\"ADDITIONAL\",\"newValue\":\"Die angrenzende Abstellkammer wird dazugenommen; di"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.area_m2",
+            "previous": 7,
+            "current": 12
+          }
+        ],
+        "conflicts": [],
+        "ignored": [
+          "bathroom.area_m2:ADDITIONAL"
+        ],
+        "current": [
+          "bathroom.area_m2=12[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"05994e71-9318-4890-a9fa-8e423ba0761e\",\"proposals\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"newValue\":12}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.area_m2",
+            "previous": 7,
+            "current": 12
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=12[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"2ffd9f55-3890-4546-91f9-83c15a782816\",\"proposals\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"newValue\":12}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.area_m2",
+            "previous": 7,
+            "current": 12
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=12[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "verneinung": [
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"76680101-a2e5-4730-ab4b-5a17fdfdc956\",\"proposals\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"newValue\":\"Badewanne mit Duschabtrennung\"}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.shower",
+            "previous": "bodengleiche Dusche",
+            "current": "Badewanne mit Duschabtrennung"
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"Badewanne mit Duschabtrennung\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"b5ef6482-06c6-4d79-807d-56961b7a69b6\",\"proposals\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"newValue\":\"Badewanne mit Duschabtrennung\"}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.shower",
+            "previous": "bodengleiche Dusche",
+            "current": "Badewanne mit Duschabtrennung"
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"Badewanne mit Duschabtrennung\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"evidence\":\"Das Bad hat doch nicht 7 m², sondern 12 m²\",\"newValue\":12}]}"
+        ],
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"831b70de-a7a9-4662-a927-57e17888874c\",\"proposals\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"newValue\":\"Badewanne mit Duschabtrennung\"}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.shower",
+            "previous": "bodengleiche Dusche",
+            "current": "Badewanne mit Duschabtrennung"
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"Badewanne mit Duschabtrennung\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "anderesObjekt": [
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"38b2475d-8878-4a60-b874-bb54dc88c893\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"ee706a66-9895-413e-84d1-b3df92fab7fa\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "calls": [
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[]}",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren",
+          "SUCCESS:{\"updates\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"evidence\":\"Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung.\",\"newValue\":\"Badewanne mit Duschabtren"
+        ],
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"b9636a48-a34b-41d2-b5aa-1c78ec2d0ad2\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ]
+  }
+}

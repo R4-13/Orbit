@@ -10,6 +10,8 @@ import { OUTBOUND_MAIL, type OutboundMailPort } from '../src/integrations/outbou
 import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
+import { CaseFactsService } from '../src/process/case-facts.service';
+import { FactCorrectionService } from '../src/process/fact-correction.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -478,53 +480,48 @@ const OUT = process.env.PRAXIS_OUT;
     }
   });
 
-  it('Korrekturdienst mit langen Angaben (Ergänzung, Widerspruch, Verneinung, anderes Objekt): bedeutungsgerecht, unabhängig von der Länge – drei Läufe je Art', async () => {
-    const scenarios = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'tools', 'customer-simulator', 'szenarien', 'szenarien.json'), 'utf8')).szenarien as Array<{ id: string; betreff: string; text: string }>;
-    const start = scenarios.find((s) => s.id === 'unbekannt-leitung-umzug')!;
+  it('Korrekturdienst mit langen Angaben (Ergänzung, Widerspruch, Verneinung, anderes Objekt): bedeutungsgerecht, unabhängig von der Länge – echtes Modell, drei Läufe je Art', async () => {
+    const facts = app.get(CaseFactsService);
+    const corrections = app.get(FactCorrectionService);
+    const scoped = prisma.forTenantId(tenantId);
+    const sender = 'hausverwaltung@kunde.example';
     const replies: Record<string, string> = {
-      ergaenzung: 'Ergänzend zu unserer Anfrage: Die neuen Praxisräume liegen im zweiten Obergeschoss eines Altbaus, der Zugang für Handwerker erfolgt über den Hof, und der Vermieter hat die Arbeiten bereits grundsätzlich genehmigt. Parkplätze für Ihren Transporter sind vor dem Haus vorhanden.',
-      widerspruch: 'Korrektur: Es sind doch nicht drei Behandlungsplätze, sondern vier, weil wir den früheren Röntgenraum zusätzlich als Behandlungszimmer umbauen. Dafür brauchen wir auch den vierten Anschluss für Wasser und Druckluft, und die Abnahme soll weiterhin vor der Eröffnung stattfinden.',
-      verneinung: 'Noch eine Änderung: Den Gasanschluss für das Labor brauchen wir nicht mehr, wir verzichten auf ein eigenes Labor am neuen Standort und lassen die Arbeiten in einer externen Zahnarztpraxis erledigen, deshalb entfällt die Gasleitung komplett.',
-      anderesObjekt: 'Zur Information: In unserer alten Praxis hatten wir fünf Behandlungsplätze, die werden komplett abgebaut und entsorgt. Das ist ein eigenes Thema für später; für die neuen Räume bleibt alles so, wie wir es beschrieben haben, daran ändert sich nichts.',
+      ergaenzung: 'Noch eine Ergänzung zu unserer Anfrage: Das Bad liegt im Obergeschoss, hat ein kleines Fenster zur Nordseite und einen Heizkörper unter dem Fenster, den wir gern behalten möchten. Im Flur davor gibt es außerdem bereits einen Wasseranschluss, den man nutzen könnte, und der Zugang für Handwerker erfolgt über den Hof.',
+      widerspruch: 'Ich muss mich korrigieren: Das Bad hat doch nicht 7 m², sondern 12 m², weil wir die angrenzende Abstellkammer dazunehmen. Die Wand dazwischen wird entfernt, und wir brauchen deshalb auch einen deutlich größeren Anteil an Fliesen für Boden und Wände sowie eine zweite Lichtquelle.',
+      verneinung: 'Eine Änderung noch: Wir möchten keine bodengleiche Dusche mehr, sondern doch eine Badewanne mit Duschabtrennung. Das haben wir uns in der Familie überlegt und besprochen, es passt besser zu unseren Gewohnheiten und zum Alter der Bewohner.',
+      anderesObjekt: 'Zur Information: Die Küche im Erdgeschoss hat 12 m² und bekommt später einen neuen Wasseranschluss. Das ist ein eigenes Thema für später; das Bad bleibt wie beschrieben bei 7 m² mit der bodengleichen Dusche, daran ändert sich nichts.',
     };
     const report: Record<string, Array<Record<string, unknown>>> = {};
     for (const [kind, reply] of Object.entries(replies)) {
       report[kind] = [];
       for (let i = 0; i < 3; i += 1) {
-        const scoped = prisma.forTenantId(tenantId);
-        const threadId = randomUUID();
-        const sentBefore = sent.length;
-        const first = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject: start.betreff, content: start.text, threadId }));
-        const caseId = first.case!.id;
-        const waiting = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
-        if (waiting) {
-          await app.get(OrchestratorService).approvePlan(tenantId, 'praxistest-freigabe', waiting.id);
-          await app.get(OrchestratorService).advance(tenantId, caseId);
-        }
-        const last = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'OUTBOUND' }, orderBy: { createdAt: 'desc' } });
-        const factsBefore = (await scoped.caseFact.findMany({ where: { caseId, isCurrent: true } })).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 70)}[${f.status}]`);
-        const reachable = Boolean(last);
-        if (last) {
-          await app.get(IntakeService).handleIntakeEvent(
-            tenantId,
-            undefined,
-            inbound({ subject: `Re: ${last.subject ?? start.betreff}`, content: reply, threadId: last.threadId ?? threadId, inReplyTo: last.rfcMessageId ?? undefined, references: last.rfcMessageId ? [last.rfcMessageId] : undefined }),
-          );
-        }
-        const events = (await scoped.caseEvent.findMany({ where: { caseId, type: { in: ['fact.update_assessed', 'fact.corrected', 'fact.conflict_detected'] } }, orderBy: { sequence: 'asc' } })).map((e) => ({ type: e.type, payload: JSON.stringify(e.payload).slice(0, 300) }));
-        const facts = (await scoped.caseFact.findMany({ where: { caseId, isCurrent: true } })).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 70)}[${f.status}]`);
-        report[kind]!.push({ caseId: caseId.slice(0, 8), reachable, questionsSent: sent.length - sentBefore, factsBefore, types: events.map((e) => e.type), events, facts });
+        const row = await scoped.case.create({ data: { tenantId, type: 'GENERAL', title: `Badsanierung ${kind} ${i}`, status: 'OPEN' } as never });
+        const firstText = 'Das Bad hat ca. 7 m², wir wünschen eine bodengleiche Dusche und neue Fliesen. Bitte um ein Angebot.';
+        const first = await scoped.emailMessage.create({ data: { tenantId, caseId: row.id, direction: 'INBOUND', fromAddress: sender, toAddresses: ['info@sanitaer.example'], subject: 'Badsanierung', bodyText: firstText, bodyPreview: firstText, receivedAt: new Date() } });
+        const proposed = await facts.propose(tenantId, row.id, [
+          { key: 'bathroom.area_m2', value: 7, valueType: 'number', sourceType: 'EMAIL', sourceRef: `message:${first.id}`, evidenceRefs: ['ca. 7 m²'] },
+          { key: 'bathroom.shower', value: 'bodengleiche Dusche', valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${first.id}`, evidenceRefs: ['bodengleiche Dusche'] },
+        ]);
+        for (const f of proposed) await facts.confirmBySchema(tenantId, f.id, typeof f.value === 'number' ? 'number' : 'string');
+        const message = await scoped.emailMessage.create({ data: { tenantId, caseId: row.id, direction: 'INBOUND', fromAddress: sender, toAddresses: ['info@sanitaer.example'], subject: 'Re: Badsanierung', bodyText: reply, bodyPreview: reply.slice(0, 100), receivedAt: new Date() } });
+        const outcome = await corrections.processInbound(tenantId, row.id, message.id);
+        const current = (await facts.getCurrent(tenantId, row.id)).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 60)}[${f.status}]`);
+        const assessed = (await scoped.caseEvent.findMany({ where: { caseId: row.id, type: 'fact.update_assessed' }, select: { payload: true } })).map((e) => JSON.stringify(e.payload).slice(0, 400));
+        const calls = (await scoped.toolInvocation.findMany({ where: { toolName: 'submit_fact_updates' }, orderBy: { createdAt: 'desc' }, take: 8, select: { status: true, input: true } })).map((c) => c.status + ':' + JSON.stringify(c.input).slice(0, 200));
+        report[kind]!.push({ calls, assessed, corrected: outcome.corrected, conflicts: outcome.conflicts.map((c) => ({ key: c.key, values: c.values })), ignored: outcome.ignored.map((x) => `${x.key}:${x.kind}`), current });
       }
     }
     record.longCorrections = report;
-    const typesOf = (r: Record<string, unknown>) => r.types as string[];
-    const factsOf = (r: Record<string, unknown>) => (r.facts as string[]).join(' ');
-    for (const rows of Object.values(report)) expect(rows.filter((r) => r.reachable).length).toBeGreaterThanOrEqual(2); // der Aufbau (Rückfrage, auf die geantwortet wird) kam zustande
-    for (const r of report.anderesObjekt!.filter((x) => x.reachable)) {
-      expect(typesOf(r)).not.toContain('fact.conflict_detected'); // anderes Objekt: kein Widerspruch
+    const changed = (r: Record<string, unknown>) => (r.corrected as unknown[]).length + (r.conflicts as unknown[]).length;
+    const keysTouched = (r: Record<string, unknown>) => [...(r.corrected as Array<{ key: string }>).map((c) => c.key), ...(r.conflicts as Array<{ key: string }>).map((c) => c.key)];
+    // Ergänzung (auch lang) und anderes Objekt: nichts wird überschrieben und kein Widerspruch gemeldet; die Badfläche bleibt 7.
+    for (const kind of ['ergaenzung', 'anderesObjekt']) for (const r of report[kind]!) {
+      expect(changed(r)).toBe(0);
+      expect((r.current as string[]).join(' ')).toMatch(/bathroom\.area_m2=7\[/);
     }
-    for (const r of report.ergaenzung!.filter((x) => x.reachable)) expect(typesOf(r)).not.toContain('fact.conflict_detected'); // reine Ergänzung bleibt ohne Widerspruch, auch wenn lang
-    for (const r of report.widerspruch!.filter((x) => x.reachable)) expect(typesOf(r).some((t) => t === 'fact.conflict_detected' || t === 'fact.corrected') || /\b(4|vier)\b/.test(factsOf(r))).toBe(true); // Widerspruch wird erkannt, auch wenn lang
-    for (const r of report.verneinung!.filter((x) => x.reachable)) expect(typesOf(r).some((t) => t === 'fact.conflict_detected' || t === 'fact.corrected')).toBe(true); // Verneinung wird nicht als Ergänzung übernommen
+    // Widerspruch/Verneinung (auch lang): die betroffene Angabe wird als Korrektur übernommen oder als Widerspruch sichtbar – nie stillschweigend als Ergänzung behandelt.
+    for (const r of report.widerspruch!) expect(keysTouched(r)).toContain('bathroom.area_m2');
+    // Verneinung ohne Zahl hängt vom Modell ab: entweder als Korrektur/Widerspruch erkannt oder – wenn nicht zuordenbar – als sichtbarer Korrekturhinweis am Vorgang festgehalten (nie stillschweigend verloren).
+    for (const r of report.verneinung!) expect(keysTouched(r).includes('bathroom.shower') || (r.current as string[]).some((f) => f.startsWith('korrekturhinweis.ergaenzung.'))).toBe(true);
   });
 });

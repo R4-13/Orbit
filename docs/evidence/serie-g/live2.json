@@ -1,0 +1,439 @@
+{
+  "maintenanceContractFit": [
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "frei",
+      "fit": [
+        {
+          "fits": false,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Person erkundigt sich konkret nach Konditionen und Starttermin für einen dauerhaften Wartungsvertrag samt Bereitschaftsdienst. Der Leitfaden erfasst Interes"
+        }
+      ],
+      "status": "WAITING_FOR_APPROVAL",
+      "plans": [
+        "1:ACTIVE:staff.informed,task.created,human.review",
+        "2:AWAITING_APPROVAL:quote.delivered,staff.informed"
+      ],
+      "awaitingPlanApproval": true,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."
+      ]
+    },
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "frei",
+      "fit": [
+        {
+          "fits": false,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Anfrage betrifft ausdrücklich einen laufenden Wartungsvertrag mit Wochenend-Bereitschaftsdienst sowie Konditionen und Starttermin, nicht lediglich die Erfas"
+        }
+      ],
+      "status": "WAITING_FOR_APPROVAL",
+      "plans": [
+        "1:ACTIVE:quote.delivered,staff.informed,task.created",
+        "2:AWAITING_APPROVAL:quote.delivered,staff.informed,task.created,human.review"
+      ],
+      "awaitingPlanApproval": true,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."
+      ]
+    },
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "fest/ohne Plan",
+      "fit": [
+        {
+          "fits": true,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Nachricht zeigt konkretes Auftragsinteresse an einem dauerhaft laufenden Wartungsvertrag und bittet um Konditionen sowie einen möglichen Start. Die Erfassun"
+        }
+      ],
+      "status": "IN_PROGRESS",
+      "plans": [],
+      "awaitingPlanApproval": false,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": []
+    },
+    {
+      "kind": "variante",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "frei",
+      "fit": [
+        {
+          "fits": false,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Anfrage zielt auf einen dauerhaften Servicevertrag mit Rufbereitschaft, Preis und möglichem Starttermin – nicht auf die Erfassung eines Interessenten mit an"
+        }
+      ],
+      "status": "WAITING_FOR_APPROVAL",
+      "plans": [
+        "1:ACTIVE:staff.informed,task.created,human.review",
+        "2:AWAITING_APPROVAL:quote.delivered,human.review"
+      ],
+      "awaitingPlanApproval": true,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."
+      ]
+    }
+  ],
+  "longCorrections": {
+    "ergaenzung": [
+      {
+        "caseId": "3d631c40",
+        "reachable": true,
+        "questionsSent": 2,
+        "factsBefore": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Geplante Arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "Frist=\"Abnahme vor Eröffnung am 3. Februar\"[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.kundenart=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.anlass=\"Umzug in neue Räume\"[CONFIRMED]",
+          "ai.wasseranschluss=\"Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.gasanschluss=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Geplante Arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "Frist=\"Abnahme vor Eröffnung am 3. Februar\"[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.kundenart=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.anlass=\"Umzug in neue Räume\"[CONFIRMED]",
+          "ai.wasseranschluss=\"Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.gasanschluss=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CONFIRMED]",
+          "ai.anschlusslage=\"Die neuen Praxisräume liegen im zweiten Obergeschoss eines Altbaus; d[CONFIRMED]"
+        ]
+      },
+      {
+        "caseId": "0b89c5d0",
+        "reachable": true,
+        "questionsSent": 1,
+        "factsBefore": [
+          "project=\"Zahnarztpraxis zieht Ende Januar in neue Räume um\"[CANDIDATE]",
+          "requested_work=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "required_inspection_deadline=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.project_context=\"Umzug einer Zahnarztpraxis\"[CONFIRMED]",
+          "ai.water_connection_count=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.compressed_air=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gas_work=\"Ein Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.deadline=\"Die Abnahme soll vor der Eröffnung am 3. Februar erfolgen\"[CONFIRMED]",
+          "ai.opening_date=\"3. Februar\"[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "project=\"Zahnarztpraxis zieht Ende Januar in neue Räume um\"[CANDIDATE]",
+          "requested_work=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "required_inspection_deadline=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.project_context=\"Umzug einer Zahnarztpraxis\"[CONFIRMED]",
+          "ai.water_connection_count=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.compressed_air=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gas_work=\"Ein Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.deadline=\"Die Abnahme soll vor der Eröffnung am 3. Februar erfolgen\"[CONFIRMED]",
+          "ai.opening_date=\"3. Februar\"[CONFIRMED]"
+        ]
+      },
+      {
+        "caseId": "4a8e6a16",
+        "reachable": false,
+        "questionsSent": 0,
+        "factsBefore": [
+          "Anzahl Behandlungsplätze=3[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "Eröffnungstermin=\"3. Februar\"[CANDIDATE]",
+          "Erforderliche Abnahme=\"Abnahme durch den Prüfer vor der Eröffnung\"[CANDIDATE]",
+          "Arbeitsort=\"Neue Räume einer Zahnarztpraxis; Ort nicht genannt\"[CANDIDATE]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Anzahl Behandlungsplätze=3[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "Eröffnungstermin=\"3. Februar\"[CANDIDATE]",
+          "Erforderliche Abnahme=\"Abnahme durch den Prüfer vor der Eröffnung\"[CANDIDATE]",
+          "Arbeitsort=\"Neue Räume einer Zahnarztpraxis; Ort nicht genannt\"[CANDIDATE]"
+        ]
+      }
+    ],
+    "widerspruch": [
+      {
+        "caseId": "7a2f1791",
+        "reachable": false,
+        "questionsSent": 0,
+        "factsBefore": [
+          "geplante_arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "frist=\"Abnahme vor der Eröffnung am 3. Februar; Umzug Ende Januar\"[CANDIDATE]",
+          "standort=\"Neue Praxisräume; genauer Ort nicht genannt\"[CANDIDATE]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "geplante_arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "frist=\"Abnahme vor der Eröffnung am 3. Februar; Umzug Ende Januar\"[CANDIDATE]",
+          "standort=\"Neue Praxisräume; genauer Ort nicht genannt\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "ec3f1a46",
+        "reachable": true,
+        "questionsSent": 1,
+        "factsBefore": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Vorhaben=\"Umzug in neue Räume\"[CANDIDATE]",
+          "Anzahl Behandlungsplätze=3[CANDIDATE]",
+          "Anschlussarbeiten=[\"Wasser\",\"Druckluft\"][CANDIDATE]",
+          "Gasarbeit=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "Abnahmefrist=\"Vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_business=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move=\"Umzug in neue Räume Ende Januar\"[CONFIRMED]",
+          "ai.water_connections=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.compressed_air=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gas_work=\"Ein Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Die Abnahme muss vor der Eröffnung am 3. Februar erfolgen\"[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Vorhaben=\"Umzug in neue Räume\"[CANDIDATE]",
+          "Anzahl Behandlungsplätze=3[CANDIDATE]",
+          "Anschlussarbeiten=[\"Wasser\",\"Druckluft\"][CANDIDATE]",
+          "Gasarbeit=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "Abnahmefrist=\"Vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_business=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move=\"Umzug in neue Räume Ende Januar\"[CONFIRMED]",
+          "ai.water_connections=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.compressed_air=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gas_work=\"Ein Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Die Abnahme muss vor der Eröffnung am 3. Februar erfolgen\"[CONFIRMED]"
+        ]
+      },
+      {
+        "caseId": "1509bb7b",
+        "reachable": true,
+        "questionsSent": 1,
+        "factsBefore": [
+          "geplanter_umzug=\"Ende Januar\"[CANDIDATE]",
+          "anzahl_behandlungsplaetze=3[CANDIDATE]",
+          "anschlussbedarf=[\"Wasser\",\"Druckluft\"][CANDIDATE]",
+          "gasarbeit=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "abnahmefrist=\"vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "standort=\"neue Räume; Ort nicht genannt\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_business=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move_timing=\"Ende Januar\"[CONFIRMED]",
+          "ai.compressed_air=\"Anschluss der drei Behandlungsplätze an Druckluft erforderlich\"[CONFIRMED]",
+          "ai.gas_work=\"Gasanschluss für das Labor verlegen\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme muss vor der Eröffnung am 3. Februar erfolgt sein\"[CONFIRMED]",
+          "ai.requested_scope=\"Der Betrieb soll angeben, ob er die Arbeiten übernehmen kann und wie [CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "geplanter_umzug=\"Ende Januar\"[CANDIDATE]",
+          "anzahl_behandlungsplaetze=3[CANDIDATE]",
+          "gasarbeit=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "abnahmefrist=\"vor der Eröffnung am 3. Februar\"[CANDIDATE]",
+          "standort=\"neue Räume; Ort nicht genannt\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_business=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move_timing=\"Ende Januar\"[CONFIRMED]",
+          "anschlussbedarf=[\"Wasser\",\"Druckluft\"][CONFLICTED]",
+          "ai.compressed_air=\"Anschluss der drei Behandlungsplätze an Druckluft erforderlich\"[CONFIRMED]",
+          "ai.gas_work=\"Gasanschluss für das Labor verlegen\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme muss vor der Eröffnung am 3. Februar erfolgt sein\"[CONFIRMED]",
+          "ai.requested_scope=\"Der Betrieb soll angeben, ob er die Arbeiten übernehmen kann und wie [CONFIRMED]",
+          "anschlussbedarf=\"Wasser und Druckluft\"[CONFLICTED]"
+        ]
+      }
+    ],
+    "verneinung": [
+      {
+        "caseId": "cdf799b2",
+        "reachable": false,
+        "questionsSent": 0,
+        "factsBefore": [
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]",
+          "Angefragte Arbeiten=[\"Drei Behandlungsplätze an Wasser und Druckluft anschließen\",\"Gasansc[CANDIDATE]",
+          "Zeitplan=\"Umzug Ende Januar; Abnahme muss vor der Eröffnung am 3. Februar erfol[CANDIDATE]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]",
+          "Angefragte Arbeiten=[\"Drei Behandlungsplätze an Wasser und Druckluft anschließen\",\"Gasansc[CANDIDATE]",
+          "Zeitplan=\"Umzug Ende Januar; Abnahme muss vor der Eröffnung am 3. Februar erfol[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "e37a778d",
+        "reachable": false,
+        "questionsSent": 0,
+        "factsBefore": [
+          "geplanter_umzug=\"Ende Januar\"[CANDIDATE]",
+          "wasseranschluesse=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CANDIDATE]",
+          "druckluftanschluesse=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CANDIDATE]",
+          "gasinstallation=\"Gasanschluss für das Labor soll verlegt werden\"[CANDIDATE]",
+          "abnahmefrist=\"Abnahme durch Prüfer vor der Eröffnung am 3. Februar\"[CANDIDATE]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "geplanter_umzug=\"Ende Januar\"[CANDIDATE]",
+          "wasseranschluesse=\"Drei Behandlungsplätze sollen an Wasser angeschlossen werden\"[CANDIDATE]",
+          "druckluftanschluesse=\"Drei Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CANDIDATE]",
+          "gasinstallation=\"Gasanschluss für das Labor soll verlegt werden\"[CANDIDATE]",
+          "abnahmefrist=\"Abnahme durch Prüfer vor der Eröffnung am 3. Februar\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "c2b802d8",
+        "reachable": true,
+        "questionsSent": 1,
+        "factsBefore": [
+          "geplante_arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar; Praxisumzug[CANDIDATE]",
+          "standort=\"UNKNOWN\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_type=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move_timing=\"Ende Januar\"[CONFIRMED]",
+          "ai.water_connections=\"Anschluss von drei Behandlungsplätzen an Wasser gewünscht\"[CONFIRMED]",
+          "ai.compressed_air=\"Anschluss von drei Behandlungsplätzen an Druckluft gewünscht\"[CONFIRMED]",
+          "ai.gas_work=\"Gasanschluss für das Labor verlegen\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme vor der Eröffnung am 3. Februar\"[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "geplante_arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar; Praxisumzug[CANDIDATE]",
+          "standort=\"UNKNOWN\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.customer_type=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.move_timing=\"Ende Januar\"[CONFIRMED]",
+          "ai.water_connections=\"Anschluss von drei Behandlungsplätzen an Wasser gewünscht\"[CONFIRMED]",
+          "ai.compressed_air=\"Anschluss von drei Behandlungsplätzen an Druckluft gewünscht\"[CONFIRMED]",
+          "ai.gas_work=\"Gasanschluss für das Labor verlegen\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme vor der Eröffnung am 3. Februar\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "anderesObjekt": [
+      {
+        "caseId": "1c82bddc",
+        "reachable": true,
+        "questionsSent": 2,
+        "factsBefore": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Angefragte Arbeiten=[\"Drei Behandlungsplätze an Wasser und Druckluft anschließen\",\"Gasansc[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "Eröffnungstermin=\"3. Februar\"[CANDIDATE]",
+          "Abnahmeanforderung=\"Abnahme durch den Prüfer vor der Eröffnung\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.kundenart=\"Zahnarztpraxis\"[CONFIRMED]",
+          "ai.anlass=\"Umzug in neue Räume Ende Januar\"[CONFIRMED]",
+          "ai.wasseranschluss=\"Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.druckluftanschluss=\"Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gasinstallation=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CONFIRMED]",
+          "ai.angefragtes=\"Fragt, ob der Betrieb die Arbeiten übernehmen kann und wie er vorgehe[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Angefragte Arbeiten=[\"Drei Behandlungsplätze an Wasser und Druckluft anschließen\",\"Gasansc[CANDIDATE]",
+          "Umzugstermin=\"Ende Januar\"[CANDIDATE]",
+          "Eröffnungstermin=\"3. Februar\"[CANDIDATE]",
+          "Abnahmeanforderung=\"Abnahme durch den Prüfer vor der Eröffnung\"[CANDIDATE]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+          "ai.angefragtes=\"Fragt, ob der Betrieb die Arbeiten übernehmen kann und wie er vorgehe[CONFLICTED]",
+          "ai.anlass=\"Umzug in neue Räume Ende Januar\"[CONFIRMED]",
+          "ai.wasseranschluss=\"Behandlungsplätze sollen an Wasser angeschlossen werden\"[CONFIRMED]",
+          "ai.druckluftanschluss=\"Behandlungsplätze sollen an Druckluft angeschlossen werden\"[CONFIRMED]",
+          "ai.gasinstallation=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.abnahmefrist=\"Abnahme durch den Prüfer vor der Eröffnung am 3. Februar\"[CONFIRMED]",
+          "ai.kundenart=\"Zahnarztpraxis\"[CONFLICTED]",
+          "ai.kundenart=\"Praxis\"[CONFLICTED]",
+          "ai.angefragtes=\"Fünf Behandlungsplätze der alten Praxis werden komplett abgebaut und [CONFLICTED]"
+        ]
+      },
+      {
+        "caseId": "c9e689aa",
+        "reachable": true,
+        "questionsSent": 1,
+        "factsBefore": [
+          "Arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Frist=\"Abnahme vor Eröffnung am 3. Februar; Umzug Ende Januar\"[CANDIDATE]",
+          "ai.compressed_air=\"Anschluss von drei Behandlungsplätzen an Druckluft\"[CONFIRMED]",
+          "ai.gas_relocation=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme muss vor der Eröffnung am 3. Februar erfolgt sein\"[CONFIRMED]",
+          "ai.requested_response=\"Ob der Betrieb die Arbeiten übernehmen kann und wie er vorgehen würde[CONFIRMED]",
+          "ai.water_connections=\"Anschluss von drei Behandlungsplätzen an Wasser\"[CONFIRMED]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "Arbeiten=\"Drei Behandlungsplätze an Wasser und Druckluft anschließen; Gasanschl[CANDIDATE]",
+          "Betriebsart=\"Zahnarztpraxis\"[CANDIDATE]",
+          "Frist=\"Abnahme vor Eröffnung am 3. Februar; Umzug Ende Januar\"[CANDIDATE]",
+          "ai.compressed_air=\"Anschluss von drei Behandlungsplätzen an Druckluft\"[CONFIRMED]",
+          "ai.gas_relocation=\"Gasanschluss für das Labor soll verlegt werden\"[CONFIRMED]",
+          "ai.inspection_deadline=\"Abnahme muss vor der Eröffnung am 3. Februar erfolgt sein\"[CONFIRMED]",
+          "ai.requested_response=\"Ob der Betrieb die Arbeiten übernehmen kann und wie er vorgehen würde[CONFIRMED]",
+          "ai.water_connections=\"Anschluss von drei Behandlungsplätzen an Wasser\"[CONFIRMED]",
+          "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]"
+        ]
+      },
+      {
+        "caseId": "3dd820b3",
+        "reachable": false,
+        "questionsSent": 0,
+        "factsBefore": [
+          "business_type=\"Zahnarztpraxis\"[CANDIDATE]",
+          "deadline=\"Abnahme durch Prüfer vor Eröffnung am 3. Februar\"[CANDIDATE]",
+          "gas_connection_work=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "project=\"Umzug in neue Räume\"[CANDIDATE]",
+          "water_and_compressed_air_connections=\"Drei Behandlungsplätze benötigen Wasser- und Druckluftanschlüsse\"[CANDIDATE]"
+        ],
+        "types": [],
+        "events": [],
+        "facts": [
+          "business_type=\"Zahnarztpraxis\"[CANDIDATE]",
+          "deadline=\"Abnahme durch Prüfer vor Eröffnung am 3. Februar\"[CANDIDATE]",
+          "gas_connection_work=\"Gasanschluss für das Labor verlegen\"[CANDIDATE]",
+          "project=\"Umzug in neue Räume\"[CANDIDATE]",
+          "water_and_compressed_air_connections=\"Drei Behandlungsplätze benötigen Wasser- und Druckluftanschlüsse\"[CANDIDATE]"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "longCorrections": {
+    "ergaenzung": [
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"4e2bfda5-4542-41c4-aeae-d72acd8d6cba\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"953ed38b-8fd6-427d-a64b-dccdb990f917\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"3cca931c-8ea9-4b60-8973-0fc0e96916b5\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "widerspruch": [
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"116bc329-7945-4b23-923a-bf4fc177493f\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"4eae4305-35b9-44fd-8cde-c850e9b10198\",\"proposals\":[{\"key\":\"bathroom.area_m2\",\"kind\":\"CORRECTION\",\"newValue\":12}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.area_m2",
+            "previous": 7,
+            "current": 12
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=12[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"07e8c925-cd61-4c5b-b688-746e70309545\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "verneinung": [
+      {
+        "assessed": [
+          "{\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"001d62db-19b3-4637-a451-b22c6a063685\",\"proposals\":[{\"key\":\"bathroom.shower\",\"kind\":\"CORRECTION\",\"newValue\":\"Badewanne mit Duschabtrennung\"}]}"
+        ],
+        "corrected": [
+          {
+            "key": "bathroom.shower",
+            "previous": "bodengleiche Dusche",
+            "current": "Badewanne mit Duschabtrennung"
+          }
+        ],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"Badewanne mit Duschabtrennung\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"3de51808-54c6-48b9-bb81-beb7972b5acc\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"2c52cc2c-dac9-4d45-a332-b484a0b85dff\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ],
+    "anderesObjekt": [
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"2e2620d5-732b-4b94-a7ad-e5f18013e57c\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"47d25bbe-f913-4fc9-ab69-2a0e8ead749a\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      },
+      {
+        "assessed": [
+          "{\"valid\":true,\"knownKeys\":[\"bathroom.area_m2\",\"bathroom.shower\"],\"messageId\":\"3a01857b-24b9-434c-91e7-0988f03994ed\",\"proposals\":[]}"
+        ],
+        "corrected": [],
+        "conflicts": [],
+        "ignored": [],
+        "current": [
+          "bathroom.area_m2=7[CONFIRMED]",
+          "bathroom.shower=\"bodengleiche Dusche\"[CONFIRMED]"
+        ]
+      }
+    ]
+  }
+}

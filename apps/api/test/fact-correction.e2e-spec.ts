@@ -151,6 +151,49 @@ describe('Korrekturen früher genannter Angaben (FX-20, e2e)', () => {
     await service.processInbound(other.tenantId, other.caseId, await message(other.tenantId, other.caseId, TOM, 'Danke, das passt so. Bis bald.'));
     expect(llm.getRequests().length - calls).toBe(2); // kein Korrekturhinweis → keine zweite Frage
   });
+  it('in einer langen Nachricht wird nach zwei leeren Antworten nur der Satz mit dem Korrekturhinweis beurteilt (Live-Fund Serie G)', async () => {
+    const { tenantId, caseId } = await setup();
+    seedUpdates([]);
+    seedUpdates([]);
+    seedUpdates([{ key: 'bathroom.area_m2', newValue: 12, evidence: 'doch nicht 7 m², sondern 12 m²', kind: 'CORRECTION', reason: 'Abstellkammer wird dazugenommen' }]);
+    const long = 'Guten Tag, ich muss mich korrigieren: Das Bad hat doch nicht 7 m², sondern 12 m², weil wir die Abstellkammer dazunehmen. Die Wand dazwischen wird entfernt. Außerdem brauchen wir mehr Fliesen für Boden und Wände und eine zweite Lichtquelle über dem Waschtisch.';
+    const before = llm.getRequests().length;
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, long));
+    expect(outcome.corrected).toEqual([{ key: 'bathroom.area_m2', previous: 7, current: 12 }]);
+    expect(llm.getRequests().length - before).toBe(6); // drei Fragen à zwei Modellaufrufe
+    const lastRequest = llm.getRequests().at(-1)!;
+    const shown = JSON.stringify(lastRequest.messages);
+    expect(shown).toContain('doch nicht 7 m²');
+    expect(shown).not.toContain('zweite Lichtquelle'); // nur der Satz mit dem Hinweis (und der folgende), nicht die ganze Nachricht
+  });
+  it('schweigt das Modell trotz „nicht 7 m², sondern 12 m²“, gilt der ausdrückliche Satzbau – die Regeln entscheiden (dieselbe Person → Korrektur)', async () => {
+    const { tenantId, caseId } = await setup();
+    seedUpdates([]);
+    seedUpdates([]);
+    seedUpdates([]);
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, 'Ich muss mich korrigieren: Das Bad hat doch nicht 7 m², sondern 12 m², weil wir die Abstellkammer dazunehmen. Außerdem brauchen wir mehr Fliesen.'));
+    expect(outcome.corrected).toEqual([{ key: 'bathroom.area_m2', previous: 7, current: 12 }]);
+    expect(await currentValues(tenantId, caseId)).toEqual([{ value: 12, status: 'CONFIRMED' }]);
+  });
+  it('ein ausdrücklicher Korrekturhinweis ohne zuordenbare Angabe geht nicht verloren: der Satz steht als sichtbare Ergänzung am Vorgang; „doch“ allein genügt dafür nicht', async () => {
+    const { tenantId, caseId } = await setup();
+    seedUpdates([]);
+    seedUpdates([]);
+    seedUpdates([]);
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, 'Korrektur: Die Badewanne soll doch ohne Glaswand eingebaut werden, das hatten wir anders besprochen.'));
+    expect(outcome).toEqual({ corrected: [], conflicts: [], ignored: [] });
+    const notes = (await facts.getCurrent(tenantId, caseId)).filter((f) => f.key.startsWith('korrekturhinweis.ergaenzung.'));
+    expect(notes).toHaveLength(1);
+    expect(String(notes[0]!.value)).toContain('ohne Glaswand');
+    expect(await currentValues(tenantId, caseId)).toEqual([{ value: 7, status: 'CONFIRMED' }]);
+
+    const other = await setup();
+    seedUpdates([]);
+    seedUpdates([]);
+    seedUpdates([]);
+    await service.processInbound(other.tenantId, other.caseId, await message(other.tenantId, other.caseId, TOM, 'Das passt doch alles so, danke.'));
+    expect((await facts.getCurrent(other.tenantId, other.caseId)).filter((f) => f.key.startsWith('korrekturhinweis.'))).toHaveLength(0);
+  });
   describe('Ergänzung, Selbstkorrektur und Widerspruch bleiben unabhängig von der Textlänge unterscheidbar', () => {
     const LONG_BASE = 'Anschluss von drei Behandlungsplätzen an Druckluft benötigt, die Leitungen sollen in den Wänden verlaufen';
     async function withLongFact(): Promise<{ tenantId: string; caseId: string }> {
