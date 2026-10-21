@@ -174,6 +174,7 @@ describe('Autonomie: Fähigkeiten (e2e)', () => {
       sent = [];
 
       seedTriage({ category: 'GENERAL_INQUIRY', conversationRelation: 'CONTINUATION' });
+      seedTool('submit_blueprint_fit', { fits: true, reason: 'Die Nachfrage nach dem Stand eines früheren Vorgangs wird aus dessen Stand beantwortet.' }); // Eignung des Standardverfahrens (FX-18)
       await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { subject: 'Wie ist der Stand?', content: 'Wann kommt jemand?' }));
       expect(sent).toHaveLength(1);
       expect(sent[0]!.bodyText).toContain('Heizung ausgefallen');
