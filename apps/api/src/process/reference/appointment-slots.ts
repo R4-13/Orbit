@@ -17,7 +17,7 @@ export interface BusyInterval {
 export interface ProposedSlot {
   start: Date;
   end: Date;
-  /** Für die Nachricht an die Kundschaft: „Donnerstag, 15.10.2026, 14:00–15:30 Uhr“. */
+  /** Für die Nachricht an die Kundschaft: „Donnerstag, 15.10.2026, 14:00–15:30 Uhr“ bzw. ohne begründete Dauer „Donnerstag, 15.10.2026, ab 14:00 Uhr“. */
   label: string;
 }
 
@@ -34,6 +34,12 @@ export interface SlotOptions {
   workEndHour?: number;
   /** Wie viele Werktage nach vorn gesucht wird; Standard 10. */
   horizonWorkdays?: number;
+  /** Dauer in Minuten (aus der Betriebsvorgabe oder fallbezogen begründet). Ohne Angabe gilt die alte Standarddauer (nur für Aufrufer, die keine Begründung kennen – der Prozess übergibt immer die begründete Dauer oder den Planungsblock). */
+  durationMinutes?: number;
+  /** Die Bezeichnung nennt nur den Beginn („ab 09:00 Uhr“): wenn die Dauer nicht begründet ist und deshalb gegenüber der Kundschaft nicht genannt wird. */
+  startOnlyLabel?: boolean;
+  /** Bereits vorgeschlagene Beginne, die nicht noch einmal angeboten werden. */
+  exclude?: readonly Date[];
 }
 
 const DURATION_MINUTES: Record<AppointmentKind, number> = { SITE_VISIT: 90, PHONE_CALL: 20 };
@@ -78,6 +84,13 @@ export function formatSlotLabel(start: Date, end: Date, timeZone: string, lang: 
   return lang === 'en' ? `${day}, ${time(start)}–${time(end)}` : `${day}, ${time(start)}–${time(end)} Uhr`;
 }
 
+export function formatStartLabel(start: Date, timeZone: string, lang: 'de' | 'en' = 'de'): string {
+  const locale = lang === 'en' ? 'en-GB' : 'de-DE';
+  const day = new Intl.DateTimeFormat(locale, { timeZone, weekday: 'long', day: '2-digit', month: lang === 'en' ? 'long' : '2-digit', year: 'numeric' }).format(start);
+  const time = new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(start);
+  return lang === 'en' ? `${day}, from ${time}` : `${day}, ab ${time} Uhr`;
+}
+
 const overlaps = (aStart: number, aEnd: number, b: BusyInterval, bufferMs: number) => aStart < b.end.getTime() + bufferMs && aEnd > b.start.getTime() - bufferMs;
 
 export function proposeSlots(options: SlotOptions): ProposedSlot[] {
@@ -87,7 +100,9 @@ export function proposeSlots(options: SlotOptions): ProposedSlot[] {
   const workStart = options.workStartHour ?? 8;
   const workEnd = options.workEndHour ?? 17;
   const horizon = options.horizonWorkdays ?? 10;
-  const durationMs = DURATION_MINUTES[kind] * 60_000;
+  const minutes = options.durationMinutes ?? DURATION_MINUTES[kind];
+  const durationMs = minutes * 60_000;
+  const excluded = new Set((options.exclude ?? []).map((d) => d.getTime()));
   const bufferMs = BUFFER_MINUTES[kind] * 60_000;
   const wanted = START_TIMES[kind];
 
@@ -109,18 +124,22 @@ export function proposeSlots(options: SlotOptions): ProposedSlot[] {
     const order = [...wanted.slice(rotation % wanted.length), ...wanted.slice(0, rotation % wanted.length)];
     for (const [hour, minute] of order) {
       const startMinutes = hour * 60 + minute;
-      if (startMinutes < workStart * 60 || startMinutes + DURATION_MINUTES[kind] > workEnd * 60) continue;
+      if (startMinutes < workStart * 60 || startMinutes + minutes > workEnd * 60) continue;
       const start = zonedTimeToUtc(day, hour, minute, timeZone);
       const end = new Date(start.getTime() + durationMs);
+      if (excluded.has(start.getTime())) continue;
       const someoneFree = calendars.some((busy) => !busy.some((b) => overlaps(start.getTime(), end.getTime(), b, bufferMs)));
       if (!someoneFree) continue;
-      slots.push({ start, end, label: formatSlotLabel(start, end, timeZone) });
+      slots.push({ start, end, label: options.startOnlyLabel ? formatStartLabel(start, timeZone) : formatSlotLabel(start, end, timeZone) });
       rotation += 1;
       break;
     }
   }
   return slots;
 }
+
+/** Planungsblock im Kalender, wenn weder Betriebsvorgabe noch Fall eine Dauer begründen: nur zum Prüfen der Verfügbarkeit, wird der Kundschaft nicht als Dauer genannt. */
+export const PLANNING_BLOCK_MINUTES: Record<AppointmentKind, number> = { SITE_VISIT: 60, PHONE_CALL: 15 };
 
 export const APPOINTMENT_LABELS: Record<AppointmentKind, string> = { SITE_VISIT: 'Vor-Ort-Termin', PHONE_CALL: 'Telefontermin' };
 export const APPOINTMENT_DURATION_MINUTES = DURATION_MINUTES;

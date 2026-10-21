@@ -8,7 +8,7 @@ import { PolicyEnforcementService } from '../../policy/policy-enforcement.servic
 import { PrismaService } from '../../prisma/prisma.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
-import { REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, analysisPrompt, evaluateAnalysis, type AnalysisResult, type RequestAnalysis } from './request-analysis';
+import { AppointmentPolicySchema, REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, analysisPrompt, evaluateAnalysis, type AnalysisResult, type RequestAnalysis } from './request-analysis';
 import { ReferenceProcessService } from './reference-process.service';
 import { ProfileContextService } from '../../organization/profile-context.service';
 import { focusedMessageText, messageCaseIds, splitFocus } from '../case-scope';
@@ -107,7 +107,9 @@ export class RequestAnalysisService {
     const submitted = [...turn.toolCallOutcomes.filter((o) => o.toolName === REQUEST_ANALYSIS_TOOL)].reverse().find((o) => o.result?.status === 'SUCCEEDED');
     if (!submitted) throw new ToolFailedError('Die KI hat keine gültige Analyse geliefert.', { errorCode: 'INVALID_ANALYSIS', retryable: true });
 
-    const result = evaluateAnalysis(RequestAnalysisSchema.parse(submitted.output), evidenceText, reserved.keys);
+    const policyRow = await scoped.tenantProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { appointmentPolicy: true } });
+    const policy = AppointmentPolicySchema.safeParse(policyRow?.appointmentPolicy ?? {});
+    const result = evaluateAnalysis(RequestAnalysisSchema.parse(submitted.output), evidenceText, reserved.keys, [], policy.success ? policy.data : undefined);
 
     // Entnommene Angaben: nur mit wörtlichem Beleg (bereits in evaluateAnalysis geprüft) und gültigem Typ als bestätigter Fakt.
     for (const item of result.known) {

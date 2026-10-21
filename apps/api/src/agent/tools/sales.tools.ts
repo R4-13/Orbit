@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { POLICY_ACTIONS } from '@orbit/shared';
-import type { ToolDefinition, ToolExecutionContext, ToolRegistry } from '@orbit/agent-core';
+import { ToolFailedError, type ToolDefinition, type ToolExecutionContext, type ToolRegistry } from '@orbit/agent-core';
 import type { CalendarConnector, CrmConnector } from '@orbit/integration-core';
 import { NotFoundError } from '@orbit/shared';
 import { CALENDAR_CONNECTOR, CRM_CONNECTOR } from '../../connectors/connectors.tokens';
@@ -11,6 +11,7 @@ import { ContactsService } from '../../contacts/contacts.service';
 import { LeadsService } from '../../leads/leads.service';
 import { MeetingsService } from '../../meetings/meetings.service';
 import { OpportunitiesService } from '../../opportunities/opportunities.service';
+import { messageCaseIds } from '../../process/case-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TasksService } from '../../tasks/tasks.service';
 
@@ -49,6 +50,22 @@ export class SalesAgentTools {
     registry.register(this.sendEmailTool());
   }
 
+  /**
+   * Läuft der Agent in einem Vorgang (aus einer eingegangenen Nachricht), muss jede Adresse, mit der er einen Kontakt anlegt oder an die er schreibt, aus diesem Vorgang stammen: die Absenderadresse einer
+   * Nachricht der Vorgangsfamilie oder eine Adresse, die wörtlich in einer solchen Nachricht steht. Die Eingabe kommt vom Modell und damit indirekt aus nicht vertrauenswürdigem Inhalt.
+   */
+  private async assertAddressFromCase(context: ToolExecutionContext, address: string): Promise<void> {
+    const run = await this.prisma.forTenantId(context.tenantId).agentRun.findUnique({ where: { id: context.agentRunId }, select: { caseId: true } });
+    if (!run?.caseId) return;
+    const wanted = address.trim().toLowerCase();
+    const messages = await this.prisma.forTenantId(context.tenantId).emailMessage.findMany({
+      where: { caseId: { in: await messageCaseIds(this.prisma, context.tenantId, run.caseId) }, direction: 'INBOUND' },
+      select: { fromAddress: true, bodyText: true },
+    });
+    const known = messages.some((m) => m.fromAddress.trim().toLowerCase() === wanted || (m.bodyText ?? '').toLowerCase().includes(wanted));
+    if (!known) throw new ToolFailedError('Die Adresse stammt nicht aus diesem Vorgang (weder Absender noch im Text der Nachricht); sie wird nicht verwendet.', { errorCode: 'ADDRESS_NOT_FROM_CASE' });
+  }
+
   private findContactTool(): ToolDefinition {
     return {
       name: 'find_contact',
@@ -85,8 +102,11 @@ export class SalesAgentTools {
       description: 'Legt einen Kontakt an (oder findet einen bestehenden anhand der E-Mail-Adresse).',
       inputSchema,
       policyAction: POLICY_ACTIONS.CONTACT_MANAGE,
-      execute: async (input, context: ToolExecutionContext) =>
-        this.contacts.upsert(context.tenantId, context.actorUserId, input, 'AGENT'),
+      execute: async (input, context: ToolExecutionContext) => {
+        // Eine vom Modell genannte Adresse ist nur dann verwendbar, wenn sie aus dem Vorgang stammt (Absender oder wörtlich in den Nachrichten): eine erfundene, formal gültige Adresse legt keinen Kontakt an.
+        if (input.email) await this.assertAddressFromCase(context, input.email);
+        return this.contacts.upsert(context.tenantId, context.actorUserId, input, 'AGENT');
+      },
     };
   }
 
@@ -254,6 +274,7 @@ export class SalesAgentTools {
       inputSchema,
       policyAction: POLICY_ACTIONS.EMAIL_DRAFT,
       execute: async (input, context: ToolExecutionContext) => {
+        await this.assertAddressFromCase(context, input.toAddress);
         // Der Absender ist das verbundene Postfach des Mandanten (dynamisch ermittelt), nie eine im Code festgelegte Adresse (UI v2 AC-17).
         const mailbox = await this.prisma.forTenantId(context.tenantId).integration.findFirst({
           where: { connectorType: { in: ['GMAIL', 'MICROSOFT'] }, status: 'CONNECTED' },

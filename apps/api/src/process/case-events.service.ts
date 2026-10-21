@@ -48,6 +48,8 @@ export const CASE_EVENT_TYPES = {
   /** Ein angebundenes System war nicht erreichbar: der Schritt wird automatisch wiederholt (das erste Ereignis je Schritt hält fest, seit wann der Ausfall besteht). */
   NODE_RETRY_SCHEDULED: 'node.retry_scheduled',
   COMMUNICATION_RECEIVED: 'communication.received',
+  /** Eine Antwort ging an einem Geschwister-Teilvorgang ein und kann Angaben für diesen (gerade nicht wartenden) Teilvorgang enthalten: sie ist zugeordnet und wird bei der nächsten Bearbeitung berücksichtigt, startet aber nichts. */
+  SIBLING_INFO_RECEIVED: 'communication.sibling_info',
   COMMAND_ACCEPTED: 'command.accepted',
   COMPLETED: 'case.completed',
   /** Schattenbetrieb: der freie Planer hat zu diesem Vorgang mitgeplant, ohne etwas auszuführen (Bewertung der Planung, kein Plan im Vorgang). */

@@ -1,0 +1,539 @@
+{
+  "gruppen": {
+    "notwendige Freigabe": 14,
+    "tatsächlich fehlende Kundeninformation": 3,
+    "fehlende Fähigkeit": 11,
+    "fachlich erforderliche menschliche Entscheidung": 19,
+    "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung": 19
+  },
+  "zeilen": [
+    {
+      "nr": 3,
+      "szenario": "preisfrage-heizkoerper",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "reine Preisfrage wurde in den Terminablauf geführt (pauschaler Vor-Ort-Termin); gewartet wird auf eine Terminwahl, die für die Preisauskunft nicht nötig ist"
+    },
+    {
+      "nr": 4,
+      "szenario": "statusfrage",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "Nachfrage nach einem früheren Vorgang, zu dem im System kein Bezug auffindbar ist: ORBIT kann ihn nicht zuordnen, eine Person prüft"
+    },
+    {
+      "nr": 5,
+      "szenario": "notfall-rohrbruch",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 6,
+      "szenario": "notfall-gasgeruch",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 7,
+      "szenario": "heizung-ausfall-frost",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 8,
+      "szenario": "beschwerde-monteur",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Beschwerde/Reklamation: Prüfung, Entscheidung und Rückruf gehören einer Person"
+    },
+    {
+      "nr": 10,
+      "szenario": "englische-anfrage",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 11,
+      "szenario": "rechnung-lieferant",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "automatische Rechnungsauslese nicht verfügbar (Platzhalter); Dokument gesichert, Person erfasst"
+    },
+    {
+      "nr": 13,
+      "szenario": "phishing",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Sicherheitsfall: Eingang liegt zur Prüfung vor, keine Aktion und keine Antwort (so beabsichtigt)"
+    },
+    {
+      "nr": 14,
+      "szenario": "prompt-injection",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Sicherheitsfall: Eingang liegt zur Prüfung vor, keine Aktion und keine Antwort (so beabsichtigt)"
+    },
+    {
+      "nr": 15,
+      "szenario": "nur-hallo",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "Mail ohne Inhalt: eine kurze Rückfrage („Wie können wir helfen?“) wäre möglich gewesen; stattdessen Prüfliste"
+    },
+    {
+      "nr": 16,
+      "szenario": "angebot-waermepumpe",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 17,
+      "szenario": "angebot-bad",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 18,
+      "szenario": "angebot-bad-variante",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 19,
+      "szenario": "angebot-heizung-knapp",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 20,
+      "szenario": "unbekannt-leitung-umzug",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "Status „Übergabe“, obwohl nur auf die Antwort der Kundschaft gewartet wird (das Warten war als menschliche Aufgabe geplant) – Prozesssteuerung"
+    },
+    {
+      "nr": 21,
+      "szenario": "unbekannt-leitung-umzug-variante",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Umfang, Preis und Frist eines Installationsprojekts entscheidet eine Person"
+    },
+    {
+      "nr": 22,
+      "szenario": "unbekannt-wartungsvertrag",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 23,
+      "szenario": "wartungsvertrag-variante",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 24,
+      "szenario": "elektroarbeiten",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 25,
+      "szenario": "elektroarbeiten-variante",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 26,
+      "szenario": "oeffnungszeiten",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Auskunftsmail wartet auf Einzelfreigabe der Regel email.send.information"
+    },
+    {
+      "nr": 27,
+      "szenario": "einsatzgebiet",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Auskunftsmail wartet auf Einzelfreigabe der Regel email.send.information"
+    },
+    {
+      "nr": 28,
+      "szenario": "preisfrage-heizkoerper",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "reine Preisfrage wurde in den Terminablauf geführt (pauschaler Vor-Ort-Termin); gewartet wird auf eine Terminwahl, die für die Preisauskunft nicht nötig ist"
+    },
+    {
+      "nr": 29,
+      "szenario": "statusfrage",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "Nachfrage nach einem früheren Vorgang, zu dem im System kein Bezug auffindbar ist: ORBIT kann ihn nicht zuordnen, eine Person prüft"
+    },
+    {
+      "nr": 30,
+      "szenario": "notfall-rohrbruch",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 31,
+      "szenario": "notfall-gasgeruch",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 32,
+      "szenario": "heizung-ausfall-frost",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Notfallverfahren: Person übernimmt (Eingangsbestätigung mit Notruf-Hinweis ging automatisch an die Kundschaft)"
+    },
+    {
+      "nr": 33,
+      "szenario": "beschwerde-monteur",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Beschwerde/Reklamation: Prüfung, Entscheidung und Rückruf gehören einer Person"
+    },
+    {
+      "nr": 36,
+      "szenario": "rechnung-lieferant",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "automatische Rechnungsauslese nicht verfügbar (Platzhalter); Dokument gesichert, Person erfasst"
+    },
+    {
+      "nr": 38,
+      "szenario": "phishing",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Sicherheitsfall: Eingang liegt zur Prüfung vor, keine Aktion und keine Antwort (so beabsichtigt)"
+    },
+    {
+      "nr": 39,
+      "szenario": "prompt-injection",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Sicherheitsfall: Eingang liegt zur Prüfung vor, keine Aktion und keine Antwort (so beabsichtigt)"
+    },
+    {
+      "nr": 40,
+      "szenario": "nur-hallo",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "Mail ohne Inhalt: eine kurze Rückfrage („Wie können wir helfen?“) wäre möglich gewesen; stattdessen Prüfliste"
+    },
+    {
+      "nr": 41,
+      "szenario": "angebot-waermepumpe",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "tatsächlich fehlende Kundeninformation",
+      "begruendung": "gezielte Rückfrage nach fehlenden Angaben gestellt"
+    },
+    {
+      "nr": 42,
+      "szenario": "angebot-bad",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 43,
+      "szenario": "angebot-bad-variante",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 44,
+      "szenario": "angebot-heizung-knapp",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 45,
+      "szenario": "unbekannt-leitung-umzug",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 46,
+      "szenario": "unbekannt-leitung-umzug-variante",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Umfang, Preis und Frist eines Installationsprojekts entscheidet eine Person"
+    },
+    {
+      "nr": 47,
+      "szenario": "unbekannt-wartungsvertrag",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "fester Vertriebsweg: Lead und Aufgabe angelegt, aber keine Eingangsbestätigung und Status „in Bearbeitung“ ohne Verantwortliche (Verantwortung, Status und Kommunikation passten nicht zusammen)"
+    },
+    {
+      "nr": 48,
+      "szenario": "wartungsvertrag-variante",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 49,
+      "szenario": "elektroarbeiten",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Leistung laut Betriebsprofil nicht im Angebot: eine Person entscheidet über die weitere Bearbeitung"
+    },
+    {
+      "nr": 50,
+      "szenario": "oeffnungszeiten",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Auskunftsmail wartet auf Einzelfreigabe der Regel email.send.information"
+    },
+    {
+      "nr": 51,
+      "szenario": "preisfrage-heizkoerper",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "reine Preisfrage wurde in den Terminablauf geführt (pauschaler Vor-Ort-Termin); gewartet wird auf eine Terminwahl, die für die Preisauskunft nicht nötig ist"
+    },
+    {
+      "nr": 52,
+      "szenario": "beschwerde-monteur",
+      "einheit": "Mail",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Beschwerde/Reklamation: Prüfung, Entscheidung und Rückruf gehören einer Person"
+    },
+    {
+      "nr": 53,
+      "szenario": "angebot-waermepumpe",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 54,
+      "szenario": "angebot-bad",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "gewartet wird nur auf eine Terminwahl (keine fehlende Sachangabe)"
+    },
+    {
+      "nr": 55,
+      "szenario": "angebot-heizung-knapp",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "tatsächlich fehlende Kundeninformation",
+      "begruendung": "gezielte Rückfrage nach fehlenden Angaben gestellt"
+    },
+    {
+      "nr": 56,
+      "szenario": "unbekannt-leitung-umzug",
+      "einheit": "Mail",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 57,
+      "szenario": "mehrere-anliegen",
+      "einheit": "Teilvorgang „Kopie der letzten Rechnung“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "eine frühere Rechnung abrufen und bereitstellen kann ORBIT nicht (keine Fähigkeit); eine Person übernimmt"
+    },
+    {
+      "nr": 57,
+      "szenario": "mehrere-anliegen",
+      "einheit": "Teilvorgang „Angebot für einen Heizungsregler“",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (D4)"
+    },
+    {
+      "nr": 57,
+      "szenario": "mehrere-anliegen",
+      "einheit": "Teilvorgang „Wartungstermin verschieben“",
+      "klasse": "W",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "einen bestehenden Termin verschieben (Kalender ändern) ist in dieser Runde ausgeschlossen und als Fähigkeit nicht vorhanden"
+    },
+    {
+      "nr": 58,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Reparaturtermin für tropfenden Wasserhahn“",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Terminoptionen prüfen und mit der Kundschaft abstimmen (Termin-Vergabe ist Sache einer Person, Buchungen in dieser Runde ausgeschlossen)"
+    },
+    {
+      "nr": 58,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Kopie der letzten Rechnung“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "eine frühere Rechnung abrufen und bereitstellen kann ORBIT nicht (keine Fähigkeit); eine Person übernimmt"
+    },
+    {
+      "nr": 58,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Samstags telefonisch erreichbar“",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Auskunftsmail wartet auf Freigabe"
+    },
+    {
+      "nr": 59,
+      "szenario": "fuenf-anliegen-variante",
+      "einheit": "Teilvorgang „Wartungstermin verlegen“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "einen bestehenden Termin verschieben (Kalender ändern) ist in dieser Runde ausgeschlossen und als Fähigkeit nicht vorhanden"
+    },
+    {
+      "nr": 59,
+      "szenario": "fuenf-anliegen-variante",
+      "einheit": "Teilvorgang „Kopie der Rechnung vom letzten Einsatz“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "eine frühere Rechnung abrufen und bereitstellen kann ORBIT nicht (keine Fähigkeit); eine Person übernimmt"
+    },
+    {
+      "nr": 59,
+      "szenario": "fuenf-anliegen-variante",
+      "einheit": "Teilvorgang „Angebot für neue Thermostate“",
+      "klasse": "W",
+      "gruppe": "tatsächlich fehlende Kundeninformation",
+      "begruendung": "Rückfrage an die Kundschaft gestellt"
+    },
+    {
+      "nr": 59,
+      "szenario": "fuenf-anliegen-variante",
+      "einheit": "Teilvorgang „Reparaturtermin für tropfenden Wasserhahn“",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 59,
+      "szenario": "fuenf-anliegen-variante",
+      "einheit": "Teilvorgang „Telefonische Erreichbarkeit freitags“",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Erreichbarkeit zu Zeiten außerhalb der Geschäftszeiten: keine belegte Auskunft im Betriebswissen, eine Person antwortet"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Wartungstermin verschieben“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "einen bestehenden Termin verschieben (Kalender ändern) ist in dieser Runde ausgeschlossen und als Fähigkeit nicht vorhanden"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Angebot für einen Heizungsregler“",
+      "klasse": "U",
+      "gruppe": "fachlich erforderliche menschliche Entscheidung",
+      "begruendung": "Angebot/Preis legt eine Person fest (kein Preis ohne Quelle)"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Weitere Fragen und Wünsche der Nachricht“",
+      "klasse": "W",
+      "gruppe": "vermeidbare Übergabe oder fehlerhafte Prozesssteuerung",
+      "begruendung": "überzähliger Teilvorgang aus verstümmeltem Auszug/Rest der Nachricht (Prozesssteuerung)"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Samstags telefonisch erreichbar“",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Auskunftsmail wartet auf Freigabe"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Reparaturtermin für tropfenden Wasserhahn“",
+      "klasse": "W",
+      "gruppe": "notwendige Freigabe",
+      "begruendung": "Plan wartet auf die Planfreigabe (unbekannte Vorgangsart, D4)"
+    },
+    {
+      "nr": 60,
+      "szenario": "fuenf-anliegen",
+      "einheit": "Teilvorgang „Kopie der letzten Rechnung“",
+      "klasse": "U",
+      "gruppe": "fehlende Fähigkeit",
+      "begruendung": "eine frühere Rechnung abrufen und bereitstellen kann ORBIT nicht (keine Fähigkeit); eine Person übernimmt"
+    }
+  ]
+}

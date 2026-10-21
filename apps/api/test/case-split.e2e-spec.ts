@@ -357,6 +357,57 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
   });
+  it('eine Antwort erreicht auch einen Teilvorgang, der gerade nicht wartet (z. B. auf eine Freigabe): er startet nicht neu, aber die Antwort ist ihm nachvollziehbar zugeordnet und für die nächste Bearbeitung lesbar', async () => {
+    const tenantId = await newTenant(true);
+    seedTriage(['ANLIEGEN_STANDORT', 'ANLIEGEN_ZUGANG']);
+    const askPlan = () => ({
+      goalKeys: ['staff.informed'],
+      nodes: [
+        node('ctx', 'RESOLVE_CONTEXT', { capability: { key: 'context.lookup' } }),
+        node('reqs', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+        node('ask_draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { to: { fact: 'contact.email' }, missing: { stepOutput: { node: 'reqs', path: 'missing' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('ask_send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draftId: { stepOutput: { node: 'ask_draft', path: 'draftId' } } }, config: { purpose: 'CLARIFICATION' } }),
+        node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } }),
+      ],
+      edges: [edge('ctx', 'reqs'), edge('reqs', 'ask_draft'), edge('ask_draft', 'ask_send'), edge('ask_send', 'wait')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Gezielt nachfragen und auf die Antwort warten.',
+    });
+    const analysis = (key: string, label: string, question: string) =>
+      seedTool('submit_request_analysis', { requestType: label, summary: `${label} klären.`, knownDetails: [], missingInformation: [{ key, label, question }], siteVisit: { recommended: false, reason: '' }, nextStep: 'ASK_CUSTOMER' });
+    seedPlan(askPlan());
+    analysis('standort', 'Standort', 'An welcher Adresse liegt das Objekt?');
+    seedPlan(askPlan());
+    analysis('zugang', 'Zugang', 'Wie kommen wir ins Objekt?');
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const kids = await children(tenantId, result.case!.id);
+    expect(kids).toHaveLength(2);
+    await confirmPlan(tenantId, kids[0]!.id); // nur der erste Teilvorgang läuft und wartet auf die Antwort; der zweite wartet auf die Freigabe seines Plans
+    expect((await children(tenantId, result.case!.id)).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_APPROVAL']);
+
+    const base = askPlan();
+    seedPlan({
+      ...base,
+      nodes: [...base.nodes.filter((n) => n.id !== 'wait'), node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Standort geklärt.' } } }), node('done', 'COMPLETE')],
+      edges: [...base.edges.filter((e) => e.target !== 'wait'), edge('ask_send', 'notify'), edge('notify', 'done')],
+    });
+    const reply = await intake.handleIntakeEvent(tenantId, undefined, {
+      ...mail(tenantId),
+      subject: 'Re: Zwei Fragen',
+      content: 'Das Objekt ist in der Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      rfcMessageId: '<antwort2@kunde.example>',
+      inReplyTo: '<sent-1@mail.example>',
+      references: ['<split@kunde.example>', '<sent-1@mail.example>'],
+    });
+    expect(reply.case!.id).toBe(kids[0]!.id);
+    const after = await children(tenantId, result.case!.id);
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'WAITING_FOR_APPROVAL']); // der zweite startet nicht neu und behält seinen Status
+    const trace = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[1]!.id, type: 'communication.sibling_info' } });
+    expect(trace.payload).toMatchObject({ fromCaseId: kids[0]!.id });
+    const familyIds = await messageCaseIds(prisma, tenantId, kids[1]!.id);
+    expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
+  });
   describe('Erkennung und Abgrenzung der Anliegen unabhängig vom Merkmal der Einstufung', () => {
     const MULTI =
       'Guten Tag, wir ziehen zum 1. Dezember um. Bitte ändern Sie unsere Rechnungsanschrift auf Hauptstraße 5 in Berlin. Außerdem möchten wir einen Wartungsvertrag für die Heizung. Was würde der pro Jahr kosten? Könnten Sie uns zusätzlich mitteilen, wann der Schornsteinfeger kommt? Viele Grüße Karl';

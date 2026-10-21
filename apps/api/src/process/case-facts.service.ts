@@ -8,6 +8,7 @@ import {
   type CaseFactSourceTypeValue,
 } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { messageCaseIds } from './case-scope';
 
 export interface FactInput {
   key: string;
@@ -68,6 +69,25 @@ export class CaseFactsService {
       where: { caseId, isCurrent: true },
       orderBy: [{ key: 'asc' }, { revision: 'asc' }],
     });
+  }
+
+  /**
+   * Angekündigte Korrekturen, die keiner Angabe zugeordnet werden konnten (Hinweis-Fakten `korrekturhinweis.ergaenzung.*`) und noch nicht geklärt sind. Ein sichtbarer Hinweis ist noch keine
+   * verarbeitete Korrektur: bis zur Klärung laufen davon abhängige Wirkungen nicht mit dem alten Wert weiter. Geklärt ist ein Hinweis, sobald die Kundschaft nach einer Klärungsfrage (Rückfrage nach
+   * dem Hinweis) geantwortet hat – die Antwort prüft der Korrekturdienst wie jede Nachricht – oder eine Person den Hinweis verworfen hat.
+   */
+  async openCorrectionNotes(tenantId: string, caseId: string): Promise<CaseFact[]> {
+    const notes = (await this.getCurrent(tenantId, caseId)).filter((f) => f.key.startsWith('korrekturhinweis.ergaenzung.') && f.status !== 'REJECTED');
+    if (notes.length === 0) return [];
+    const scoped = this.prisma.forTenantId(tenantId);
+    const family = await messageCaseIds(this.prisma, tenantId, caseId);
+    const open: CaseFact[] = [];
+    for (const note of notes) {
+      const asked = await scoped.actionIntent.findFirst({ where: { caseId, capabilityKey: 'email.send', purpose: 'CLARIFICATION', status: 'CONFIRMED', createdAt: { gt: note.createdAt } }, orderBy: { createdAt: 'asc' } });
+      const answered = asked ? (await scoped.emailMessage.count({ where: { caseId: { in: family }, direction: 'INBOUND', createdAt: { gt: asked.createdAt } } })) > 0 : false;
+      if (!answered) open.push(note);
+    }
+    return open;
   }
 
   async getHistory(tenantId: string, caseId: string, key: string): Promise<CaseFact[]> {

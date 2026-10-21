@@ -215,6 +215,7 @@ ${profile}`);
       timeZone: tenantRow?.timezone || 'Europe/Berlin',
       analysis,
       facts,
+      openCorrections: (await this.caseFacts.openCorrectionNotes(tenantId, caseId)).map((n) => String(n.value)),
       appointment: {
         ...(bookedPayload?.kind && bookedPayload.start ? { booked: { kind: bookedPayload.kind, start: bookedPayload.start, ...(bookedPayload.assignee?.name ? { assignee: bookedPayload.assignee.name } : {}) } } : {}),
         ...(typeof agreed === 'string' && agreed.trim() ? { agreed } : {}),

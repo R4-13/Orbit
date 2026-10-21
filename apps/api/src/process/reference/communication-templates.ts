@@ -1,4 +1,4 @@
-import { APPOINTMENT_DURATION_MINUTES, type AppointmentKind } from './appointment-slots';
+import type { AppointmentKind } from './appointment-slots';
 import { formatEuro } from './money';
 import type { ReplyLanguage } from './reply-language';
 
@@ -15,32 +15,34 @@ export interface ClarificationAppointment {
   kind: AppointmentKind;
   /** Konkrete freie Zeiten aus dem Kalender; leer = es sind keine bekannt, die Nachricht bittet um Terminwünsche. */
   slots: string[];
+  /** Begründete Dauer (Betriebsvorgabe oder Fall). Ohne Angabe nennt die Nachricht keine Dauer. */
+  minutes?: number;
 }
 
 /** Wozu gefragt wird: für ein Angebot, das ORBIT selbst erstellt (`QUOTE`), oder um die Anfrage an die zuständige Person zu übergeben (`HANDOFF`, kein Wort über ein Angebot). */
 export type ClarificationIntent = 'QUOTE' | 'HANDOFF';
 
 function appointmentBlock(appointment: ClarificationAppointment, intent: ClarificationIntent): string[] {
-  const minutes = APPOINTMENT_DURATION_MINUTES[appointment.kind];
+  const duration = appointment.minutes ? ` (ca. ${appointment.minutes} Minuten)` : '';
   const reliable = intent === 'HANDOFF' ? 'eine verlässliche Einschätzung' : 'ein verlässliches Angebot';
   if (appointment.kind === 'SITE_VISIT') {
     if (appointment.slots.length > 0) {
       return [
-        `Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Folgende Termine hätten wir frei:`,
+        `Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an${duration}. Folgende Termine hätten wir frei:`,
         ...appointment.slots.map((slot) => `- ${slot}`),
         'Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.',
       ];
     }
-    return [`Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. ${minutes} Minuten). Bitte nennen Sie uns zwei bis drei Zeiträume (Wochentag und Uhrzeit), zu denen ein Termin bei Ihnen passt.`];
+    return [`Für ${reliable} schauen wir uns die Situation gern bei Ihnen vor Ort an${duration}. Bitte nennen Sie uns zwei bis drei Zeiträume (Wochentag und Uhrzeit), zu denen ein Termin bei Ihnen passt.`];
   }
   if (appointment.slots.length > 0) {
     return [
-      `Zur Klärung der offenen Punkte und zur Abstimmung eines möglichen Vor-Ort-Termins rufen wir Sie gern kurz an (ca. ${minutes} Minuten). Dafür hätten wir folgende Zeiten:`,
+      `Zur Klärung der offenen Punkte und zur Abstimmung eines möglichen Vor-Ort-Termins rufen wir Sie gern kurz an${duration}. Dafür hätten wir folgende Zeiten:`,
       ...appointment.slots.map((slot) => `- ${slot}`),
       'Bitte antworten Sie mit Ihrer Wunschzeit und einer Telefonnummer, unter der wir Sie erreichen.',
     ];
   }
-  return [`Zur Klärung der offenen Punkte und zur Abstimmung eines möglichen Vor-Ort-Termins rufen wir Sie gern kurz an (ca. ${minutes} Minuten). Unter welcher Telefonnummer und zu welchen Zeiten erreichen wir Sie am besten?`];
+  return [`Zur Klärung der offenen Punkte und zur Abstimmung eines möglichen Vor-Ort-Termins rufen wir Sie gern kurz an${duration}. Unter welcher Telefonnummer und zu welchen Zeiten erreichen wir Sie am besten?`];
 }
 
 export function clarificationBody(input: {
@@ -118,7 +120,7 @@ const closing = (companyName: string, lang: ReplyLanguage = 'de'): string[] => [
 /** Betreff ohne „Re:“/„AW:“-Vorsätze, wenn er in einem Satz zitiert wird. */
 export const quotableSubject = (subject?: string | null): string => (subject ?? '').replace(/^\s*((re|aw|fw|fwd|wg)\s*:\s*)+/i, '').trim();
 
-export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean; lang?: ReplyLanguage; name?: string }): string {
+export function acknowledgementBody(input: { originalSubject?: string | null; companyName: string; emergency?: boolean; lang?: ReplyLanguage; name?: string; appointmentPending?: boolean }): string {
   const lang = input.lang ?? 'de';
   const subject = quotableSubject(input.originalSubject);
   if (lang === 'en') {
@@ -128,6 +130,7 @@ export function acknowledgementBody(input: { originalSubject?: string | null; co
       ...(input.emergency
         ? ['We have classed it as urgent and are passing it on to the person responsible right away.', 'If anyone is in immediate danger, please call the emergency number 112 straight away.']
         : ['We will look into it and get back to you.']),
+      ...(input.appointmentPending ? ['You are still welcome to choose one of the appointments we suggested earlier - just reply with your preferred time.'] : []),
       'You are welcome to simply reply to this email if you would like to add anything.',
       ...closing(input.companyName, lang),
     ].join('\n');
@@ -139,6 +142,7 @@ export function acknowledgementBody(input: { originalSubject?: string | null; co
     ...(input.emergency
       ? ['Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter.', 'Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112.']
       : ['Wir kümmern uns darum und melden uns bei Ihnen.']),
+    ...(input.appointmentPending ? ['Einen der bereits vorgeschlagenen Termine können Sie weiterhin wählen, indem Sie uns kurz Ihren Wunschtermin nennen.'] : []),
     'Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.',
     ...closing(input.companyName),
   ].join('\n');

@@ -2762,6 +2762,8 @@ model TenantProfile {
   escalationPolicy      Json?     @map("escalation_policy")
   /// Eigene Grenzen des Betriebs für automatische Abläufe (nur verschärfend): { maxActionsPerCase?, maxReplans?, maxConsecutiveCapabilityFailures?, maxAiCostPerCase? } (BPF-04).
   processLimits         Json?     @map("process_limits")
+  /// Betriebliche Vorgabe zu Terminen (optional): { siteVisit?: { minutes?, requiredFor?: string[] }, phoneCall?: { minutes? } }. Ohne Vorgabe entscheidet allein die fallbezogene Begründung (FX-18, Messlauf 21.10.).
+  appointmentPolicy     Json?     @map("appointment_policy")
   onboardingCompletedAt DateTime? @map("onboarding_completed_at")
   /// Wann der Automatisierungsgrad bewusst gewählt (oder bei der Anlage des Betriebs festgelegt) wurde.
   automationConfirmedAt DateTime? @map("automation_confirmed_at")

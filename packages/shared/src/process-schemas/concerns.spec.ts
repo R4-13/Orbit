@@ -92,3 +92,35 @@ describe('Gekürzte Auszüge: es zählt der Originalsatz, nie der verkürzte Tex
     expect(splitSentences('Der Termin am 28.10. wird auf den 4.11. verschoben. Danke.')).toEqual(['Der Termin am 28.10. wird auf den 4.11. verschoben.', 'Danke.']);
   });
 });
+
+describe('Zerlegung: verstümmelte Auszüge und Floskeln (Messlauf 21.10.)', () => {
+  const FIVE = `Guten Tag,
+ich habe fünf Anliegen: Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer. Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben. Viertens: Sind Sie samstags telefonisch erreichbar?
+Danke, Tom Orbit`;
+
+  it('ein Auszug mit Zeichenfehlern der KI gilt als belegt und erzeugt kein doppeltes Restanliegen', () => {
+    const verified = verifyConcerns(FIVE, {
+      concerns: [
+        { title: 'Rechnung', category: 'GENERAL_INQUIRY', goal: 'Kopie der Rechnung', excerpt: 'Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer.' },
+        { title: 'Wartungstermin', category: 'GENERAL_INQUIRY', goal: 'Termin verschieben', excerpt: 'Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben.' },
+        { title: 'Erreichbarkeit', category: 'GENERAL_INQUIRY', goal: 'Erreichbarkeit erfahren', excerpt: 'Viertens: Sind Sie samstags\nt telefon isch erreichbar?' },
+      ],
+      sharedContext: '',
+    });
+    expect(verified.concerns.map((c) => c.grounded)).toEqual([true, true, true]);
+    expect(verified.concerns.some((c) => c.supplemented)).toBe(false);
+    expect(verified.concerns[2]!.excerpt).toContain('Viertens: Sind Sie samstags telefonisch erreichbar?'); // der volle Originalsatz
+  });
+
+  it('ein erfundener Auszug wird auch mit der unscharfen Prüfung nicht belegt', () => {
+    const verified = verifyConcerns(FIVE, { concerns: [{ title: 'X', category: 'UNKNOWN', goal: 'g', excerpt: 'Bitte schicken Sie uns sofort die komplette Preisliste für alle Produkte zu.' }], sharedContext: '' });
+    expect(verified.concerns[0]!.grounded).toBe(false);
+  });
+
+  it('Gruß und Dank sind kein Anliegen; Dank mit echter Bitte schon', () => {
+    const only = verifyConcerns('Guten Tag,\nbitte rufen Sie mich wegen der Heizung zurück.\nVielen Dank im Voraus, Tom Orbit', { concerns: [{ title: 'Rückruf', category: 'UNKNOWN', goal: 'Rückruf', excerpt: 'bitte rufen Sie mich wegen der Heizung zurück.' }], sharedContext: '' });
+    expect(only.concerns.some((c) => c.supplemented)).toBe(false);
+    const withRequest = verifyConcerns('Guten Tag,\nbitte rufen Sie mich wegen der Heizung zurück.\nDanke und bitte schicken Sie mir noch die Rechnung vom letzten Einsatz.', { concerns: [{ title: 'Rückruf', category: 'UNKNOWN', goal: 'Rückruf', excerpt: 'bitte rufen Sie mich wegen der Heizung zurück.' }], sharedContext: '' });
+    expect(withRequest.concerns.find((c) => c.supplemented)?.excerpt).toContain('Rechnung vom letzten Einsatz');
+  });
+});

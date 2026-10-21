@@ -424,6 +424,14 @@ export class OrchestratorService {
     }
 
     const purpose = typeof def.config.purpose === 'string' ? def.config.purpose : undefined;
+    // Eine angekündigte, aber keiner Angabe zugeordnete Korrektur ist noch nicht verarbeitet: Wirkungen, die auf den Angaben des Vorgangs beruhen (Angebot, Preis, Terminbuchung und -bestätigung), laufen nicht
+    // mit dem alten Wert weiter, bis sie geklärt ist (Rückfrage an die Kundschaft oder Entscheidung einer Person).
+    if (['quote.create', 'quote.render', 'pricing.resolve', 'calendar.book'].includes(capability.key) || (capability.key === 'email.send' && ['QUOTE_DELIVERY', 'APPOINTMENT_CONFIRMATION'].includes(purpose ?? ''))) {
+      const open = await this.facts.openCorrectionNotes(tenantId, caseRow.id);
+      if (open.length > 0) {
+        return this.blockNode(tenantId, caseRow, graph, node, def, 'CORRECTION_UNRESOLVED', `Eine angekündigte Korrektur ist noch nicht geklärt („${String(open[0]!.value).slice(0, 120)}“); die Aktion läuft nicht mit dem alten Wert weiter.`, 'MANUAL_REVIEW');
+      }
+    }
     const policyAction = this.capabilities.policyActionFor(capability, purpose);
     const decision = decidePolicyAction(await this.policy.resolveMode(tenantId, policyAction as never));
     if (decision === 'DENY') return this.blockNode(tenantId, caseRow, graph, node, def, 'POLICY_DENIED', 'Die Policy verbietet diese Aktion.', 'MANUAL_REVIEW');
@@ -679,6 +687,7 @@ export class OrchestratorService {
     const evidence = confirmed.map((e) => `${e.capabilityKey}${e.purpose ? `/${e.purpose}` : ''}${e.providerRef ? `:${e.providerRef}` : ''}`);
     let met: boolean;
     let blockReason: string | undefined;
+    let provenGoals: Array<{ goal: string; label: string; evidence: string[] }> | undefined;
     if (blueprint) {
       // BP-40: deterministische Bewertung je Ziel; der Schnappschuss wird festgehalten, ob erfüllt oder nicht.
       const evaluation = evaluateCompletion({ goals: blueprint.goals, completionCriteria: blueprint.completionCriteria, goalCriteria: blueprint.goalCriteria }, ctx, evidence);
@@ -695,6 +704,7 @@ export class OrchestratorService {
         evidence: { effects: confirmed.map((e) => ({ capabilityKey: e.capabilityKey, purpose: e.purpose })), tasksCreated: await this.prisma.forTenantId(tenantId).task.count({ where: { caseId: caseRow.id } }) },
       });
       met = evaluation.met;
+      provenGoals = evaluation.goals.map((g) => ({ goal: g.goal, label: g.label, evidence: g.evidence }));
       if (!met) blockReason = evaluation.description;
       await this.events.append(tenantId, caseRow.id, {
         type: CASE_EVENT_TYPES.COMPLETION_EVALUATED,
@@ -713,7 +723,13 @@ export class OrchestratorService {
       return;
     }
     await this.succeed(tenantId, caseRow.id, graph, node, { criteriaMet: true }, 'LIVE');
-    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: { code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'ADHOC_GOALS_PROVEN', evidenceRefs: evidence } });
+    await this.lifecycle.transition(tenantId, caseRow.id, { to: 'COMPLETED', outcome: {
+        code: blueprint ? 'COMPLETION_CRITERIA_MET' : 'ADHOC_GOALS_PROVEN',
+        evidenceRefs: evidence,
+        // Was der Abschluss belegt – und was nicht: nachgewiesen sind die genannten Ziele (Wirkungen laut Protokoll), nicht die Wirkung bei Dritten.
+        ...(provenGoals ? { goals: provenGoals, notProven: 'Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).' } : {}),
+      },
+    });
   }
 
   // ── Waiting, events, approvals ──────────────────────────────────────────────

@@ -19,7 +19,7 @@ import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
-import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText } from './request-analysis';
+import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, APPOINTMENT_REJECTION, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
@@ -359,6 +359,24 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
             if (!handoff) needed.set(APPOINTMENT_OUTCOME_KEY, { question: appointmentKind === 'SITE_VISIT' ? 'Ergebnis des Vor-Ort-Termins (Aufmaß, Befund)' : 'Ergebnis des Telefonats', valueType: 'string', internal: true });
           }
         }
+        // Eine angekündigte, keiner Angabe zugeordnete Korrektur wird gezielt geklärt (statt mit dem alten Wert weiterzurechnen).
+        for (const note of await this.facts.openCorrectionNotes(ctx.tenantId, caseId)) {
+          const sentence = String(note.value).replace(/\s+/g, ' ').replace(/[.!?\s]+$/, '').trim();
+          const quoted = sentence.length > 0 && sentence.length <= 220 && isSafeCustomerText(sentence).safe ? `Sie schreiben: „${sentence}“. ` : '';
+          needed.set(`korrekturklaerung.${note.id.slice(0, 8)}`, { question: `${quoted}Welche Ihrer bisherigen Angaben ändert sich, und wie lautet der neue Wert?`, valueType: 'string' });
+        }
+
+        // Nach jeder Antwort: Was ist beantwortet, was bleibt nötig? Steht nur noch die Terminwahl aus, liegt ein gültiger Vorschlag vor und hat die Kundschaft ihn nicht abgelehnt, wird derselbe Vorschlag nicht
+        // noch einmal gesendet: die Wahl bleibt offen (der Vorschlag gilt weiter), der Ablauf geht mit dem Stand der Dinge weiter.
+        let awaitingAppointmentChoice = false;
+        if (appointmentKind) {
+          const state = await this.appointmentState(ctx.tenantId, caseId);
+          const chosen = (await this.facts.getCurrent(ctx.tenantId, caseId)).some((f) => f.key === APPOINTMENT_AGREED_KEY && f.status === 'CONFIRMED');
+          if (state.outstanding && state.repliedSince && !state.rejected && !chosen) {
+            awaitingAppointmentChoice = true;
+            needed.delete(APPOINTMENT_AGREED_KEY);
+          }
+        }
         const current = await this.facts.getCurrent(ctx.tenantId, caseId);
 
         // Auflösungsleiter (Amendment 02 v1.2 §30): bevor ein Mensch ins Spiel kommt, ist die externe Sachrückfrage nur zulässig, wenn die Policy sie nicht sperrt.
@@ -384,6 +402,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           missing,
           internalMissing,
           complete: missing.length === 0 && internalMissing.length === 0 && requirements['contact.email'] === 'SATISFIED',
+          awaitingAppointmentChoice,
           category: item?.category ?? null,
           analysis: analysis ? { requestType: analysis.requestType, summary: analysis.summary, nextStep: analysis.nextStep, siteVisit: analysis.siteVisit } : null,
           // LIVE nur, wenn eine echte KI die Anfrage analysiert hat; sonst wertet nur das feste Regelwerk aus.
@@ -442,7 +461,10 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           const appointmentOpen = input.missing.some((q) => q.key === APPOINTMENT_AGREED_KEY);
           const kind = analysed && appointmentOpen ? appointmentKindOf(analysed.nextStep) : undefined;
           // Terminvorschläge nur aus der echten Verfügbarkeit; ohne verbundenen Kalender bittet die Nachricht um Terminwünsche – es werden keine Zeiten erfunden.
-          const proposal = kind ? await this.appointments.propose(ctx.tenantId, kind) : undefined;
+          const earlier = kind ? await this.appointmentState(ctx.tenantId, caseId) : undefined;
+          const proposal = kind
+            ? await this.appointments.propose(ctx.tenantId, kind, { ...(analysed?.appointmentMinutes ? { minutes: analysed.appointmentMinutes } : {}), exclude: earlier?.proposedStarts ?? [] })
+            : undefined;
           const handoff = (await this.blueprintOfCase(ctx.tenantId, caseId))?.dynamicRequirements?.outcome === 'HANDOFF';
           const previousRounds = await this.prisma.forTenantId(ctx.tenantId).actionIntent.count({ where: { caseId, status: 'CONFIRMED', capabilityKey: 'email.send', purpose: 'CLARIFICATION' } });
           const questions = input.missing.filter((q) => q.key !== APPOINTMENT_AGREED_KEY);
@@ -451,13 +473,13 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
             questions,
             companyName,
             summary: analysed?.summary && isSafeCustomerText(analysed.summary).safe ? analysed.summary : undefined,
-            appointment: kind && proposal ? { kind, slots: proposal.slots.map((slot) => slot.label) } : undefined,
+            appointment: kind && proposal ? { kind, slots: proposal.slots.map((slot) => slot.label), ...(analysed?.appointmentMinutes ? { minutes: analysed.appointmentMinutes } : {}) } : undefined,
             intent: handoff ? 'HANDOFF' : 'QUOTE',
             previousRounds,
           });
           if (kind && proposal) {
             await this.caseEvents
-              .append(ctx.tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED, payload: { kind, source: proposal.source, slots: proposal.slots.map((s) => ({ start: s.start.toISOString(), end: s.end.toISOString() })), reason: proposal.reason ?? null } })
+              .append(ctx.tenantId, caseId, { type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED, payload: { kind, source: proposal.source, durationStated: proposal.durationStated ?? false, basis: analysed?.appointmentBasis ?? null, slots: proposal.slots.map((s) => ({ start: s.start.toISOString(), end: s.end.toISOString() })), reason: proposal.reason ?? null } })
               .catch(() => undefined);
             appointmentInfo = { kind, source: proposal.source, slotCount: proposal.slots.length };
           }
@@ -469,7 +491,8 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           bodyText = quoteDeliveryBody({ quoteNumber: quote.number, grossCents: ReferenceProcessService.cents(quote.grossAmount), validUntil: quote.validUntil, companyName });
           attachmentDocumentIds.push(input.documentId);
         } else if (input.purpose === 'ACKNOWLEDGEMENT') {
-          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang, name });
+          const pending = await this.appointmentState(ctx.tenantId, caseId);
+          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang, name, appointmentPending: pending.outstanding && !pending.rejected });
         } else if (input.purpose === 'STATUS_UPDATE') {
           const status = await this.statusFor(ctx.tenantId, caseId, replyTarget);
           bodyText = statusUpdateBody({ referenceTitle: status.title, status: status.status, lastStep: lang === 'en' ? status.lastStepEn : status.lastStep, companyName, lang, name });
@@ -505,6 +528,19 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         return { draftId: draft.id, version: draft.version, contentHash: draft.contentHash, to: draft.toAddress, subject: draft.subject, appointment: appointmentInfo ?? null, executionMode: 'LIVE' };
       },
     };
+  }
+
+  /** Stand der Terminvorschläge dieses Vorgangs: früher angebotene Beginne, ob noch ein Vorschlag offen ist, ob die Kundschaft seither geantwortet und die Zeiten abgelehnt hat. */
+  private async appointmentState(tenantId: string, caseId: string): Promise<{ proposedStarts: Date[]; outstanding: boolean; rejected: boolean; repliedSince: boolean }> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const events = await scoped.caseEvent.findMany({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED }, orderBy: { sequence: 'asc' }, select: { payload: true, createdAt: true } });
+    const startsOf = (payload: unknown): Date[] => ((payload as { slots?: Array<{ start: string }> } | null)?.slots ?? []).map((s) => new Date(s.start)).filter((d) => !Number.isNaN(d.getTime()));
+    const proposedStarts = events.flatMap((e) => startsOf(e.payload));
+    const last = events.at(-1);
+    if (!last) return { proposedStarts, outstanding: false, rejected: false, repliedSince: false };
+    const outstanding = startsOf(last.payload).some((d) => d.getTime() > Date.now() + 3_600_000);
+    const replies = await scoped.emailMessage.findMany({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND', createdAt: { gt: last.createdAt } }, select: { bodyText: true } });
+    return { proposedStarts, outstanding, rejected: replies.some((m) => APPOINTMENT_REJECTION.test(m.bodyText ?? '')), repliedSince: replies.length > 0 };
   }
 
   private sendCommunication(): ToolDefinition {

@@ -79,9 +79,15 @@ const REQUEST_CUES = /\b(bitte|könnten|koennten|könnte|würden|wuerden|möchte
 
 /** Inhaltlich tragend: eine Frage, Bitte oder ein Wunsch – keine Anrede, keine Grußformel, kein bloßer Hinweis. */
 export function isSubstantiveSentence(sentence: string): boolean {
-  const s = sentence.trim();
+  let s = sentence.trim();
+  // Anrede, Gruß und Dank stehen oft vor einem echten Anliegen („Danke und bitte rufen Sie zurück“): erst die Floskel abtrennen, dann den Rest prüfen. Bleibt nichts Tragendes, ist es keine Aussage.
+  const greeting = /^(?:sehr geehrte[^,.!?]*|guten (?:tag|morgen|abend)|hallo(?: zusammen)?|liebe[rs]?[^,.!?]*|mit freundlichen gr[üu](?:ß|ss)en|freundliche gr[üu](?:ß|ss)e|viele gr[üu](?:ß|ss)e|beste gr[üu](?:ß|ss)e|herzliche gr[üu](?:ß|ss)e|vielen dank(?: im voraus| vorab| schon mal)?|besten dank|danke(?: schön| sehr| vorab| im voraus)?)[\s,.!:;–-]*(?:und\s+)?/i;
+  for (let i = 0; i < 3; i += 1) {
+    const rest = s.replace(greeting, '');
+    if (rest === s) break;
+    s = rest.trim();
+  }
   if (s.length < 12) return false;
-  if (/^(sehr geehrte|guten (tag|morgen|abend)|hallo|liebe|lieber|mit freundlichen|freundliche gr|viele gr|beste gr|herzliche gr|vielen dank|danke)/i.test(s)) return false;
   return s.includes('?') || REQUEST_CUES.test(s);
 }
 
@@ -105,6 +111,32 @@ function isSubsequenceOf(needle: readonly string[], haystack: readonly string[])
   return true;
 }
 
+/** Länge der längsten gemeinsamen Teilfolge zweier Zeichenketten (Zeichen für Zeichen). */
+function lcsLength(a: string, b: string): number {
+  if (a.length === 0 || b.length === 0) return 0;
+  let previous = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = new Array<number>(b.length + 1).fill(0);
+    for (let j = 1; j <= b.length; j += 1) current[j] = a[i - 1] === b[j - 1] ? previous[j - 1]! + 1 : Math.max(previous[j]!, current[j - 1]!);
+    previous = current;
+  }
+  return previous[b.length]!;
+}
+
+const compact = (text: string): string => normalizeForMatch(text).replace(/[^a-z0-9äöüß]/g, '');
+
+/** Der Satz der Nachricht, in dem fast alle Zeichen des Auszugs in dieser Reihenfolge vorkommen (≥ 92 % bei mindestens 20 Zeichen); sonst nichts. */
+function closestSentence(part: string, sentences: ReadonlyArray<{ raw: string; tokens: string[] }>): { raw: string; tokens: string[] } | undefined {
+  const needle = compact(part);
+  if (needle.length < 20) return undefined;
+  let best: { sentence: { raw: string; tokens: string[] }; ratio: number } | undefined;
+  for (const sentence of sentences) {
+    const ratio = lcsLength(needle, compact(sentence.raw)) / needle.length;
+    if (ratio >= 0.92 && (!best || ratio > best.ratio)) best = { sentence, ratio };
+  }
+  return best?.sentence;
+}
+
 export function verifyConcerns(message: string, segmentation: ConcernSegmentation): VerifiedConcerns {
   const messageSentences = splitSentences(message).map((raw) => ({ raw, tokens: tokensOf(raw) }));
   /**
@@ -119,7 +151,9 @@ export function verifyConcerns(message: string, segmentation: ConcernSegmentatio
     for (const part of parts) {
       const tokens = tokensOf(part);
       const matches = messageSentences.filter((m) => (tokens.length >= 3 ? isSubsequenceOf(tokens, m.tokens) : m.tokens.join(' ').includes(tokens.join(' '))));
-      const best = [...matches].sort((x, y) => x.tokens.length - y.tokens.length)[0];
+      // Ein Auszug mit Zeichenfehlern der KI („telefon isch“, ein eingestreuter Buchstabe) gilt als belegt, wenn fast alle Zeichen in der Reihenfolge eines einzigen Satzes stehen (≥ 92 %): so wird aus einem
+      // verstümmelten Auszug kein doppeltes „Restanliegen“. Verwendet wird auch dann der volle Originalsatz.
+      const best = [...matches].sort((x, y) => x.tokens.length - y.tokens.length)[0] ?? closestSentence(part, messageSentences);
       if (!best) continue;
       found += 1;
       if (!used.includes(best.raw)) used.push(best.raw);

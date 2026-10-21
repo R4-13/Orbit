@@ -252,6 +252,17 @@ describe('validatePlan (§11.3)', () => {
     expect(codes(validatePlan(clarificationPlan(), ctx({ blueprint: undefined })))).not.toContain('PLAN_BEHIND_WAIT');
   });
 
+  it('„Auf die Antwort der Kundschaft warten“ als menschliche Aufgabe ist ein Planfehler (Warten ist ein WAIT_EVENT); echte Aufgaben für eine Person bleiben zulässig', () => {
+    const waiting = clarificationPlan();
+    waiting.nodes.push(node('manual', 'MANUAL_TASK', { title: 'Auf Antwort der Kundschaft warten' }));
+    waiting.edges.push(edge('e8', 'manual', 'wait'));
+    expect(codes(validatePlan(waiting, ctx({ blueprint: undefined })))).toContain('MANUAL_TASK_IS_WAITING');
+    const real = clarificationPlan();
+    real.nodes.push(node('manual', 'MANUAL_TASK', { title: 'Eine Person prüft den Umfang und ruft zurück' }));
+    real.edges.push(edge('e8', 'manual', 'wait'));
+    expect(codes(validatePlan(real, ctx({ blueprint: undefined })))).not.toContain('MANUAL_TASK_IS_WAITING');
+  });
+
   it('a complete plan with a terminal node is valid, and a plan without one is not', () => {
     const complete = clarificationPlan();
     complete.nodes.push(node('done', 'COMPLETE'));

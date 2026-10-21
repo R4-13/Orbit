@@ -12,6 +12,7 @@ import { GmailConnectorService } from '../src/integrations/gmail-connector.servi
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { BlueprintRegistryService } from '../src/process/blueprint-registry.service';
+import { CaseFactsService } from '../src/process/case-facts.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
@@ -193,7 +194,7 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     const tenantId = await newTenant({ calendar: true });
     seedTriage();
     seedExtraction();
-    seedAnalysis({ missingInformation: [{ key: 'preferred_visit_times', label: 'Mögliche Besichtigungstermine', question: 'Welche Tage oder Zeitfenster passen Ihnen für eine Besichtigung?' }], siteVisit: { recommended: true, reason: 'Die Auslegung braucht die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
+    seedAnalysis({ missingInformation: [{ key: 'preferred_visit_times', label: 'Mögliche Besichtigungstermine', question: 'Welche Tage oder Zeitfenster passen Ihnen für eine Besichtigung?' }], siteVisit: { recommended: true, reason: 'Die Wärmepumpe ersetzt eine alte Gasheizung; im Haus mit 140 m² Wohnfläche braucht die Auslegung die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
     const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
     const caseId = first.case!.id;
     expect(sent).toHaveLength(1);
@@ -216,5 +217,105 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     const lead = await prisma.forTenantId(tenantId).lead.findFirstOrThrow({ where: { caseId } });
     expect(lead.notes).toMatch(/Termin: Vor-Ort-Termin gebucht für /);
     expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
+  });
+
+  it('Antwort ohne Terminwahl: der Vorschlag gilt weiter und wird nicht noch einmal gesendet; die Anfrage geht mit offener Terminwahl an die Person, die Bestätigung erinnert nur an die Wahl (Messlauf 21.10.)', async () => {
+    const tenantId = await newTenant({ calendar: true });
+    seedTriage();
+    seedExtraction();
+    seedAnalysis({ siteVisit: { recommended: true, reason: 'Die Wärmepumpe ersetzt eine alte Gasheizung; im Haus mit 140 m² Wohnfläche braucht die Auslegung die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.bodyText).toContain('Folgende Termine hätten wir frei');
+    expect(sent[0]!.bodyText).not.toMatch(/Minuten/); // keine begründete Dauer: keine Dauer genannt
+    expect(sent[0]!.bodyText).toMatch(/- \w+, \d{2}\.\d{2}\.\d{4}, ab \d{2}:\d{2} Uhr/);
+
+    // Die Kundschaft beantwortet die Fachfrage, wählt aber keinen Termin.
+    seedExtraction([{ key: 'ai.hot_water', value: 'ja', evidence: 'soll auch das Warmwasser übernehmen' }]);
+    await reply(tenantId, 'Ja, die Wärmepumpe soll auch das Warmwasser übernehmen.', 1);
+
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.bodyText).not.toContain('Folgende Termine hätten wir frei'); // derselbe Vorschlag wird nicht noch einmal gesendet
+    expect(sent[1]!.bodyText).toContain('bereits vorgeschlagenen Termine');
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'appointment.proposed' } })).toBe(1);
+    expect(await nodeState(tenantId, caseId, 'ask2')).toBe('SKIPPED');
+    const lead = await prisma.forTenantId(tenantId).lead.findFirstOrThrow({ where: { caseId } });
+    expect(lead.notes).toMatch(/Termin: Ein Vor-Ort-Termin ist sinnvoll/);
+    expect(lead.notes).toMatch(/Wärmepumpe soll auch das Warmwasser|Warmwasser/);
+    expect(created).toHaveLength(0); // keine Buchung ohne Terminwahl
+  });
+
+  it('lehnt die Kundschaft die vorgeschlagenen Termine ab, gibt es neue Vorschläge ohne die alten Zeiten', async () => {
+    const tenantId = await newTenant({ calendar: true });
+    seedTriage();
+    seedExtraction();
+    seedAnalysis({ siteVisit: { recommended: true, reason: 'Die Wärmepumpe ersetzt eine alte Gasheizung; im Haus mit 140 m² Wohnfläche braucht die Auslegung die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    const firstSlots = sent[0]!.bodyText.split('\n').filter((line) => line.startsWith('- '));
+    expect(firstSlots.length).toBeGreaterThan(0);
+
+    seedExtraction();
+    await reply(tenantId, 'Leider passt keiner der Termine bei uns. Gibt es andere?', 1);
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.bodyText).toContain('Folgende Termine hätten wir frei');
+    const secondSlots = sent[1]!.bodyText.split('\n').filter((line) => line.startsWith('- '));
+    expect(secondSlots.length).toBeGreaterThan(0);
+    for (const slot of secondSlots) expect(firstSlots).not.toContain(slot);
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'appointment.proposed' } })).toBe(2);
+  });
+
+  it('eine reine Preisfrage führt nicht in den Terminablauf: keine Terminvorschläge, die Rückfrage betrifft die Preisauskunft (Messlauf 21.10.)', async () => {
+    const tenantId = await newTenant({ calendar: true });
+    seedTriage();
+    seedExtraction();
+    seedAnalysis({
+      requestType: 'Preisauskunft Heizkörpertausch',
+      summary: 'Die Person möchte eine Größenordnung für den Tausch von vier Heizkörpern.',
+      knownDetails: [],
+      missingInformation: [{ key: 'radiator_type', label: 'Heizkörperart', question: 'Um welche Art von Heizkörpern handelt es sich (z. B. Plattenheizkörper)?' }],
+      siteVisit: { recommended: true, reason: 'Heizkörper tauschen' },
+      nextStep: 'PROPOSE_SITE_VISIT',
+      inquiryKind: 'PRICE_INFORMATION',
+    });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId, { content: 'Hallo, was kostet es ungefähr, vier Heizkörper zu tauschen? Tom' }));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.bodyText).toContain('Um welche Art von Heizkörpern');
+    expect(sent[0]!.bodyText).not.toMatch(/Termin|vor Ort|Minuten/);
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId, type: 'appointment.proposed' } })).toBe(0);
+  });
+
+  it('ein sichtbarer Korrekturhinweis ist noch keine verarbeitete Korrektur: bis zur Klärung wird nicht mit dem alten Wert gebucht, die Rückfrage klärt gezielt (Messlauf 21.10.)', async () => {
+    const tenantId = await newTenant({ calendar: true });
+    seedTriage();
+    seedExtraction();
+    seedAnalysis({ siteVisit: { recommended: true, reason: 'Die Wärmepumpe ersetzt eine alte Gasheizung; im Haus mit 140 m² Wohnfläche braucht die Auslegung die Gegebenheiten vor Ort.' }, nextStep: 'PROPOSE_SITE_VISIT' });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1);
+
+    // Die Antwort wählt einen Termin und kündigt eine Änderung an, die der Korrekturdienst keiner Angabe zuordnen konnte (der Hinweis steht als sichtbare Ergänzung am Vorgang).
+    await app.get(CaseFactsService).propose(tenantId, caseId, [
+      { key: 'korrekturhinweis.ergaenzung.abcd1234', value: 'Korrektur: Wir wollen doch keine Wärmepumpe mehr, sondern eine Pelletheizung.', valueType: 'string', sourceType: 'EMAIL', sourceRef: 'message:test', evidenceRefs: ['Korrektur'] },
+    ]);
+    seedExtraction([{ key: 'appointment.agreed', value: 'Der erste Termin passt mir gut.', evidence: 'Der erste Termin passt mir gut' }]);
+    await reply(tenantId, 'Der erste Termin passt mir gut. Korrektur: Wir wollen doch keine Wärmepumpe mehr, sondern eine Pelletheizung.', 1);
+
+    // Nichts läuft mit dem alten Stand weiter: keine Buchung, stattdessen eine gezielte Rückfrage zu der angekündigten Änderung.
+    expect(created).toHaveLength(0);
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.bodyText).toContain('Welche Ihrer bisherigen Angaben ändert sich');
+    expect(sent[1]!.bodyText).toContain('Pelletheizung');
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('WAITING_FOR_INFORMATION');
+    expect(await app.get(CaseFactsService).openCorrectionNotes(tenantId, caseId)).toHaveLength(1);
+
+    // Die Kundschaft klärt: der Hinweis gilt als geklärt (Rückfrage gestellt und beantwortet), der gewählte Termin wird jetzt gebucht.
+    seedExtraction([{ key: 'ai.hot_water', value: 'ja', evidence: 'soll auch das Warmwasser übernehmen' }]);
+    seedTool('submit_slot_choice', { slotIndex: 0, evidence: 'Der erste Termin passt mir gut' });
+    await reply(tenantId, 'Wir bleiben bei der Wärmepumpe, sie soll auch das Warmwasser übernehmen. Der erste Termin passt mir gut.', 2);
+    expect(await app.get(CaseFactsService).openCorrectionNotes(tenantId, caseId)).toHaveLength(0);
+    expect(created).toHaveLength(1);
   });
 });

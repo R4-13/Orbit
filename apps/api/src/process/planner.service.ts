@@ -379,6 +379,7 @@ Zielarbeit bei unbekannten Vorgängen (kein hinterlegter Prozess): Arbeite wie e
 - Reichen Kontext und Angaben nicht für eine sichere Antwort, oder entscheidet eine Person (Zusagen, Preise, Rechtliches): staff.notify mit Zusammenfassung (was ist bekannt, was fehlt, was ist erfolgt) und MANUAL_TASK – das ist ein zulässiger Endpunkt, kein Scheitern. Nenne nie Preise oder Fristen, die nicht belegt sind.
 - Jeder Rückfrage-Entwurf (communication.draft, purpose CLARIFICATION) bekommt die Eingabe "missing" aus einem vorgelagerten requirements.resolve (Pfad "missing").
 - Nach einer Antwort der Kundschaft prüfst du die Anforderungen NEU: lies die Antwort zuerst aus (facts.extract_from_message) und lege dann einen neuen Knoten EVALUATE_REQUIREMENTS mit neuer Kennung an (z. B. "reqs_2") und binde spätere Entwürfe (missing) an ihn – das Ergebnis eines früheren Prüfknotens ist veraltet. Frage nie nach Angaben, die die Antwort bereits enthält.
+- Das Warten auf eine Antwort der Kundschaft ist ein WAIT_EVENT, nie ein MANUAL_TASK. Ein MANUAL_TASK bedeutet: eine Person muss jetzt etwas tun (prüfen, entscheiden, anrufen) – und nennt in title, was.
 - Plane nur Schritte, deren Ergebnis du für das Ziel brauchst; jeder Plan endet an COMPLETE (Ziel nachweisbar), WAIT_EVENT, APPROVAL oder MANUAL_TASK.
 Muster für häufige Fälle (nur verwenden, wenn die Fähigkeiten dafür ausführbar sind):
 - Beginne mit RESOLVE_CONTEXT (context.lookup): es prüft den Absender und legt bei Bedarf den Kunden an.

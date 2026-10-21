@@ -130,6 +130,9 @@ describe('Intake workflow — Agent Runtime (e2e)', () => {
       .set('Authorization', `Bearer ${salesToken}`)
       .expect(200);
     expect(caseDetail.body.type).toBe('SALES');
+    // Der feste Vertriebsweg endet bei einer Person (Lead + Folgeaufgabe): der Vorgang steht als Übergabe da, nicht als „in Bearbeitung“ ohne Verantwortliche.
+    expect(caseDetail.body.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(JSON.stringify(caseDetail.body.attentionReasons)).toContain('Interessentenanfrage übernommen');
 
     const contacts = await request(app.getHttpServer())
       .get('/api/v1/contacts')

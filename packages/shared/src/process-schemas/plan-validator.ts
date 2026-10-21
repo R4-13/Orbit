@@ -510,6 +510,18 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     }
   }
 
+  // Status und Inhalt müssen zusammenpassen: eine menschliche Aufgabe („Bitte manuell bearbeiten“) bedeutet, dass eine Person handeln muss. „Auf die Antwort der Kundschaft warten“ ist ein WAIT_EVENT –
+  // als menschliche Aufgabe geplant stünde der Vorgang als „bei einer Person“, obwohl niemand etwas tun kann (Messlauf 21.10., Fall Praxisumzug).
+  if (!blueprint) {
+    for (const node of nodes) {
+      if (node.type !== 'MANUAL_TASK') continue;
+      const text = `${node.title ?? ''} ${typeof node.purpose === 'string' ? node.purpose : ''}`;
+      if (/\b(?:auf|bis)\b[^.]{0,40}\b(?:antwort|rückmeldung|rückantwort|reaktion)\b[^.]{0,40}\b(?:warten|abwarten|eingeht|vorliegt)\b|\b(?:antwort|rückmeldung|rückantwort)\b[^.]{0,30}\b(?:abwarten|abwarten)\b|^\s*warten\b/i.test(text)) {
+        add({ code: 'MANUAL_TASK_IS_WAITING', check: 12, nodeId: node.id, message: `Die menschliche Aufgabe "${node.id}" besteht nur im Warten auf die Kundschaft. Das Warten auf eine Antwort ist ein WAIT_EVENT (config.eventType = "communication.received", Frist gesetzt), keine Aufgabe für eine Person; MANUAL_TASK nur, wenn eine Person etwas tun muss.` });
+      }
+    }
+  }
+
   // Wer die Anforderungsprüfung erst im Plan ausführt, kennt ihr Ergebnis beim Planen nicht: Übergabe oder Rückfrage lassen sich erst danach sinnvoll festlegen.
   const runsRequirements = nodes.some((n) => n.capability?.key === 'requirements.resolve');
   if (!blueprint && ctx.requirementsAnalyzed === false && runsRequirements && !askedAlready && !onlyUnderstanding) {

@@ -594,6 +594,15 @@ export class IntakeService {
       );
     } else if (handled?.waitingForApproval) {
       await this.lifecycle.transition(tenantId, businessCase.id, { to: 'WAITING_FOR_APPROVAL', attentionReasons: ['Eine Freigabe ist offen.'] }, { type: 'AGENT' });
+    } else if (route === 'SALES') {
+      // Der feste Vertriebsweg legt Interessent und Folgeaufgabe an und endet dort: die weitere Bearbeitung liegt bei einer Person. Der Vorgang steht deshalb als Übergabe da (mit Grund), nicht als „in
+      // Bearbeitung“ ohne Verantwortliche; eine Eingangsbestätigung an die Kundschaft sieht dieser Weg nicht vor – das steht im Hinweis, damit es nicht verborgen bleibt.
+      await this.lifecycle.transition(
+        tenantId,
+        businessCase.id,
+        { to: 'MANUAL_REVIEW', attentionReasons: ['Interessentenanfrage übernommen: Lead und Folgeaufgabe sind angelegt, eine Person nimmt Kontakt auf. Der feste Vertriebsweg sendet keine Eingangsbestätigung an die Kundschaft.'] },
+        { type: 'AGENT' },
+      );
     }
 
     // A failed workflow is not a completed intake — without this the IntakeEvent (and anything
@@ -692,20 +701,27 @@ export class IntakeService {
       });
       await this.orchestrator.advance(tenantId, matched.id);
       // Teilvorgang einer aufgeteilten Nachricht (FX-02): Die Antwort hängt am Teilvorgang, auf dessen Nachricht sie antwortet, kann aber Angaben für die übrigen enthalten. Jeder Geschwister-
-      // Teilvorgang, der gerade auf eine Antwort wartet, erhält sie ebenfalls und wertet sie selbst aus (seine Fragen, seine Ziele); nichts geht verloren.
-      if (matched.parentCaseId) {
-        const siblings = await scoped.case.findMany({
-          where: { parentCaseId: matched.parentCaseId, id: { not: matched.id }, orchestrationStatus: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED'] }, waitSubscriptions: { some: { status: 'WAITING', eventType: 'communication.received' } } },
-          select: { id: true },
-        });
-        for (const sibling of siblings) {
-          await this.corrections.processInboundSafely(tenantId, sibling.id, inboundEmailId);
+      // Teilvorgang, der gerade auf eine Antwort wartet, erhält sie ebenfalls und wertet sie selbst aus (seine Fragen, seine Ziele). Die übrigen offenen Teilvorgänge (bei einer Person, wartend auf eine
+      // Freigabe …) starten dadurch nicht neu, bekommen die Antwort aber nachvollziehbar zugeordnet: Korrekturen früherer Angaben werden geprüft, und ein Ereignis hält fest, dass die Antwort eingegangen ist –
+      // bei der nächsten Bearbeitung liest der Teilvorgang die neueste Nachricht der Vorgangsfamilie. Auch eine Antwort an den Hauptvorgang erreicht seine Teilvorgänge.
+      const familyRoot = matched.parentCaseId ?? matched.id;
+      const others = await scoped.case.findMany({
+        where: { parentCaseId: familyRoot, id: { not: matched.id }, orchestrationStatus: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED'] } },
+        select: { id: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } },
+      });
+      for (const sibling of others) {
+        await this.corrections.processInboundSafely(tenantId, sibling.id, inboundEmailId);
+        if (sibling.waitSubscriptions.length > 0) {
           await this.orchestrator.receiveInbound(tenantId, sibling.id, {
             type: 'communication.received',
             payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: 'SIBLING_FAN_OUT', fanOutFromCaseId: matched.id },
             dedupeKey: `inbound:${inboundEmailId}:${sibling.id}`,
           });
           await this.orchestrator.advance(tenantId, sibling.id);
+        } else {
+          await this.caseEvents
+            .append(tenantId, sibling.id, { type: CASE_EVENT_TYPES.SIBLING_INFO_RECEIVED, payload: { emailMessageId: inboundEmailId, from: event.sender?.address ?? null, fromCaseId: matched.id }, dedupeKey: `sibling-info:${inboundEmailId}:${sibling.id}` })
+            .catch(() => undefined);
         }
       }
     } catch (error) {

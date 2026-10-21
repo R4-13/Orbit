@@ -14,7 +14,7 @@ const proposal = (over: Partial<RequestAnalysisInput> = {}): RequestAnalysisInpu
     { key: 'daemmung', label: 'Dämmung', question: 'Wie ist das Gebäude gedämmt (z. B. Fassade, Dach, Fenster)?' },
     { key: 'heizkoerper', label: 'Heizkörper', question: 'Haben Sie Heizkörper oder eine Fußbodenheizung?' },
   ],
-  siteVisit: { recommended: true, reason: 'Für eine Wärmepumpe muss die Aufstellfläche und das Heizsystem vor Ort geprüft werden.' },
+  siteVisit: { recommended: true, reason: 'Bei der alten Ölheizung im Einfamilienhaus (Baujahr 1985) müssen Aufstellfläche und Leitungswege für die Wärmepumpe vor Ort geprüft werden.' },
   nextStep: 'PROPOSE_SITE_VISIT',
   ...over,
 });
@@ -117,7 +117,7 @@ describe('Rückfragen nur, wenn sie gebraucht werden und nicht beschaffbar sind'
 });
 
 describe('Terminfragen als zusätzliche Angabe', () => {
-  const base = { requestType: 'Badsanierung', summary: 'Komplettes Bad.', knownDetails: [], siteVisit: { recommended: true, reason: 'Aufmaß' }, nextStep: 'PROPOSE_SITE_VISIT' as const };
+  const base = { requestType: 'Badsanierung', summary: 'Komplettes Bad.', knownDetails: [], siteVisit: { recommended: true, reason: 'Das Bad soll komplett saniert werden; die alten Leitungen müssen vor Ort angesehen werden.' }, nextStep: 'PROPOSE_SITE_VISIT' as const };
   const missing = [
     { key: 'preferred_visit_times', label: 'Mögliche Besichtigungstermine', question: 'Welche Tage oder Zeitfenster passen Ihnen für eine Besichtigung?' },
     { key: 'renovation_period', label: 'Zeitraum der Sanierung', question: 'Für welchen Zeitraum planen Sie die Badsanierung?' },
@@ -132,13 +132,13 @@ describe('Terminfragen als zusätzliche Angabe', () => {
   });
 
   it('mit geplantem Termin wird die Terminfrage nicht zusätzlich verlangt (der Termin wird gesondert vereinbart), die übrigen Fragen bleiben', () => {
-    const result = evaluateAnalysis({ ...base, missingInformation: missing }, 'Wir wollen unser Bad sanieren.', new Set());
+    const result = evaluateAnalysis({ ...base, missingInformation: missing }, 'Wir wollen unser Bad komplett sanieren, die Leitungen sind alt.', new Set());
     expect(result.requirements.map((r) => r.key)).toEqual(['ai.renovation_period']);
     expect(result.rejected).toEqual([{ what: 'Mögliche Besichtigungstermine', reason: 'Der Termin wird gesondert vereinbart' }]);
   });
 
   it('ohne Termin bleibt die Frage erhalten (es gibt keine andere Stelle, die sie stellt)', () => {
-    const result = evaluateAnalysis({ ...base, siteVisit: { recommended: false, reason: '' }, nextStep: 'ASK_CUSTOMER', missingInformation: missing }, 'Wir wollen unser Bad sanieren.', new Set());
+    const result = evaluateAnalysis({ ...base, siteVisit: { recommended: false, reason: '' }, nextStep: 'ASK_CUSTOMER', missingInformation: missing }, 'Wir wollen unser Bad komplett sanieren, die Leitungen sind alt.', new Set());
     expect(result.requirements.map((r) => r.key)).toEqual(['ai.preferred_visit_times', 'ai.renovation_period']);
   });
 });
@@ -159,7 +159,7 @@ describe('Rückfrage-Nachricht', () => {
       questions,
       companyName: 'Musterwerk GmbH',
       summary: 'Tausch der Ölheizung gegen eine Wärmepumpe.',
-      appointment: { kind: 'SITE_VISIT', slots: ['Donnerstag, 15.10.2026, 09:00–10:30 Uhr', 'Freitag, 16.10.2026, 14:00–15:30 Uhr'] },
+      appointment: { kind: 'SITE_VISIT', slots: ['Donnerstag, 15.10.2026, 09:00–10:30 Uhr', 'Freitag, 16.10.2026, 14:00–15:30 Uhr'], minutes: 90 },
     });
     expect(body).toContain('Wir haben sie so verstanden: Tausch der Ölheizung gegen eine Wärmepumpe.');
     expect(body).toContain('vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei:');
@@ -245,5 +245,55 @@ describe('Terminwahl: nur eine konkrete Angabe zählt', () => {
     for (const text of ['Welcher der Termine passt, sage ich Ihnen noch.', 'Den Termin sage ich Ihnen noch.', 'Ich melde mich später mit einem Termin.', 'Das weiß ich noch nicht.', '']) expect(isConcreteAppointmentChoice(text)).toBe(false);
     for (const text of ['Der erste Termin passt mir gut', 'Mittwoch, 21.10. um 9 Uhr', 'Donnerstag Nachmittag wäre gut', 'Am 22.10. ab 14 Uhr', 'Ich bin vormittags erreichbar']) expect(isConcreteAppointmentChoice(text)).toBe(true);
     expect(isConcreteAppointmentChoice('Der zweite Termin passt, den Rest sage ich Ihnen noch.')).toBe(true);
+  });
+});
+
+describe('Termin: fallbezogene Grundlage, Dauer nur mit Grundlage (Messlauf 21.10.)', () => {
+  const PRICE_MESSAGE = 'Hallo, was kostet es ungefähr, vier Heizkörper zu tauschen? Tom';
+  const priceProposal = (over: Partial<RequestAnalysisInput> = {}): RequestAnalysisInput => ({
+    requestType: 'Preisauskunft Heizkörpertausch',
+    summary: 'Die Person möchte eine Größenordnung für den Tausch von vier Heizkörpern.',
+    knownDetails: [],
+    missingInformation: [],
+    siteVisit: { recommended: true, reason: 'Heizkörper tauschen' },
+    nextStep: 'PROPOSE_SITE_VISIT',
+    inquiryKind: 'PRICE_INFORMATION',
+    ...over,
+  });
+
+  it('eine reine Preisfrage führt nicht automatisch in den Terminablauf', () => {
+    const result = evaluateAnalysis(priceProposal(), PRICE_MESSAGE, new Set());
+    expect(result.nextStep).toBe('ASK_CUSTOMER');
+    expect(result.siteVisit.recommended).toBe(false);
+    expect(result.rejected.map((r) => r.reason)).toContain('Reine Preisfrage: kein automatischer Wechsel in den Terminablauf');
+    expect(result.appointmentMinutes).toBeUndefined();
+  });
+
+  it('keine pauschale Gegenregel: eine fallbezogene Begründung erlaubt den Vor-Ort-Termin, eine Standardbegründung nicht', () => {
+    const generic = evaluateAnalysis(proposal({ siteVisit: { recommended: true, reason: 'Für ein verlässliches Angebot ist eine Besichtigung vor Ort nötig.' } }), MESSAGE, new Set());
+    expect(generic.nextStep).toBe('ASK_CUSTOMER');
+    expect(generic.rejected.map((r) => r.what)).toContain('Vor-Ort-Termin');
+    const specific = evaluateAnalysis(proposal(), MESSAGE, new Set());
+    expect(specific.nextStep).toBe('PROPOSE_SITE_VISIT');
+    expect(specific.appointmentBasis).toBe('CASE');
+  });
+
+  it('die Dauer steht nur mit Grundlage: Betriebsvorgabe oder aus dem Umfang begründet, sonst bleibt sie leer', () => {
+    expect(evaluateAnalysis(proposal(), MESSAGE, new Set()).appointmentMinutes).toBeUndefined();
+    const reasoned = evaluateAnalysis(proposal({ siteVisit: { recommended: true, reason: 'Bei der alten Ölheizung im Einfamilienhaus müssen Aufstellfläche und Leitungswege geprüft werden.', durationMinutes: 120, durationReason: 'Einfamilienhaus mit 140 m² und Ölheizung: Heizraum, Leitungswege und Aufstellfläche begehen.' } }), MESSAGE, new Set());
+    expect(reasoned.appointmentMinutes).toBe(120);
+    const unreasoned = evaluateAnalysis(proposal({ siteVisit: { recommended: true, reason: proposal().siteVisit.reason, durationMinutes: 90, durationReason: 'dauert so lange' } }), MESSAGE, new Set());
+    expect(unreasoned.appointmentMinutes).toBeUndefined();
+    const policy = evaluateAnalysis(proposal(), MESSAGE, new Set(), [], { siteVisit: { minutes: 60, requiredFor: ['Wärmepumpe'] } });
+    expect(policy).toMatchObject({ appointmentBasis: 'POLICY', appointmentMinutes: 60 });
+  });
+
+  it('die Nachricht nennt die Dauer nur, wenn sie begründet ist', () => {
+    const slots = ['Donnerstag, 15.10.2026, ab 09:00 Uhr'];
+    const without = clarificationBody({ originalSubject: 'X', questions: [], companyName: 'Musterwerk GmbH', appointment: { kind: 'SITE_VISIT', slots } });
+    expect(without).not.toMatch(/Minuten/);
+    expect(without).toContain('- Donnerstag, 15.10.2026, ab 09:00 Uhr');
+    const withMinutes = clarificationBody({ originalSubject: 'X', questions: [], companyName: 'Musterwerk GmbH', appointment: { kind: 'SITE_VISIT', slots, minutes: 120 } });
+    expect(withMinutes).toContain('(ca. 120 Minuten)');
   });
 });

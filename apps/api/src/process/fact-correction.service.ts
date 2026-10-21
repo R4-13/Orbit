@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedContent } from '@orbit/agent-core';
 import type { CaseFact } from '@orbit/domain';
-import { factValuesEqual, normalizeForMatch, validateFactValue } from '@orbit/shared';
+import { factValuesEqual, normalizeForMatch, splitSentences, validateFactValue } from '@orbit/shared';
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -55,21 +55,52 @@ export function cueSentences(body: string): string | undefined {
   return sentences.filter((_, index) => wanted.has(index)).join(' ').slice(0, 500);
 }
 
-const NUMERIC_REPLACEMENT = /\bnicht\s+(?:mehr\s+)?(?:nur\s+)?(\d+(?:[.,]\d+)?)\s*(?:m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:doch\s+|nun\s+|jetzt\s+)?(\d+(?:[.,]\d+)?)/gi;
+const NUMERIC_REPLACEMENT = /\bnicht\s+(?:mehr\s+)?(?:nur\s+)?(\d+(?:[.,]\d+)?)\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:doch\s+|nun\s+|jetzt\s+)?(\d+(?:[.,]\d+)?)/gi;
+const UNIT_ALIASES: Record<string, string> = { 'm²': 'm2', qm: 'm2', quadratmeter: 'm2', kilowatt: 'kw', euro: '€' };
+const normalizeUnit = (unit: string | undefined): string | undefined => (unit ? (UNIT_ALIASES[unit.toLowerCase()] ?? unit.toLowerCase()) : undefined);
+const STOPWORDS = new Set(
+  'der die das den dem des ein eine einer einen einem und oder aber doch nicht sondern auch noch nur mit für von zu im in am an auf ist sind hat haben wird werden wir sie ich es bei als wie dass sich mehr nun jetzt dann so etwa circa ungefähr korrektur korrigieren muss müssen weil'.split(' '),
+);
+
+/** Inhaltswörter (ab 3 Buchstaben, ohne Zahlen und Füllwörter) eines Textes – die Anker, an denen eine Zahl ihrem Gegenstand zugeordnet wird. */
+export function contentWords(text: string): string[] {
+  return [...new Set(normalizeForMatch(text).split(' ').map((w) => w.replace(/[^a-zäöüß]/g, '')).filter((w) => w.length >= 3 && !STOPWORDS.has(w)))];
+}
+const sameStem = (a: string, b: string): boolean => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4))));
+
+/** Eine bekannte Zahl mit den Wörtern ihres Gegenstands (Schlüssel, Satz der ursprünglichen Nachricht) und ihrer Einheit. */
+export interface AnchoredNumber {
+  key: string;
+  value: unknown;
+  anchors: string[];
+  unit?: string;
+}
 
 /**
  * Ausdrücklicher Ersatz einer bekannten Zahl in der Form „nicht 7 m², sondern 12“: die erste Zahl ist genau der bekannte Wert, die zweite der neue. Das ist ein Satzbau, keine Deutung –
  * er wird auch dann erkannt, wenn das Modell ihn in einer langen Nachricht übersieht (Live-Fund Serie G). Den Ersatz selbst entscheiden weiterhin die Regeln (dieselbe Person → Korrektur).
  */
-export function numericReplacements(body: string, known: Array<{ key: string; value: unknown }>): Array<{ key: string; newValue: number; evidence: string; kind: 'CORRECTION'; reason: string }> {
+export function numericReplacements(body: string, known: AnchoredNumber[]): Array<{ key: string; newValue: number; evidence: string; kind: 'CORRECTION'; reason: string }> {
   const updates: Array<{ key: string; newValue: number; evidence: string; kind: 'CORRECTION'; reason: string }> = [];
   for (const match of body.matchAll(NUMERIC_REPLACEMENT)) {
     const from = Number(match[1]!.replace(',', '.'));
-    const to = Number(match[2]!.replace(',', '.'));
+    const to = Number(match[3]!.replace(',', '.'));
+    if (to === from) continue;
     const evidence = match[0].trim().slice(0, 300);
-    for (const fact of known) {
-      if (typeof fact.value === 'number' && fact.value === from && to !== from && !updates.some((u) => u.key === fact.key)) updates.push({ key: fact.key, newValue: to, evidence, kind: 'CORRECTION', reason: 'ausdrücklicher Ersatz „nicht A, sondern B“' });
-    }
+    const unit = normalizeUnit(match[2]);
+    // Nicht die Zahl allein entscheidet: der Satz muss zum Gegenstand der bekannten Angabe passen (gleiche Einheit, gemeinsame Inhaltswörter). „Die Küche hat nicht 7 m², sondern 12“ ändert das Bad (7 m²) nicht.
+    const sentence = splitSentences(body).find((s) => s.includes(match[0])) ?? match[0];
+    const words = contentWords(sentence.replace(match[0], ' '));
+    const candidates = known
+      .filter((fact) => typeof fact.value === 'number' && fact.value === from && !updates.some((u) => u.key === fact.key))
+      .filter((fact) => !unit || !fact.unit || normalizeUnit(fact.unit) === unit);
+    if (candidates.length === 0) continue;
+    const scored = candidates.map((fact) => ({ fact, overlap: fact.anchors.filter((anchor) => words.some((word) => sameStem(anchor, word))).length }));
+    const best = Math.max(...scored.map((c) => c.overlap));
+    const chosen = best > 0 ? scored.filter((c) => c.overlap === best) : words.length === 0 ? scored : [];
+    // Mehrdeutig (mehrere gleich passende Angaben) oder ohne Bezug zum Gegenstand: keine Zuordnung – dann klärt eine Rückfrage statt einer geratenen Änderung.
+    if (chosen.length !== 1) continue;
+    updates.push({ key: chosen[0]!.fact.key, newValue: to, evidence, kind: 'CORRECTION', reason: 'ausdrücklicher Ersatz „nicht A, sondern B“ (Gegenstand passt)' });
   }
   return updates;
 }
@@ -131,6 +162,25 @@ export class FactCorrectionService implements OnModuleInit {
   }
 
   /** Schlüssel, die für diese Nachricht bereits beurteilt wurden (Korrektur, Ergänzung, Widerspruch): die spätere Auslese derselben Nachricht legt sie nicht noch einmal an (kein zweiter, abweichend formulierter Wert). */
+  /** Die bekannten Zahlen mit ihren Ankerwörtern: Wörter des Schlüssels und des Satzes der ursprünglichen Nachricht, in dem die Zahl stand. */
+  private async anchored(tenantId: string, facts: CaseFact[]): Promise<AnchoredNumber[]> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const result: AnchoredNumber[] = [];
+    for (const fact of facts) {
+      if (typeof fact.value !== 'number') continue;
+      const messageId = /^message:(.+)$/.exec(fact.sourceRef ?? '')?.[1];
+      const source = messageId ? await scoped.emailMessage.findFirst({ where: { id: messageId }, select: { bodyText: true } }) : null;
+      const digits = String(fact.value).replace('.', '[.,]');
+      const sentences = splitSentences(source?.bodyText ?? '');
+      const at = sentences.findIndex((s) => new RegExp('(^|[^0-9])' + digits + '([^0-9]|$)').test(s));
+      // Der Satz mit der Zahl und der davor (Abkürzungen wie „ca.“ trennen sonst den Gegenstand von der Zahl).
+      const sentence = at >= 0 ? sentences.slice(Math.max(0, at - 1), at + 1).join(' ') : (fact.evidenceRefs ?? []).join(' ');
+      const unit = normalizeUnit(/\d\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|%|€|euro)\b/i.exec(sentence)?.[1] ?? /_(m2|kw|cm|mm|l)\b/i.exec(fact.key)?.[1]);
+      result.push({ key: fact.key, value: fact.value, anchors: contentWords(`${fact.key.replace(/[._]/g, ' ')} ${sentence}`), ...(unit ? { unit } : {}) });
+    }
+    return result;
+  }
+
   async handledKeys(tenantId: string, caseId: string, messageId: string): Promise<Set<string>> {
     const event = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId, type: CASE_EVENT_TYPES.FACT_UPDATE_ASSESSED, dedupeKey: `fact.update_assessed:${messageId}` }, select: { payload: true } });
     const proposals = (event?.payload as { proposals?: Array<{ key?: string }> } | null | undefined)?.proposals ?? [];
@@ -194,7 +244,7 @@ ${lines}`,
       }
     }
     if (!parsed.success || parsed.data.updates.length === 0) {
-      const replaced = numericReplacements(body, known);
+      const replaced = numericReplacements(body, await this.anchored(tenantId, known));
       if (replaced.length > 0) parsed = { success: true, data: { updates: replaced } } as typeof parsed;
     }
     const knownKeys = [...new Set(known.map((f) => f.key))];

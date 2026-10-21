@@ -81,7 +81,7 @@ describe('Request analysis in the reference process (e2e)', () => {
       { key: 'baujahr', label: 'Baujahr', value: 1985, evidence: 'Baujahr 1985', confidence: 0.9 },
     ],
     missingInformation: [{ key: 'daemmung', label: 'Dämmung', question: 'Wie ist das Gebäude gedämmt (Fassade, Dach, Fenster)?' }],
-    siteVisit: { recommended: true, reason: 'Aufstellfläche und Heizsystem müssen vor Ort geprüft werden.' },
+    siteVisit: { recommended: true, reason: 'Bei der alten Ölheizung im Einfamilienhaus (Baujahr 1985) müssen Aufstellfläche und Leitungswege für die Wärmepumpe geprüft werden.', durationMinutes: 120, durationReason: 'Einfamilienhaus mit Ölheizung und Wärmepumpe: Heizraum, Aufstellfläche und Leitungswege begehen.' },
     nextStep: 'PROPOSE_SITE_VISIT',
     ...over,
   });
@@ -157,7 +157,7 @@ describe('Request analysis in the reference process (e2e)', () => {
     const draft = await prisma.forTenantId(tenantId).communicationDraft.findFirstOrThrow({ where: { caseId, purpose: 'CLARIFICATION' } });
     expect(draft.bodyText).toContain('Wir haben sie so verstanden: Tausch der Ölheizung gegen eine Wärmepumpe.');
     expect(draft.bodyText).toContain('Wie ist das Gebäude gedämmt (Fassade, Dach, Fenster)?');
-    expect(draft.bodyText).toContain('vor Ort an (ca. 90 Minuten)');
+    expect(draft.bodyText).toContain('vor Ort an (ca. 120 Minuten)'); // die Dauer steht, weil sie aus dem Umfang der Anfrage begründet ist
     expect(draft.bodyText).toContain('Bitte nennen Sie uns zwei bis drei Zeiträume');
     expect(draft.bodyText).not.toMatch(/- \w+, \d{2}\.\d{2}\.\d{4}/); // keine konkreten Zeiten
     expect(draft.bodyText).not.toContain('Welcher der vorgeschlagenen Termine'); // die Terminwahl steht im Terminblock, nicht als Frage
@@ -209,7 +209,7 @@ describe('Request analysis in the reference process (e2e)', () => {
         summary: 'Abbau der Küchenmöbel, Streichen von Wänden und Decke, neuer Bodenbelag.',
         knownDetails: [],
         missingInformation: [{ key: 'flaeche', label: 'Fläche', question: 'Wie groß ist die zu streichende Fläche insgesamt (in m²)?' }],
-        siteVisit: { recommended: true, reason: 'Aufmaß der Räume und Zustand des Bodens müssen vor Ort beurteilt werden.' },
+        siteVisit: { recommended: true, reason: 'Abbau und Aufbau der Geräte sowie das Streichen der Wände in der Küche müssen vor Ort beurteilt werden.' },
         nextStep: 'PROPOSE_SITE_VISIT',
       },
       { content: 'Hallo, ich muss meine Küche erneuern und benötige ein Angebot zum Abbau der Geräte, Streichen der 4 Wände und Aufbau der Geräte. Wann könnte das passieren? Danke, Tom', extraction: [] },

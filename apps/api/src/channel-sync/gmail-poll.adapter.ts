@@ -6,11 +6,12 @@ import type { NormalizedIntakeEvent } from '../intake/channel-event.types';
 import type { ChannelPollAdapter, ChannelPollResult } from './channel-poll-adapter';
 
 /**
- * Gmail polling batch size per sync tick — deliberately small (the
- * generic sync runtime, Increment D, polls on a short interval, so a
- * backlog drains over a few ticks rather than needing one huge fetch).
+ * Gmail polling: pro Takt werden die Kennungen der neuesten `GMAIL_POLL_WINDOW` Nachrichten gelesen und nur die noch unbekannten (kein Eingang mit dieser Kennung) vollständig geholt, höchstens
+ * `GMAIL_POLL_BATCH_SIZE` je Takt, die ältesten zuerst – ein Rückstand baut sich über einige Takte ab. Früher wurden nur die zehn neuesten Nachrichten betrachtet: kamen zwischen zwei Takten mehr als
+ * zehn an (eigene gesendete Nachrichten zählen mit), gingen ältere Eingänge unbemerkt verloren (Messlauf 21.10.: drei Mails lagen im Posteingang, ORBIT kannte sie nicht).
  */
-const GMAIL_POLL_BATCH_SIZE = 10;
+const GMAIL_POLL_BATCH_SIZE = 25;
+const GMAIL_POLL_WINDOW = 200;
 
 /**
  * The ONLY Gmail-specific code in the Channel Event Runtime (§1/§6 of
@@ -22,12 +23,11 @@ const GMAIL_POLL_BATCH_SIZE = 10;
  * called directly by this adapter.
  *
  * **Cursor is best-effort, not the correctness guarantee.**
- * `GmailConnectorService.listMessages()` has no incremental/history-based
- * fetch (confirmed during Increment A's research — it always returns the
- * most recent `maxResults` messages; `cursor` is only ever set to the most
- * recently seen message id and currently unused as a fetch filter.
+ * There is no incremental/history-based fetch (`history.list` is deliberately not used): each tick reads the ids of the newest
+ * `GMAIL_POLL_WINDOW` messages and fetches the ones no intake event exists for; `cursor` is only ever set to the most
+ * recently seen message id and is not used as a fetch filter.
  * Re-processing an already-seen message is prevented by the idempotency
- * layer (`WebhookIdempotencyService`, Increment D), not by this cursor —
+ * layer (`WebhookIdempotencyService`, Increment D) and the unique intake event id, not by this cursor —
  * a deliberate choice over guessing at Gmail's `history.list` API (a
  * correctness-critical third-party contract CLAUDE.md requires verifying
  * against official docs before use, not assuming); a real incremental
@@ -44,10 +44,18 @@ export class GmailPollAdapter implements ChannelPollAdapter {
   ) {}
 
   async poll(tenantId: string, connectionId: string, cursor: string | null): Promise<ChannelPollResult> {
-    const emails = await this.gmailConnector.listMessages(tenantId, GMAIL_POLL_BATCH_SIZE);
+    const ids = await this.gmailConnector.listMessageIds(tenantId, GMAIL_POLL_WINDOW);
+    const known = new Set(
+      ids.length === 0
+        ? []
+        : (await this.prisma.forTenantId(tenantId).intakeEvent.findMany({ where: { provider: 'gmail', externalEventId: { in: ids } }, select: { externalEventId: true } })).map((row) => row.externalEventId),
+    );
+    // Die Liste ist neueste-zuerst; unbekannte werden von den ältesten an abgearbeitet.
+    const unseen = ids.filter((id) => !known.has(id)).reverse().slice(0, GMAIL_POLL_BATCH_SIZE);
+    const emails = unseen.length === 0 ? [] : await this.gmailConnector.fetchMessages(tenantId, unseen);
     const connectedAddress = await this.connectedAddress(tenantId, connectionId);
     const events = emails.map((email) => this.toNormalizedIntakeEvent(tenantId, connectionId, email, connectedAddress));
-    const nextCursor = emails[0]?.providerMessageId ?? cursor;
+    const nextCursor = ids[0] ?? cursor;
     return { events, nextCursor };
   }
 

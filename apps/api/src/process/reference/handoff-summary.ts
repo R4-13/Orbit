@@ -22,6 +22,8 @@ export interface HandoffInput {
     /** Wie viele konkrete Termine vorgeschlagen wurden (0 = es wurde nach Zeiträumen gefragt). */
     proposedSlots?: number;
   };
+  /** Angekündigte Änderungen der Kundschaft, die keiner Angabe zugeordnet werden konnten und noch nicht geklärt sind (Wortlaut). */
+  openCorrections?: string[];
 }
 
 export interface HandoffSummary {
@@ -96,6 +98,7 @@ export function buildHandoffSummary(input: HandoffInput): HandoffSummary {
   } else if (wantsVisit) {
     lines.push('', `Termin: Ein Vor-Ort-Termin ist sinnvoll${input.analysis?.siteVisit.reason ? ` (${input.analysis.siteVisit.reason})` : ''}; noch ${appointment?.proposedSlots ? 'keine Auswahl der Kundschaft' : 'kein Termin vereinbart'}.`);
   }
+  if ((input.openCorrections ?? []).length > 0) lines.push('', 'Ungeklärt – angekündigte Änderung der Kundschaft:', ...(input.openCorrections ?? []).map((c) => `- „${c.slice(0, 300)}“ (keiner Angabe zugeordnet; vor dem Weiterrechnen klären)`));
   lines.push('', 'Erfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft.');
   return { text: lines.join('\n'), known, open };
 }
