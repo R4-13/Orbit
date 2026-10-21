@@ -60,3 +60,7 @@ Nicht Teil der Prüfung: die Autonomieregeln (unverändert), Kalenderbuchungen i
 5. **Die betriebliche Terminvorgabe** ist über die Profil-Schnittstelle pflegbar, hat aber keine Oberfläche; im Betrieb Musterwerk ist keine hinterlegt (es entscheidet allein die fallbezogene Begründung).
 6. **Nicht erneut gemessen:** der Anteil vermeidbarer Übergaben und Wartezustände im Betrieb. Die Ursachenaufteilung stammt aus dem Messlauf (alter Stand); ob die Behebungen ihn senken, zeigt erst ein neuer Messlauf – nach Auftraggeber-Entscheidung keine sofortige Wiederholung aller 60 Fälle.
 7. **Next.js-Build unter Windows** schreibt das Standalone-Verzeichnis nicht (Symlink-Rechte); der Docker-Build ist der maßgebliche Weg und lief grün.
+
+## Bereitstellung
+
+Bereitgestellt ist Commit `71a8267` (Code identisch mit `7b66519`; danach nur Dokumentation): Docker-Build von `api`, `worker`, `web` grün (damit auch der Web-Build), Container gesund. Die Migration `20261021120000_appointment_policy` (neue, leere Spalte `tenant_profiles.appointment_policy`) wird **nicht** beim Start der Container angewandt; sie wurde danach mit `prisma migrate deploy` auf die Betriebsdatenbank gespielt und geprüft (Spalte vorhanden). Zwischen Start der Container und Migration lag etwa eine Minute ohne eingehende Mails. **Künftig:** Migration vor dem Start der neuen Container anwenden. Flags unverändert: `planner.shadow` AN (musterwerk), `process.split` entfernt. Modellprofil der Container: `gpt-6-luna`, Reasoning `none`.
