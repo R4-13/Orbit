@@ -99,6 +99,7 @@ select coalesce(json_agg(r order by r.received_at), '[]'::json) from (
      from action_intents i where i.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) intents,
   (select count(*) from tasks t where t.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) tasks,
   (select count(*) from invoices v where v.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) invoices,
+  (select json_agg(w.case_id) from wait_subscriptions w where w.status = 'WAITING' and w.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) waits_cases,
   (select count(*) from wait_subscriptions w where w.status = 'WAITING' and w.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) active_waits,
   (select json_agg(left(e.payload::text, 260)) from case_events e where e.type = 'blueprint.fit_assessed' and e.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) fit,
   (select count(*) from case_events e where e.type = 'shadow.plan_proposed' and e.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) shadow
@@ -115,6 +116,49 @@ function query(since) {
 const TECHNICAL = [/Schrittlimit/, /ungewiss/i, /nicht nachweislich erfüllt/, /ohne dass das Ziel nachgewiesen/, /kein Schritt wartet/, /blockiert oder fehlgeschlagen/, /Aktion wurde nicht ausgeführt/, /nicht aktiviert/, /nicht erreichbar/i, /Planung/i, /Plan abgelehnt/];
 const NOTRUF = /112|110|notruf|feuerwehr|notdienst/i;
 const CALENDAR = /^calendar\./;
+
+
+/** Ordnet einen einzelnen Vorgang (ohne Teilvorgänge) einer Klasse zu. */
+function classifyPart(row, cases, caseId) {
+  const notes = [];
+  const states = cases.map((f) => f.orch);
+  const reasons = cases.flatMap((f) => f.reasons ?? []);
+  const waiting = states.some((s) => s.startsWith('WAITING'));
+  const bad = (row.bad_nodes ?? []).filter((n) => n.case === caseId && (n.plan === 'ACTIVE' || n.plan === 'AWAITING_APPROVAL'));
+  // Ein Schritt, der auf eine Antwort oder Freigabe wartet, ist zu Recht blockiert (fehlende Angaben, noch nicht alle Schritte erledigt) – das ist Warten, kein Fehler.
+  const technicalBad = bad.filter((n) => !/^POLICY_/.test(n.code ?? '') && !(waiting && /MISSING_INPUT|COMPLETION_CRITERIA_NOT_MET/.test(n.code ?? '')));
+  const exhausted = (row.events ?? []).includes('plan.retry_exhausted') || (row.events ?? []).includes('plan.replan_unavailable');
+  const technicalReason = reasons.find((r) => TECHNICAL.some((re) => re.test(r)));
+  const plans = (row.plans ?? []).filter((p) => p.case === caseId);
+  const waitsHere = (row.waits_cases ?? []).filter((c) => c === caseId).length;
+  let cls;
+  let why;
+  if (states.every((s) => s === 'COMPLETED')) {
+    cls = 'E';
+    why = 'abgeschlossen mit Abschlussnachweis';
+  } else if (states.some((s) => s === 'FAILED') || exhausted || technicalBad.length > 0 || technicalReason) {
+    cls = 'T';
+    why = exhausted ? 'Planung nach Wiederholungen aufgegeben' : technicalBad.length > 0 ? `Schritt ${technicalBad[0].key} ${technicalBad[0].state} (${technicalBad[0].code ?? technicalBad[0].msg})` : (technicalReason ?? 'Vorgang fehlgeschlagen');
+  } else if (states.some((s) => s === 'MANUAL_REVIEW')) {
+    cls = 'U';
+    why = `Übergabe an eine Person: ${reasons.find(Boolean) ?? '–'}`;
+  } else if (waiting && (waitsHere > 0 || plans.some((p) => p.status === 'AWAITING_APPROVAL') || states.includes('WAITING_FOR_APPROVAL'))) {
+    cls = 'W';
+    why = `wartet: ${[...new Set(states.filter((s) => s.startsWith('WAITING')))].join('/') || states.join('/')}${waitsHere > 0 ? ' (Antwort der Kundschaft)' : ''}`;
+  } else if (states.every((s) => s === 'IN_PROGRESS') && plans.length === 0 && Number(row.tasks) > 0 && (row.events ?? []).includes('blueprint.fit_assessed')) {
+    // Fester Vertriebsweg (Altweg): Lead und Aufgabe für eine Person sind angelegt; der Vorgang bleibt ohne Plan „in Bearbeitung“ (kein Abschlussnachweis vorgesehen).
+    cls = 'U';
+    why = 'fester Vertriebsweg: Lead und Aufgabe für eine Person angelegt; Vorgang bleibt ohne Plan in Bearbeitung';
+    notes.push('Altweg ohne Abschluss – von Hand bewerten');
+  } else if (states.some((s) => ['RECEIVED', 'READY', 'IN_PROGRESS'].includes(s))) {
+    cls = 'N';
+    why = `Bearbeitung nicht abgeschlossen (${states.join('/')})`;
+  } else {
+    cls = 'N';
+    why = `Zustand nicht zuzuordnen (${states.join('/')})`;
+  }
+  return { cls, why, notes };
+}
 
 /** Ordnet einen ausgewerteten Eingang einer der fünf Klassen zu und prüft die harten Grenzen. */
 export function classify(row, matrix, scenario) {
@@ -139,6 +183,11 @@ export function classify(row, matrix, scenario) {
       const expectIgnored = ['werbung', 'spam', 'angriff'].includes(scenario?.art);
       cls = expectIgnored ? 'E' : 'T';
       why = expectIgnored ? `als nicht geschäftlich eingestuft (${row.relevance ?? row.intake_status}), keine Bearbeitung` : `fälschlich als nicht geschäftlich verworfen (${row.relevance})`;
+    } else if (row.intake_status === 'NEEDS_REVIEW') {
+      // Kein Vorgang, aber der Eingang liegt sichtbar in der Prüfliste (keine Aktion, keine Antwort): Übergabe an eine Person, ohne Bearbeitung – im Befund von Hand zu bewerten.
+      cls = 'U';
+      why = 'kein Vorgang angelegt; Eingang liegt zur Prüfung durch eine Person vor (keine Aktion, keine Antwort)';
+      notes.push('Prüfliste statt Vorgang – von Hand bewerten');
     } else if (row.intake_status === 'PENDING_TRIAGE' || row.intake_status === 'RECEIVED') {
       cls = 'N';
       why = `Eingang noch nicht eingestuft (${row.intake_status})`;
@@ -147,37 +196,25 @@ export function classify(row, matrix, scenario) {
       why = `kein Vorgang (${row.intake_status ?? 'kein Eingang'}${row.intake_error ? `: ${row.intake_error}` : ''})`;
     }
   } else {
-    const root = fam.find((f) => f.id === row.root_id) ?? fam[0];
-    const states = fam.map((f) => f.orch);
-    const reasons = fam.flatMap((f) => f.reasons ?? []);
-    const bad = (row.bad_nodes ?? []).filter((n) => n.plan === 'ACTIVE' || n.plan === 'AWAITING_APPROVAL');
-    const technicalBad = bad.filter((n) => !/^POLICY_/.test(n.code ?? ''));
-    const exhausted = (row.events ?? []).includes('plan.retry_exhausted') || (row.events ?? []).includes('plan.replan_unavailable');
-    const technicalReason = reasons.find((r) => TECHNICAL.some((re) => re.test(r)));
-    if (states.every((s) => s === 'COMPLETED')) {
-      cls = 'E';
-      why = 'abgeschlossen mit Abschlussnachweis';
-    } else if (states.some((s) => s === 'FAILED') || exhausted || technicalBad.length > 0 || technicalReason) {
-      cls = 'T';
-      why = exhausted ? 'Planung nach Wiederholungen aufgegeben' : technicalBad.length > 0 ? `Schritt ${technicalBad[0].key} ${technicalBad[0].state} (${technicalBad[0].code ?? technicalBad[0].msg})` : (technicalReason ?? 'Vorgang fehlgeschlagen');
-    } else if (states.some((s) => s === 'MANUAL_REVIEW')) {
-      cls = 'U';
-      why = `Übergabe an eine Person: ${reasons.find(Boolean) ?? '–'}`;
-    } else if (states.some((s) => ['WAITING_FOR_APPROVAL', 'WAITING_FOR_INFORMATION', 'WAITING_FOR_EXTERNAL_SYSTEM', 'PAUSED'].includes(s)) && (Number(row.active_waits) > 0 || (row.plans ?? []).some((p) => p.status === 'AWAITING_APPROVAL') || intents.some((i) => i.status === 'PENDING') || states.includes('WAITING_FOR_APPROVAL'))) {
-      cls = 'W';
-      why = `wartet: ${[...new Set(states.filter((s) => s.startsWith('WAITING')))].join('/') || states.join('/')}${Number(row.active_waits) > 0 ? ' (Antwort der Kundschaft)' : ''}`;
-    } else if (states.some((s) => ['RECEIVED', 'READY', 'IN_PROGRESS'].includes(s))) {
-      cls = 'N';
-      why = `Bearbeitung nicht abgeschlossen (${states.join('/')})`;
+    // Aufgeteilte Nachricht: jedes Anliegen (Teilvorgang) wird für sich eingeordnet; der Hauptvorgang trägt nur die Zusammenfassung (schlechteste Klasse zuerst: T, N, U, W, E).
+    const children = fam.filter((f) => f.parent === row.root_id);
+    const parts = children.length > 0 ? children : fam;
+    const part = (c) => classifyPart(row, [c], c.id);
+    const results = parts.map(part);
+    if (children.length > 0) {
+      const order = ['T', 'N', 'U', 'W', 'E'];
+      cls = order.find((k) => results.some((r) => r.cls === k)) ?? 'N';
+      why = `aufgeteilt in ${children.length} Teilvorgänge: ${results.map((r, i) => `${children[i].title.split(':')[0]} → ${r.cls}`).join('; ')}`;
+      row.teilvorgaenge = results.map((r, i) => ({ id: children[i].id.slice(0, 8), anliegen: children[i].title.split(':')[0], klasse: r.cls, grund: r.why }));
     } else {
-      cls = 'N';
-      why = `Zustand nicht zuzuordnen (${states.join('/')})`;
+      cls = results[0].cls;
+      why = results[0].why;
+      notes.push(...results[0].notes);
     }
-    if (root && fam.length > 1) notes.push(`${fam.length - 1} Teilvorgänge`);
   }
   const expected = matrix ? [...matrix.primaer, ...matrix.akzeptabel] : [];
   const deviates = matrix ? !expected.includes(cls) : false;
-  return { klasse: cls, grund: why, harteVerstoesse: hard, abweichungVomErwarteten: deviates, hinweise: notes };
+  return { klasse: cls, grund: why, harteVerstoesse: hard, abweichungVomErwarteten: deviates, hinweise: notes, ...(row.teilvorgaenge ? { teilvorgaenge: row.teilvorgaenge } : {}) };
 }
 
 function commandEvaluate(values) {

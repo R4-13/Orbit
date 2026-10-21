@@ -180,6 +180,32 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: kids[0]!.id, type: 'case.split_from' } })).toBe(1);
   });
 
+  it('ein Teilvorgang liest die Angaben aus der Nachricht des Hauptvorgangs (Fund Messlauf 21.10.: „Es fehlen Angaben: messageId“ blockierte die Auslese jedes Teilvorgangs)', async () => {
+    const tenantId = await newTenant(true);
+    seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION']);
+    seedTool('submit_blueprint_fit', { fits: true, reason: 'Eine Frage, die aus dem Betriebswissen zu beantworten ist.' }); // Eignung des Standardverfahrens (FX-18)
+    seedTool('submit_knowledge_answer', { answerable: true, answer: 'Ja, wir führen Badsanierungen im Raum Berlin aus.', sources: ['FAQ: Machen Sie Badsanierung?'], confidence: 0.95 });
+    seedPlan({
+      goalKeys: ['staff.informed'],
+      nodes: [
+        node('extract', 'PREPARE', { capability: { key: 'facts.extract_from_message' }, inputs: { messageId: { sourceRef: 'inbound.latestMessageId' } } }),
+        node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Kundenwunsch: Wartungsvertrag zum Jahresende kündigen – bitte prüfen.' } } }),
+        node('done', 'COMPLETE'),
+      ],
+      edges: [edge('extract', 'notify'), edge('notify', 'done')],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Angaben auslesen, Person informieren.',
+    });
+    seedTool('submit_extracted_facts', { facts: [{ key: 'ai.kuendigung', value: 'zum Jahresende', evidence: 'Wartungsvertrag', confidence: 0.9 }] });
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const kids = await children(tenantId, result.case!.id);
+    const second = kids.find((k) => k.currentIntent === 'MAINTENANCE_CONTRACT_CANCELLATION')!;
+    const nodes = await prisma.forTenantId(tenantId).processPlanNode.findMany({ where: { plan: { caseId: second.id } }, select: { nodeKey: true, state: true, errorMessage: true } });
+    expect(nodes.find((n) => n.nodeKey === 'extract')).toMatchObject({ state: 'SUCCEEDED' }); // vorher: BLOCKED, „Es fehlen Angaben: messageId“
+    expect(nodes.filter((n) => n.errorMessage?.includes('messageId'))).toEqual([]);
+  });
+
   it('der Hauptvorgang bleibt offen, solange ein Teilvorgang nicht erledigt ist', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['GENERAL_INQUIRY', 'MAINTENANCE_CONTRACT_CANCELLATION']);

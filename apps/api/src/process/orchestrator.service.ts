@@ -36,6 +36,7 @@ import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
+import { messageCaseIds } from './case-scope';
 import { runInCaseContext } from '../common/case-context';
 import { PlannerService } from './planner.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
@@ -1013,7 +1014,8 @@ export class OrchestratorService {
     }
     Object.assign(requirements, this.requirementStates(blueprint, current));
     const sourceRefs: Record<string, unknown> = { "case.id": caseRow.id };
-    const latestInbound = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: caseRow.id, direction: "INBOUND" }, orderBy: { createdAt: "desc" } });
+    // Ein Teilvorgang einer aufgeteilten Nachricht hat die Nachricht nicht selbst: sie liegt am Hauptvorgang (und Antworten an den Geschwistern) – sonst bleibt die Auslese mit „messageId fehlt“ stehen (Fund Messlauf 21.10., Gruppe B).
+    const latestInbound = await this.prisma.forTenantId(tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseRow.id) }, direction: "INBOUND" }, orderBy: { createdAt: "desc" } });
     if (latestInbound) {
       sourceRefs["inbound.latestMessageId"] = latestInbound.id;
       if (latestInbound.threadId) sourceRefs["inbound.latestThreadId"] = latestInbound.threadId;

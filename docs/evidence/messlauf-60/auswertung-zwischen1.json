@@ -1,0 +1,334 @@
+{
+  "summary": {
+    "ausgewertetUm": "2026-10-21T08:49:27.831Z",
+    "gesendet": 18,
+    "geplant": 60,
+    "klassen": {
+      "E": 1,
+      "W": 4,
+      "U": 6,
+      "T": 0,
+      "N": 7
+    },
+    "harteVerstoesse": [],
+    "schattenPlanungen": 9
+  },
+  "results": [
+    {
+      "nr": 1,
+      "szenario": "oeffnungszeiten",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:36:06.780Z",
+      "vorgang": "02521f16-d0f0-41f3-a89e-9f12bca940b5",
+      "klasse": "W",
+      "grund": "wartet: WAITING_FOR_APPROVAL",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [
+        "{\"fits\": true, \"reason\": \"Der Kunde stellt zwei konkrete Informationsfragen zu angebotenen Leistungen und den Freitagsöffnungszeiten. Beantwortung aus freigegebenem Betriebswissen oder Weiterleitung bei fehlenden Angaben entspricht genau dem Leitfaden.\", \"asse"
+      ],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 2,
+      "szenario": "einsatzgebiet",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:36:53.498Z",
+      "vorgang": "c2495d17-3eea-4091-a9a5-7afce9fcecc2",
+      "klasse": "W",
+      "grund": "wartet: WAITING_FOR_APPROVAL",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [
+        "{\"fits\": true, \"reason\": \"Die Kundschaft fragt konkret, ob der Anbieter für eine Wartung der Gasheizung nach Bergisch Gladbach kommt. Das ist eine sachliche Betriebswissensfrage zum Einsatzgebiet; der Leitfaden sieht vor, die Information aus freigegebenem Betr"
+      ],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 3,
+      "szenario": "preisfrage-heizkoerper",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:37:40.086Z",
+      "vorgang": "ead1dbd6-0638-431b-99af-ad9833f4474b",
+      "klasse": "W",
+      "grund": "wartet: WAITING_FOR_INFORMATION (Antwort der Kundschaft)",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [
+        "{\"fits\": true, \"reason\": \"Die Person fragt nach einem ungefähren Preis für einen konkreten Austausch von vier Heizkörpern. Der Leitfaden dient dazu, die Anfrage zu erfassen und mit den nötigen Angaben an die zuständige Person zur Angebotserstellung zu übergebe"
+      ],
+      "ausgehend": [
+        {
+          "an": [
+            "tomorbit777@gmail.com"
+          ],
+          "betreff": "Re: Preis Heizkörper",
+          "text": "Guten Tag,  vielen Dank für Ihre Anfrage „Preis Heizkörper“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grüßen Musterwerk GmbH"
+        }
+      ],
+      "aufgaben": 0
+    },
+    {
+      "nr": 4,
+      "szenario": "statusfrage",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:38:26.714Z",
+      "vorgang": "aacc82de-653f-43e0-a62b-d8d7dd342fd3",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Manuelle Prüfung und Rückmeldung abwarten: Bitte manuell bearbeiten.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 0,
+      "fit": [
+        "{\"fits\": false, \"reason\": \"Die Kundschaft fragt nach dem Bearbeitungsstand ihrer konkreten früheren Meldung zu den Heizkörpern und nach einem Termin für einen Vor-Ort-Besuch. Das ist eine Status-/Terminabstimmung, keine allgemeine Frage, die sich aus freigegeb"
+      ],
+      "ausgehend": [],
+      "aufgaben": 1
+    },
+    {
+      "nr": 5,
+      "szenario": "notfall-rohrbruch",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:39:14.120Z",
+      "vorgang": "13fb499b-0aa2-47ce-a465-6fb0090864ff",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Eine Person übernimmt den Notfall: Bitte manuell bearbeiten.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [],
+      "ausgehend": [
+        {
+          "an": [
+            "tomorbit777@gmail.com"
+          ],
+          "betreff": "Re: Wasserrohrbruch im Keller!!!",
+          "text": "Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Wasserrohrbruch im Keller!!!“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH"
+        }
+      ],
+      "aufgaben": 1
+    },
+    {
+      "nr": 6,
+      "szenario": "notfall-gasgeruch",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:40:00.712Z",
+      "vorgang": "08cb48c4-a311-4c57-a508-b73039670a61",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Eine Person übernimmt den Notfall: Bitte manuell bearbeiten.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [],
+      "ausgehend": [
+        {
+          "an": [
+            "tomorbit777@gmail.com"
+          ],
+          "betreff": "Re: Es riecht nach Gas im Keller",
+          "text": "Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Es riecht nach Gas im Keller“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH"
+        }
+      ],
+      "aufgaben": 1
+    },
+    {
+      "nr": 7,
+      "szenario": "heizung-ausfall-frost",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:40:47.877Z",
+      "vorgang": "3276649c-d44c-497c-b6e5-82e6167f77a9",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Eine Person übernimmt den Notfall: Bitte manuell bearbeiten.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [],
+      "ausgehend": [
+        {
+          "an": [
+            "tomorbit777@gmail.com"
+          ],
+          "betreff": "Re: Heizung ausgefallen, minus 6 Grad",
+          "text": "Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Heizung ausgefallen, minus 6 Grad“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH"
+        }
+      ],
+      "aufgaben": 1
+    },
+    {
+      "nr": 8,
+      "szenario": "beschwerde-monteur",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:41:34.588Z",
+      "vorgang": "8d0f111b-4e25-41d9-92aa-f5085712f0cb",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Fachprüfung, Entscheidung und Rückruf durch zuständige Person: Bitte manuell bearbeiten.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 0,
+      "fit": [],
+      "ausgehend": [],
+      "aufgaben": 2
+    },
+    {
+      "nr": 9,
+      "szenario": "bewerbung",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:42:21.151Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "Eingang nicht in ORBIT gefunden",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": []
+    },
+    {
+      "nr": 10,
+      "szenario": "englische-anfrage",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:43:07.715Z",
+      "vorgang": "83897ac1-a795-4076-a153-d2fefce32ade",
+      "klasse": "W",
+      "grund": "wartet: WAITING_FOR_APPROVAL",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [
+        "{\"fits\": true, \"reason\": \"Die Person stellt konkrete Fragen dazu, ob der Betrieb Badrenovierungen anbietet und zu den Öffnungszeiten. Der Leitfaden ist darauf ausgelegt, solche Kundenfragen aus freigegebenem Betriebswissen zu beantworten oder bei fehlender Bel"
+      ],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 11,
+      "szenario": "rechnung-lieferant",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:43:55.300Z",
+      "vorgang": "020fec14-c4ed-452f-a642-d4b168e0ebaa",
+      "klasse": "U",
+      "grund": "Übergabe an eine Person: Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen.",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 12,
+      "szenario": "werbung",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:44:41.994Z",
+      "vorgang": null,
+      "klasse": "E",
+      "grund": "als nicht geschäftlich eingestuft (NON_ACTIONABLE), keine Bearbeitung",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": false,
+      "hinweise": [],
+      "shadow": 0,
+      "fit": [],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 13,
+      "szenario": "phishing",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:45:28.436Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "kein Vorgang (NEEDS_REVIEW)",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": [],
+      "shadow": 0,
+      "fit": [],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 14,
+      "szenario": "prompt-injection",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:46:14.940Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "kein Vorgang (NEEDS_REVIEW)",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": [],
+      "shadow": 0,
+      "fit": [],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 15,
+      "szenario": "nur-hallo",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:47:01.670Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "Eingang nicht in ORBIT gefunden",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": []
+    },
+    {
+      "nr": 16,
+      "szenario": "angebot-waermepumpe",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:47:48.202Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "Eingang nicht in ORBIT gefunden",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": []
+    },
+    {
+      "nr": 17,
+      "szenario": "angebot-bad",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:48:34.947Z",
+      "vorgang": "1c25cd32-14b4-412f-84d0-e1d2baed8427",
+      "klasse": "N",
+      "grund": "Bearbeitung nicht abgeschlossen (IN_PROGRESS)",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": [],
+      "shadow": 1,
+      "fit": [
+        "{\"fits\": true, \"reason\": \"Die Kundschaft möchte ein individuelles Angebot für eine konkrete Badsanierung und fragt nach einem Besichtigungstermin. Der Leitfaden erfasst und übergibt die Angaben, kann den benötigten Termin vereinbaren und überlässt Preis und An"
+      ],
+      "ausgehend": [],
+      "aufgaben": 0
+    },
+    {
+      "nr": 18,
+      "szenario": "angebot-bad-variante",
+      "gruppe": "A",
+      "gesendetUm": "2026-10-21T08:49:21.465Z",
+      "vorgang": null,
+      "klasse": "N",
+      "grund": "Eingang nicht in ORBIT gefunden",
+      "harteVerstoesse": [],
+      "abweichungVomErwarteten": true,
+      "hinweise": []
+    }
+  ]
+}

@@ -227,7 +227,7 @@ export class ReferenceProcessTools implements OnModuleInit {
       policyAction: 'email.triage',
       execute: async (input: { messageId: string }, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
-        const message = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { id: input.messageId, caseId } });
+        const message = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { id: input.messageId, caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) } } }); // Teilvorgang: die Nachricht liegt am Hauptvorgang
         if (!message) throw new ToolFailedError('Die Nachricht gehört nicht zu diesem Vorgang.', { errorCode: 'MESSAGE_NOT_IN_CASE' });
 
         const blueprint = await this.blueprintOfCase(ctx.tenantId, caseId);

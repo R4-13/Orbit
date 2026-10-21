@@ -1,0 +1,542 @@
+{
+  "angelegt": "2026-10-21T08:35:56.033Z",
+  "tenant": "musterwerk",
+  "eintraege": [
+    {
+      "nr": 1,
+      "gruppe": "A",
+      "szenario": "oeffnungszeiten",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:36:06.780Z",
+      "gmailId": "1a15d9a75af9b2da"
+    },
+    {
+      "nr": 2,
+      "gruppe": "A",
+      "szenario": "einsatzgebiet",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:36:53.498Z",
+      "gmailId": "1a15d9b2a5af8904"
+    },
+    {
+      "nr": 3,
+      "gruppe": "A",
+      "szenario": "preisfrage-heizkoerper",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:37:40.086Z",
+      "gmailId": "1a15d9be18d03bb2"
+    },
+    {
+      "nr": 4,
+      "gruppe": "A",
+      "szenario": "statusfrage",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:38:26.714Z",
+      "gmailId": "1a15d9c9783f507a"
+    },
+    {
+      "nr": 5,
+      "gruppe": "A",
+      "szenario": "notfall-rohrbruch",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:39:14.120Z",
+      "gmailId": "1a15d9d509e71fc5"
+    },
+    {
+      "nr": 6,
+      "gruppe": "A",
+      "szenario": "notfall-gasgeruch",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:40:00.712Z",
+      "gmailId": "1a15d9e078ebcb0e"
+    },
+    {
+      "nr": 7,
+      "gruppe": "A",
+      "szenario": "heizung-ausfall-frost",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:40:47.877Z",
+      "gmailId": "1a15d9ebe8411d43"
+    },
+    {
+      "nr": 8,
+      "gruppe": "A",
+      "szenario": "beschwerde-monteur",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:41:34.588Z",
+      "gmailId": "1a15d9f7445036e2"
+    },
+    {
+      "nr": 9,
+      "gruppe": "A",
+      "szenario": "bewerbung",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:42:21.151Z",
+      "gmailId": "1a15da02b2989e2d"
+    },
+    {
+      "nr": 10,
+      "gruppe": "A",
+      "szenario": "englische-anfrage",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:43:07.715Z",
+      "gmailId": "1a15da0e13133c45"
+    },
+    {
+      "nr": 11,
+      "gruppe": "A",
+      "szenario": "rechnung-lieferant",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:43:55.300Z",
+      "gmailId": "1a15da19a5d773d4"
+    },
+    {
+      "nr": 12,
+      "gruppe": "A",
+      "szenario": "werbung",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:44:41.994Z",
+      "gmailId": "1a15da253812cd42"
+    },
+    {
+      "nr": 13,
+      "gruppe": "A",
+      "szenario": "phishing",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:45:28.436Z",
+      "gmailId": "1a15da3073eff1b2"
+    },
+    {
+      "nr": 14,
+      "gruppe": "A",
+      "szenario": "prompt-injection",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:46:14.940Z",
+      "gmailId": "1a15da3bd0a33be2"
+    },
+    {
+      "nr": 15,
+      "gruppe": "A",
+      "szenario": "nur-hallo",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:47:01.670Z",
+      "gmailId": "1a15da472de0e90f"
+    },
+    {
+      "nr": 16,
+      "gruppe": "A",
+      "szenario": "angebot-waermepumpe",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:47:48.202Z",
+      "gmailId": "1a15da528f5b5585"
+    },
+    {
+      "nr": 17,
+      "gruppe": "A",
+      "szenario": "angebot-bad",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:48:34.947Z",
+      "gmailId": "1a15da5e113e7c38"
+    },
+    {
+      "nr": 18,
+      "gruppe": "A",
+      "szenario": "angebot-bad-variante",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T08:49:21.465Z",
+      "gmailId": "1a15da697dae67d6"
+    },
+    {
+      "nr": 19,
+      "gruppe": "A",
+      "szenario": "angebot-heizung-knapp",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T09:02:37.631Z",
+      "gmailId": "1a15db2bb2f6585f"
+    },
+    {
+      "nr": 20,
+      "gruppe": "A",
+      "szenario": "unbekannt-leitung-umzug",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T09:03:24.648Z",
+      "gmailId": "1a15db37241afbf5"
+    },
+    {
+      "nr": 21,
+      "gruppe": "A",
+      "szenario": "unbekannt-leitung-umzug-variante",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T09:59:40.357Z",
+      "gmailId": "1a15de6f5242ed79"
+    },
+    {
+      "nr": 22,
+      "gruppe": "A",
+      "szenario": "unbekannt-wartungsvertrag",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:02:58.758Z",
+      "gmailId": "1a15de9fdf48ddf6"
+    },
+    {
+      "nr": 23,
+      "gruppe": "A",
+      "szenario": "wartungsvertrag-variante",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:03:45.766Z",
+      "gmailId": "1a15deab542a3edd"
+    },
+    {
+      "nr": 24,
+      "gruppe": "A",
+      "szenario": "elektroarbeiten",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:04:32.738Z",
+      "gmailId": "1a15deb6ca430962"
+    },
+    {
+      "nr": 25,
+      "gruppe": "A",
+      "szenario": "elektroarbeiten-variante",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:05:19.841Z",
+      "gmailId": "1a15dec237b119ac"
+    },
+    {
+      "nr": 26,
+      "gruppe": "A",
+      "szenario": "oeffnungszeiten",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:06:06.944Z",
+      "gmailId": "1a15decdb871fb84"
+    },
+    {
+      "nr": 27,
+      "gruppe": "A",
+      "szenario": "einsatzgebiet",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:06:54.416Z",
+      "gmailId": "1a15ded95904af97"
+    },
+    {
+      "nr": 28,
+      "gruppe": "A",
+      "szenario": "preisfrage-heizkoerper",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:55:33.998Z",
+      "gmailId": "1a15e1a23defc418"
+    },
+    {
+      "nr": 29,
+      "gruppe": "A",
+      "szenario": "statusfrage",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:56:20.939Z",
+      "gmailId": "1a15e1ad9fd3a8b0"
+    },
+    {
+      "nr": 30,
+      "gruppe": "A",
+      "szenario": "notfall-rohrbruch",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:57:08.019Z",
+      "gmailId": "1a15e1b90fdbebea"
+    },
+    {
+      "nr": 31,
+      "gruppe": "A",
+      "szenario": "notfall-gasgeruch",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:57:55.030Z",
+      "gmailId": "1a15e1c484255a74"
+    },
+    {
+      "nr": 32,
+      "gruppe": "A",
+      "szenario": "heizung-ausfall-frost",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:58:42.040Z",
+      "gmailId": "1a15e1d01c716708"
+    },
+    {
+      "nr": 33,
+      "gruppe": "A",
+      "szenario": "beschwerde-monteur",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T10:59:29.043Z",
+      "gmailId": "1a15e1db6e109bf8"
+    },
+    {
+      "nr": 34,
+      "gruppe": "A",
+      "szenario": "bewerbung",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:00:16.083Z",
+      "gmailId": "1a15e1e6f4a330ed"
+    },
+    {
+      "nr": 35,
+      "gruppe": "A",
+      "szenario": "englische-anfrage",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:01:02.996Z",
+      "gmailId": "1a15e1f26be36d3f"
+    },
+    {
+      "nr": 36,
+      "gruppe": "A",
+      "szenario": "rechnung-lieferant",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:01:50.900Z",
+      "gmailId": "1a15e1fe36131527"
+    },
+    {
+      "nr": 37,
+      "gruppe": "A",
+      "szenario": "werbung",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:02:37.956Z",
+      "gmailId": "1a15e20988cc992d"
+    },
+    {
+      "nr": 38,
+      "gruppe": "A",
+      "szenario": "phishing",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:03:24.895Z",
+      "gmailId": "1a15e2151af1f2e0"
+    },
+    {
+      "nr": 39,
+      "gruppe": "A",
+      "szenario": "prompt-injection",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:39:33.188Z",
+      "gmailId": "1a15e4269fafe01a"
+    },
+    {
+      "nr": 40,
+      "gruppe": "A",
+      "szenario": "nur-hallo",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:40:21.576Z",
+      "gmailId": "1a15e43264b4e33e"
+    },
+    {
+      "nr": 41,
+      "gruppe": "A",
+      "szenario": "angebot-waermepumpe",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:41:09.025Z",
+      "gmailId": "1a15e43e14afcef1"
+    },
+    {
+      "nr": 42,
+      "gruppe": "A",
+      "szenario": "angebot-bad",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:41:55.987Z",
+      "gmailId": "1a15e44976da5ef6"
+    },
+    {
+      "nr": 43,
+      "gruppe": "A",
+      "szenario": "angebot-bad-variante",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:52:48.140Z",
+      "gmailId": "1a15e4e8b734a43b"
+    },
+    {
+      "nr": 44,
+      "gruppe": "A",
+      "szenario": "angebot-heizung-knapp",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:53:35.164Z",
+      "gmailId": "1a15e4f439cc0369"
+    },
+    {
+      "nr": 45,
+      "gruppe": "A",
+      "szenario": "unbekannt-leitung-umzug",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:54:22.311Z",
+      "gmailId": "1a15e4ffae5d11ac"
+    },
+    {
+      "nr": 46,
+      "gruppe": "A",
+      "szenario": "unbekannt-leitung-umzug-variante",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:55:09.419Z",
+      "gmailId": "1a15e50b230b824d"
+    },
+    {
+      "nr": 47,
+      "gruppe": "A",
+      "szenario": "unbekannt-wartungsvertrag",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T11:55:56.725Z",
+      "gmailId": "1a15e516b2906091"
+    },
+    {
+      "nr": 48,
+      "gruppe": "A",
+      "szenario": "wartungsvertrag-variante",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:00:37.594Z",
+      "gmailId": "1a15e55b2c5b7430"
+    },
+    {
+      "nr": 49,
+      "gruppe": "A",
+      "szenario": "elektroarbeiten",
+      "wiederholung": 2,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:01:25.003Z",
+      "gmailId": "1a15e566d2a6f3e4"
+    },
+    {
+      "nr": 50,
+      "gruppe": "A",
+      "szenario": "oeffnungszeiten",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:02:12.299Z",
+      "gmailId": "1a15e5727d6a010e"
+    },
+    {
+      "nr": 51,
+      "gruppe": "A",
+      "szenario": "preisfrage-heizkoerper",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:02:59.439Z",
+      "gmailId": "1a15e57df92eaa72"
+    },
+    {
+      "nr": 52,
+      "gruppe": "A",
+      "szenario": "beschwerde-monteur",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:03:46.521Z",
+      "gmailId": "1a15e5897553c213"
+    },
+    {
+      "nr": 53,
+      "gruppe": "A",
+      "szenario": "angebot-waermepumpe",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:07:04.995Z",
+      "gmailId": "1a15e5b9d99b60d2"
+    },
+    {
+      "nr": 54,
+      "gruppe": "A",
+      "szenario": "angebot-bad",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:07:52.200Z",
+      "gmailId": "1a15e5c557c3c706"
+    },
+    {
+      "nr": 55,
+      "gruppe": "A",
+      "szenario": "angebot-heizung-knapp",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:08:39.307Z",
+      "gmailId": "1a15e5d0d4002dfb"
+    },
+    {
+      "nr": 56,
+      "gruppe": "A",
+      "szenario": "unbekannt-leitung-umzug",
+      "wiederholung": 3,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:11:57.898Z",
+      "gmailId": "1a15e601466db719"
+    },
+    {
+      "nr": 57,
+      "gruppe": "B",
+      "szenario": "mehrere-anliegen",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:16:38.278Z",
+      "gmailId": "1a15e645d28d1020"
+    },
+    {
+      "nr": 58,
+      "gruppe": "B",
+      "szenario": "fuenf-anliegen",
+      "wiederholung": 1,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:17:25.079Z",
+      "gmailId": "1a15e65136a440be"
+    },
+    {
+      "nr": 59,
+      "gruppe": "B",
+      "szenario": "fuenf-anliegen-variante",
+      "wiederholung": 1,
+      "status": "offen"
+    },
+    {
+      "nr": 60,
+      "gruppe": "B",
+      "szenario": "fuenf-anliegen",
+      "wiederholung": 2,
+      "status": "offen"
+    }
+  ]
+}
