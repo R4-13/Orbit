@@ -26,6 +26,7 @@ const SENDER = 'karl@kunde.example';
  * Kalender sind Aufzeichnungs-Doubles – nichts verlässt den Testprozess.
  */
 describe('Autonomie: Fähigkeiten (e2e)', () => {
+  jest.setTimeout(60_000); // der Standardwert von 20 s reicht unter Last nicht (Gesamtlauf neben anderen Läufen); ein Zeitüberschreiten verbraucht außerdem Modell-Seeds der Folgetests
   let app: INestApplication;
   let prisma: PrismaService;
   let intake: IntakeService;
