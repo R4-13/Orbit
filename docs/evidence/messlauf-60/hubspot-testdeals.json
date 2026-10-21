@@ -1,0 +1,158 @@
+{
+  "exportedAt": "2026-10-21T14:02:48.215Z",
+  "tenant": "musterwerk",
+  "evidence": [
+    {
+      "dealId": "529563585778",
+      "deal": {
+        "id": "529563585778",
+        "properties": {
+          "amount": null,
+          "createdate": "2026-10-21T12:00:30.877Z",
+          "dealname": "Anfrage (EMAIL)",
+          "dealstage": "appointmentscheduled",
+          "hs_lastmodifieddate": "2026-10-21T12:02:25.117Z",
+          "hs_object_id": "529563585778",
+          "hubspot_owner_id": null,
+          "pipeline": "default"
+        },
+        "createdAt": "2026-10-21T12:00:30.877Z",
+        "updatedAt": "2026-10-21T12:02:25.117Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-3/529563585778"
+      },
+      "associations": {
+        "contacts": [
+          {
+            "toObjectId": 894325044429,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 3,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "companies": [
+          {
+            "toObjectId": 455544826065,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 5,
+                "label": "Primary",
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              },
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 341,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "notes": [],
+        "tasks": [],
+        "emails": [],
+        "meetings": [],
+        "calls": []
+      },
+      "contact": {
+        "id": "894325044429",
+        "properties": {
+          "createdate": "2026-10-17T16:21:14.362Z",
+          "email": "tomorbit777@gmail.com",
+          "hs_object_id": "894325044429",
+          "lastmodifieddate": "2026-10-21T13:04:40.800Z"
+        },
+        "createdAt": "2026-10-17T16:21:14.362Z",
+        "updatedAt": "2026-10-21T13:04:40.800Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-1/894325044429"
+      },
+      "contactDeals": 5,
+      "checks": {
+        "lesbar": true,
+        "nach --since angelegt": true,
+        "automatisch vergebener Name": true,
+        "nur mit dem Testkontakt (oder dem gleichzeitig angelegten E-Mail-losen Kontakt) verknüpft": true,
+        "höchstens ein Unternehmen": true,
+        "keine Notizen/Aufgaben/E-Mails/Meetings/Anrufe": true,
+        "von keiner Person bearbeitet (Änderung ≤ 10 Min. nach Anlage)": true,
+        "ohne Besitzer, Standardphase": true
+      }
+    },
+    {
+      "dealId": "529605469416",
+      "deal": {
+        "id": "529605469416",
+        "properties": {
+          "amount": null,
+          "createdate": "2026-10-21T13:04:37.843Z",
+          "dealname": "Anfrage Angebotsanfrage für Heizungsregler – Tom Orbit",
+          "dealstage": "appointmentscheduled",
+          "hs_lastmodifieddate": "2026-10-21T13:06:00.363Z",
+          "hs_object_id": "529605469416",
+          "hubspot_owner_id": null,
+          "pipeline": "default"
+        },
+        "createdAt": "2026-10-21T13:04:37.843Z",
+        "updatedAt": "2026-10-21T13:06:00.363Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-3/529605469416"
+      },
+      "associations": {
+        "contacts": [
+          {
+            "toObjectId": 894325044429,
+            "associationTypes": [
+              {
+                "category": "HUBSPOT_DEFINED",
+                "typeId": 3,
+                "label": null,
+                "fromObjectTypeId": null,
+                "toObjectTypeId": null
+              }
+            ]
+          }
+        ],
+        "companies": [],
+        "notes": [],
+        "tasks": [],
+        "emails": [],
+        "meetings": [],
+        "calls": []
+      },
+      "contact": {
+        "id": "894325044429",
+        "properties": {
+          "createdate": "2026-10-17T16:21:14.362Z",
+          "email": "tomorbit777@gmail.com",
+          "hs_object_id": "894325044429",
+          "lastmodifieddate": "2026-10-21T13:04:40.800Z"
+        },
+        "createdAt": "2026-10-17T16:21:14.362Z",
+        "updatedAt": "2026-10-21T13:04:40.800Z",
+        "archived": false,
+        "url": "https://app-eu1.hubspot.com/contacts/149566194/record/0-1/894325044429"
+      },
+      "contactDeals": 5,
+      "checks": {
+        "lesbar": true,
+        "nach --since angelegt": true,
+        "automatisch vergebener Name": true,
+        "nur mit dem Testkontakt (oder dem gleichzeitig angelegten E-Mail-losen Kontakt) verknüpft": true,
+        "höchstens ein Unternehmen": true,
+        "keine Notizen/Aufgaben/E-Mails/Meetings/Anrufe": true,
+        "von keiner Person bearbeitet (Änderung ≤ 10 Min. nach Anlage)": true,
+        "ohne Besitzer, Standardphase": true
+      }
+    }
+  ]
+}

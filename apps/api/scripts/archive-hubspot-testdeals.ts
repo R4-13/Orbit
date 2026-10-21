@@ -6,7 +6,7 @@
  *
  * ERST ANZEIGEN, DANN ÄNDERN. Ein Deal wird nur archiviert, wenn ALLE Prüfungen bestehen:
  *   1. er ist lesbar und wurde nach `--since` angelegt (durch den Messlauf neu),
- *   2. sein Name ist der automatisch vergebene Name („Anfrage (EMAIL)“),
+ *   2. sein Name ist ein automatisch vergebener Name („Anfrage (EMAIL)“ oder „Anfrage <Titel des Leads> – Tom Orbit“, so benennt ORBIT Deals aus Lead-Titel und Kontakt),
  *   3. er ist nur mit EINEM Kontakt verknüpft, der der benannte Testkontakt ist – oder (der ORBIT-Vertriebsweg legt den Kontakt ohne E-Mail an) ein Kontakt ohne E-Mail, der zusammen mit dem Deal (±2 Minuten) nach `--since`
  *      angelegt wurde und nur mit diesem einen Deal verknüpft ist – und höchstens einem Unternehmen, ohne Notizen, Aufgaben, E-Mails, Meetings oder Anrufe,
  *   4. er ist von keiner Person bearbeitet (Änderung höchstens 10 Minuten nach der Anlage – automatische Ergänzungen von HubSpot –, keine Besitzerzuordnung, Standardphase der Standard-Pipeline),
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
         }
         checks.push(
           ['nach --since angelegt', created !== undefined && created.getTime() >= since.getTime()],
-          ['automatisch vergebener Name', /^Anfrage \(EMAIL\)$/.test(props.dealname ?? '')],
+          ['automatisch vergebener Name', /^Anfrage( \(EMAIL\)| .+ – Tom Orbit)$/.test(props.dealname ?? '')],
           ['nur mit dem Testkontakt (oder dem gleichzeitig angelegten E-Mail-losen Kontakt) verknüpft', contactIsTest],
           ['höchstens ein Unternehmen', (associations.companies?.length ?? 0) <= 1],
           ['keine Notizen/Aufgaben/E-Mails/Meetings/Anrufe', ['notes', 'tasks', 'emails', 'meetings', 'calls'].every((k) => (associations[k]?.length ?? 0) === 0)],

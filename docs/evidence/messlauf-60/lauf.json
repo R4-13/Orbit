@@ -529,14 +529,38 @@
       "gruppe": "B",
       "szenario": "fuenf-anliegen-variante",
       "wiederholung": 1,
-      "status": "offen"
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:45:57.344Z",
+      "gmailId": "1a15e7f345b8540d"
     },
     {
       "nr": 60,
       "gruppe": "B",
       "szenario": "fuenf-anliegen",
       "wiederholung": 2,
-      "status": "offen"
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:46:44.112Z",
+      "gmailId": "1a15e7fea150e09d"
+    },
+    {
+      "nr": 61,
+      "gruppe": "B",
+      "szenario": "mehrere-anliegen",
+      "wiederholung": 2,
+      "nachpruefung": true,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:47:30.929Z",
+      "gmailId": "1a15e80a1ba98c7c"
+    },
+    {
+      "nr": 62,
+      "gruppe": "B",
+      "szenario": "fuenf-anliegen",
+      "wiederholung": 3,
+      "nachpruefung": true,
+      "status": "gesendet",
+      "gesendetUm": "2026-10-21T12:48:17.787Z",
+      "gmailId": "1a15e8159f2569a0"
     }
   ]
 }

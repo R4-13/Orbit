@@ -98,6 +98,7 @@ select coalesce(json_agg(r order by r.received_at), '[]'::json) from (
   (select json_agg(json_build_object('case', i.case_id, 'cap', i.capability_key, 'purpose', i.purpose, 'status', i.status, 'approval', (select a.status from approvals a where a.id = i.approval_id)))
      from action_intents i where i.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) intents,
   (select count(*) from tasks t where t.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) tasks,
+  (select count(*) from leads ld where ld.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) leads,
   (select count(*) from invoices v where v.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) invoices,
   (select json_agg(w.case_id) from wait_subscriptions w where w.status = 'WAITING' and w.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) waits_cases,
   (select count(*) from wait_subscriptions w where w.status = 'WAITING' and w.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) active_waits,
@@ -145,11 +146,15 @@ function classifyPart(row, cases, caseId) {
   } else if (waiting && (waitsHere > 0 || plans.some((p) => p.status === 'AWAITING_APPROVAL') || states.includes('WAITING_FOR_APPROVAL'))) {
     cls = 'W';
     why = `wartet: ${[...new Set(states.filter((s) => s.startsWith('WAITING')))].join('/') || states.join('/')}${waitsHere > 0 ? ' (Antwort der Kundschaft)' : ''}`;
-  } else if (states.every((s) => s === 'IN_PROGRESS') && plans.length === 0 && Number(row.tasks) > 0 && (row.events ?? []).includes('blueprint.fit_assessed')) {
+  } else if (states.every((s) => s === 'IN_PROGRESS') && plans.length === 0 && Number(row.leads) > 0 && (row.events ?? []).includes('blueprint.fit_assessed')) {
     // Fester Vertriebsweg (Altweg): Lead und Aufgabe für eine Person sind angelegt; der Vorgang bleibt ohne Plan „in Bearbeitung“ (kein Abschlussnachweis vorgesehen).
     cls = 'U';
     why = 'fester Vertriebsweg: Lead und Aufgabe für eine Person angelegt; Vorgang bleibt ohne Plan in Bearbeitung';
     notes.push('Altweg ohne Abschluss – von Hand bewerten');
+  } else if (waiting) {
+    // Status „wartet“, aber weder eine offene Wartebedingung noch eine offene Freigabe: der Vorgang hängt (kein berechtigtes Warten).
+    cls = 'T';
+    why = `wartet ohne offene Wartebedingung oder Freigabe (${states.join('/')}): ${(technicalBad[0] ?? bad[0]) ? `Schritt ${(technicalBad[0] ?? bad[0]).key} ${(technicalBad[0] ?? bad[0]).state} (${(technicalBad[0] ?? bad[0]).code})` : reasons.find(Boolean) ?? '–'}`;
   } else if (states.some((s) => ['RECEIVED', 'READY', 'IN_PROGRESS'].includes(s))) {
     cls = 'N';
     why = `Bearbeitung nicht abgeschlossen (${states.join('/')})`;
@@ -255,12 +260,39 @@ function commandEvaluate(values) {
   say(md.join('\n'));
 }
 
+/** Zählt aus einer Auswertung die fünf Klassen: gesamt (die 60 Fälle; Nachprüfungen nach einer Behebung getrennt) und je Szenario. Schreibt eine Markdown-Tabelle. */
+function commandReport(values) {
+  const file = join(OUT, `auswertung-${values.ausgabe}.json`);
+  const data = JSON.parse(readFileSync(file, 'utf8'));
+  const label = { E: 'Ziel erreicht', W: 'berechtigt wartend', U: 'begründet übergeben', T: 'technisch fehlgeschlagen', N: 'nicht geprüft' };
+  const lauf = load();
+  const repeat = new Set(lauf.eintraege.filter((e) => e.nachpruefung).map((e) => e.nr));
+  const main = data.results.filter((r) => !repeat.has(r.nr));
+  const tally = (rows) => Object.fromEntries(Object.keys(label).map((k) => [k, rows.filter((r) => r.klasse === k).length]));
+  const total = tally(main);
+  const bySc = new Map();
+  for (const r of main) bySc.set(r.szenario, [...(bySc.get(r.szenario) ?? []), r]);
+  const lines = [`**Gesamt (${main.length} Fälle):** ${Object.entries(total).map(([k, v]) => `${label[k]} ${v}`).join(' · ')}`];
+  const re = data.results.filter((r) => repeat.has(r.nr));
+  if (re.length > 0) lines.push(`**Nachprüfung nach Behebung (${re.length}, nicht Teil der 60):** ${Object.entries(tally(re)).map(([k, v]) => `${label[k]} ${v}`).join(' · ')}`);
+  const children = main.flatMap((r) => r.teilvorgaenge ?? []);
+  if (children.length > 0) lines.push(`**Teilvorgänge der aufgeteilten Nachrichten (${children.length}):** ${Object.entries(tally(children.map((c) => ({ klasse: c.klasse })))).map(([k, v]) => `${label[k]} ${v}`).join(' · ')}`);
+  lines.push('', '| Szenario | n | E | W | U | T | N | Abweichung vom Erwarteten |', '|---|---|---|---|---|---|---|---|');
+  for (const [name, rows] of bySc) {
+    const t = tally(rows);
+    lines.push(`| ${name} | ${rows.length} | ${t.E} | ${t.W} | ${t.U} | ${t.T} | ${t.N} | ${rows.filter((r) => r.abweichungVomErwarteten).map((r) => '#' + r.nr).join(', ') || '–'} |`);
+  }
+  writeFileSync(join(OUT, `bericht-${values.ausgabe}.md`), lines.join(String.fromCharCode(10)) + String.fromCharCode(10), 'utf8');
+  say(lines.join(String.fromCharCode(10)));
+}
+
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { values } = parseArgs({ args: rest, options: { gruppe: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, senden: { type: 'boolean' }, ausgabe: { type: 'string' } }, strict: true });
   if (command === 'plan') return commandPlan();
   if (command === 'senden') return commandSend(values);
   if (command === 'auswerten') return commandEvaluate(values);
+  if (command === 'bericht') return commandReport(values);
   say('Aufruf: plan | senden --gruppe A|B --anzahl N [--abstand 45] [--senden] | auswerten [--ausgabe <Name>]');
 }
 

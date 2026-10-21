@@ -1,0 +1,1915 @@
+# Rohdaten Zustand B (nach begrenzten Testfreigaben und 5 Antworten Toms) — 2026-10-21T14:02:59Z
+######## Vorgang 02521f16-d0f0-41f3-a89e-9f12bca940b5
+== Vorgang
+COMPLETED | Allgemeine Anfrage: Frage zu Ihren Leistungen | {} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Frage zu Ihren Leistungen | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht.  Ja, wir führen komplette Badsanierungen im Raum Köln aus, von der Planung bis zur Abnahme. Freitags sind wir bis 16:00 Uhr erreichbar.  Bei weiteren Fragen melden Sie sich gern.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+APPROVED | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed node.state_changed case.status_changed action.confirmed node.state_changed node.state_changed completion.evaluated node.state_changed case.completed
+######## Vorgang c2495d17-3eea-4091-a9a5-7afce9fcecc2
+== Vorgang
+COMPLETED | Allgemeine Anfrage: Kommen Sie auch nach Bergisch Gladbach? | {} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Kommen Sie auch nach Bergisch Gladbach? | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht.  Ja, wir sind auch in Bergisch Gladbach tätig. Wir warten Gasheizungen.  Bei weiteren Fragen melden Sie sich gern.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+APPROVED | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+FITS | true | ["email.send/INFORMATION"]
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed node.state_changed case.status_changed action.confirmed node.state_changed node.state_changed completion.evaluated node.state_changed case.completed
+######## Vorgang ead1dbd6-0638-431b-99af-ad9833f4474b
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Preis Heizkörper | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Preis Heizkörper | Guten Tag,  vielen Dank für Ihre Anfrage „Preis Heizkörper“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grü
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirm
+######## Vorgang aacc82de-653f-43e0-a62b-d8d7dd342fd3
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Wie ist der Stand? | {"Manuelle Prüfung und Rückmeldung abwarten: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,task.created} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {staff.informed,task.created} | requirements | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,appointment.booked,staff.informed} | context | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,appointment.booked,staff.informed} | knowledge | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,appointment.booked,staff.informed} | manual | WAITING | 
+2 | ACTIVE | {inquiry.answered,appointment.booked,staff.informed} | requirements | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,appointment.booked,staff.informed} | staff | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Manuelle Prüfung und Rückmeldung abwarten | 
+Hinweis | Tom Orbit fragt nach dem Stand seiner vor wenigen Tagen gemeldeten Heizkörper-Anfrage und wann jemand vorbeikommen kann. Bitte prüfen Sie den früheren Vorgang und teilen Sie mögliche Terminoptionen mit; es liegen hier keine konkreten Status- oder Termindaten vor. | 
+Hinweis | Manuelle Prüfung und Rückmeldung abwarten: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.referenced case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state
+######## Vorgang 13fb499b-0aa2-47ce-a465-6fb0090864ff
+== Vorgang
+MANUAL_REVIEW | Notfall: Wasserrohrbruch im Keller!!! | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Wasserrohrbruch im Keller!!! | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Wasserrohrbruch im Keller!!!“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Wasserrohrbruch im Keller!!!“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+FITS | false | ["staff.notify", "task.create"]
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang 08cb48c4-a311-4c57-a508-b73039670a61
+== Vorgang
+MANUAL_REVIEW | Notfall: Es riecht nach Gas im Keller | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Es riecht nach Gas im Keller | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Es riecht nach Gas im Keller“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Es riecht nach Gas im Keller“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+FITS | false | ["staff.notify"]
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang 3276649c-d44c-497c-b6e5-82e6167f77a9
+== Vorgang
+MANUAL_REVIEW | Notfall: Heizung ausgefallen, minus 6 Grad | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Heizung ausgefallen, minus 6 Grad | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Heizung ausgefallen, minus 6 Grad“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Heizung ausgefallen, minus 6 Grad“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+FITS | false | ["staff.notify", "task.create"]
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang 8d0f111b-4e25-41d9-92aa-f5085712f0cb
+== Vorgang
+MANUAL_REVIEW | Reklamation oder Service: Heizung nach Wartung wieder kalt | {"Fachprüfung, Entscheidung und Rückruf durch zuständige Person: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | reqs | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | review | WAITING | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | task | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Fachprüfung, Entscheidung und Rückruf durch zuständige Person | 
+Aufgabe | Reklamation Heizung nach Wartung und Anfahrtspauschale prüfen | 
+Hinweis | Tom Orbit meldet, dass die Heizung im Wohnzimmer nach der Wartung letzte Woche nicht mehr richtig warm wird. Er beanstandet eine berechnete Anfahrtspauschale von 45 Euro, die nach seiner Aussage vorher nicht mitgeteilt wurde, und bittet um Rückruf. Ursache, Abhilfe und Berechtigung der Gebühr sind zu prüfen; keine Zusagen gemacht. | 
+Hinweis | Fachprüfung, Entscheidung und Rückruf durch zuständige Person: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.referenced case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed
+######## Vorgang 83897ac1-a795-4076-a153-d2fefce32ade
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Do you do bathroom renovations? | {"Antwort senden: Freigabe erforderlich."} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | PLANNED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | AWAITING_APPROVAL | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+PENDING | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed
+######## Vorgang 020fec14-c4ed-452f-a642-d4b168e0ebaa
+== Vorgang
+MANUAL_REVIEW | Rechnungseingang: Rechnung Nr. 34489 | {"Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed case.status_changed shadow.plan_proposed
+######## Vorgang 879b2a43-6339-42a3-a069-1f03c3eae230
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Anfrage Wärmepumpe Einfamilienhaus | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Anfrage Wärmepumpe Einfamilienhaus | Guten Tag,  vielen Dank für Ihre Anfrage „Anfrage Wärmepumpe Einfamilienhaus“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mi
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolut
+######## Vorgang 1c25cd32-14b4-412f-84d0-e1d2baed8427
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Badsanierung – bitte um Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Badsanierung – bitte um Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit f
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_chan
+######## Vorgang 2a9946c1-c2a1-46d4-851b-7d35ec28b93f
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Badezimmer erneuern – was kostet das? | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Badezimmer erneuern – was kostet das? | Guten Tag,  vielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten. 
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolut
+######## Vorgang ad19794a-b3cf-4a94-a8d2-9cef571f58c6
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Neue Heizung - Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Neue Heizung - Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Heizung - Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlich
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed a
+######## Vorgang 8c36188b-e0f3-451d-829c-279f62304f88
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse | {"Auf Antwort der Kundschaft warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review,request.handed_over} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review,request.handed_over} | reassess | SUCCEEDED | 
+1 | SUPERSEDED | {human.review,request.handed_over} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | clarify_draft | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | manual | WAITING | 
+2 | ACTIVE | {staff.informed,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | send_clarification | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | wait_reply | WAITING | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Praxisumzug – Wasser- und Gasanschlüsse | Guten Tag,  vielen Dank für Ihre Anfrage „Praxisumzug – Wasser- und Gasanschlüsse“. Wir haben sie so verstanden: Die Zahnarztpraxis bittet um Anschlüsse für drei Behandlungsplätze an Wasser und Druckluft sowie die Verlegung eines Labor-Gasanschlusses und eine Prüfung vor der Eröffnung am 3. Februar; Druckluftarbeiten sind nicht ausdrücklich im Leistungsangebot aufgeführt.  Damit wir Ihnen ein passendes Angebot erstellen können, benötigen wir noch folgende Angaben:  1. An welcher Adresse beziehun
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Fachliche Prüfung und Entscheidung | 
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+Hinweis | Zahnarztpraxis fragt nach Wasser-/Druckluftanschlüssen für drei Behandlungsplätze und Verlegung eines Labor-Gasanschlusses mit Abnahme vor dem 3. Februar. Die neue Adresse und der konkrete Druckluftumfang fehlen; Machbarkeit und Leistungsumfang sind nicht belegt und erfordern Prüfung. | 
+Hinweis | Auf Antwort der Kundschaft warten: Wartet auf eine Antwort. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed plan.su
+######## Vorgang 0df56af7-15f7-4582-916e-451423a80b09
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas | {"Fachliche Entscheidung bleibt bei einer Person: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | weiter_planen | SUPERSEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | knowledge | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | task | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Zahnarztpraxis: Anschlüsse, Gasleitung und Abnahme fachlich prüfen | 
+Aufgabe | Fachliche Entscheidung bleibt bei einer Person | 
+Hinweis | Fachliche Entscheidung bleibt bei einer Person: Bitte manuell bearbeiten. | 
+Hinweis | Zahnarztpraxis zieht Ende Januar um; drei Behandlungsplätze benötigen Wasser- und Druckluftanschlüsse, im Labor wird eine Gasleitung gewünscht. Abnahme ist vor der Eröffnung am 3. Februar erforderlich. Im Betriebsprofil sind diese speziellen Installationen und die erforderliche Abnahme nicht als Leistung bestätigt; bitte Übernahme, Machbarkeit und Vorgehen fachlich prüfen. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_chan
+######## Vorgang 32ef05cf-8367-481f-9f0c-b08e2cff6fac
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | wait2 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Wartungsvertrag für 12 Wohneinheiten | Guten Tag,  vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Wird die Heizungsanlage mit Gas oder Öl betrieben? 2. In welcher Stadt oder Gemeinde befindet sich das Haus?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 
+{tomorbit777@gmail.com} | Re: Wartungsvertrag für 12 Wohneinheiten | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_chan
+######## Vorgang ec7d62d4-9d2f-45b5-aa69-e0c24887cff5
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Servicepartner für unser Mehrfamilienhaus gesucht | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | wait2 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Servicepartner für unser Mehrfamilienhaus gesucht | Guten Tag,  vielen Dank für Ihre Anfrage „Servicepartner für unser Mehrfamilienhaus gesucht“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Handelt es sich bei der Heizungsanlage um eine Gas- oder Ölheizung? 2. Welche Leistungen soll die dauerhafte Betreuung umfassen: regelmäßige Wartung, Störungsreparaturen oder beides?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten 
+{tomorbit777@gmail.com} | Re: Servicepartner für unser Mehrfamilienhaus gesucht | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirm
+######## Vorgang 227e257d-acb4-4103-bdd9-45bf59159b6e
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Steckdosen im Bad | {"Auskunft zustellen: Freigabe erforderlich."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,task.created,request.handed_over} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,request.handed_over} | requirements | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,request.handed_over} | weiter_planen | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | answer | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | done | PLANNED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | draft | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | review | WAITING | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | send | AWAITING_APPROVAL | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | staff | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | unanswerable | SKIPPED | Kein Pfad führt zu diesem Schritt.
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+PENDING | Auskunft zustellen (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Aufgabe | Manuelle Entscheidung zur Anfrage | 
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+Hinweis | Tom fragt im Zuge einer Badsanierung nach drei neuen Steckdosen und einer neuen Lichtleitung. Elektroarbeiten sind laut Betriebsprofil nicht im Angebot; bitte entscheiden, wie die Anfrage weiterbehandelt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed plan.superseded plan.activated case.status_changed plan.scope_approved node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed case.status_changed node.state_changed case.status_changed live.upgrade n
+######## Vorgang 2fd56882-585c-4259-99ce-230695aa9f5c
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Elektrik im Badezimmer | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | interpret | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | reqs | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | done | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | know | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | needs_review | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | send | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang bd87a7e2-3dd2-48d0-9def-1c98d2df865f
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Frage zu Ihren Leistungen | {"Antwort senden: Freigabe erforderlich."} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | PLANNED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | AWAITING_APPROVAL | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+PENDING | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+FITS | true | ["email.send/INFORMATION", "staff.notify"]
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed
+######## Vorgang b0c51290-ae34-4afc-b32c-e4d7cbec2a22
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Kommen Sie auch nach Bergisch Gladbach? | {"Antwort senden: Freigabe erforderlich."} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | PLANNED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | AWAITING_APPROVAL | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+PENDING | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed
+######## Vorgang 6307248c-a527-430f-b258-4d8fc87e362f
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Preis Heizkörper | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Preis Heizkörper | Guten Tag,  vielen Dank für Ihre Anfrage „Preis Heizkörper“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grü
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed wait.started node
+######## Vorgang 4428f278-7e98-4e2c-98ee-1f1d7f629aab
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Wie ist der Stand? | {"Person prüft den Vorgang und entscheidet über die Rückmeldung: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {inquiry.answered,appointment.booked,staff.informed} | context | SUCCEEDED | 
+1 | SUPERSEDED | {inquiry.answered,appointment.booked,staff.informed} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {inquiry.answered,appointment.booked,staff.informed} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | interpret | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | manual | WAITING | 
+2 | ACTIVE | {staff.informed,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Person prüft den Vorgang und entscheidet über die Rückmeldung | 
+Hinweis | Person prüft den Vorgang und entscheidet über die Rückmeldung: Bitte manuell bearbeiten. | 
+Hinweis | Tom Orbit fragt nach dem Bearbeitungsstand seiner früheren Anfrage zu Heizkörpern und wann jemand vorbeikommen kann. Die Nachricht enthält keinen konkreten Vorgangsstatus oder Termin; bitte prüfen Sie den Verlauf und die Verfügbarkeit, ohne eine unbelegte Zusage zu machen. | 
+== Schatten-Bewertung
+== Ereignisse
+case.referenced case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state
+######## Vorgang 525f2f33-0d13-428c-9d7b-2cc703fbce89
+== Vorgang
+MANUAL_REVIEW | Notfall: Wasserrohrbruch im Keller!!! | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Wasserrohrbruch im Keller!!! | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Wasserrohrbruch im Keller!!!“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Wasserrohrbruch im Keller!!!“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang 42d7503d-3f30-423b-b25b-0525aac660dc
+== Vorgang
+MANUAL_REVIEW | Notfall: Es riecht nach Gas im Keller | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Es riecht nach Gas im Keller | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Es riecht nach Gas im Keller“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Es riecht nach Gas im Keller“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+FITS | true | ["facts.extract_from_message", "staff.notify", "email.send/ACKNOWLEDGEMENT"]
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang 44f5b9e4-15ea-4f4e-a51f-0a35c4330cd8
+== Vorgang
+MANUAL_REVIEW | Notfall: Heizung ausgefallen, minus 6 Grad | {"Eine Person übernimmt den Notfall: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | ACTIVE | {emergency.handled} | ack_draft | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | ack_send | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | human_takes_over | WAITING | 
+1 | ACTIVE | {emergency.handled} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {emergency.handled} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Heizung ausgefallen, minus 6 Grad | Guten Tag Tom Orbit,  vielen Dank für Ihre Nachricht zu „Heizung ausgefallen, minus 6 Grad“. Sie ist bei uns eingegangen. Wir haben sie als dringend eingestuft und leiten sie sofort an die zuständige Stelle weiter. Bei akuter Gefahr für Personen wenden Sie sich bitte umgehend an den Notruf 112. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person übernimmt den Notfall | 
+Hinweis | Notfall: „Heizung ausgefallen, minus 6 Grad“ – bitte sofort prüfen und die Absenderin bzw. den Absender kontaktieren. | 
+Hinweis | Eine Person übernimmt den Notfall: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Vorgang e54aca3f-aac3-49ec-a130-2d87ea1d3fdc
+== Vorgang
+MANUAL_REVIEW | Reklamation oder Service: Heizung nach Wartung wieder kalt | {"Person prüft Reklamation und führt den gewünschten Rückruf: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | review | WAITING | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | task | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Reklamation Heizung und Anfahrtspauschale – Tom Orbit | 
+Aufgabe | Person prüft Reklamation und führt den gewünschten Rückruf | 
+Hinweis | Tom Orbit meldet, dass die Heizung im Wohnzimmer seit der Wartung letzte Woche nicht mehr richtig warm wird. Er beanstandet eine nicht angekündigte Anfahrtspauschale von 45 Euro und bittet um Rückruf; bitte Servicefall und Berechnung prüfen und den Kunden kontaktieren. | 
+Hinweis | Person prüft Reklamation und führt den gewünschten Rückruf: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.pre
+######## Vorgang 0648606f-0584-43ac-80bc-ecf5c940a723
+== Vorgang
+MANUAL_REVIEW | Rechnungseingang: Rechnung Nr. 73668 | {"Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Die automatische Rechnungsauslese ist in dieser Umgebung nicht verfügbar (Platzhalter). Das Dokument ist gesichert; bitte die Rechnung manuell erfassen. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed case.status_changed shadow.plan_proposed
+######## Vorgang 4c18d9e2-b56f-450c-be56-b2a88dd32ca7
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Anfrage Wärmepumpe Einfamilienhaus | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Anfrage Wärmepumpe Einfamilienhaus | Guten Tag,  vielen Dank für Ihre Anfrage „Anfrage Wärmepumpe Einfamilienhaus“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Wird das Warmwasser derzeit ebenfalls über die Gasheizung bereitet?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr B
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolut
+######## Vorgang f750033a-0f1c-4858-bee4-79e568d020ce
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Badsanierung – bitte um Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | wait2 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Badsanierung – bitte um Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Gibt es weitere Arbeiten oder Sanitärobjekte, die Sie in die Badsanierung einbeziehen möchten? 2. Bleiben Dusche, Waschtisch und WC an ihren bisherigen Positionen, oder sollen Anschlüsse verlegt werden?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätte
+{tomorbit777@gmail.com} | Re: Badsanierung – bitte um Angebot | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirm
+######## Vorgang 7933dc12-062c-4706-930f-618681b6d1ce
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Badezimmer erneuern – was kostet das? | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | wait2 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Badezimmer erneuern – was kostet das? | Guten Tag,  vielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. In welchem Ort befindet sich das Badezimmer?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie m
+{tomorbit777@gmail.com} | Re: Badezimmer erneuern – was kostet das? | Guten Tag,  vielen Dank für Ihre Antwort.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grüßen Musterwerk GmbH
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.st
+######## Vorgang c034f1d8-cea0-43b2-81e2-521718a28b20
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Neue Heizung - Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | wait2 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Neue Heizung - Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Heizung - Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. Welche Heizungsart ist derzeit in Ihrem Haus installiert (zum Beispiel Gas, Öl oder eine andere)? 2. Haben Sie bereits eine bestimmte Heizungsart im Sinn, etwa eine Wärmepumpe, oder wünschen Sie eine Beratung zu den Möglichkeiten? 3. In welcher Stadt oder Gemeinde befindet sich das Haus?  Für eine verlässliche Einschätzung schauen wir uns die
+{tomorbit777@gmail.com} | Re: Neue Heizung - Angebot | Guten Tag,  vielen Dank für Ihre Antwort.  Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:  1. Haben Sie bereits eine bestimmte Heizungsart im Sinn, etwa eine Wärmepumpe, oder wünschen Sie eine Beratung zu den Möglichkeiten?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action
+######## Vorgang 29cb1a1c-a0f2-4a15-a577-2ac9dea2610f
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 
+== Pläne und Schritte
+1 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | weiter_planen | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {human.review,staff.informed} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,staff.informed} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,staff.informed} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,staff.informed} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,staff.informed} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang f9a837fe-1c45-44c7-bb07-c0079bbe2577
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas | {"Menschliche Entscheidung und Antwort erforderlich: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review,staff.informed,task.created} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review,staff.informed,task.created} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {human.review,staff.informed,task.created} | requirements | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | answer | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,task.created,human.review} | task | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Prüfung Praxisanschlüsse und Gasleitung | 
+Aufgabe | Menschliche Entscheidung und Antwort erforderlich | 
+Hinweis | Neue Anfrage einer Zahnarztpraxis: Wasser- und Druckluftanschlüsse für drei Behandlungsplätze sowie Gasleitung fürs Labor; Abnahme vor Eröffnung am 3. Februar. Die Angaben liegen vor, aber das Betriebsprofil bestätigt diese Leistungen und die Machbarkeit der Frist nicht. Bitte Übernahme und möglichen Ablauf fachlich prüfen. | 
+Hinweis | Menschliche Entscheidung und Antwort erforderlich: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.
+######## Vorgang fc12eace-3f29-4930-9380-45a60829feaf
+== Vorgang
+IN_PROGRESS | Neue Anfrage: Wartungsvertrag für 12 Wohneinheiten | {} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Neuen Lead kontaktieren: Tom Orbit | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed
+######## Vorgang 7c25affe-ca90-47f0-a519-51ceca0d5a6b
+== Vorgang
+WAITING_FOR_APPROVAL | Angebotsanfrage: Servicepartner für unser Mehrfamilienhaus gesucht | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 
+== Pläne und Schritte
+1 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {human.review} | context | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+blueprint.fit_assessed case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_chang
+######## Vorgang 6c27ebdc-1301-48d9-94f8-22ce049a78d7
+== Vorgang
+MANUAL_REVIEW | Allgemeine Anfrage: Steckdosen im Bad | {"Person entscheidet über die weitere Bearbeitung: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,task.created} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {staff.informed,task.created} | requirements | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | answer | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | manual | WAITING | 
+2 | ACTIVE | {inquiry.answered,staff.informed,human.review} | notify | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Person entscheidet über die weitere Bearbeitung | 
+Hinweis | Person entscheidet über die weitere Bearbeitung: Bitte manuell bearbeiten. | 
+Hinweis | Tom fragt im Zuge einer Badsanierung nach drei neuen Steckdosen und einer neuen Lichtleitung. Elektroarbeiten sind laut Betriebsprofil nicht im Angebot; bitte prüfen und über die weitere Bearbeitung entscheiden. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_c
+######## Vorgang a21417ca-5e73-4c63-92db-a473a9036425
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Frage zu Ihren Leistungen | {"Antwort senden: Freigabe erforderlich."} | 
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | PLANNED | 
+1 | ACTIVE | {inquiry.answered} | human_answers | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | plan_further | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_draft | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_send | AWAITING_APPROVAL | 
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+PENDING | Antwort senden (email.send, INFORMATION) wartet auf Freigabe.
+== Aufgaben / Hinweise
+Hinweis | Antwort senden: Freigabe erforderlich. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared node.state_changed case.status_changed
+######## Vorgang 47d5ca4c-c54d-4bbd-be5b-38ee3b18030d
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Preis Heizkörper | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Preis Heizkörper | Guten Tag,  vielen Dank für Ihre Anfrage „Preis Heizkörper“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen Grü
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed wait.started node
+######## Vorgang b2aabc85-d149-4efb-a91b-9596d0af5f5e
+== Vorgang
+MANUAL_REVIEW | Reklamation oder Service: Heizung nach Wartung wieder kalt | {"Menschliche Prüfung und Rückruf durchführen: Bitte manuell bearbeiten."} | 
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {staff.informed,task.created,human.review} | task | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Reklamation Heizung und Anfahrtspauschale prüfen; Kundenrückruf | 
+Aufgabe | Menschliche Prüfung und Rückruf durchführen | 
+Hinweis | Menschliche Prüfung und Rückruf durchführen: Bitte manuell bearbeiten. | 
+Hinweis | Tom Orbit meldet, dass die Heizung im Wohnzimmer seit der Wartung letzte Woche nicht richtig warm wird; er beanstandet eine nicht angekündigte Anfahrtspauschale von 45 Euro und bittet um Rückruf. Laut bisheriger Prüfung fehlen keine Kundenangaben; Ursache und Kostenbeanstandung erfordern fachliche Prüfung. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.pre
+######## Vorgang f6a7fc3a-e96e-4636-82e6-273e88e93e34
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Anfrage Wärmepumpe Einfamilienhaus | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Anfrage Wärmepumpe Einfamilienhaus | Guten Tag,  vielen Dank für Ihre Anfrage „Anfrage Wärmepumpe Einfamilienhaus“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mi
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed wait.started node
+######## Vorgang 3123235d-a62c-42af-8f07-bf3669104b46
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Badsanierung – bitte um Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Badsanierung – bitte um Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Badsanierung – bitte um Angebot“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit f
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed wait.started node
+######## Vorgang 66816f08-f549-4f0d-9888-891d470cb041
+== Vorgang
+WAITING_FOR_INFORMATION | Neue Anfrage: Neue Heizung - Angebot | {"Auf Antwort warten: Wartet auf eine Antwort."} | 
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Neue Heizung - Angebot | Guten Tag,  vielen Dank für Ihre Anfrage „Neue Heizung - Angebot“.  Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:  1. In welchem Ort befindet sich das Haus?  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+blueprint.fit_assessed case.status_changed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.propose
+######## Vorgang 937db284-270f-4375-a480-c1798a0dfe2d
+== Vorgang
+WAITING_FOR_APPROVAL | Allgemeine Anfrage: Praxisumzug – Wasser- und Gasanschlüsse | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 
+== Pläne und Schritte
+1 | ACTIVE | {staff.informed,task.created,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+1 | ACTIVE | {staff.informed,task.created,human.review} | weiter_planen | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {human.review,request.handed_over} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,request.handed_over} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,request.handed_over} | reqs | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,request.handed_over} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {human.review,request.handed_over} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang 2266f09c-8e75-4f36-b039-4d432fa90203
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Mehrere Dinge | {"Teilvorgang „Kopie der letzten Rechnung: Mehrere Dinge“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed case.split
+######## Teilvorgang aecab528-7afd-414d-93f0-ba0d90ca19c6 (von 2266f09c-8e75-4f36-b039-4d432fa90203)
+== Vorgang
+MANUAL_REVIEW | Kopie der letzten Rechnung: Mehrere Dinge | {"Rechnungskopie manuell bereitstellen: Bitte manuell bearbeiten."} | 2266f09c-8e75-4f36-b039-4d432fa90203
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {human.review} | manual | WAITING | 
+2 | ACTIVE | {human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {human.review} | reqs | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Rechnungskopie manuell bereitstellen | 
+Hinweis | Rechnungskopie manuell bereitstellen: Bitte manuell bearbeiten. | 
+Hinweis | Kundschaft benötigt eine Kopie der letzten Rechnung für die Steuer. Zweck und E-Mail-Adresse sind bereits bekannt; bitte prüfen Sie den Rechnungsvorgang und stellen Sie die Kopie bereit. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang e339bcdc-cec2-4942-b0a7-daaca3d141f9 (von 2266f09c-8e75-4f36-b039-4d432fa90203)
+== Vorgang
+WAITING_FOR_INFORMATION | Wartungstermin verschieben: Mehrere Dinge | {"Terminangaben aus der Kundennachricht übernehmen: Es fehlen Angaben: messageId."} | 2266f09c-8e75-4f36-b039-4d432fa90203
+== Pläne und Schritte
+1 | SUPERSEDED | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | complete | BLOCKED | Es sind noch nicht alle Schritte des Ablaufs abgeschlossen.
+2 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | extract | BLOCKED | Es fehlen Angaben: messageId.
+2 | ACTIVE | {appointment.booked,human.review} | manual | PLANNED | 
+2 | ACTIVE | {appointment.booked,human.review} | notify | PLANNED | 
+2 | ACTIVE | {appointment.booked,human.review} | requirements | PLANNED | 
+2 | ACTIVE | {appointment.booked,human.review} | wait | WAITING | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed completion.evaluated node.state_changed case.status_changed case.status_changed node.state_changed node.state_changed node.state_changed wait.started node.state_changed case.status_changed cas
+######## Teilvorgang 075901e9-efab-4763-9749-935112b63373 (von 2266f09c-8e75-4f36-b039-4d432fa90203)
+== Vorgang
+WAITING_FOR_APPROVAL | Angebot für einen Heizungsregler: Mehrere Dinge | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 2266f09c-8e75-4f36-b039-4d432fa90203
+== Pläne und Schritte
+1 | ACTIVE | {quote.delivered,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered,human.review} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | extract | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | reqs_2 | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | staff | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Fünf Dinge auf einmal | {"Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.","Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfung.","Teilvorgang „Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge auf einmal“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed case.split
+######## Teilvorgang 0ce9796a-3c70-40a3-890d-fb28539ef29b (von 05bd92e9-1a3f-471c-9ba8-70e1f41cee12)
+== Vorgang
+MANUAL_REVIEW | Kopie der letzten Rechnung: Fünf Dinge auf einmal | {"Rechnungskopie durch eine Person bearbeiten: Bitte manuell bearbeiten."} | 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | interpret | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {human.review} | manual | WAITING | 
+2 | ACTIVE | {human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {human.review} | reqs_2 | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Rechnungskopie durch eine Person bearbeiten | 
+Hinweis | Der Kunde bittet um eine Kopie seiner letzten Rechnung für die Steuer. Bitte den letzten Rechnungsbeleg im berechtigten System ermitteln und die Kopie bereitstellen; ORBIT hat keine Fähigkeit zum Abruf oder Versand des Rechnungsdokuments. | 
+Hinweis | Rechnungskopie durch eine Person bearbeiten: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang d5bcc005-709c-4c35-8f97-f1f3be3067c8 (von 05bd92e9-1a3f-471c-9ba8-70e1f41cee12)
+== Vorgang
+MANUAL_REVIEW | Wartungstermin verschieben: Fünf Dinge auf einmal | {"Angaben zum gewünschten Verschieben aus der Kundennachricht erfassen: Es fehlen Angaben: messageId."} | 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Pläne und Schritte
+1 | SUPERSEDED | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed} | context | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed} | done | BLOCKED | Es sind noch nicht alle Schritte des Ablaufs abgeschlossen.
+2 | ACTIVE | {appointment.booked,staff.informed} | extract | BLOCKED | Es fehlen Angaben: messageId.
+2 | ACTIVE | {appointment.booked,staff.informed} | manual | PLANNED | 
+2 | ACTIVE | {appointment.booked,staff.informed} | notify | PLANNED | 
+2 | ACTIVE | {appointment.booked,staff.informed} | requirements | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Angaben zum gewünschten Verschieben aus der Kundennachricht erfassen: Es fehlen Angaben: messageId. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed completion.evaluated node.state_changed case.status_changed case.status_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang c9473b72-0f4a-41d7-97c8-470d661ff010 (von 05bd92e9-1a3f-471c-9ba8-70e1f41cee12)
+== Vorgang
+WAITING_FOR_INFORMATION | Angebot für einen neuen Heizungsregler: Fünf Dinge auf einmal | {"Angaben aus der Anfrage entnehmen: Es fehlen Angaben: messageId."} | 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | BLOCKED | Es fehlen Angaben: messageId.
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang 016a06da-4b8d-4655-9117-66abd667ed3c (von 05bd92e9-1a3f-471c-9ba8-70e1f41cee12)
+== Vorgang
+WAITING_FOR_APPROVAL | Samstags telefonisch erreichbar: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Pläne und Schritte
+1 | SUPERSEDED | {inquiry.answered} | answered | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | SUPERSEDED | {inquiry.answered} | human_answers | SUPERSEDED | 
+1 | SUPERSEDED | {inquiry.answered} | know | SUCCEEDED | 
+1 | SUPERSEDED | {inquiry.answered} | notify_staff | SUCCEEDED | 
+1 | SUPERSEDED | {inquiry.answered} | plan_further | SUPERSEDED | 
+1 | SUPERSEDED | {inquiry.answered} | reply_draft | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | SUPERSEDED | {inquiry.answered} | reply_send | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | SUPERSEDED | {inquiry.answered} | sender_check | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered} | context | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered} | notify_staff | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered} | reqs | SUCCEEDED | 
+2 | ACTIVE | {inquiry.answered} | weiter | SUCCEEDED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | complete | PLANNED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | know_answer | PLANNED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | manual_review | PLANNED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | notify_staff | PLANNED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | send_answer | PLANNED | 
+3 | AWAITING_APPROVAL | {inquiry.answered,human.review} | send_draft | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Die Kundenanfrage betrifft die telefonische Erreichbarkeit samstags; die verfügbaren Betriebsangaben nennen Erreichbarkeit Montag bis Freitag und einen Wochenend-Notdienst. | 
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+MISSES | false | []
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.a
+######## Teilvorgang 338bc6e7-fd07-4383-a124-77681ec576be (von 05bd92e9-1a3f-471c-9ba8-70e1f41cee12)
+== Vorgang
+MANUAL_REVIEW | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge auf einmal | {"Terminoptionen prüfen und mit Kundschaft abstimmen: Bitte manuell bearbeiten."} | 05bd92e9-1a3f-471c-9ba8-70e1f41cee12
+== Pläne und Schritte
+1 | SUPERSEDED | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | interpret | SUCCEEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | manual | WAITING | 
+2 | ACTIVE | {appointment.booked,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Terminoptionen prüfen und mit Kundschaft abstimmen | 
+Hinweis | Kundschaft bittet um einen Reparaturtermin für den tropfenden Wasserhahn im Gäste-WC. Ort, Problem und gewünschter nächster Schritt sind bekannt; bitte verfügbare Reparaturtermine prüfen und Optionen zur Auswahl mitteilen. | 
+Hinweis | Terminoptionen prüfen und mit Kundschaft abstimmen: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed n
+######## Vorgang 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Einiges auf einmal | {"Teilvorgang „Kopie der Rechnung vom letzten Einsatz: Einiges auf einmal“ braucht Prüfung.","Teilvorgang „Wartungstermin verlegen: Einiges auf einmal“ braucht Prüfung.","Teilvorgang „Telefonische Erreichbarkeit freitags: Einiges auf einmal“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.referenced case.status_changed case.split
+######## Teilvorgang a315894e-9551-4d31-9bfa-c83de12b5e5b (von 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d)
+== Vorgang
+MANUAL_REVIEW | Kopie der Rechnung vom letzten Einsatz: Einiges auf einmal | {"Manuelle Prüfung und Bereitstellung der Rechnungskopie: Bitte manuell bearbeiten."} | 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Pläne und Schritte
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {human.review} | manual | WAITING | 
+2 | ACTIVE | {human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {human.review} | reassess_goal | SUCCEEDED | 
+2 | ACTIVE | {human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Manuelle Prüfung und Bereitstellung der Rechnungskopie | 
+Hinweis | Der Kunde bittet für seine Steuererklärung um eine Kopie der Rechnung vom letzten Einsatz. Angeforderter Beleg und Verwendungszweck sind bekannt; es fehlen keine Angaben von der Kundschaft. Bitte Rechnung im Kunden-/Vorgangskontext prüfen und die Kopie bereitstellen bzw. den nächsten Schritt festlegen. | 
+Hinweis | Manuelle Prüfung und Bereitstellung der Rechnungskopie: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status
+######## Teilvorgang bd36f4ce-8cca-4816-8dbb-3261922bd61c (von 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d)
+== Vorgang
+MANUAL_REVIEW | Wartungstermin verlegen: Einiges auf einmal | {"Terminverlegung durch eine Person prüfen und bearbeiten: Bitte manuell bearbeiten."} | 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {human.review} | extract | SUCCEEDED | 
+2 | ACTIVE | {human.review} | manual | WAITING | 
+2 | ACTIVE | {human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {human.review} | reqs_2 | SUCCEEDED | 
+2 | ACTIVE | {human.review} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Terminverlegung durch eine Person prüfen und bearbeiten | 
+Hinweis | Terminverlegung durch eine Person prüfen und bearbeiten: Bitte manuell bearbeiten. | 
+Hinweis | Der Kunde möchte den Wartungstermin vom 28.10. auf den 4.11. verlegen. Bitte Verfügbarkeit und Umsetzung prüfen; die automatische Kalenderbuchung ist auf zuvor vorgeschlagene und anschließend gewählte Termine beschränkt. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_chang
+######## Teilvorgang 95015dc2-41f8-47f7-a006-af3670d7d812 (von 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d)
+== Vorgang
+WAITING_FOR_INFORMATION | Angebot für neue Thermostate: Einiges auf einmal | {"Auf Antwort warten: Wartet auf eine Antwort."} | 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Pläne und Schritte
+1 | ACTIVE | {request.handed_over} | ack | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ack_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask1 | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask1_draft | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | ask2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask2_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | ask3_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | book | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm | PLANNED | 
+1 | ACTIVE | {request.handed_over} | confirm_draft | PLANNED | 
+1 | ACTIVE | {request.handed_over} | context | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | done | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | extract2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | extract4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | interpret | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | lead | PLANNED | 
+1 | ACTIVE | {request.handed_over} | notify | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs | SUCCEEDED | 
+1 | ACTIVE | {request.handed_over} | reqs2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs3 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | reqs4 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait1 | WAITING | 
+1 | ACTIVE | {request.handed_over} | wait2 | PLANNED | 
+1 | ACTIVE | {request.handed_over} | wait3 | PLANNED | 
+== Ausgehende Nachrichten
+{tomorbit777@gmail.com} | Re: Einiges auf einmal | Guten Tag,  vielen Dank für Ihre Anfrage „Einiges auf einmal“.  Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an (ca. 90 Minuten). Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, 09:00–10:30 Uhr - Freitag, 23.10.2026, 14:00–15:30 Uhr - Montag, 26.10.2026, 11:00–12:30 Uhr Bitte antworten Sie mit Ihrem Wunschtermin. Passt keiner der Vorschläge, nennen Sie uns gern Alternativen.  Sie können einfach auf diese E-Mail antworten.  Mit freundlichen G
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed node.state_changed node.state_changed customer.record_checked node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed action.prepared appointment.proposed action.confirmed node.state_changed node.state_changed action.prepared action.confirmed no
+######## Teilvorgang c962daf9-3bcb-43a3-9f52-d7328dd099ad (von 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d)
+== Vorgang
+MANUAL_REVIEW | Telefonische Erreichbarkeit freitags: Einiges auf einmal | {"Eine Person beantwortet die Frage: Bitte manuell bearbeiten."} | 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | answered | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | human_answers | WAITING | 
+1 | ACTIVE | {inquiry.answered} | know | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | notify_staff | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | plan_further | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reply_draft | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | reply_send | SKIPPED | Kein Pfad führt zu diesem Schritt.
+1 | ACTIVE | {inquiry.answered} | sender_check | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | answer | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | answered | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | complete | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | notify_staff | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | send | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Eine Person beantwortet die Frage | 
+Hinweis | Allgemeine Frage „Einiges auf einmal“ – aus dem Betriebswissen nicht belegt beantwortbar, bitte persönlich antworten. | 
+Hinweis | Eine Person beantwortet die Frage: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+NEEDS_REVIEW | true | ["email.send/INFORMATION", "staff.notify"]
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed shadow.plan_proposed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed case.status_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang e4ecd33c-dd0e-4dfb-8084-a9f5e7cc9d65 (von 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d)
+== Vorgang
+WAITING_FOR_APPROVAL | Reparaturtermin für tropfenden Wasserhahn: Einiges auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 2c3e9f8c-48fc-4651-8ae8-162e2b0e403d
+== Pläne und Schritte
+1 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | extract | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Fünf Dinge auf einmal | {"Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.","Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfung.","Teilvorgang „Angebot für einen Heizungsregler: Fünf Dinge auf einmal“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed case.split
+######## Teilvorgang 1bd18adf-2185-49f5-b17c-54e05c29fff7 (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+MANUAL_REVIEW | Kopie der letzten Rechnung: Fünf Dinge auf einmal | {"Rechnungskopie intern auffinden und bereitstellen: Bitte manuell bearbeiten."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | SUPERSEDED | {task.created} | context | SUCCEEDED | 
+1 | SUPERSEDED | {task.created} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {task.created} | requirements | SUCCEEDED | 
+2 | ACTIVE | {human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {human.review} | done | PLANNED | 
+2 | ACTIVE | {human.review} | manual | WAITING | 
+2 | ACTIVE | {human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Rechnungskopie intern auffinden und bereitstellen | 
+Hinweis | Der Kunde benötigt eine Kopie seiner letzten Rechnung für Steuerzwecke. Die gewünschte Rechnung ist intern aufzufinden und zu prüfen; es fehlen keine weiteren Angaben der Kundschaft. | 
+Hinweis | Rechnungskopie intern auffinden und bereitstellen: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang 6efa91c6-9461-4fa1-96c6-99bdecb2b6f1 (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+MANUAL_REVIEW | Wartungstermin verschieben: Fünf Dinge auf einmal | {"Terminverschiebung durch eine Person prüfen und bearbeiten: Bitte manuell bearbeiten."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | requirements | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | weiter_planen | SUPERSEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | extract | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | manual | WAITING | 
+2 | ACTIVE | {appointment.booked,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Terminverschiebung durch eine Person prüfen und bearbeiten | 
+Hinweis | Der Kunde möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben. Bitte den bestehenden Termin und die Verfügbarkeit prüfen; eine Änderung ist noch nicht bestätigt. | 
+Hinweis | Terminverschiebung durch eine Person prüfen und bearbeiten: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_c
+######## Teilvorgang edf1d8d5-5969-4482-a37e-608dc728eb2a (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+MANUAL_REVIEW | Angebot für einen Heizungsregler: Fünf Dinge auf einmal | {"Fachliche Prüfung und weiteres Vorgehen durch eine Person: Bitte manuell bearbeiten."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | SUPERSEDED | {quote.delivered} | context | SUCCEEDED | 
+1 | SUPERSEDED | {quote.delivered} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {quote.delivered} | requirements | SUCCEEDED | 
+2 | ACTIVE | {quote.delivered,staff.informed,task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {quote.delivered,staff.informed,task.created,human.review} | lead | SUCCEEDED | 
+2 | ACTIVE | {quote.delivered,staff.informed,task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {quote.delivered,staff.informed,task.created,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {quote.delivered,staff.informed,task.created,human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Fachliche Prüfung und weiteres Vorgehen durch eine Person | 
+Aufgabe | Neuen Lead kontaktieren: Tom Orbit | 
+Hinweis | Kundschaft wünscht ein Angebot für einen neuen Heizungsregler. Heizungsregler sind im Leistungsprofil nicht ausdrücklich aufgeführt; bitte klären, ob der Betrieb dies anbietet und welche nächsten Schritte für ein Angebot nötig sind. | 
+Hinweis | Fachliche Prüfung und weiteres Vorgehen durch eine Person: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed action.prepared 
+######## Teilvorgang 2b24d18e-5685-4847-abb9-ffc6d83a653e (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+WAITING_FOR_APPROVAL | Samstags telefonisch erreichbar: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | context | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reassess | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | answer | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | complete | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | context | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | decision | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | send | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Teilvorgang 0bf7400d-24d1-490c-b27d-bdb83a1f8880 (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+WAITING_FOR_APPROVAL | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | extract_reply | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Teilvorgang 222e0e49-f0b6-404e-9707-2967ac13699d (von a9da9e12-800c-4beb-9dd0-263bf8420e20)
+== Vorgang
+WAITING_FOR_APPROVAL | Weitere Fragen und Wünsche der Nachricht: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | a9da9e12-800c-4beb-9dd0-263bf8420e20
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered,staff.informed} | context | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed} | requirements | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed} | weiter_planen | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | answerable | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | done | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | knowledge | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed} | send | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang 47311804-7715-4a59-8528-42611db64b31
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Mehrere Dinge | {"Teilvorgang „Kopie der letzten Rechnung: Mehrere Dinge“ braucht Prüfung.","Teilvorgang „Wartungstermin verschieben: Mehrere Dinge“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed case.split
+######## Teilvorgang c61ac376-809d-4bda-818a-ee4158260e36 (von 47311804-7715-4a59-8528-42611db64b31)
+== Vorgang
+MANUAL_REVIEW | Kopie der letzten Rechnung: Mehrere Dinge | {"Rechnungskopie manuell bereitstellen: Bitte manuell bearbeiten."} | 47311804-7715-4a59-8528-42611db64b31
+== Pläne und Schritte
+1 | SUPERSEDED | {human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {task.created,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | staff | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Rechnungskopie manuell bereitstellen | 
+Hinweis | Bitte prüfen Sie im Kunden-/Rechnungssystem die letzte Rechnung von Tom Orbit und veranlassen Sie die Bereitstellung einer Kopie für steuerliche Zwecke. Die Nachricht nennt keine Rechnungsnummer; Absenderkontext wird geprüft. | 
+Hinweis | Rechnungskopie manuell bereitstellen: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang 5be34f86-33f7-4dcc-aa42-04e0011d68d5 (von 47311804-7715-4a59-8528-42611db64b31)
+== Vorgang
+MANUAL_REVIEW | Wartungstermin verschieben: Mehrere Dinge | {"Terminverschiebung manuell prüfen und bearbeiten: Bitte manuell bearbeiten."} | 47311804-7715-4a59-8528-42611db64b31
+== Pläne und Schritte
+1 | SUPERSEDED | {staff.informed,human.review} | ctx | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | reqs | SUCCEEDED | 
+1 | SUPERSEDED | {staff.informed,human.review} | weiter_planen | SUPERSEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | ctx | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | extract | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | manual | WAITING | 
+2 | ACTIVE | {appointment.booked,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,human.review} | reqs_2 | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Terminverschiebung manuell prüfen und bearbeiten | 
+Hinweis | Kundschaft bittet darum, den Wartungstermin vom 28.10. auf den 4.11. zu verschieben. Bitte den bestehenden Termin und die Verfügbarkeit prüfen; kein neuer Termin wurde durch ORBIT zugesagt oder gebucht. | 
+Hinweis | Terminverschiebung manuell prüfen und bearbeiten: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_c
+######## Teilvorgang fd1a95a4-2537-4af4-b948-b890ffdf57d1 (von 47311804-7715-4a59-8528-42611db64b31)
+== Vorgang
+WAITING_FOR_APPROVAL | Angebot für einen neuen Heizungsregler: Mehrere Dinge | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 47311804-7715-4a59-8528-42611db64b31
+== Pläne und Schritte
+1 | ACTIVE | {quote.delivered} | context | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered} | reassess | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | clarification_draft | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | inform | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | send_clarification | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,human.review} | wait_reply | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Vorgang 57b5b33c-152f-4559-800c-8c46336dfb44
+== Vorgang
+IN_PROGRESS | Mehrere Anliegen: Fünf Dinge auf einmal | {"Teilvorgang „Kopie der letzten Rechnung: Fünf Dinge auf einmal“ braucht Prüfung.","Teilvorgang „Wartungstermin verschieben: Fünf Dinge auf einmal“ braucht Prüfung."} | 
+== Pläne und Schritte
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+== Schatten-Bewertung
+== Ereignisse
+case.status_changed case.split
+######## Teilvorgang 495d660d-e6fd-4c4c-8954-d360ac1a2356 (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+MANUAL_REVIEW | Kopie der letzten Rechnung: Fünf Dinge auf einmal | {"Rechnungskopie manuell prüfen und bereitstellen: Bitte manuell bearbeiten."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {receipt.acknowledged,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | manual | WAITING | 
+2 | ACTIVE | {task.created,human.review} | reqs_2 | SUCCEEDED | 
+2 | ACTIVE | {task.created,human.review} | staff | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Rechnungskopie manuell prüfen und bereitstellen | 
+Hinweis | Der Kunde bittet um eine Kopie seiner letzten Rechnung für die Steuer. Bitte prüfen Sie den Kunden-/Vorgangsdatensatz und stellen Sie die passende Rechnungskopie bereit; im vorliegenden Nachrichtenteil fehlen belegte Rechnungs- oder Vorgangsangaben. | 
+Hinweis | Rechnungskopie manuell prüfen und bereitstellen: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status_changed
+######## Teilvorgang 5177f000-3e25-44d5-a066-de224d8ec69a (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+MANUAL_REVIEW | Wartungstermin verschieben: Fünf Dinge auf einmal | {"Terminverschiebung manuell prüfen: Bitte manuell bearbeiten."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | SUPERSEDED | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | reassess | SUPERSEDED | 
+1 | SUPERSEDED | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed,human.review} | context | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed,human.review} | interpret | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed,human.review} | manual | WAITING | 
+2 | ACTIVE | {appointment.booked,staff.informed,human.review} | notify | SUCCEEDED | 
+2 | ACTIVE | {appointment.booked,staff.informed,human.review} | requirements | SUCCEEDED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Aufgabe | Terminverschiebung manuell prüfen | 
+Hinweis | Kundschaft möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben. Beide Datumsangaben sind bekannt; bitte Verfügbarkeit und mögliche Umbuchung prüfen. | 
+Hinweis | Terminverschiebung manuell prüfen: Bitte manuell bearbeiten. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created plan.superseded plan.activated case.status_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed node.state_changed action.prepared action.confirmed node.state_changed node.state_changed node.state_changed case.status
+######## Teilvorgang 0de57f16-c6d5-4b71-99bc-cb3b214d7c23 (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+WAITING_FOR_APPROVAL | Angebot für einen neuen Heizungsregler: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | ACTIVE | {quote.delivered,staff.informed} | context | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered,staff.informed} | reassess | SUCCEEDED | 
+1 | ACTIVE | {quote.delivered,staff.informed} | reqs | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | lead | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | review | PLANNED | 
+2 | AWAITING_APPROVAL | {quote.delivered,staff.informed,task.created,human.review} | task | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Teilvorgang f865bf67-87b6-4668-b307-cb3390d3d2d8 (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+WAITING_FOR_APPROVAL | Telefonische Erreichbarkeit am Samstag: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered} | context | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | reassess | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | answer | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | decision | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | requirements | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from case.status_changed blueprint.fit_assessed plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Teilvorgang a57f99b8-b064-4fa4-9968-9ee074b46477 (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+WAITING_FOR_APPROVAL | Reparaturtermin für tropfenden Wasserhahn: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | ACTIVE | {appointment.booked,human.review} | context | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | reassess | SUCCEEDED | 
+1 | ACTIVE | {appointment.booked,human.review} | requirements | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | reqs | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | send | PLANNED | 
+2 | AWAITING_APPROVAL | {appointment.booked,human.review} | wait | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted context.resolution_attempted node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed
+######## Teilvorgang 81417727-32ab-489c-b5a7-4b7350ff6366 (von 57b5b33c-152f-4559-800c-8c46336dfb44)
+== Vorgang
+WAITING_FOR_APPROVAL | Weitere Fragen und Wünsche der Nachricht: Fünf Dinge auf einmal | {"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."} | 57b5b33c-152f-4559-800c-8c46336dfb44
+== Pläne und Schritte
+1 | ACTIVE | {inquiry.answered,staff.informed} | context | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed} | reassess | SUCCEEDED | 
+1 | ACTIVE | {inquiry.answered,staff.informed} | reqs | SUCCEEDED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | answer | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | context | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | decision | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | done | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | draft | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | manual | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | notify | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | reqs_2 | PLANNED | 
+2 | AWAITING_APPROVAL | {inquiry.answered,staff.informed,human.review} | send | PLANNED | 
+== Ausgehende Nachrichten
+== Freigaben (Aktionen)
+== Aufgaben / Hinweise
+Hinweis | Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird. | 
+== Schatten-Bewertung
+== Ereignisse
+case.split_from plan.created plan.activated case.status_changed node.state_changed customer.record_checked node.state_changed node.state_changed requirements.analyzed node.state_changed node.state_changed node.state_changed plan.created case.status_changed node.state_changed

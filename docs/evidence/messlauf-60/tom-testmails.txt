@@ -1,0 +1,95 @@
+INBOUND | 2026-10-21 08:37:02 | <CABG-=TZQBLtH2ww73gSAFw-OSr8D+qnz6sFxa-r5k-M3gZqDNA@mail.gmail.com> | Kommen Sie auch nach Bergisch Gladbach?
+INBOUND | 2026-10-21 08:37:20 | <CABG-=TbmKvaaRYJCLe+qS9caonAp1G8vxMQ-TdpJnjDFCdgruQ@mail.gmail.com> | Frage zu Ihren Leistungen
+INBOUND | 2026-10-21 08:39:02 | <CABG-=TYn+fA+eMyDFu2=itA1O8zx+yno_WaAMTJ0ddrMPwQzYA@mail.gmail.com> | Wie ist der Stand?
+INBOUND | 2026-10-21 08:40:12 | <CABG-=Tbpx2toLyt5eKgV9qEDwHYJzskpLT5qws0uf0ZzXWUQJQ@mail.gmail.com> | Preis Heizkörper
+OUTBOUND | 2026-10-21 08:40:37 | <CAHbdD1zYB5dTy7O8Cgm-fe54Hgo=Phw9smOujbqi9s1oEPW+Yw@mail.gmail.com> | Re: Preis Heizkörper
+INBOUND | 2026-10-21 08:42:02 | <CABG-=TYBRD9w7xtbXChjW0DOS2-g57HA=yqSL90ycTvTwFJ66w@mail.gmail.com> | Heizung nach Wartung wieder kalt
+INBOUND | 2026-10-21 08:42:52 | <CABG-=TaSP8qAKWBodpoSsj_oV5z+HFR0z=_D69V1fzzmfcA90A@mail.gmail.com> | Heizung ausgefallen, minus 6 Grad
+OUTBOUND | 2026-10-21 08:43:04 | <CAHbdD1xJXPuvY3xU==+Y8+=nJqMibfuqD4_nadA__kWynq6=hg@mail.gmail.com> | Re: Heizung ausgefallen, minus 6 Grad
+INBOUND | 2026-10-21 08:43:05 | <CABG-=Tai6ReOx3mVvHo3C2ZdVoj9oriO9Jc--kMBhtLaZJ7=5A@mail.gmail.com> | Es riecht nach Gas im Keller
+OUTBOUND | 2026-10-21 08:43:21 | <CAHbdD1zij7UKXSL1ZAumM-HKW62wdE+D0uWd32pi0iTn_3oKug@mail.gmail.com> | Re: Es riecht nach Gas im Keller
+INBOUND | 2026-10-21 08:43:21 | <CABG-=TY99-y0wC8pESEOKM+VqcHPyph2+nkHYftwU2W=QFseyw@mail.gmail.com> | Wasserrohrbruch im Keller!!!
+OUTBOUND | 2026-10-21 08:43:35 | <CAHbdD1yh6pRnerhJLjV822d-rBpxt3YvscxpQnKA1abo1LZFzw@mail.gmail.com> | Re: Wasserrohrbruch im Keller!!!
+INBOUND | 2026-10-21 08:45:02 | <CABG-=Ta_fHGC-xXgFyM_pZYr86ecZ=wNjb0ghmX3wTCKVe3xyg@mail.gmail.com> | Herbstaktion: bis zu 25 % Rabatt auf alle Heizkörper
+INBOUND | 2026-10-21 08:45:11 | <CABG-=TZVCnkDVHcsqySGHqt3H2+Ymtxqb-wRRGS95JRZOtdFRQ@mail.gmail.com> | Rechnung Nr. 34489
+INBOUND | 2026-10-21 08:45:24 | <CABG-=TZ6QowmAAOEnaG=Q0Gix4FWoobBKB15x3LoGqSP1dUoMw@mail.gmail.com> | Do you do bathroom renovations?
+INBOUND | 2026-10-21 08:47:02 | <CABG-=TYT1MFK+awkVL8eC5vXgtBheFUbJOo3F7qM7qAFOL-GMg@mail.gmail.com> | Anfrage
+INBOUND | 2026-10-21 08:47:13 | <CABG-=TYewwYg9QOjiUsFsA179kRYZS_1TL=9Bkr1KfZCU93_eg@mail.gmail.com> | Letzte Mahnung: Ihr Konto wird gesperrt
+INBOUND | 2026-10-21 08:49:02 | <CABG-=TZyPWEWHRfN+4G7HYpSeFhWpimK_ckTyfwcH7xYqYdusw@mail.gmail.com> | Badsanierung – bitte um Angebot
+OUTBOUND | 2026-10-21 08:49:31 | <CAHbdD1xrVSwfR8=_VurmD3Gf1GrgaGt7bxEV7Xf7sSXG5tgdGw@mail.gmail.com> | Re: Badsanierung – bitte um Angebot
+INBOUND | 2026-10-21 08:49:31 | <CABG-=TaOELiEgiBO=QuZax5Vc7k-B81F6j4Mv=jDy=Ez8MJ3rQ@mail.gmail.com> | Anfrage Wärmepumpe Einfamilienhaus
+OUTBOUND | 2026-10-21 08:50:06 | <CAHbdD1yRc9w1COnfH15QVK8oaprV68ZA7fVoku=6-QQdG__UHQ@mail.gmail.com> | Re: Anfrage Wärmepumpe Einfamilienhaus
+INBOUND | 2026-10-21 08:50:07 | <CABG-=TYOwpt8Djs-4nZYrhFTtoW5PNsTrdSkYpS39-P8T66rWA@mail.gmail.com> | Hallo
+INBOUND | 2026-10-21 08:52:02 | <CABG-=TZHVgcg7RaSRU5toyDPtAZD84D1SXFZjB4Vk_XDB9xrnQ@mail.gmail.com> | Badezimmer erneuern – was kostet das?
+OUTBOUND | 2026-10-21 08:52:29 | <CAHbdD1yP9kSZut9nZkzpNv+7JtLJwznh0oL8kqMyG_GxfXqPcg@mail.gmail.com> | Re: Badezimmer erneuern – was kostet das?
+INBOUND | 2026-10-21 09:04:02 | <CABG-=TZjKZhafe++Z=y_gP3Ax20pgyjMjGWKkyWsJgjFRf514w@mail.gmail.com> | Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND | 2026-10-21 09:05:35 | <CABG-=Tb++T0zUT4V_SAxf+e9-Ff7qt_PdvKWizq9_awYJnG1AQ@mail.gmail.com> | Neue Heizung - Angebot
+OUTBOUND | 2026-10-21 09:05:57 | <CAHbdD1xJdLpCj0YwCvCmRFB_QOG6GCS9prPay216R9YHoGPWvA@mail.gmail.com> | Re: Neue Heizung - Angebot
+INBOUND | 2026-10-21 10:01:02 | <CABG-=TamcyzzsEw=h-GtiqR9SnhjD_gS5pDTji4mK1VeiNSsmA@mail.gmail.com> | Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas
+INBOUND | 2026-10-21 10:04:02 | <CABG-=Taa0f8C070qg+467JuVqrXuoscuQm0dWcXc53RXxdRz9w@mail.gmail.com> | Servicepartner für unser Mehrfamilienhaus gesucht
+OUTBOUND | 2026-10-21 10:04:40 | <CAHbdD1xKL7dPuGFdx84R2e0Ocn-59ZJ29iZSD5XJc9vqp74DzQ@mail.gmail.com> | Re: Servicepartner für unser Mehrfamilienhaus gesucht
+INBOUND | 2026-10-21 10:04:40 | <CABG-=TZ=RyFhYhZYk1za-ZkPSMvD6cNBMpVoRnJpoko1q8uTvQ@mail.gmail.com> | Wartungsvertrag für 12 Wohneinheiten
+OUTBOUND | 2026-10-21 10:05:16 | <CAHbdD1zS=3CRty8h1vcoGwYHtJj3kKQBNKbHrE0s2qpT344VmQ@mail.gmail.com> | Re: Wartungsvertrag für 12 Wohneinheiten
+INBOUND | 2026-10-21 10:07:02 | <CABG-=Tbzxj0sH2WNjieWy8HyjHFUUah1KS1YU6A39uG533bKkg@mail.gmail.com> | Kommen Sie auch nach Bergisch Gladbach?
+INBOUND | 2026-10-21 10:07:18 | <CABG-=TbJKCB4+DOJr38iMnz+C4NfkXfYyUkguVLZ1ccHTTytgw@mail.gmail.com> | Frage zu Ihren Leistungen
+INBOUND | 2026-10-21 10:07:34 | <CABG-=TYpToGtihW0+nb52NQ-=kX1VXfN5Psf5phEcEEygwG6XQ@mail.gmail.com> | Elektrik im Badezimmer
+INBOUND | 2026-10-21 10:08:27 | <CABG-=Ta9TvK9xksWgH36BhSzvT4S++9a63RVi6EW7GYNyirTDw@mail.gmail.com> | Steckdosen im Bad
+INBOUND | 2026-10-21 10:57:02 | <CABG-=TYGB126rcPBy5=y-Dt=Y6aNZKBVkYAgm-6LaT7X54B6Rw@mail.gmail.com> | Wie ist der Stand?
+INBOUND | 2026-10-21 10:58:13 | <CABG-=TY8XCNhWr_DwF1ixEax+YmX+8rrYnYskfGfkeigaFJWug@mail.gmail.com> | Preis Heizkörper
+OUTBOUND | 2026-10-21 10:58:33 | <CAHbdD1wB8+R3cCMcUaJof5B_tpYkqb5c3mUdYUEmnr6QT=AdnA@mail.gmail.com> | Re: Preis Heizkörper
+INBOUND | 2026-10-21 11:00:03 | <CABG-=TYeJFRbvp7Ji9xs8waoqxiz6iQgvcao6s1+0AWcEeKzkA@mail.gmail.com> | Heizung nach Wartung wieder kalt
+INBOUND | 2026-10-21 11:00:51 | <CABG-=TZA7B=rx1FKW4NrbkmAnqYbsDt7zE7SMTjkCTCoNeDCrA@mail.gmail.com> | Heizung ausgefallen, minus 6 Grad
+OUTBOUND | 2026-10-21 11:01:05 | <CAHbdD1wKSu_=Ejp0nzmAXsu7BL2Xu_w10p=H=ySLREzK7H8p7g@mail.gmail.com> | Re: Heizung ausgefallen, minus 6 Grad
+INBOUND | 2026-10-21 11:01:06 | <CABG-=TZ8AVWTcnmEVfH6goHcdbi3dCb+BkEF6RvfUFanT01ygA@mail.gmail.com> | Es riecht nach Gas im Keller
+OUTBOUND | 2026-10-21 11:01:20 | <CAHbdD1xJYoXzON+aH-Qt_g4FxpiDi1m8PNKjdFOgSgXjODd5ug@mail.gmail.com> | Re: Es riecht nach Gas im Keller
+INBOUND | 2026-10-21 11:01:20 | <CABG-=TbG9sCcMjPWjziASLzPpXfOKb5jPcTJMA1hQYffG1iCOw@mail.gmail.com> | Wasserrohrbruch im Keller!!!
+OUTBOUND | 2026-10-21 11:01:33 | <CAHbdD1wDwJp0R3tSEqZ6ETe3j-ATJFERfaYvz68S92sUSLsqog@mail.gmail.com> | Re: Wasserrohrbruch im Keller!!!
+INBOUND | 2026-10-21 11:03:03 | <CABG-=TZ0UPuHXgV9OAv205=yH7rK_RYS_OE5yXKYq-tOZzQpVw@mail.gmail.com> | Herbstaktion: bis zu 25 % Rabatt auf alle Heizkörper
+INBOUND | 2026-10-21 11:03:11 | <CABG-=TbMNLHnexD0p7vM4HJXW6pWA0AoOdqC49J4QYGu9FHwjA@mail.gmail.com> | Rechnung Nr. 73668
+INBOUND | 2026-10-21 11:05:03 | <CABG-=Tbm9EiLeZqUm2-U3XYBWTX9vz5b92CVSvr2rphC6sR_WQ@mail.gmail.com> | Letzte Mahnung: Ihr Konto wird gesperrt
+INBOUND | 2026-10-21 11:41:04 | <CABG-=TYRbwjhqwdpULUY2KQ3deC+m9J-a2MGgBvRvp7o=sKGfw@mail.gmail.com> | Hallo
+INBOUND | 2026-10-21 11:41:10 | <CABG-=TZhV1n4GjsBzhPD53_gUU85ntyMU3_ORy4cNbOTDKuyVw@mail.gmail.com> | Anfrage
+INBOUND | 2026-10-21 11:43:03 | <CABG-=TaNzpR4pM5+fW-K_so=r4MxiEEz4cPxC4qZ6e4NLGFJLA@mail.gmail.com> | Badsanierung – bitte um Angebot
+OUTBOUND | 2026-10-21 11:43:41 | <CAHbdD1w_GX6LAu+XbiWa_JPKrzFwEk525CQZp5hS3S83+H6n0A@mail.gmail.com> | Re: Badsanierung – bitte um Angebot
+INBOUND | 2026-10-21 11:43:42 | <CABG-=TZd=KNJ0vmiUmi_S-XhXdtSJNxXCqNMeAQHXzvY9JFfEQ@mail.gmail.com> | Anfrage Wärmepumpe Einfamilienhaus
+OUTBOUND | 2026-10-21 11:44:17 | <CAHbdD1yowRLfbBaO0C+nKOdxqMhQg5OqtXHZCXvbzLrs85nHyQ@mail.gmail.com> | Re: Anfrage Wärmepumpe Einfamilienhaus
+INBOUND | 2026-10-21 11:54:02 | <CABG-=TYQzhfcQ7Dvqhz396Zgpwy-D5=3mm4apsRHAHOW+uW30Q@mail.gmail.com> | Neue Heizung - Angebot
+OUTBOUND | 2026-10-21 11:54:35 | <CAHbdD1zphzBnWJ_MiryDrJz5RxTao33U1ZUNxZSFDCw097ESfA@mail.gmail.com> | Re: Neue Heizung - Angebot
+INBOUND | 2026-10-21 11:54:36 | <CABG-=TZ-asD+SJdvH9c0gdOv3gJcTJ+0TGbTENSiUsYnj=tMGw@mail.gmail.com> | Badezimmer erneuern – was kostet das?
+OUTBOUND | 2026-10-21 11:55:10 | <CAHbdD1x8zKo_f-SiMdghjUKYCuU+PjYkRwm-RneQoaZBUbgjzA@mail.gmail.com> | Re: Badezimmer erneuern – was kostet das?
+INBOUND | 2026-10-21 12:00:03 | <CABG-=TZmGM+PSzh0P0QJp5wL8td4npj4tpZvVvjqD2CBsMdV1A@mail.gmail.com> | Wartungsvertrag für 12 Wohneinheiten
+INBOUND | 2026-10-21 12:00:33 | <CABG-=TYUdVACynkEqp1aE9bwkJDBzp9+ceQMKCO3GW6AH2O8CA@mail.gmail.com> | Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas
+INBOUND | 2026-10-21 12:01:46 | <CABG-=TbpVN2Tui2o4FMyF1C2MDmw=cF8tzYKegJEOSHUiU52nw@mail.gmail.com> | Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND | 2026-10-21 12:04:03 | <CABG-=TaBNHrouQN402i65Lrya96Adsd6u5a85zNb9BecYjT80w@mail.gmail.com> | Heizung nach Wartung wieder kalt
+INBOUND | 2026-10-21 12:04:44 | <CABG-=TY9v7bJK603=Nm4gXvOfcNMHvYk88wb6gEcOZwj8BXbiA@mail.gmail.com> | Preis Heizkörper
+OUTBOUND | 2026-10-21 12:05:09 | <CAHbdD1x-Jn0+jOBS-kB5cWUH2Kp2pjDSwu46Udg=i_OBkegemA@mail.gmail.com> | Re: Preis Heizkörper
+INBOUND | 2026-10-21 12:05:09 | <CABG-=TYGQ8V9Fd_YYkYh_drc2wC4-QeinLAMB3uZB187a1nRPg@mail.gmail.com> | Frage zu Ihren Leistungen
+INBOUND | 2026-10-21 12:05:27 | <CABG-=TbeZ=dmh5oawbYGWuLUcP+VKodwBHBO81MSe3pCu-yvbg@mail.gmail.com> | Steckdosen im Bad
+INBOUND | 2026-10-21 12:06:13 | <CABG-=TZVZAJZh45350ZNNLcBtqdZ1ub5etkrf3UuRaK-spcOVg@mail.gmail.com> | Servicepartner für unser Mehrfamilienhaus gesucht
+INBOUND | 2026-10-21 12:09:03 | <CABG-=Ta71JhGbr7vfrHuYAZ_ewfer64+LY38QPvtjN5rR10XAQ@mail.gmail.com> | Neue Heizung - Angebot
+OUTBOUND | 2026-10-21 12:09:32 | <CAHbdD1yAarS1nMOu7KZYc7iaR0oMCtaxn4s0d=Sn=En3aT6asw@mail.gmail.com> | Re: Neue Heizung - Angebot
+INBOUND | 2026-10-21 12:09:33 | <CABG-=TZTRDGRZjGfiCRj9koC1YRaus1+YdWfOoyoAZ0452MLqw@mail.gmail.com> | Badsanierung – bitte um Angebot
+OUTBOUND | 2026-10-21 12:10:01 | <CAHbdD1wzTDBat8AW7-8nVRqvnmgEsoEASu5kEd8Tgnd7xOatmw@mail.gmail.com> | Re: Badsanierung – bitte um Angebot
+INBOUND | 2026-10-21 12:10:02 | <CABG-=Tawd9LAyoUJ05wiFfCQ7sNm4F07Eny26w_wwwiGf8w3qw@mail.gmail.com> | Anfrage Wärmepumpe Einfamilienhaus
+OUTBOUND | 2026-10-21 12:10:33 | <CAHbdD1zZWgMPhVkL9dmtUUAikjBDEAkOa8c4xKwzdQF7VBO4dA@mail.gmail.com> | Re: Anfrage Wärmepumpe Einfamilienhaus
+INBOUND | 2026-10-21 12:14:03 | <CABG-=TZXmSE2rxAvgD0dqejYKXr2Xgfhr-dDd13X6j+GDuUFvA@mail.gmail.com> | Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND | 2026-10-21 12:17:03 | <CABG-=Taksn3nxwKfQYYkD+d3_+HiL4nFGuFgnAc+MBp3cWvCyA@mail.gmail.com> | Mehrere Dinge
+INBOUND | 2026-10-21 12:21:03 | <CABG-=Ta-y6O3v0NDFeeANdoM0wRHha7KFvuCU8JBmcWhX-=BJg@mail.gmail.com> | Fünf Dinge auf einmal
+INBOUND | 2026-10-21 12:46:07 | <CABG-=TYZ2G61yzmp7wJBtVC5T-rkGMPKDUvMYQRntWYTHEOaUw@mail.gmail.com> | Einiges auf einmal
+OUTBOUND | 2026-10-21 12:48:47 | <CAHbdD1xtZYGuEhp3uVkzPHr16wX0CDdOkra5F-yDZQikXzcc0Q@mail.gmail.com> | Re: Einiges auf einmal
+INBOUND | 2026-10-21 12:51:03 | <CABG-=TYCs+ceyFhhWWjtcSYVOjeV4-dhNcsd56VWecG0KirHew@mail.gmail.com> | Fünf Dinge auf einmal
+INBOUND | 2026-10-21 12:57:12 | <CABG-=TZm23V4mynsJKDrQZV8G986S21BKpHFSSn6wPSnS_sZsA@mail.gmail.com> | Mehrere Dinge
+INBOUND | 2026-10-21 12:59:45 | <CABG-=Tb2ML+uaXb6-seKBcqNRKDf92MWtb1eJhOVuCpgRYbXHA@mail.gmail.com> | Fünf Dinge auf einmal
+INBOUND | 2026-10-21 13:15:03 | <CABG-=TYAk0_8DOeiY=fd30dY9A0n96KsV_THEmg1EAnKAwMxUg@mail.gmail.com> | Re: Badsanierung – bitte um Angebot
+OUTBOUND | 2026-10-21 13:15:17 | <CAHbdD1yEC5hhe87NxN7e=pV2a-L13KRgJ==2vbtdLi0M1eV3Rg@mail.gmail.com> | Re: Badsanierung – bitte um Angebot
+INBOUND | 2026-10-21 13:17:04 | <CABG-=TaSB9wtz2e7tGZniavvT62xsGBR3TfY3=vVGCePJW6XPg@mail.gmail.com> | Re: Badezimmer erneuern – was kostet das?
+OUTBOUND | 2026-10-21 13:17:15 | <CAHbdD1wfj5U72vxiDSP7y9wb+WCAGpbX6SW4J1nV8nq-_XEHrQ@mail.gmail.com> | Re: Badezimmer erneuern – was kostet das?
+INBOUND | 2026-10-21 13:17:16 | <CABG-=TbTC_QN0W+m1dphCSAxYaN-G5+rC8hxCQUPG+W7ZhYO2w@mail.gmail.com> | Re: Wartungsvertrag für 12 Wohneinheiten
+OUTBOUND | 2026-10-21 13:17:29 | <CAHbdD1yLCscdCpSWYPEvmUNmjR3nMp_AN5wkDrN5nLO6FixLXg@mail.gmail.com> | Re: Wartungsvertrag für 12 Wohneinheiten
+OUTBOUND | 2026-10-21 13:18:17 | <CAHbdD1yAcDS3=k-TZD10UExgN7C9Er6iz+H4edtvNURi8c81BA@mail.gmail.com> | Re: Frage zu Ihren Leistungen
+OUTBOUND | 2026-10-21 13:18:49 | <CAHbdD1xkc1Amywq23oezeuTvFaQ79DPaV7+fNRbW_7ebTO5=PA@mail.gmail.com> | Re: Kommen Sie auch nach Bergisch Gladbach?
+OUTBOUND | 2026-10-21 13:19:25 | <CAHbdD1z8_SmpH=drWhJzbf6v=T-SMR4hDpzYTO=RtpKUOisXJA@mail.gmail.com> | Re: Praxisumzug – Wasser- und Gasanschlüsse
+INBOUND | 2026-10-21 13:51:03 | <CABG-=TaZpsXd1eW5FJKfWKGrEW=RJ8dHrSwE80X7nfu8C_TCgQ@mail.gmail.com> | Re: Servicepartner für unser Mehrfamilienhaus gesucht
+OUTBOUND | 2026-10-21 13:51:19 | <CAHbdD1zLbKumGMZhWFgxodhTWqh04Lgcw+Kvvr73w8=TXsAFAA@mail.gmail.com> | Re: Servicepartner für unser Mehrfamilienhaus gesucht
+INBOUND | 2026-10-21 13:53:03 | <CABG-=Tbd06HkDqC0YFf7AeHRvenjESNFzUUQuL2nCTpmYep6YA@mail.gmail.com> | Re: Neue Heizung - Angebot
+OUTBOUND | 2026-10-21 13:53:15 | <CAHbdD1yNA_W_x+Fm4JX38DBb3ho6uq0gveXzj-y2g_47b0=7YA@mail.gmail.com> | Re: Neue Heizung - Angebot
