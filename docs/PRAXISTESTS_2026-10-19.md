@@ -174,3 +174,19 @@ Grundlage: Entscheidung des Auftraggebers vom 21.10. („vor dem breiten Messlau
 - Gesamtlauf isoliert am Stand `876de50`: 73/73 Suiten außer einer (`autonomy-capabilities`: fehlender Eignungs-Seed in einem Testfall, behoben, Suite danach 17/17); am Stand `10fdc0c` siehe Abschnitt 8.6.
 - **FX-19 getrennt berichtet:** *Wiederholung bei KI-Ausfall* ist **nur mit skriptgesteuertem Modell** belegt (Unit-/e2e-Tests mit simuliertem Ausfall, Wartezeiten 1/5/15/30/60/120 min, Ereignisse `plan.retry_scheduled/exhausted`). *Neuplanung nach einer Kundenantwort* ist **mit dem echten Modell** belegt (Praxisumzug, Serien A–F: zuletzt F ohne Fund) – nicht mit Skript.
 - Wiederholungen der betroffenen Szenarien auf unverändertem Stand: Zerlegung 3×3 (5/5/5, 5/5/5, 1/1/1), Autonomer Abschluss 4, Mehrfach-Antwort 3, Wartungsvertrag 4 (nach G1), Korrekturdienst 12 (nach G2). Bereiche ohne Änderung (Praxisumzug-Neuplanung, Zerlegung) wurden nicht neu gesendet; sie liegen in Serie F bzw. im 60-Fälle-Lauf.
+
+## 9. Breiter Messlauf mit 60 Fällen (21.10.2026)
+
+Vollständiger Bericht, Fallmatrix, Klassen und Regeln: `docs/MESSLAUF_60_FAELLE.md`; Rohdaten: `docs/evidence/messlauf-60/`. Kurzfassung (Zustand A = ohne Eingriff, B = nach begrenzten Testfreigaben für Tom und 5 Antworten Toms):
+
+| | Ziel erreicht | berechtigt wartend | begründet übergeben | technisch fehlgeschlagen | nicht geprüft |
+|---|---|---|---|---|---|
+| Zustand A | 2 | 28 | 26 | 1 | 3 |
+| Zustand B | 4 | 25 | 27 | 1 | 3 |
+
+- **Kernfehler B1** (erst im breiten Lauf sichtbar): Teilvorgänge aufgeteilter Nachrichten lasen die Nachricht des Hauptvorgangs nicht („Es fehlen Angaben: messageId“) → behoben `bc4c1d0`, Regressionstest, danach kein Teilvorgang mit dem Fehler. Davor betroffen: Nr. 58 (zählt als technisch fehlgeschlagen).
+- **Harte Grenzen:** keine Verletzung (keine Mail an Dritte, kein Kalendereingriff, keine Zahlung, kein Preis/keine Zusage in Kundenmails, Notruf-Hinweis in allen 6 Notfallbestätigungen).
+- **Qualitätsmängel (offen):** pauschaler 90-Minuten-Vor-Ort-Termin im Angebotsablauf (17 von 60 Erstantworten, auch bei reiner Preisfrage), wiederholter Terminvorschlag nach jeder Antwort (5 von 5), überzähliger Teilvorgang bei zwei Fünf-Anliegen-Mails, Deals aus Teilen einer Nachricht.
+- **Nicht eingegangen:** 3 Mails (2 Bewerbungen, 1 englische Anfrage) – Ursache nicht nachgewiesen (vermutlich Gmail-Spam), als „nicht geprüft“ gezählt.
+- **Schatten-Kontingent:** 45 von 60 verbraucht (12 vorher + 33), 15 übrig, nicht zurückgesetzt.
+- **Aufgeräumt** nach Sicherung der Nachweise (`58e144c`): 79 Testvorgänge, 2 HubSpot-Deals (`529563585778`, `529605469416`) reversibel archiviert, 95 Mails in Toms Papierkorb.
