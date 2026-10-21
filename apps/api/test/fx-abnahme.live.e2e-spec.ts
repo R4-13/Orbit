@@ -241,8 +241,10 @@ const OUT = process.env.ABNAHME_OUT;
       'Korrektur zu unserer Anfrage: Statt der bodengleichen Dusche hätten wir jetzt gern eine normale Wanne.',
       'Wir haben uns umentschieden – die Dusche streichen wir, es kommt eine freistehende Badewanne hinein.',
       'Bitte berücksichtigen Sie: Die Fliesen sollen nicht mehr in Weiß, sondern in Anthrazit sein.',
+      // Ohne jedes Änderungswort (nur die Bedeutung): bekannte Grenze – hier trägt allein die Einschätzung des Modells; das Ergebnis wird festgehalten, ist aber keine harte Erwartung.
+      'Die Dusche lassen wir weg, dafür nehmen wir die Wanne mit Duschabtrennung.',
     ];
-    const keys = ['bathroom.shower', 'bathroom.shower', 'bathroom.shower', 'bathroom.tiles'];
+    const keys = ['bathroom.shower', 'bathroom.shower', 'bathroom.shower', 'bathroom.tiles', 'bathroom.shower'];
     const runs: Array<Record<string, unknown>> = [];
     for (const [index, text] of replies.entries()) {
       const row = await scoped().case.create({ data: { tenantId, type: 'GENERAL', title: `Korrektur ohne Zahl ${index}`, status: 'OPEN' } as never });
@@ -258,7 +260,7 @@ const OUT = process.env.ABNAHME_OUT;
       const open = await facts.openCorrectionNotes(tenantId, row.id);
       const handled = outcome.corrected.some((c) => c.key === keys[index]) || outcome.conflicts.some((c) => c.key === keys[index]) || open.length > 0;
       runs.push({ text, corrected: outcome.corrected, conflicts: outcome.conflicts.map((c) => c.key), ungeklaerterHinweis: open.length, erfasst: handled });
-      expect(handled).toBe(true); // nicht still verloren
+      if (index < 4) expect(handled).toBe(true); // nicht still verloren (Formulierungen mit Änderungswort); die fünfte ist die dokumentierte Grenze
     }
     record.korrekturOhneZahl = runs;
   });
