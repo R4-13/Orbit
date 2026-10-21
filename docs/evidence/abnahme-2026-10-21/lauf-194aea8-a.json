@@ -1,0 +1,1258 @@
+{
+  "preisfrage": [
+    {
+      "subject": "Preis Heizkörper",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "COMPLETION_CRITERIA_MET",
+        "evidenceRefs": [
+          "facts.extract_from_message",
+          "crm.lead.create/CRM_HANDOFF",
+          "staff.notify",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-1"
+        ]
+      },
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "extract",
+        "lead",
+        "notify",
+        "interpret",
+        "context",
+        "reqs",
+        "ack_draft",
+        "ack",
+        "done"
+      ],
+      "gruende": [],
+      "offeneSchritte": [],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Preis Heizkörper“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme 7ae42f"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Kosten Heizkörpertausch",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:human.review:Ich prüfe zunächst den Absender- und Vorgangskontext sowie die für eine Kostenauskunft erforderlichen Angaben. Da das Ergebnis der Anforderungsprüfung noch fehl",
+        "2:ACTIVE:staff.informed,task.created,human.review:Die Kundschaft hat die angefragte Leistung und die Anzahl genannt; es fehlt keine Angabe, die erneut erfragt werden sollte. Da Heizkörpertausch und eine belastb"
+      ],
+      "erledigt": [
+        "context",
+        "requirements",
+        "context",
+        "requirements",
+        "answer",
+        "notify",
+        "task"
+      ],
+      "gruende": [
+        "Person prüft Leistungsumfang und entscheidet, ob ein Angebot möglich ist: Bitte manuell bearbeiten."
+      ],
+      "offeneSchritte": [
+        "manual:WAITING"
+      ],
+      "mails": [],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Warmwasserspeicher",
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "plaene": [
+        "1:SUPERSEDED:quote.delivered,staff.informed:Ich prüfe zuerst den Absender- und Vorgangskontext sowie die für diese konkrete Preisanfrage nötigen Angaben. Da das Ergebnis der Anforderungsprüfung noch fehlt",
+        "2:ACTIVE:staff.informed,human.review:Die zwei fehlenden technischen Angaben werden gebündelt erfragt; danach wartet der Ablauf auf die Antwort. Zuständigkeit und Preis sind nicht belegt und müssen "
+      ],
+      "erledigt": [
+        "requirements",
+        "context",
+        "reassess",
+        "context",
+        "notify_staff",
+        "requirements",
+        "draft_question",
+        "send_question"
+      ],
+      "gruende": [
+        "Auf Antwort der Kundschaft warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "review_task:WAITING",
+        "wait_reply:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Warmwasserspeicher“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Welche Heizungs- oder Warmwasseranlage ist derzeit vorhanden, an die der Speicher angeschlossen werden soll? 2. Welches Speichervolumen benötigen Sie, oder wie viele Personen nutzen üblicherweise das Warmwasser? Sie können einfach auf diese E-Mail ant"
+      ],
+      "appointmentsProposed": 0
+    },
+    {
+      "subject": "Preisrahmen Thermostate",
+      "ohneVorgang": "NEEDS_REVIEW",
+      "mails": 0
+    },
+    {
+      "subject": "Armaturen im Bad",
+      "status": "WAITING_FOR_INFORMATION",
+      "outcome": null,
+      "plaene": [
+        "1:ACTIVE:request.handed_over:Standardablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.1)."
+      ],
+      "erledigt": [
+        "ask1_draft",
+        "interpret",
+        "context",
+        "extract",
+        "reqs",
+        "ask1"
+      ],
+      "gruende": [
+        "Auf Antwort warten: Wartet auf eine Antwort."
+      ],
+      "offeneSchritte": [
+        "wait1:WAITING"
+      ],
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Armaturen im Bad“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welche drei Armaturen handelt es sich (zum Beispiel Waschtisch-, Dusch- oder Wannenarmatur)? 2. Sind die neuen Armaturen bereits vorhanden, oder sollen wir diese liefern? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Abnahme "
+      ],
+      "appointmentsProposed": 0
+    }
+  ],
+  "wartungsvertrag": [
+    {
+      "kind": "Standard",
+      "subject": "Wartungsvertrag für 12 Wohneinheiten",
+      "status": "WAITING_FOR_INFORMATION",
+      "blueprint": "REQUEST_FOR_QUOTE",
+      "analysis": {
+        "known": [],
+        "summary": "Die Hausverwaltung für ein Haus mit 12 Wohneinheiten sucht einen Betrieb zur dauerhaften Wartung der Heizungsanlage, fragt nach Konditionen und möglichem Start sowie Wochenend-Bereitschaftsdienst; Heizungswartung liegt im Betriebsangebot, die gewünschte Wochenendbereitschaft ist nicht bestätigt.",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [
+          {
+            "what": "Wohneinheiten",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Gewünschte Leistung",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Baujahr der Heizungsanlage",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Bereitschaftsdienst am Wochenende gewünscht",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Erbetene Auskunft",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Bitte um Rückmeldung",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Kontaktperson",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          }
+        ],
+        "siteVisit": {
+          "reason": "Die Nachricht nennt keine konkrete unklare Bausituation oder einen ungeklärten Anlagenzustand, der einen Vor-Ort-Termin bereits erforderlich macht.",
+          "recommended": false
+        },
+        "inquiryKind": "QUOTE_OR_ORDER",
+        "requestType": "Anfrage zu dauerhaftem Wartungsvertrag für eine Heizungsanlage mit Bereitschaftsdienst",
+        "requirements": [
+          {
+            "key": "ai.system_type",
+            "type": "string",
+            "label": "Art der Heizungsanlage",
+            "blocking": true,
+            "question": "Um welche Art von Heizungsanlage handelt es sich (z. B. Gas-, Öl- oder Wärmepumpenanlage)?"
+          },
+          {
+            "key": "ai.current_condition",
+            "type": "string",
+            "label": "Zustand und bisherige Wartung",
+            "blocking": true,
+            "question": "Gibt es bekannte Störungen oder Besonderheiten, und wann wurde die Anlage zuletzt gewartet?"
+          },
+          {
+            "key": "ai.site_location",
+            "type": "string",
+            "label": "Standort des Objekts",
+            "blocking": true,
+            "question": "In welchem Ort befindet sich das Haus?"
+          },
+          {
+            "key": "ai.weekend_service_scope",
+            "type": "string",
+            "label": "Umfang der Wochenendbereitschaft",
+            "blocking": true,
+            "question": "Welche Reaktionszeit und welchen Umfang erwarten Sie vom Bereitschaftsdienst am Wochenende?"
+          }
+        ],
+        "withinOffering": "YES"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welche Art von Heizungsanlage handelt es sich (z. B. Gas-, Öl- oder Wärmepumpenanlage)? 2. Gibt es bekannte Störungen oder Besonderheiten, und wann wurde die Anlage zuletzt gewartet? 3. In welchem Ort befindet sich das Haus? 4. Welche Reaktionszeit und welchen Umfang erwarten Sie vom Bereitschaftsdienst am Wochenende? Sie können"
+      ]
+    },
+    {
+      "kind": "Standard",
+      "subject": "Wartungsvertrag für 12 Wohneinheiten",
+      "status": "WAITING_FOR_INFORMATION",
+      "blueprint": null,
+      "analysis": {
+        "known": [
+          {
+            "key": "ai.unit_count",
+            "label": "Wohneinheiten",
+            "value": 12,
+            "evidence": "Haus mit 12 Wohneinheiten",
+            "confidence": 1
+          },
+          {
+            "key": "ai.requested_service",
+            "label": "Gewünschte Leistung",
+            "value": "Dauerhafte Wartung der Heizungsanlage",
+            "evidence": "die Heizungsanlage (Baujahr 2009) dauerhaft wartet",
+            "confidence": 1
+          },
+          {
+            "key": "ai.system_year",
+            "label": "Baujahr der Anlage",
+            "value": 2009,
+            "evidence": "Heizungsanlage (Baujahr 2009)",
+            "confidence": 1
+          },
+          {
+            "key": "ai.weekend_on_call",
+            "label": "Bereitschaftsdienst",
+            "value": "am Wochenende gewünscht",
+            "evidence": "mit Bereitschaftsdienst am Wochenende",
+            "confidence": 1
+          },
+          {
+            "key": "ai.pricing_start",
+            "label": "Erfragte Konditionen und Start",
+            "value": "Konditionen und möglicher Startzeitpunkt",
+            "evidence": "Wie sehen Ihre Konditionen aus und wie schnell könnten Sie starten?",
+            "confidence": 1
+          },
+          {
+            "key": "ai.contact",
+            "label": "Kontakt",
+            "value": "Tom Orbit, Hausverwaltung",
+            "evidence": "Tom Orbit, Hausverwaltung",
+            "confidence": 1
+          }
+        ],
+        "summary": "Die Hausverwaltung sucht einen Betrieb für die dauerhafte Wartung einer Heizungsanlage in einem Haus mit 12 Wohneinheiten, einschließlich Wochenend-Bereitschaftsdienst, und fragt nach Konditionen und Startmöglichkeit.",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [],
+        "siteVisit": {
+          "reason": "Die Anfrage nennt keinen konkreten Umstand, der einen Vor-Ort-Termin für den nächsten Schritt erforderlich macht.",
+          "recommended": false
+        },
+        "inquiryKind": "QUOTE_OR_ORDER",
+        "requestType": "Anfrage zu dauerhaftem Heizungswartungsvertrag",
+        "requirements": [
+          {
+            "key": "ai.unit_count",
+            "type": "number",
+            "label": "Wohneinheiten",
+            "blocking": true,
+            "question": "Wohneinheiten?"
+          },
+          {
+            "key": "ai.requested_service",
+            "type": "string",
+            "label": "Gewünschte Leistung",
+            "blocking": true,
+            "question": "Gewünschte Leistung?"
+          },
+          {
+            "key": "ai.system_year",
+            "type": "number",
+            "label": "Baujahr der Anlage",
+            "blocking": true,
+            "question": "Baujahr der Anlage?"
+          },
+          {
+            "key": "ai.weekend_on_call",
+            "type": "string",
+            "label": "Bereitschaftsdienst",
+            "blocking": true,
+            "question": "Bereitschaftsdienst?"
+          },
+          {
+            "key": "ai.pricing_start",
+            "type": "string",
+            "label": "Erfragte Konditionen und Start",
+            "blocking": true,
+            "question": "Erfragte Konditionen und Start?"
+          },
+          {
+            "key": "ai.contact",
+            "type": "string",
+            "label": "Kontakt",
+            "blocking": true,
+            "question": "Kontakt?"
+          },
+          {
+            "key": "ai.heating_type",
+            "type": "string",
+            "label": "Art der Heizungsanlage",
+            "blocking": true,
+            "question": "Um welche Art von Heizungsanlage handelt es sich und welcher Energieträger wird verwendet?"
+          },
+          {
+            "key": "ai.last_service",
+            "type": "string",
+            "label": "Letzte Wartung",
+            "blocking": true,
+            "question": "Wann wurde die Anlage zuletzt gewartet?"
+          },
+          {
+            "key": "ai.location",
+            "type": "string",
+            "label": "Standort des Hauses",
+            "blocking": true,
+            "question": "In welchem Ort befindet sich das Haus?"
+          },
+          {
+            "key": "ai.on_call_scope",
+            "type": "string",
+            "label": "Umfang der Wochenend-Bereitschaft",
+            "blocking": true,
+            "question": "Welche Reaktionszeit und welchen Umfang erwarten Sie vom Bereitschaftsdienst am Wochenende?"
+          }
+        ],
+        "withinOffering": "YES"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welche Art von Heizungsanlage handelt es sich und welcher Energieträger wird verwendet? 2. Wann wurde die Anlage zuletzt gewartet? 3. In welchem Ort befindet sich das Haus? 4. Welche Reaktionszeit und welchen Umfang erwarten Sie vom Bereitschaftsdienst am Wochenende? Sie können einfach auf diese E-Mail antworten. Mit freundliche"
+      ]
+    },
+    {
+      "kind": "Standard",
+      "subject": "Wartungsvertrag für 12 Wohneinheiten",
+      "status": "WAITING_FOR_INFORMATION",
+      "blueprint": "REQUEST_FOR_QUOTE",
+      "analysis": {
+        "known": [],
+        "summary": "Die Hausverwaltung erkundigt sich nach den Konditionen und dem möglichen Start einer dauerhaften Wartung der Heizungsanlage eines Hauses mit 12 Wohneinheiten und wünscht Bereitschaftsdienst am Wochenende.",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [
+          {
+            "what": "Gewünschte Leistung",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Anzahl Wohneinheiten",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Baujahr der Heizungsanlage",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Bereitschaftsdienst",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Gewünschter Beginn",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Ansprechperson",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          }
+        ],
+        "siteVisit": {
+          "reason": "",
+          "recommended": false
+        },
+        "inquiryKind": "QUOTE_OR_ORDER",
+        "requestType": "Anfrage zu einem dauerhaften Heizungswartungsvertrag",
+        "requirements": [
+          {
+            "key": "ai.system_type",
+            "type": "string",
+            "label": "Art und Energieträger der Anlage",
+            "blocking": true,
+            "question": "Um welchen Typ Heizungsanlage und welchen Energieträger handelt es sich?"
+          },
+          {
+            "key": "ai.location",
+            "type": "string",
+            "label": "Standort des Hauses",
+            "blocking": true,
+            "question": "In welchem Ort befindet sich das Haus?"
+          },
+          {
+            "key": "ai.maintenance_status",
+            "type": "string",
+            "label": "Bisheriger Wartungsstand",
+            "blocking": true,
+            "question": "Wann wurde die Anlage zuletzt gewartet, und bestehen bekannte Störungen oder Mängel?"
+          },
+          {
+            "key": "ai.on_call_scope",
+            "type": "string",
+            "label": "Umfang des Bereitschaftsdienstes",
+            "blocking": true,
+            "question": "Welche Reaktionszeit und welche Leistungen erwarten Sie vom Bereitschaftsdienst am Wochenende?"
+          }
+        ],
+        "withinOffering": "YES"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wartungsvertrag für 12 Wohneinheiten“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Um welchen Typ Heizungsanlage und welchen Energieträger handelt es sich? 2. In welchem Ort befindet sich das Haus? 3. Wann wurde die Anlage zuletzt gewartet, und bestehen bekannte Störungen oder Mängel? 4. Welche Reaktionszeit und welche Leistungen erwarten Sie vom Bereitschaftsdienst am Wochenende? Sie können einfach auf diese E-M"
+      ]
+    },
+    {
+      "kind": "Variante",
+      "subject": "Servicepartner für unser Mehrfamilienhaus gesucht",
+      "status": "WAITING_FOR_INFORMATION",
+      "blueprint": "REQUEST_FOR_QUOTE",
+      "analysis": {
+        "known": [],
+        "summary": "Die Hausverwaltung sucht für ein Mehrfamilienhaus mit zwölf Wohnungen und einer Heizungsanlage von 2009 einen dauerhaften Servicepartner mit Wochenend-Rufbereitschaft und fragt nach den Kosten sowie dem möglichen Starttermin. Der Betrieb bietet Heizungswartung und Notdienst an; eine dauerhafte Wochenend-Rufbereitschaft ist im Profil nicht ausdrücklich bestätigt.",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [
+          {
+            "what": "Objektart",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Anzahl Wohnungen",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Baujahr der Heizungsanlage",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Gewünschte Vertragsdauer",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Gewünschte Rufbereitschaft",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Kostenfrage",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Frage nach möglichem Beginn",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Name",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          },
+          {
+            "what": "Rolle",
+            "reason": "Beleg steht nicht wörtlich in der Nachricht"
+          }
+        ],
+        "siteVisit": {
+          "reason": "Die Anfrage nennt keinen konkreten ungeklärten baulichen oder technischen Zustand, der einen Vor-Ort-Termin erforderlich macht.",
+          "recommended": false
+        },
+        "inquiryKind": "PRICE_INFORMATION",
+        "requestType": "Anfrage zu dauerhaftem Heizungsservice mit Wochenend-Rufbereitschaft",
+        "requirements": [
+          {
+            "key": "ai.service_scope",
+            "type": "string",
+            "label": "Gewünschter Leistungsumfang",
+            "blocking": true,
+            "question": "Welche regelmäßigen Wartungs- oder Betreuungsleistungen sollen wir für die Heizungsanlage übernehmen?"
+          },
+          {
+            "key": "ai.system_type",
+            "type": "string",
+            "label": "Art der Heizungsanlage",
+            "blocking": true,
+            "question": "Um welche Art von Heizungsanlage handelt es sich (z. B. Gas, Öl oder Wärmepumpe)?"
+          },
+          {
+            "key": "ai.service_location",
+            "type": "string",
+            "label": "Standort",
+            "blocking": true,
+            "question": "In welchem Ort befindet sich das Mehrfamilienhaus?"
+          },
+          {
+            "key": "ai.weekend_on_call_scope",
+            "type": "string",
+            "label": "Umfang der Wochenend-Rufbereitschaft",
+            "blocking": true,
+            "question": "Welche Reaktionszeit und welchen Umfang an Einsätzen erwarten Sie während der Wochenend-Rufbereitschaft?"
+          }
+        ],
+        "withinOffering": "UNSURE"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Servicepartner für unser Mehrfamilienhaus gesucht“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Welche regelmäßigen Wartungs- oder Betreuungsleistungen sollen wir für die Heizungsanlage übernehmen? 2. Um welche Art von Heizungsanlage handelt es sich (z. B. Gas, Öl oder Wärmepumpe)? 3. In welchem Ort befindet sich das Mehrfamilienhaus? 4. Welche Reaktionszeit und welchen Umfang an Einsätzen erwarten Sie während de"
+      ]
+    },
+    {
+      "kind": "Neu 1",
+      "subject": "Betreuung unserer Heizzentrale",
+      "status": "WAITING_FOR_INFORMATION",
+      "blueprint": "REQUEST_FOR_QUOTE",
+      "analysis": {
+        "known": [
+          {
+            "key": "ai.customer_type",
+            "label": "Kundschaft",
+            "value": "Eigentümergemeinschaft",
+            "evidence": "wir sind eine Eigentümergemeinschaft",
+            "confidence": 1
+          },
+          {
+            "key": "ai.unit_count",
+            "label": "Wohnungen",
+            "value": 8,
+            "evidence": "mit 8 Wohnungen",
+            "confidence": 1
+          },
+          {
+            "key": "ai.heating_type",
+            "label": "Heizungsart",
+            "value": "Gasheizung",
+            "evidence": "unsere Gasheizung",
+            "confidence": 1
+          },
+          {
+            "key": "ai.installation_year",
+            "label": "Baujahr",
+            "value": 2014,
+            "evidence": "(Baujahr 2014)",
+            "confidence": 1
+          },
+          {
+            "key": "ai.requested_service",
+            "label": "Gewünschte Leistung",
+            "value": "Regelmäßige Wartung und Hilfe bei Störungen",
+            "evidence": "regelmäßig wartet und bei Störungen kommt",
+            "confidence": 1
+          },
+          {
+            "key": "ai.price_request",
+            "label": "Preisanfrage",
+            "value": "Ungefähre jährliche Kosten",
+            "evidence": "Was würde das pro Jahr ungefähr kosten?",
+            "confidence": 1
+          },
+          {
+            "key": "ai.customer_name",
+            "label": "Name",
+            "value": "WEG Rheinblick",
+            "evidence": "Viele Grüße, WEG Rheinblick",
+            "confidence": 1
+          }
+        ],
+        "summary": "Die Eigentümergemeinschaft fragt nach den ungefähren jährlichen Kosten für regelmäßige Wartung und Störungseinsätze an ihrer Gasheizung (Baujahr 2014).",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [],
+        "siteVisit": {
+          "reason": "",
+          "recommended": false
+        },
+        "inquiryKind": "PRICE_INFORMATION",
+        "requestType": "Preisauskunft zur regelmäßigen Wartung und Störungsbehebung einer Gasheizung",
+        "requirements": [
+          {
+            "key": "ai.customer_type",
+            "type": "string",
+            "label": "Kundschaft",
+            "blocking": true,
+            "question": "Kundschaft?"
+          },
+          {
+            "key": "ai.unit_count",
+            "type": "number",
+            "label": "Wohnungen",
+            "blocking": true,
+            "question": "Wohnungen?"
+          },
+          {
+            "key": "ai.heating_type",
+            "type": "string",
+            "label": "Heizungsart",
+            "blocking": true,
+            "question": "Heizungsart?"
+          },
+          {
+            "key": "ai.installation_year",
+            "type": "number",
+            "label": "Baujahr",
+            "blocking": true,
+            "question": "Baujahr?"
+          },
+          {
+            "key": "ai.requested_service",
+            "type": "string",
+            "label": "Gewünschte Leistung",
+            "blocking": true,
+            "question": "Gewünschte Leistung?"
+          },
+          {
+            "key": "ai.price_request",
+            "type": "string",
+            "label": "Preisanfrage",
+            "blocking": true,
+            "question": "Preisanfrage?"
+          },
+          {
+            "key": "ai.customer_name",
+            "type": "string",
+            "label": "Name",
+            "blocking": true,
+            "question": "Name?"
+          },
+          {
+            "key": "ai.boiler_details",
+            "type": "string",
+            "label": "Anlagendaten",
+            "blocking": true,
+            "question": "Wie viele Heizkessel beziehungsweise Wärmeerzeuger umfasst die Heizzentrale, und welche Leistung haben sie?"
+          },
+          {
+            "key": "ai.maintenance_frequency",
+            "type": "string",
+            "label": "Wartungsturnus",
+            "blocking": true,
+            "question": "Wie häufig soll die Wartung stattfinden?"
+          },
+          {
+            "key": "ai.fault_response_scope",
+            "type": "string",
+            "label": "Störungseinsätze",
+            "blocking": true,
+            "question": "Soll die Störungsbehebung auch außerhalb der üblichen Geschäftszeiten erfolgen?"
+          }
+        ],
+        "withinOffering": "YES"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Betreuung unserer Heizzentrale“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Wie viele Heizkessel beziehungsweise Wärmeerzeuger umfasst die Heizzentrale, und welche Leistung haben sie? 2. Wie häufig soll die Wartung stattfinden? 3. Soll die Störungsbehebung auch außerhalb der üblichen Geschäftszeiten erfolgen? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Abnahme 7ae42f"
+      ]
+    },
+    {
+      "kind": "Neu 2",
+      "subject": "Jährliche Wartung gesucht",
+      "status": "MANUAL_REVIEW",
+      "blueprint": null,
+      "analysis": {
+        "known": [
+          {
+            "key": "ai.customer_name",
+            "label": "Kundenname",
+            "value": "Weber Immobilien",
+            "evidence": "Gruß, Weber Immobilien",
+            "confidence": 1
+          },
+          {
+            "key": "ai.property_type",
+            "label": "Objektart",
+            "value": "Gewerbeobjekt",
+            "evidence": "für unser Gewerbeobjekt",
+            "confidence": 1
+          },
+          {
+            "key": "ai.requested_service",
+            "label": "Gewünschte Leistung",
+            "value": "Fester Wartungsvertrag",
+            "evidence": "einen festen Wartungsvertrag",
+            "confidence": 1
+          },
+          {
+            "key": "ai.emergency_service_interest",
+            "label": "Interesse an Notdienst",
+            "value": "Gern mit Notdienst",
+            "evidence": "gern mit Notdienst",
+            "confidence": 1
+          },
+          {
+            "key": "ai.process_question",
+            "label": "Frage zum Ablauf",
+            "value": "Fragt, wie es abläuft",
+            "evidence": "Wie läuft das bei Ihnen",
+            "confidence": 1
+          },
+          {
+            "key": "ai.start_timing_question",
+            "label": "Frage zum möglichen Beginn",
+            "value": "Fragt, ab wann es ginge",
+            "evidence": "und ab wann ginge das?",
+            "confidence": 1
+          }
+        ],
+        "summary": "Weber Immobilien fragt für ein Gewerbeobjekt mit zwei Ölkesseln nach einem festen Wartungsvertrag, gern mit Notdienst, sowie nach dem Ablauf und dem frühestmöglichen Beginn; Heizungswartung und Notdienst gehören zum Betriebsangebot.",
+        "nextStep": "ASK_CUSTOMER",
+        "rejected": [
+          {
+            "what": "Anzahl der Ölkessel",
+            "reason": "Zahl steht nicht im Beleg"
+          }
+        ],
+        "siteVisit": {
+          "reason": "",
+          "recommended": false
+        },
+        "inquiryKind": "QUOTE_OR_ORDER",
+        "requestType": "Anfrage zu einem festen Wartungsvertrag für zwei Ölkessel",
+        "requirements": [
+          {
+            "key": "ai.customer_name",
+            "type": "string",
+            "label": "Kundenname",
+            "blocking": true,
+            "question": "Kundenname?"
+          },
+          {
+            "key": "ai.property_type",
+            "type": "string",
+            "label": "Objektart",
+            "blocking": true,
+            "question": "Objektart?"
+          },
+          {
+            "key": "ai.requested_service",
+            "type": "string",
+            "label": "Gewünschte Leistung",
+            "blocking": true,
+            "question": "Gewünschte Leistung?"
+          },
+          {
+            "key": "ai.emergency_service_interest",
+            "type": "string",
+            "label": "Interesse an Notdienst",
+            "blocking": true,
+            "question": "Interesse an Notdienst?"
+          },
+          {
+            "key": "ai.process_question",
+            "type": "string",
+            "label": "Frage zum Ablauf",
+            "blocking": true,
+            "question": "Frage zum Ablauf?"
+          },
+          {
+            "key": "ai.start_timing_question",
+            "type": "string",
+            "label": "Frage zum möglichen Beginn",
+            "blocking": true,
+            "question": "Frage zum möglichen Beginn?"
+          },
+          {
+            "key": "ai.boiler_details",
+            "type": "string",
+            "label": "Angaben zu den Ölkesseln",
+            "blocking": true,
+            "question": "Könnten Sie bitte Hersteller, Modell und ungefähres Alter der beiden Ölkessel nennen?"
+          },
+          {
+            "key": "ai.boiler_location",
+            "type": "string",
+            "label": "Standort der Ölkessel",
+            "blocking": true,
+            "question": "In welchem Ort befindet sich das Gewerbeobjekt?"
+          },
+          {
+            "key": "ai.maintenance_history",
+            "type": "string",
+            "label": "Bisheriger Wartungszustand",
+            "blocking": true,
+            "question": "Wann wurden die Kessel zuletzt gewartet, und sind derzeit Störungen oder bekannte Mängel vorhanden?"
+          }
+        ],
+        "withinOffering": "YES"
+      },
+      "mails": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Jährliche Wartung gesucht“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Gewünschte Leistung? 2. Frage zum Ablauf? 3. Frage zum möglichen Beginn? 4. Könnten Sie bitte Hersteller, Modell und ungefähres Alter der beiden Ölkessel nennen? 5. In welchem Ort befindet sich das Gewerbeobjekt? 6. Wann wurden die Kessel zuletzt gewartet, und sind derzeit Störungen oder bekannte Mängel vorhanden? Sie können einfach auf diese"
+      ]
+    }
+  ],
+  "terminvertagung": [
+    {
+      "deferral": "Die Wärmepumpe soll auch das Warmwasser übernehmen. Welcher der Termine passt, sage ich Ihnen noch.",
+      "aufbau": true,
+      "status": "WAITING_FOR_INFORMATION",
+      "firstMail": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wärmepumpe im Altbau“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. In welchem Ort befindet sich die Immobilie? 2. Wie hoch war der jährliche Heizölverbrauch der letzten Jahre, soweit bekannt? 3. Welche Wärmeverteilun"
+      ],
+      "nachAntwort": [
+        "Guten Tag, vielen Dank für Ihre Antwort. Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben: 1. Gewünschte Leistung? 2. In welchem Ort befindet sich die Immobilie? 3. Wie hoch war der jährliche Heizölverbrauch der letzten Jahre, soweit bekannt? 4. Welche Wärmeverteilung "
+      ],
+      "vorschlaegeNachher": 1,
+      "gebucht": 0
+    },
+    {
+      "deferral": "Ja, auch das Warmwasser. Den Termin kann ich erst nächste Woche festlegen, ich melde mich dazu.",
+      "aufbau": true,
+      "status": "WAITING_FOR_INFORMATION",
+      "firstMail": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wärmepumpe im Altbau“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. In welcher Stadt oder Gemeinde befindet sich die Immobilie? 2. Wie hoch war der jährliche Heizölverbrauch der letzten Jahre, soweit Ihnen bekannt? 3."
+      ],
+      "nachAntwort": [
+        "Guten Tag, vielen Dank für Ihre Antwort. Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben: 1. In welcher Stadt oder Gemeinde befindet sich die Immobilie? 2. Wie hoch war der jährliche Heizölverbrauch der letzten Jahre, soweit Ihnen bekannt? 3. Welche Heizflächen sind v"
+      ],
+      "vorschlaegeNachher": 1,
+      "gebucht": 0
+    },
+    {
+      "deferral": "Das Warmwasser soll mit versorgt werden. Wann genau ich Zeit habe, weiß ich noch nicht – ich gebe Ihnen Bescheid.",
+      "aufbau": true,
+      "status": "WAITING_FOR_INFORMATION",
+      "firstMail": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wärmepumpe im Altbau“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. In welchem Ort befindet sich die Immobilie? 2. Welche Heizflächen sind im Haus vorhanden, zum Beispiel Heizkörper oder Fußbodenheizung? Für eine verl"
+      ],
+      "nachAntwort": [
+        "Guten Tag, vielen Dank für Ihre Antwort. Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben: 1. In welchem Ort befindet sich die Immobilie? 2. Welche Heizflächen sind im Haus vorhanden, zum Beispiel Heizkörper oder Fußbodenheizung? Sie können einfach auf diese E-Mail ant"
+      ],
+      "vorschlaegeNachher": 1,
+      "gebucht": 0
+    },
+    {
+      "deferral": "Warmwasser bitte mit. Zum Termin: Ich muss erst mit meiner Frau sprechen und schreibe Ihnen dann.",
+      "aufbau": true,
+      "status": "WAITING_FOR_INFORMATION",
+      "firstMail": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Wärmepumpe im Altbau“. Für eine verlässliche Einschätzung schauen wir uns die Situation gern bei Ihnen vor Ort an. Folgende Termine hätten wir frei: - Donnerstag, 22.10.2026, ab 09:00 Uhr - Freitag, 23.10.2026, ab 14:00 Uhr - Montag, 26.10.2026, ab 11:00 Uhr "
+      ],
+      "nachAntwort": [
+        "Guten Tag, vielen Dank für Ihre Antwort. Damit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben: 1. Gewünschte Leistung? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Abnahme 7ae42f"
+      ],
+      "vorschlaegeNachher": 1,
+      "gebucht": 0
+    }
+  ],
+  "fuenfAnliegen": [
+    {
+      "name": "Standard 1",
+      "concerns": [
+        "Kopie der letzten Rechnung",
+        "Wartungstermin verschieben",
+        "Angebot für Heizungsregler",
+        "Telefonische Erreichbarkeit samstags",
+        "Reparaturtermin für tropfenden Wasserhahn"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    },
+    {
+      "name": "Standard 2",
+      "concerns": [
+        "Kopie der letzten Rechnung",
+        "Wartungstermin verschieben",
+        "Angebot für Heizungsregler",
+        "Telefonische Erreichbarkeit samstags",
+        "Reparaturtermin für tropfenden Wasserhahn"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    },
+    {
+      "name": "Standard 3",
+      "concerns": [
+        "Kopie der letzten Rechnung",
+        "Wartungstermin verschieben",
+        "Angebot für Heizungsregler",
+        "Telefonische Erreichbarkeit samstags",
+        "Reparaturtermin für tropfenden Wasserhahn"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    },
+    {
+      "name": "Variante",
+      "concerns": [
+        "Kopie der Rechnung vom letzten Einsatz",
+        "Wartungstermin verschieben",
+        "Angebot für neue Thermostate",
+        "Telefonische Erreichbarkeit freitags",
+        "Reparaturtermin für tropfenden Wasserhahn"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    },
+    {
+      "name": "Neu 1",
+      "concerns": [
+        "Kopie der Rechnung vom 12.09.",
+        "Wartungstermin verlegen",
+        "Preisauskunft für ein neues Thermostat",
+        "Termin wegen tropfendem Wasserhahn"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    },
+    {
+      "name": "Neu 2 (Dank mit echter Bitte)",
+      "concerns": [
+        "Erreichbarkeit samstags",
+        "Wartungstermin verschieben",
+        "Rückruf zur Garagenheizung"
+      ],
+      "supplemented": 0,
+      "ungrounded": 0,
+      "unassigned": 0
+    }
+  ],
+  "mehrfachVollstaendig": [
+    {
+      "subject": "Zwei Dinge",
+      "children": 2,
+      "mailsGesendet": 4,
+      "replySent": true,
+      "fehlendeMessageId": 0,
+      "perChild": [
+        {
+          "anliegen": "Angebot für neuen Heizungsregler",
+          "status": "WAITING_FOR_INFORMATION",
+          "siblingInfo": 0,
+          "antwortErhalten": 1
+        },
+        {
+          "anliegen": "Reparaturtermin für tropfenden Wasserhahn",
+          "status": "MANUAL_REVIEW",
+          "siblingInfo": 0,
+          "antwortErhalten": 1
+        }
+      ]
+    },
+    {
+      "subject": "Reparatur und Angebot",
+      "children": 2,
+      "mailsGesendet": 1,
+      "replySent": true,
+      "fehlendeMessageId": 0,
+      "perChild": [
+        {
+          "anliegen": "Reparaturtermin für tropfenden Wasserhahn",
+          "status": "MANUAL_REVIEW",
+          "siblingInfo": 1,
+          "antwortErhalten": 0
+        },
+        {
+          "anliegen": "Angebot für einen neuen Heizungsregler",
+          "status": "WAITING_FOR_INFORMATION",
+          "siblingInfo": 0,
+          "antwortErhalten": 1
+        }
+      ]
+    },
+    {
+      "subject": "Zwei Bitten",
+      "children": 2,
+      "mailsGesendet": 4,
+      "replySent": true,
+      "fehlendeMessageId": 0,
+      "perChild": [
+        {
+          "anliegen": "Termin für die Reparatur des Wasserhahns",
+          "status": "MANUAL_REVIEW",
+          "siblingInfo": 0,
+          "antwortErhalten": 1
+        },
+        {
+          "anliegen": "Preisauskunft zum Heizungsregler",
+          "status": "MANUAL_REVIEW",
+          "siblingInfo": 0,
+          "antwortErhalten": 1
+        }
+      ]
+    }
+  ],
+  "erreichbaresZiel": [
+    {
+      "subject": "Frage zu Ihren Leistungen",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "inquiry.answered",
+            "label": "Anfrage beantwortet",
+            "evidence": [
+              "email.send/INFORMATION"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/INFORMATION",
+          "email.send/INFORMATION:x-27"
+        ]
+      },
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht. Ja, wir bieten Badsanierungen an. Freitags sind wir bis 16:00 Uhr erreichbar. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Abnahme 7ae42f"
+        }
+      ]
+    },
+    {
+      "subject": "Frage zu Ihren Leistungen",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "inquiry.answered",
+            "label": "Anfrage beantwortet",
+            "evidence": [
+              "email.send/INFORMATION"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/INFORMATION",
+          "email.send/INFORMATION:x-28"
+        ]
+      },
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht. Ja, wir bieten Badsanierungen an. Freitags sind wir bis 16:00 Uhr erreichbar. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Abnahme 7ae42f"
+        }
+      ]
+    },
+    {
+      "subject": "Frage zu Ihren Leistungen",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "inquiry.answered",
+            "label": "Anfrage beantwortet",
+            "evidence": [
+              "email.send/INFORMATION"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/INFORMATION",
+          "email.send/INFORMATION:x-29"
+        ]
+      },
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht. Guten Tag, ja, wir bieten Badsanierungen an. Freitags sind wir bis 16:00 Uhr erreichbar. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Abnahme 7ae42f"
+        }
+      ]
+    },
+    {
+      "subject": "Leistungen und Zeiten",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "inquiry.answered",
+            "label": "Anfrage beantwortet",
+            "evidence": [
+              "email.send/INFORMATION"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/INFORMATION",
+          "email.send/INFORMATION:x-30"
+        ]
+      },
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht. Ja, wir bieten Wärmepumpen an. Montags erreichen Sie uns von 07:30 bis 16:00 Uhr. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Abnahme 7ae42f"
+        }
+      ]
+    },
+    {
+      "subject": "Kommen Sie nach Bergisch Gladbach?",
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "inquiry.answered",
+            "label": "Anfrage beantwortet",
+            "evidence": [
+              "email.send/INFORMATION"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/INFORMATION",
+          "email.send/INFORMATION:x-31"
+        ]
+      },
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht. Ja, Bergisch Gladbach liegt im Einsatzgebiet Köln und Umgebung (30 km). Rohrreinigung bieten wir an. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Abnahme 7ae42f"
+        }
+      ]
+    }
+  ],
+  "schluesselbund": [
+    {
+      "auftrag": "Guten Tag, Ihr Monteur hat gestern bei uns im Haus Rheinweg 8 einen Schlüsselbund im Keller liegen lassen. Bitte sagen Sie ihm Bescheid, damit er ihn bei uns abholt, und bestätigen Sie uns kurz, dass diese Nachricht angekommen ist. Viele Grüße, Fritz Lindner",
+      "status": "MANUAL_REVIEW",
+      "ziele": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "task.created",
+        "request.handed_over",
+        "human.review"
+      ],
+      "erklaerung": "Die vorhandenen Angaben beantworten bereits, was gemeldet wurde; es fehlen keine kundenbekannten Informationen. ORBIT bestätigt den Eingang und übergibt die interne Ermittlung des zuständigen Monteurs samt Abholung an eine Person, da Monteur-Identität und tatsächliche Abholung intern zu klären sind.",
+      "abschluss": null,
+      "meldung": [
+        {
+          "knoten": "notify",
+          "zustand": "SUCCEEDED"
+        }
+      ],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Schlüsselbund im Keller vergessen“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme 7ae42f"
+      ]
+    },
+    {
+      "auftrag": "Guten Tag, Ihr Monteur hat gestern bei uns im Haus Rheinweg 8 einen Schlüsselbund im Keller liegen lassen. Bitte sagen Sie ihm Bescheid, damit er ihn bei uns abholt, und bestätigen Sie uns kurz, dass diese Nachricht angekommen ist. Viele Grüße, Fritz Lindner",
+      "status": "MANUAL_REVIEW",
+      "ziele": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "task.created",
+        "human.review"
+      ],
+      "erklaerung": "Die neuen Angaben reichen für die Empfangsbestätigung, interne Benachrichtigung und Abholaufgabe; es wird nichts erneut erfragt. Eine Person muss noch den zuständigen Monteur zuordnen und die tatsächliche Abholung koordinieren, da ORBIT dafür keine ausführbare Fähigkeit hat.",
+      "abschluss": null,
+      "meldung": [
+        {
+          "knoten": "notify",
+          "zustand": "SUCCEEDED"
+        }
+      ],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Vergessener Schlüsselbund bei uns im Keller“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abna"
+      ]
+    },
+    {
+      "auftrag": "Guten Tag, Ihr Monteur hat gestern bei uns im Haus Rheinweg 8 einen Schlüsselbund im Keller liegen lassen. Bitte sagen Sie ihm Bescheid, damit er ihn bei uns abholt, und bestätigen Sie uns kurz, dass diese Nachricht angekommen ist. Viele Grüße, Fritz Lindner",
+      "status": "COMPLETED",
+      "ziele": [
+        "receipt.acknowledged",
+        "staff.informed"
+      ],
+      "erklaerung": "Die neuen Angaben erfüllen das Geschäftsziel: Der Betrieb kann die zuständige Person intern informieren und den Eingang wie gewünscht bestätigen, ohne erneut nachzufragen. Die tatsächliche Zuordnung und Abholung des Schlüssels bleibt der zuständigen Person vorbehalten.",
+      "abschluss": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "receipt.acknowledged",
+            "label": "Eingang bestätigt",
+            "evidence": [
+              "email.send/ACKNOWLEDGEMENT"
+            ]
+          },
+          {
+            "goal": "staff.informed",
+            "label": "Zuständige Person informiert",
+            "evidence": [
+              "staff.notify"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "staff.notify",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-34"
+        ]
+      },
+      "meldung": [
+        {
+          "knoten": "notify",
+          "zustand": "SUCCEEDED"
+        }
+      ],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Schlüssel im Keller: bitte Monteur informieren“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen A"
+      ]
+    },
+    {
+      "auftrag": "Hallo, bei der Wartung gestern im Rheinweg 8 ist ein Schlüsselbund im Heizungskeller zurückgeblieben. Könnten Sie dem Techniker ausrichten, dass er ihn abholen kann? Eine kurze Eingangsbestätigung würde uns reichen. Danke, F. Lindner",
+      "status": "COMPLETED",
+      "ziele": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "task.created"
+      ],
+      "erklaerung": "Die neuen Angaben zeigen, dass das Ziel nicht bereits erreicht ist: Die Kundschaft hat den Ort, den Schlüsselbund und den gewünschten Schritt benannt, doch die Eingangsbestätigung und interne Organisation stehen noch aus. Ich prüfe den tatsächlichen Bedarf, bestätige den Eingang und gebe die Abholun",
+      "abschluss": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "goals": [
+          {
+            "goal": "receipt.acknowledged",
+            "label": "Eingang bestätigt",
+            "evidence": [
+              "email.send/ACKNOWLEDGEMENT"
+            ]
+          },
+          {
+            "goal": "staff.informed",
+            "label": "Zuständige Person informiert",
+            "evidence": [
+              "staff.notify"
+            ]
+          },
+          {
+            "goal": "task.created",
+            "label": "Aufgabe angelegt",
+            "evidence": [
+              "task"
+            ]
+          }
+        ],
+        "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+        "evidenceRefs": [
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-35",
+          "staff.notify",
+          "task.create"
+        ]
+      },
+      "meldung": [],
+      "mails": [
+        "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Liegengebliebene Schlüssel – Rückgabe“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Abnahme 7a"
+      ]
+    }
+  ]
+}

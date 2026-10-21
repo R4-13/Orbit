@@ -42,9 +42,11 @@ export interface FactCorrectionOutcome {
   ignored: Array<{ key: string; kind: string; reason: string }>;
 }
 
-const CORRECTION_CUE = /\b(doch|korrigier\w*|korrektur|eigentlich|stimmt\s+nicht|falsch|vertan|geirrt|verwechselt)\b|\bnicht\b[^.!?]{0,40}\bsondern\b/i;
+/** Wörter, mit denen jemand eine frühere Angabe ändert, ohne „Korrektur“ zu schreiben („wir haben uns umentschieden“, „stattdessen“, „nicht mehr“, „statt der …“). */
+const CHANGE_CUE = /\b(umentschieden|stattdessen|ändern\w*|geändert|ersetz\w*|entfällt|entfallen|verzichten|streichen\s+wir|doch\s+lieber|lieber\s+doch)\b|\bnicht\s+mehr\b|\bstatt\s+(?:der|des|dem|den|einer|eines|eine|ein)\b/i;
+const CORRECTION_CUE = /\b(doch|korrigier\w*|korrektur|eigentlich|stimmt\s+nicht|falsch|vertan|geirrt|verwechselt|umentschieden|stattdessen)\b|\bnicht\b[^.!?]{0,40}\bsondern\b|\bnicht\s+mehr\b|\bstatt\s+(?:der|des|dem|den|einer|eines|eine|ein)\b/i;
 
-const STRONG_CUE = /\b(korrigier\w*|korrektur|stimmt\s+nicht|geirrt|vertan|verwechselt)\b|\bnicht\b[^.!?]{0,40}\bsondern\b/i;
+const STRONG_CUE = new RegExp(`${/\b(korrigier\w*|korrektur|stimmt\s+nicht|geirrt|vertan|verwechselt)\b|\bnicht\b[^.!?]{0,40}\bsondern\b/.source}|${CHANGE_CUE.source}`, 'i');
 
 /** Die Sätze mit Korrekturhinweis (samt Nachbarsatz, höchstens 500 Zeichen) – leer, wenn keiner vorkommt. */
 export function cueSentences(body: string): string | undefined {

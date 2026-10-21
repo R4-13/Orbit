@@ -194,6 +194,16 @@ describe('Korrekturen früher genannter Angaben (FX-20, e2e)', () => {
     await service.processInbound(other.tenantId, other.caseId, await message(other.tenantId, other.caseId, TOM, 'Das passt doch alles so, danke.'));
     expect((await facts.getCurrent(other.tenantId, other.caseId)).filter((f) => f.key.startsWith('korrekturhinweis.'))).toHaveLength(0);
   });
+  it('eine Änderung ohne das Wort „Korrektur“ („wir haben uns umentschieden“, „statt der …“) geht nicht still verloren: wird sie keiner Angabe zugeordnet, steht der Satz als ungeklärter Hinweis am Vorgang', async () => {
+    const { tenantId, caseId } = await setup();
+    seedUpdates([]);
+    seedUpdates([]);
+    seedUpdates([]);
+    const outcome = await service.processInbound(tenantId, caseId, await message(tenantId, caseId, TOM, 'Wir haben uns umentschieden – die Dusche streichen wir, es kommt eine freistehende Badewanne statt der Dusche hinein.'));
+    expect(outcome).toEqual({ corrected: [], conflicts: [], ignored: [] });
+    expect(await facts.openCorrectionNotes(tenantId, caseId)).toHaveLength(1);
+    expect(await currentValues(tenantId, caseId)).toEqual([{ value: 7, status: 'CONFIRMED' }]); // der alte Wert wird nicht still ersetzt
+  });
   describe('Ergänzung, Selbstkorrektur und Widerspruch bleiben unabhängig von der Textlänge unterscheidbar', () => {
     const LONG_BASE = 'Anschluss von drei Behandlungsplätzen an Druckluft benötigt, die Leitungen sollen in den Wänden verlaufen';
     async function withLongFact(): Promise<{ tenantId: string; caseId: string }> {
