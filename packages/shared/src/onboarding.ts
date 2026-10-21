@@ -13,7 +13,23 @@ export const ProcessLimitsInputSchema = z
   })
   .partial()
   .strict();
-export const UpdateTenantProfileRequestSchema = UpdateTenantProfileSchema.extend({ escalationPolicy: EscalationPolicyInputSchema.optional(), processLimits: ProcessLimitsInputSchema.optional() });
+/**
+ * Betriebliche Vorgabe zu Terminen (optional). Ohne Vorgabe entscheidet allein die fallbezogene Begründung der Anfrageanalyse.
+ * `requiredFor`: Stichwörter, bei denen der Betrieb grundsätzlich einen Vor-Ort-Termin will (z. B. „Wärmepumpe“); `minutes`: Dauer, die der Betrieb dafür festlegt.
+ */
+export const AppointmentPolicySchema = z
+  .object({
+    siteVisit: z.object({ minutes: z.number().int().min(15).max(480).optional(), requiredFor: z.array(z.string().trim().min(2).max(60)).max(20).optional() }).strict().optional(),
+    phoneCall: z.object({ minutes: z.number().int().min(5).max(120).optional() }).strict().optional(),
+  })
+  .strict();
+export type AppointmentPolicy = z.infer<typeof AppointmentPolicySchema>;
+export const UpdateTenantProfileRequestSchema = UpdateTenantProfileSchema.extend({
+  escalationPolicy: EscalationPolicyInputSchema.optional(),
+  processLimits: ProcessLimitsInputSchema.optional(),
+  /** `null` entfernt die Vorgabe (es gilt wieder allein die fallbezogene Begründung). */
+  appointmentPolicy: AppointmentPolicySchema.nullable().optional(),
+});
 export type UpdateTenantProfileRequest = z.infer<typeof UpdateTenantProfileRequestSchema>;
 
 /**

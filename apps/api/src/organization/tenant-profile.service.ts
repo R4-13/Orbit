@@ -16,7 +16,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type TenantProfileView = Omit<TenantProfile, 'tenantId' | 'openingHours' | 'faqs' | 'escalationPolicy' | 'processLimits'> & { openingHours: unknown; faqs: unknown; escalationPolicy: unknown; processLimits: unknown };
+export type TenantProfileView = Omit<TenantProfile, 'tenantId' | 'openingHours' | 'faqs' | 'escalationPolicy' | 'processLimits' | 'appointmentPolicy'> & { appointmentPolicy: unknown } & { openingHours: unknown; faqs: unknown; escalationPolicy: unknown; processLimits: unknown };
 
 export interface TenantProfileState {
   profile: TenantProfileView | null;
@@ -59,7 +59,7 @@ export class TenantProfileService {
   }
 
   async update(tenantId: string, actorUserId: string, input: UpdateTenantProfileRequest): Promise<TenantProfileState> {
-    const { escalationPolicy: escalationInput, processLimits: limitsInput, ...fields } = input;
+    const { escalationPolicy: escalationInput, processLimits: limitsInput, appointmentPolicy: appointmentInput, ...fields } = input;
     const existing = await this.prisma.forTenantId(tenantId).tenantProfile.findUnique({ where: { tenantId } });
 
     let escalationPolicy: Prisma.InputJsonValue | undefined;
@@ -80,8 +80,12 @@ export class TenantProfileService {
       processLimits = Object.keys(merged).length > 0 ? (merged as Prisma.InputJsonValue) : Prisma.DbNull;
     }
 
+    // Vorgabe zu Terminen: `null` entfernt sie, ein Objekt ersetzt sie (bereits vom Schema geprüft).
+    const appointmentPolicy = appointmentInput === undefined ? undefined : appointmentInput === null ? Prisma.DbNull : (appointmentInput as Prisma.InputJsonValue);
+
     const data = {
       ...fields,
+      appointmentPolicy,
       processLimits,
       openingHours: fields.openingHours as Prisma.InputJsonValue | undefined,
       faqs: fields.faqs as Prisma.InputJsonValue | undefined,

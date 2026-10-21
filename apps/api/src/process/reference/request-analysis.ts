@@ -81,17 +81,8 @@ export interface AnalysisResult {
 
 const normalize = (text: string): string => text.toLowerCase().replace(/\s+/g, ' ').trim();
 
-/**
- * Betriebliche Vorgabe zu Terminen (Profil des Betriebs, optional). Ohne Vorgabe entscheidet allein die fallbezogene Begründung.
- * `requiredFor`: Stichwörter, bei denen der Betrieb grundsätzlich einen Vor-Ort-Termin will (z. B. „Wärmepumpe“); `minutes`: Dauer, die der Betrieb dafür festlegt.
- */
-export const AppointmentPolicySchema = z
-  .object({
-    siteVisit: z.object({ minutes: z.number().int().min(15).max(480).optional(), requiredFor: z.array(z.string().trim().min(2).max(60)).max(20).optional() }).strict().optional(),
-    phoneCall: z.object({ minutes: z.number().int().min(5).max(120).optional() }).strict().optional(),
-  })
-  .strict();
-export type AppointmentPolicy = z.infer<typeof AppointmentPolicySchema>;
+export { AppointmentPolicySchema, type AppointmentPolicy } from '@orbit/shared';
+import type { AppointmentPolicy } from '@orbit/shared';
 
 /** Wörter, die jede Begründung enthalten kann und die deshalb nichts über den Fall sagen. */
 const GENERIC_REASON_WORDS = new Set([

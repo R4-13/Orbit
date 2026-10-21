@@ -57,3 +57,14 @@ describe('Einrichtungs-Checkliste', () => {
     expect(done.complete).toBe(true);
   });
 });
+
+describe('Betriebliche Vorgabe zu Terminen', () => {
+  it('nimmt Dauer und Stichwörter an, lehnt unbekannte Felder und unsinnige Werte ab, und null entfernt die Vorgabe', async () => {
+    const { AppointmentPolicySchema, UpdateTenantProfileRequestSchema } = await import('./onboarding');
+    expect(AppointmentPolicySchema.safeParse({ siteVisit: { minutes: 60, requiredFor: ['Wärmepumpe'] }, phoneCall: { minutes: 15 } }).success).toBe(true);
+    expect(AppointmentPolicySchema.safeParse({ siteVisit: { minutes: 5 } }).success).toBe(false); // zu kurz
+    expect(AppointmentPolicySchema.safeParse({ siteVisit: { minutes: 60, immer: true } }).success).toBe(false); // unbekanntes Feld
+    expect(UpdateTenantProfileRequestSchema.safeParse({ appointmentPolicy: null }).success).toBe(true);
+    expect(UpdateTenantProfileRequestSchema.safeParse({}).success).toBe(true);
+  });
+});
