@@ -27,8 +27,8 @@
     { "szenario": "wartungsvertrag-variante", "n": 2, "erwartet": "Wie unbekannt-wartungsvertrag (sprachlich verändert)", "primaer": ["W", "U"], "akzeptabel": ["E"] },
     { "szenario": "elektroarbeiten", "n": 2, "erwartet": "Außerhalb des Angebots: keine Detailfragen zur Ausführung; Auskunft (Freigabe) oder Entscheidung durch eine Person", "primaer": ["W", "U"], "akzeptabel": ["E"] },
     { "szenario": "elektroarbeiten-variante", "n": 1, "erwartet": "Wie elektroarbeiten (sprachlich verändert)", "primaer": ["W", "U"], "akzeptabel": ["E"] },
-    { "szenario": "mehrere-anliegen", "n": 2, "erwartet": "Mehrere Anliegen: bei aktivierter Aufteilung ein Teilvorgang je Anliegen; Hauptvorgang bleibt offen, solange Teilvorgänge bei Personen liegen", "primaer": ["W", "U"], "akzeptabel": ["E"], "split": true, "anliegen": 3 },
-    { "szenario": "fuenf-anliegen", "n": 1, "erwartet": "Fünf Teilvorgänge mit eigenem Ziel", "primaer": ["W", "U"], "akzeptabel": ["E"], "split": true, "anliegen": 5 },
+    { "szenario": "mehrere-anliegen", "n": 1, "erwartet": "Mehrere Anliegen: bei aktivierter Aufteilung ein Teilvorgang je Anliegen; Hauptvorgang bleibt offen, solange Teilvorgänge bei Personen liegen", "primaer": ["W", "U"], "akzeptabel": ["E"], "split": true, "anliegen": 3 },
+    { "szenario": "fuenf-anliegen", "n": 2, "erwartet": "Fünf Teilvorgänge mit eigenem Ziel", "primaer": ["W", "U"], "akzeptabel": ["E"], "split": true, "anliegen": 5 },
     { "szenario": "fuenf-anliegen-variante", "n": 1, "erwartet": "Fünf Teilvorgänge (sprachlich verändert)", "primaer": ["W", "U"], "akzeptabel": ["E"], "split": true, "anliegen": 5 }
   ]
 }

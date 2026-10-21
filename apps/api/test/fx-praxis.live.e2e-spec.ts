@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
@@ -435,5 +436,95 @@ const OUT = process.env.PRAXIS_OUT;
       await setSplit(false);
       record.multiChildReply = results;
     }
+  });
+  it('Eignungsprüfung bei Wartungsverträgen (Fall der Vertragsanfrage): kontextabhängig, keine pauschale Regel, nie ohne erfolgreiche Prüfung als „passt“ – drei Läufe und eine sprachliche Variante', async () => {
+    const scenarios = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'tools', 'customer-simulator', 'szenarien', 'szenarien.json'), 'utf8')).szenarien as Array<{ id: string; betreff: string; text: string }>;
+    const pick = (id: string) => scenarios.find((s) => s.id === id)!;
+    const plan: Array<[string, string, string]> = [
+      ['wartungsvertrag', pick('unbekannt-wartungsvertrag').betreff, pick('unbekannt-wartungsvertrag').text],
+      ['wartungsvertrag', pick('unbekannt-wartungsvertrag').betreff, pick('unbekannt-wartungsvertrag').text],
+      ['wartungsvertrag', pick('unbekannt-wartungsvertrag').betreff, pick('unbekannt-wartungsvertrag').text],
+      ['variante', pick('wartungsvertrag-variante').betreff, pick('wartungsvertrag-variante').text],
+    ];
+    const runs: Array<Record<string, unknown>> = [];
+    for (const [kind, subject, content] of plan) {
+      const mailsBefore = sent.length;
+      const result = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject, content: content.replace(/\{\{\w+\}\}/g, '1') }));
+      const caseId = result.case!.id;
+      const scoped = prisma.forTenantId(tenantId);
+      const row = await scoped.case.findUniqueOrThrow({ where: { id: caseId } });
+      const fitEvents = (await scoped.caseEvent.findMany({ where: { caseId, type: 'blueprint.fit_assessed' }, orderBy: { sequence: 'asc' } })).map((e) => e.payload as Record<string, unknown>);
+      const decision = await scoped.intakeDecision.findFirst({ where: { intakeEventId: result.intakeEventId } });
+      const plans = await scoped.processPlan.findMany({ where: { caseId }, orderBy: { revision: 'asc' }, select: { revision: true, status: true, goalKeys: true } });
+      const waiting = plans.find((p) => p.status === 'AWAITING_APPROVAL');
+      runs.push({
+        kind,
+        category: (decision?.result as { category?: string } | null)?.category,
+        route: row.blueprintKey ?? (plans.length > 0 ? 'frei' : 'fest/ohne Plan'),
+        fit: fitEvents.map((f) => ({ fits: f.fits, assessed: f.assessed, procedure: f.procedure ?? false, reason: String(f.reason ?? '').slice(0, 160) })),
+        status: row.orchestrationStatus,
+        plans: plans.map((p) => `${p.revision}:${p.status}:${(p.goalKeys ?? []).join(',')}`),
+        awaitingPlanApproval: Boolean(waiting),
+        mailsBeforeApproval: sent.length - mailsBefore,
+        mails: sent.slice(mailsBefore).map((m) => ({ to: m.to, body: m.bodyText.replace(/\s+/g, ' ').slice(0, 300) })),
+        reasons: row.attentionReasons.slice(0, 2),
+      });
+    }
+    record.maintenanceContractFit = runs;
+    for (const run of runs) {
+      // Ohne erfolgreiche Prüfung gilt nichts als passend; die Antwort geht nie an jemand anderen als den Absender.
+      for (const f of run.fit as Array<{ fits: boolean; assessed: boolean }>) if (f.fits) expect(f.assessed).toBe(true);
+      for (const mail of run.mails as Array<{ to: string }>) expect(mail.to).toBe('hausverwaltung@kunde.example');
+    }
+  });
+
+  it('Korrekturdienst mit langen Angaben (Ergänzung, Widerspruch, Verneinung, anderes Objekt): bedeutungsgerecht, unabhängig von der Länge – drei Läufe je Art', async () => {
+    const scenarios = JSON.parse(readFileSync(join(__dirname, '..', '..', '..', 'tools', 'customer-simulator', 'szenarien', 'szenarien.json'), 'utf8')).szenarien as Array<{ id: string; betreff: string; text: string }>;
+    const start = scenarios.find((s) => s.id === 'unbekannt-leitung-umzug')!;
+    const replies: Record<string, string> = {
+      ergaenzung: 'Ergänzend zu unserer Anfrage: Die neuen Praxisräume liegen im zweiten Obergeschoss eines Altbaus, der Zugang für Handwerker erfolgt über den Hof, und der Vermieter hat die Arbeiten bereits grundsätzlich genehmigt. Parkplätze für Ihren Transporter sind vor dem Haus vorhanden.',
+      widerspruch: 'Korrektur: Es sind doch nicht drei Behandlungsplätze, sondern vier, weil wir den früheren Röntgenraum zusätzlich als Behandlungszimmer umbauen. Dafür brauchen wir auch den vierten Anschluss für Wasser und Druckluft, und die Abnahme soll weiterhin vor der Eröffnung stattfinden.',
+      verneinung: 'Noch eine Änderung: Den Gasanschluss für das Labor brauchen wir nicht mehr, wir verzichten auf ein eigenes Labor am neuen Standort und lassen die Arbeiten in einer externen Zahnarztpraxis erledigen, deshalb entfällt die Gasleitung komplett.',
+      anderesObjekt: 'Zur Information: In unserer alten Praxis hatten wir fünf Behandlungsplätze, die werden komplett abgebaut und entsorgt. Das ist ein eigenes Thema für später; für die neuen Räume bleibt alles so, wie wir es beschrieben haben, daran ändert sich nichts.',
+    };
+    const report: Record<string, Array<Record<string, unknown>>> = {};
+    for (const [kind, reply] of Object.entries(replies)) {
+      report[kind] = [];
+      for (let i = 0; i < 3; i += 1) {
+        const scoped = prisma.forTenantId(tenantId);
+        const threadId = randomUUID();
+        const sentBefore = sent.length;
+        const first = await app.get(IntakeService).handleIntakeEvent(tenantId, undefined, inbound({ subject: start.betreff, content: start.text, threadId }));
+        const caseId = first.case!.id;
+        const waiting = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' } });
+        if (waiting) {
+          await app.get(OrchestratorService).approvePlan(tenantId, 'praxistest-freigabe', waiting.id);
+          await app.get(OrchestratorService).advance(tenantId, caseId);
+        }
+        const last = await scoped.emailMessage.findFirst({ where: { caseId, direction: 'OUTBOUND' }, orderBy: { createdAt: 'desc' } });
+        const factsBefore = (await scoped.caseFact.findMany({ where: { caseId, isCurrent: true } })).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 70)}[${f.status}]`);
+        const reachable = Boolean(last);
+        if (last) {
+          await app.get(IntakeService).handleIntakeEvent(
+            tenantId,
+            undefined,
+            inbound({ subject: `Re: ${last.subject ?? start.betreff}`, content: reply, threadId: last.threadId ?? threadId, inReplyTo: last.rfcMessageId ?? undefined, references: last.rfcMessageId ? [last.rfcMessageId] : undefined }),
+          );
+        }
+        const events = (await scoped.caseEvent.findMany({ where: { caseId, type: { in: ['fact.update_assessed', 'fact.corrected', 'fact.conflict_detected'] } }, orderBy: { sequence: 'asc' } })).map((e) => ({ type: e.type, payload: JSON.stringify(e.payload).slice(0, 300) }));
+        const facts = (await scoped.caseFact.findMany({ where: { caseId, isCurrent: true } })).map((f) => `${f.key}=${JSON.stringify(f.value).slice(0, 70)}[${f.status}]`);
+        report[kind]!.push({ caseId: caseId.slice(0, 8), reachable, questionsSent: sent.length - sentBefore, factsBefore, types: events.map((e) => e.type), events, facts });
+      }
+    }
+    record.longCorrections = report;
+    const typesOf = (r: Record<string, unknown>) => r.types as string[];
+    const factsOf = (r: Record<string, unknown>) => (r.facts as string[]).join(' ');
+    for (const rows of Object.values(report)) expect(rows.filter((r) => r.reachable).length).toBeGreaterThanOrEqual(2); // der Aufbau (Rückfrage, auf die geantwortet wird) kam zustande
+    for (const r of report.anderesObjekt!.filter((x) => x.reachable)) {
+      expect(typesOf(r)).not.toContain('fact.conflict_detected'); // anderes Objekt: kein Widerspruch
+    }
+    for (const r of report.ergaenzung!.filter((x) => x.reachable)) expect(typesOf(r)).not.toContain('fact.conflict_detected'); // reine Ergänzung bleibt ohne Widerspruch, auch wenn lang
+    for (const r of report.widerspruch!.filter((x) => x.reachable)) expect(typesOf(r).some((t) => t === 'fact.conflict_detected' || t === 'fact.corrected') || /\b(4|vier)\b/.test(factsOf(r))).toBe(true); // Widerspruch wird erkannt, auch wenn lang
+    for (const r of report.verneinung!.filter((x) => x.reachable)) expect(typesOf(r).some((t) => t === 'fact.conflict_detected' || t === 'fact.corrected')).toBe(true); // Verneinung wird nicht als Ergänzung übernommen
   });
 });

@@ -1,0 +1,638 @@
+{
+  "segmentation": {
+    "fuenfAnliegen": [
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Kopie der letzten Rechnung",
+          "Wartungstermin verschieben",
+          "Angebot für Heizungsregler",
+          "Telefonische Erreichbarkeit samstags",
+          "Reparaturtermin für tropfenden Wasserhahn"
+        ]
+      },
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Kopie der letzten Rechnung",
+          "Wartungstermin verschieben",
+          "Angebot für neuen Heizungsregler",
+          "Telefonische Erreichbarkeit samstags",
+          "Reparaturtermin für tropfenden Wasserhahn"
+        ]
+      },
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Kopie der letzten Rechnung",
+          "Wartungstermin verschieben",
+          "Angebot für Heizungsregler",
+          "Telefonische Erreichbarkeit am Samstag",
+          "Reparaturtermin für tropfenden Wasserhahn"
+        ]
+      }
+    ],
+    "fuenfAnliegenVariante": [
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Kopie der Rechnung",
+          "Wartungstermin verlegen",
+          "Angebot für Thermostate",
+          "Telefonische Erreichbarkeit freitags",
+          "Reparaturtermin für Wasserhahn"
+        ]
+      },
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Rechnungskopie anfordern",
+          "Wartungstermin verschieben",
+          "Angebot für Thermostate",
+          "Telefonische Erreichbarkeit freitags erfragen",
+          "Reparaturtermin für tropfenden Wasserhahn"
+        ]
+      },
+      {
+        "concerns": 5,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Kopie der Rechnung vom letzten Einsatz",
+          "Wartungstermin verlegen",
+          "Angebot für neue Thermostate",
+          "Telefonische Erreichbarkeit freitags",
+          "Reparaturtermin für tropfenden Wasserhahn"
+        ]
+      }
+    ],
+    "einAnliegen": [
+      {
+        "concerns": 1,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Angebot für Badsanierung"
+        ]
+      },
+      {
+        "concerns": 1,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Angebot und Besichtigung für Badsanierung"
+        ]
+      },
+      {
+        "concerns": 1,
+        "supplemented": 0,
+        "ungrounded": 0,
+        "unassigned": 0,
+        "titles": [
+          "Angebot für die Badsanierung"
+        ]
+      }
+    ]
+  },
+  "autonomousCompletion": [
+    {
+      "subject": "Schlüsselbund im Keller vergessen",
+      "category": "GENERAL_INQUIRY",
+      "blueprintKey": null,
+      "beforeApproval": {
+        "planned": [
+          "context",
+          "requirements",
+          "ack_draft",
+          "ack_send",
+          "notify",
+          "task",
+          "done"
+        ],
+        "mails": 0
+      },
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "evidenceRefs": [
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:x-1",
+          "staff.notify",
+          "task.create"
+        ]
+      },
+      "goals": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "task.created"
+      ],
+      "nodes": [
+        "ack_draft:SUCCEEDED",
+        "ack_send:SUCCEEDED",
+        "context:SUCCEEDED",
+        "done:SUCCEEDED",
+        "notify:SUCCEEDED",
+        "requirements:SUCCEEDED",
+        "task:SUCCEEDED"
+      ],
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Schlüsselbund im Keller vergessen“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Praxis Live 167df7"
+        }
+      ],
+      "attentionItems": 1,
+      "attentionReasons": []
+    },
+    {
+      "subject": "Vergessener Schlüsselbund bei uns im Keller",
+      "category": "GENERAL_INQUIRY",
+      "blueprintKey": null,
+      "beforeApproval": {
+        "planned": [
+          "context",
+          "ack_draft",
+          "ack_send",
+          "staff",
+          "task",
+          "done"
+        ],
+        "mails": 0
+      },
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "evidenceRefs": [
+          "email.send/ACKNOWLEDGEMENT:x-2",
+          "staff.notify",
+          "task.create",
+          "communication.draft/ACKNOWLEDGEMENT"
+        ]
+      },
+      "goals": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "task.created"
+      ],
+      "nodes": [
+        "ack_draft:SUCCEEDED",
+        "ack_send:SUCCEEDED",
+        "context:SUCCEEDED",
+        "done:SUCCEEDED",
+        "staff:SUCCEEDED",
+        "task:SUCCEEDED"
+      ],
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Vergessener Schlüsselbund bei uns im Keller“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Praxis Live 167df7"
+        }
+      ],
+      "attentionItems": 1,
+      "attentionReasons": []
+    },
+    {
+      "subject": "Schlüssel im Keller: bitte Monteur informieren",
+      "category": "GENERAL_INQUIRY",
+      "blueprintKey": null,
+      "beforeApproval": {
+        "planned": [
+          "context",
+          "notify",
+          "ack_draft",
+          "ack_send",
+          "done"
+        ],
+        "mails": 0
+      },
+      "status": "COMPLETED",
+      "outcome": {
+        "code": "ADHOC_GOALS_PROVEN",
+        "evidenceRefs": [
+          "staff.notify",
+          "email.send/ACKNOWLEDGEMENT:x-3",
+          "communication.draft/ACKNOWLEDGEMENT"
+        ]
+      },
+      "goals": [
+        "staff.informed",
+        "receipt.acknowledged"
+      ],
+      "nodes": [
+        "ack_draft:SUCCEEDED",
+        "ack_send:SUCCEEDED",
+        "context:SUCCEEDED",
+        "done:SUCCEEDED",
+        "notify:SUCCEEDED"
+      ],
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Schlüssel im Keller: bitte Monteur informieren“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Praxis Live 167df7"
+        }
+      ],
+      "attentionItems": 1,
+      "attentionReasons": []
+    },
+    {
+      "subject": "Liegengebliebene Schlüssel – Rückgabe",
+      "category": "GENERAL_INQUIRY",
+      "blueprintKey": null,
+      "beforeApproval": {
+        "planned": [
+          "requirements",
+          "ack_draft",
+          "ack_send",
+          "context",
+          "notify",
+          "manual"
+        ],
+        "mails": 0
+      },
+      "status": "MANUAL_REVIEW",
+      "outcome": null,
+      "goals": [
+        "receipt.acknowledged",
+        "staff.informed",
+        "human.review"
+      ],
+      "nodes": [
+        "ack_draft:SUCCEEDED",
+        "ack_send:SUCCEEDED",
+        "context:SUCCEEDED",
+        "manual:WAITING",
+        "notify:SUCCEEDED",
+        "requirements:SUCCEEDED"
+      ],
+      "mails": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag Hausverwaltung Lindner, vielen Dank für Ihre Nachricht zu „Liegengebliebene Schlüssel – Rückgabe“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Praxis Live 167df7"
+        }
+      ],
+      "attentionItems": 1,
+      "attentionReasons": [
+        "Weitergabe an den zuständigen Techniker sicherstellen: Bitte manuell bearbeiten."
+      ]
+    }
+  ],
+  "multiChildReply": [
+    {
+      "subject": "Zwei Dinge: Heizungsregler und Wasserhahn",
+      "children": 2,
+      "questionsSent": 1,
+      "childrenWaitingForAnswer": 1,
+      "replySent": true,
+      "questions": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag, vielen Dank für Ihre Anfrage „Zwei Dinge: Heizungsregler und Wasserhahn“. Wir haben sie so verstanden: Fritz Lindner möchte ein Angebot für einen neuen Heizungsregler für sein Haus am Rheinweg 8; ob diese konk"
+        }
+      ],
+      "perChild": [
+        {
+          "concern": "Angebot für einen neuen Heizungsregler",
+          "status": "MANUAL_REVIEW",
+          "facts": [
+            "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+            "ai.property_address=\"Rheinweg 8\"[CONFIRMED]",
+            "ai.customer_name=\"Fritz Lindner\"[CONFIRMED]"
+          ],
+          "waits": [
+            "communication.received:SATISFIED",
+            "communication.received:WAITING"
+          ]
+        },
+        {
+          "concern": "Reparaturtermin für tropfenden Wasserhahn",
+          "status": "WAITING_FOR_INFORMATION",
+          "facts": [
+            "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+            "ai.issue=\"Wasserhahn tropft\"[CONFIRMED]",
+            "ai.location_in_home=\"Gäste-WC\"[CONFIRMED]",
+            "ai.address=\"Haus Rheinweg 8\"[CONFIRMED]",
+            "ai.customer_name=\"Fritz Lindner\"[CONFIRMED]",
+            "ai.requested_action=\"Reparaturtermin vereinbaren\"[CONFIRMED]"
+          ],
+          "waits": []
+        }
+      ]
+    },
+    {
+      "subject": "Reparatur und Angebot Rheinweg 8",
+      "children": 2,
+      "questionsSent": 0,
+      "childrenWaitingForAnswer": 0,
+      "replySent": false,
+      "questions": [],
+      "perChild": [
+        {
+          "concern": "Reparaturtermin für tropfenden Wasserhahn",
+          "status": "WAITING_FOR_INFORMATION",
+          "facts": [
+            "service_location=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]"
+          ],
+          "waits": []
+        },
+        {
+          "concern": "Angebot für einen neuen Heizungsregler",
+          "status": "MANUAL_REVIEW",
+          "facts": [
+            "service_location=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+            "ai.requested_service=\"Angebot für einen neuen Heizungsregler\"[CONFIRMED]"
+          ],
+          "waits": []
+        }
+      ]
+    },
+    {
+      "subject": "Zwei Bitten zum Rheinweg 8",
+      "children": 2,
+      "questionsSent": 1,
+      "childrenWaitingForAnswer": 1,
+      "replySent": true,
+      "questions": [
+        {
+          "to": "hausverwaltung@kunde.example",
+          "body": "Guten Tag, vielen Dank für Ihre Anfrage „Zwei Bitten zum Rheinweg 8“. Wir haben sie so verstanden: Die Hausverwaltung Lindner möchte den Preis für einen neuen Heizungsregler für das Haus am Rheinweg 8 erfahren. Die Anfra"
+        }
+      ],
+      "perChild": [
+        {
+          "concern": "Termin für Reparatur des tropfenden Wasserhahns",
+          "status": "MANUAL_REVIEW",
+          "facts": [
+            "service_address=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+            "ai.service=\"Reparatur eines tropfenden Wasserhahns\"[CONFIRMED]",
+            "ai.location_detail=\"Gäste-WC\"[CONFIRMED]",
+            "ai.address=\"Rheinweg 8\"[CONFIRMED]"
+          ],
+          "waits": []
+        },
+        {
+          "concern": "Preisauskunft für einen neuen Heizungsregler",
+          "status": "MANUAL_REVIEW",
+          "facts": [
+            "service_address=\"Rheinweg 8\"[CANDIDATE]",
+            "contact.email=\"hausverwaltung@kunde.example\"[CONFIRMED]",
+            "ai.requested_service=\"Preis für einen neuen Heizungsregler\"[CONFIRMED]",
+            "ai.property_address=\"Rheinweg 8\"[CONFIRMED]"
+          ],
+          "waits": [
+            "communication.received:SATISFIED"
+          ]
+        }
+      ]
+    }
+  ],
+  "maintenanceContractFit": [
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "fest/ohne Plan",
+      "fit": [
+        {
+          "fits": true,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Hausverwaltung zeigt konkretes Kauf- bzw. Beauftragungsinteresse an einem laufenden Wartungsvertrag und bittet um Konditionen sowie möglichen Start. Der Lei"
+        }
+      ],
+      "status": "IN_PROGRESS",
+      "plans": [],
+      "awaitingPlanApproval": false,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": []
+    },
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "frei",
+      "fit": [
+        {
+          "fits": false,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Anfrage zielt auf den Abschluss bzw. die Konditionen eines laufenden Wartungsvertrags mit Bereitschaftsdienst, nicht auf die Erfassung eines Interessenten f"
+        }
+      ],
+      "status": "MANUAL_REVIEW",
+      "plans": [
+        "1:SUPERSEDED:staff.informed,task.created,human.review",
+        "2:ACTIVE:staff.informed,task.created,human.review"
+      ],
+      "awaitingPlanApproval": false,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Menschliche Prüfung und Festlegung von Konditionen und Start: Bitte manuell bearbeiten."
+      ]
+    },
+    {
+      "kind": "wartungsvertrag",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "frei",
+      "fit": [
+        {
+          "fits": false,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Person hat zwar echtes Kaufinteresse, fragt aber konkret nach einem laufenden Wartungsvertrag mit Wochenend-Bereitschaftsdienst und bittet um Konditionen so"
+        }
+      ],
+      "status": "WAITING_FOR_APPROVAL",
+      "plans": [
+        "1:ACTIVE:human.review,staff.informed,task.created",
+        "2:AWAITING_APPROVAL:quote.delivered,staff.informed,human.review"
+      ],
+      "awaitingPlanApproval": true,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."
+      ]
+    },
+    {
+      "kind": "variante",
+      "category": "REQUEST_FOR_QUOTE",
+      "route": "fest/ohne Plan",
+      "fit": [
+        {
+          "fits": true,
+          "assessed": true,
+          "procedure": false,
+          "reason": "Die Hausverwaltung zeigt konkretes, dauerhaftes Kauf- bzw. Auftragsinteresse an einem Servicepartner und fragt nach Preis sowie möglichem Start. Der Leitfaden e"
+        }
+      ],
+      "status": "FAILED",
+      "plans": [],
+      "awaitingPlanApproval": false,
+      "mailsBeforeApproval": 0,
+      "mails": [],
+      "reasons": [
+        "Step 1 (sales-intake): Tool \"create_contact\" failed: Invalid input for tool \"create_contact\": email: Invalid email"
+      ]
+    }
+  ],
+  "longCorrections": {
+    "ergaenzung": [
+      {
+        "caseId": "fecfab3d",
+        "types": [],
+        "facts": [
+          "Absendername=\"Fritz Lindner\"[CANDIDATE]",
+          "Angebotswunsch=true[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "9490ff7b",
+        "types": [],
+        "facts": [
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "349440c7",
+        "types": [],
+        "facts": [
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]"
+        ]
+      }
+    ],
+    "widerspruch": [
+      {
+        "caseId": "54bc34a3",
+        "types": [],
+        "facts": [
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]",
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Projektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "67345120",
+        "types": [],
+        "facts": [
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Absendername=\"Fritz Lindner\"[CANDIDATE]",
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "b532643d",
+        "types": [],
+        "facts": [
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]"
+        ]
+      }
+    ],
+    "verneinung": [
+      {
+        "caseId": "24b70af1",
+        "types": [],
+        "facts": [
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "8de9bca9",
+        "types": [],
+        "facts": [
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "50bc2ef9",
+        "types": [],
+        "facts": [
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Angebotswunsch=true[CANDIDATE]",
+          "Absendername=\"Fritz Lindner\"[CANDIDATE]",
+          "Absenderorganisation=\"Hausverwaltung Lindner\"[CANDIDATE]",
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      }
+    ],
+    "anderesObjekt": [
+      {
+        "caseId": "cca760e7",
+        "types": [],
+        "facts": [
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Projektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "882e99e6",
+        "types": [],
+        "facts": [
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      },
+      {
+        "caseId": "e1b36260",
+        "types": [],
+        "facts": [
+          "Ansprechpartnername=\"Fritz Lindner\"[CANDIDATE]",
+          "Badfläche=7[CANDIDATE]",
+          "Gewünschte Ausstattung=[\"bodengleiche Dusche\",\"neue Fliesen\"][CANDIDATE]",
+          "Objektadresse=\"Rheinweg 8\"[CANDIDATE]"
+        ]
+      }
+    ]
+  }
+}

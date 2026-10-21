@@ -69,8 +69,8 @@ Je Mail werden zusätzlich erfasst: Anzahl der Rückfragen an Tom (Doppel-/Zusat
 | wartungsvertrag-variante | 2 | wie oben (anders formuliert) | W, U | E |
 | elektroarbeiten | 2 | außerhalb des Angebots | W, U | E |
 | elektroarbeiten-variante | 1 | wie oben (anders formuliert) | W, U | E |
-| mehrere-anliegen (Gruppe B) | 2 | je Anliegen ein Teilvorgang | W, U | E |
-| fuenf-anliegen (Gruppe B) | 1 | fünf Teilvorgänge | W, U | E |
+| mehrere-anliegen (Gruppe B) | 1 | je Anliegen ein Teilvorgang | W, U | E |
+| fuenf-anliegen (Gruppe B) | 2 | fünf Teilvorgänge | W, U | E |
 | fuenf-anliegen-variante (Gruppe B) | 1 | fünf Teilvorgänge (anders formuliert) | W, U | E |
 
 Zusammensetzung: 33 feste/bekannte Verfahren, 11 Angebotsanfragen, 12 unbekannte/freie Vorgänge, 4 Mehrfachanliegen. Das Kontingent der Schatten-Planungen reicht rechnerisch (höchstens 44 feste Fälle ≤ 48); die Zählung läuft ohnehin dauerhaft über Prüfeinträge `SHADOW_PLAN_CONSUMED`.

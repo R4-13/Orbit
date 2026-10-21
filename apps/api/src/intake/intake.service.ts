@@ -929,9 +929,12 @@ export class IntakeService {
       });
     }
 
+    // Der Vertriebs-Agent bekommt nur Betreff und Text. Ohne die Absenderadresse erfindet ein echtes Modell eine (Fund Serie G: „Invalid email“ → Vorgang FAILED), darum steht sie
+    // ausdrücklich im Text (gilt auch für bestehende Betriebe, deren Workflow-Definition die Zuordnung eigener Felder nicht kennt).
+    const senderLine = fromAddress ? `\n\nAbsender dieser Nachricht (für den Kontakt genau diese E-Mail-Adresse verwenden, keine andere erfinden): ${event.sender?.displayName ? `${event.sender.displayName} ` : ''}<${fromAddress}>` : '';
     return this.triggerWorkflow(tenantId, actorUserId, 'sales-lead-intake', businessCase.id, intakeEventId, {
       subject: event.subject ?? '',
-      content: event.content ?? '',
+      content: `${event.content ?? ''}${senderLine}`,
       caseId: businessCase.id,
     });
   }
