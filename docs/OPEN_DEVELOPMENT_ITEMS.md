@@ -175,6 +175,21 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 | TEC-10 | Playwright-Gesamtlauf und Live-Suite (mit echtem Modell) nach größeren Änderungen routinemäßig wiederholen | MAN | S | P2 | in dieser Prüfung nur gezielte Teilmengen gelaufen |
 | TEC-11 | ~~E2E-Läufe vom laufenden Worker trennen~~ **umgesetzt 20.10.** (`scripts/e2e-isolated.sh`: eigene Datenbank `orbit_e2e`, eigener Test-Redis `orbit-redis-e2e`; `ASSUMPTIONS.md` #628). Dabei wurden seit 18.10. unbemerkt rote e2e-Erwartungen gefunden und korrigiert (BYOK-Flag `ai.byok`, Copilot-Werkzeugliste) sowie ein nicht mehr kompilierender Seed repariert. **Offen:** einige Abläufe liegen auf einem normal ausgelasteten Rechner knapp unter der Testgrenze von 20 s (Grenze für zwei Suiten auf 60 s gesetzt) | ENG | S | erledigt | |
 
+
+## 9. Offene Punkte aus dem Funktionsnachweis (23.10.2026)
+
+| ID | Punkt | Art | Aufwand | Prio | Anmerkung |
+|---|---|---|---|---|---|
+| FN-01 | **Lead/CRM nach der Übergabe aktualisieren** (Angaben und Korrekturen der Kundschaft): heute nur Aufgabe „Korrektur nach Übergabe“ / „Neue Nachricht nach Abschluss“ | ENG | M | P1 | Befund F-B1; braucht eine Fähigkeit „CRM-Objekt ergänzen“ mit Richtlinie und HubSpot-Dokumentation |
+| FN-02 | Preisfrage ohne Angaben (B3): Frage beantworten („Preise nennen wir nicht vorab …“) und fehlende Angaben erfragen, bevor der Lead angelegt wird | ENG | M | P1 | Befund F-B2 |
+| FN-03 | Mehrfachanliegen: Rückfragen der Teilvorgänge nur zum eigenen Anliegen; **eine zusammengefasste ausgehende Antwort** und nur eine Eingangsbestätigung je Nachricht | ENG | L | P1 | Befunde F-C1, F-C3; neue Produktfunktion |
+| FN-04 | Planausfall eines Teilvorgangs (etwa jeder dritte): Ursache in der Verdrahtung der Neuplanung (fehlender Knoten für `requirements.resolve`, Sackgasse) weiter eingrenzen; Reparaturen in `repairBindings` erweitern | ENG | M | P1 | Befund F-C2; nicht modellabhängig (`gpt-6-sol` gleich) |
+| FN-05 | Responses-Schnittstelle des Anbieters für Function-Tools (aktiviertes Denken) und danach der begrenzte Modellvergleich | ENG | M | P2 | Chat Completions lehnt `reasoning_effort` ≥ low mit Tools ab |
+| FN-06 | Zuständigkeit `DISPATCH` und Monteure im Mitarbeiterverzeichnis von Musterwerk pflegen (Entscheidung des Betriebs); bis dahin bleibt „Monteur informieren“ eine Übergabe mit offenem Restziel | MAN | S | P2 | Regel dokumentiert in `ASSUMPTIONS.md` #633 |
+| FN-07 | Fähigkeiten für die übergebenen Anliegen: Dokumentkopie versenden (Rechnung), Terminänderung (Kalender ausgeschlossen), Angebotserstellung im freien Ablauf | ENG | L | P3 | nur nach Entscheidung des Auftraggebers |
+| FN-08 | Zusammenfassungszeile des Leads kann der Liste der Angaben widersprechen („nicht genannt“); Korrektur über das Modell kann Textwerte verkürzen | ENG | S | P3 | |
+| FN-09 | Überholter zweiter Planungsversuch erzeugt an einem Teilvorgang eine überflüssige Aufgabe „Planung nicht möglich“ (Race zwischen Planfreigabe und Weiterplanen-Knoten der Vorrevision) | ENG | S | P3 | beobachtet in Musterwerk C2 |
+
 ---
 
 ## Empfohlene Reihenfolge
