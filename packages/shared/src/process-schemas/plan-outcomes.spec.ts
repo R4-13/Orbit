@@ -146,3 +146,17 @@ describe('Rückfrage wird abgewartet (Funktionsnachweis 23.10., Ablauf B2)', () 
     expect(codes(p, noOutcomes)).not.toContain('CLARIFICATION_NOT_AWAITED');
   });
 });
+
+describe('Ziel ohne erzeugenden Schritt (Funktionsnachweis 23.10., Musterwerk B2)', () => {
+  it('„Angebot zugestellt“ ohne Schritt, der ein Angebot zustellt, wird abgewiesen – das Anliegen gehört in eine Übergabe', () => {
+    const p = { goalKeys: ['receipt.acknowledged', 'quote.delivered'], nodes: [...ack], edges: [edge('e1', 'ack_draft', 'ack')], conciseExplanation: 'Eingang bestätigen und Angebot.', requestedOutcomes: [{ text: 'Eingang bestätigen', goalKey: 'receipt.acknowledged' }, { text: 'Ein Angebot erhalten', goalKey: 'quote.delivered' }] };
+    expect(codes(p)).toContain('OUTCOME_GOAL_UNREACHABLE');
+  });
+
+  it('erreichbare Ziele bleiben zulässig; bereits bestätigte Wirkungen zählen', () => {
+    const p = { goalKeys: ['receipt.acknowledged'], nodes: [...ack], edges: [edge('e1', 'ack_draft', 'ack')], conciseExplanation: 'Eingang bestätigen.', requestedOutcomes: [{ text: 'Eingang bestätigen', goalKey: 'receipt.acknowledged' }] };
+    expect(codes(p).filter((c) => c.startsWith('OUTCOME'))).toEqual([]);
+    const later = { goalKeys: ['receipt.acknowledged'], nodes: [node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } })], edges: [], conciseExplanation: 'Warten.', requestedOutcomes: [{ text: 'Eingang bestätigen', goalKey: 'receipt.acknowledged' }] };
+    expect(codes(later, ctx({ confirmedEffects: [{ nodeId: 'ack', capability: 'email.send', purpose: 'ACKNOWLEDGEMENT' }] })).filter((c) => c.startsWith('OUTCOME'))).toEqual([]);
+  });
+});

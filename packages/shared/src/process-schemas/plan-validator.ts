@@ -476,6 +476,17 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
       if (!definition) add({ code: 'OUTCOME_UNKNOWN_GOAL', check: 9, message: `Das Ziel "${outcome.goalKey}" für ${label} steht nicht im Katalog.` });
       else if (definition.humanOnly) add({ code: 'OUTCOME_HUMAN_GOAL_AS_COVERAGE', check: 9, message: `Das Anliegen ${label} liegt bei einer Person: markiere es als Übergabe (handover:true) statt mit dem Ziel ${outcome.goalKey}.` });
       else if (!plan.goalKeys.includes(outcome.goalKey)) add({ code: 'OUTCOME_GOAL_NOT_PLANNED', check: 9, message: `Das Ziel "${outcome.goalKey}" für ${label} fehlt unter den goalKeys des Plans.` });
+      else {
+        // Ein Ziel, dessen Nachweis der Plan gar nicht erzeugt, ist kein Plan, sondern ein Wunsch (Funktionsnachweis 23.10., Musterwerk B2: „Angebot zugestellt“ ohne jeden Schritt, der ein Angebot erzeugt – der Vorgang endete ohne Aufgabe für eine Person).
+        const producible = definition.requires.every((criterion) => {
+          if (criterion.kind === 'TASK') return nodes.some((n) => n.type === 'MANUAL_TASK' || n.capability?.key === 'task.create') || (ctx.confirmedEffects ?? []).some((e) => e.capability === 'task.create');
+          const effectKey = criterion.capability;
+          const inPlan = nodes.some((n) => n.type === 'ACTION' && n.capability?.key === effectKey && (!criterion.purposes || criterion.purposes.includes(String(n.config.purpose ?? ''))));
+          const done = (ctx.confirmedEffects ?? []).some((e) => e.capability === effectKey && (!criterion.purposes || criterion.purposes.includes(String(e.purpose ?? ''))));
+          return inPlan || done;
+        });
+        if (!producible) add({ code: 'OUTCOME_GOAL_UNREACHABLE', check: 9, message: `Das Ziel "${outcome.goalKey}" für ${label} wird von keinem Schritt des Plans belegt (die dafür nötige Wirkung fehlt). Was ORBIT nicht selbst erreichen kann, planst du als Übergabe mit Restziel (handover:true, ohne goalKey) – nicht als Ziel, das offen bleibt.` });
+      }
       // Die Kennzeichnung „über eine Zwischenperson“ stammt vom Modell; als Netz gilt zusätzlich die Rollenbezeichnung im Anliegen selbst (Monteur, Techniker …): wer eine solche Person informieren will, ist mit einer Meldung an die Leitung/das Büro nicht erreicht.
       if ((outcome.intermediary || FIELD_STAFF_WORDS.test(outcome.text)) && outcome.goalKey === 'staff.informed' && !ctx.dispatchAvailable) {
         add({ code: 'OUTCOME_INTERMEDIARY_UNDOCUMENTED', check: 9, message: `${label} wird nur über eine Zwischenperson erreicht (z. B. Büro → Monteur). Der Betrieb hat diese Weitergabe nicht als Zuständigkeit hinterlegt; die Meldung an das Büro erreicht das Ziel daher nicht. Plane es als Übergabe mit Restziel (handover:true, human.review, MANUAL_TASK mit dem Restziel); die Eingangsbestätigung an die Kundschaft bleibt davon unberührt.` });

@@ -283,7 +283,14 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const handled = await this.corrections.handledKeys(ctx.tenantId, caseId, message.id);
         // Nennt das Modell dieselbe Angabe in einer Auslese zweimal (mit anderen Worten), gilt die erste: zwei Fassungen derselben Aussage sind kein Widerspruch der Kundschaft (Funktionsnachweis 23.10.: „Angebot erbeten“ und „bitte um Angebot" ließen die Angabe als widersprüchlich gelten und lösten eine sinnlose Rückfrage aus).
         const seenKeys = new Set<string>();
+        // Dieselbe Nachricht noch einmal auszulesen (die Planung liest sie nach einer Neuplanung erneut) darf keinen Widerspruch mit sich selbst erzeugen: was aus ihr schon festgehalten ist, gilt (Funktionsnachweis 23.10., Musterwerk B2:
+        // zwei Fassungen von „Angebotswunsch“ aus derselben Nachricht ließen die Angabe widersprüchlich erscheinen und lösten eine sinnlose Rückfrage und eine Übergabe aus).
+        const alreadyFromThisMessage = new Set((await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => f.isCurrent && f.status !== 'REJECTED' && f.sourceRef === `message:${message.id}`).map((f) => f.key));
         for (const item of proposal.facts) {
+          if (alreadyFromThisMessage.has(item.key)) {
+            rejected.push({ key: item.key, reason: 'bereits aus dieser Nachricht gelesen; die erste Auslese gilt' });
+            continue;
+          }
           if (seenKeys.has(item.key)) {
             rejected.push({ key: item.key, reason: 'Angabe kommt in derselben Auslese mehrfach vor; die erste gilt' });
             continue;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitDecisionFromConcerns, verifyConcerns } from './concerns';
+import { splitDecisionFromConcerns, splitSentences, verifyConcerns } from './concerns';
 
 /**
  * Funktionsnachweis 23.10.: Wortgleichheit und Zeichenähnlichkeit (≥ 92 %) sind nur Hilfen. Gegenbeispiele: Auszüge, die Verneinungen oder Bedingungen weglassen oder erfinden,
@@ -91,5 +91,30 @@ describe('Sinnerhalt der Anliegen: Ähnlichkeit ist nur eine Hilfe', () => {
     const decision = splitDecisionFromConcerns(verified);
     expect(decision.children[0]!.segment).toBeUndefined();
     expect(decision.children[1]!.segment).toBe('Außerdem noch eine Frage zur Rechnung.');
+  });
+});
+
+describe('Weich umbrochene Zeilen sind keine Satzgrenzen (Funktionsnachweis 23.10.)', () => {
+  const wrapped = 'Guten Tag,\r\n\r\nerstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11.\r\nverschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler\r\ninteressieren.\r\n\r\nDanke, Tom Orbit';
+
+  it('ein Umbruch vor einem Kleinbuchstaben verbindet die Zeilen; Absätze und Satzenden bleiben Grenzen', () => {
+    expect(splitSentences(wrapped)).toEqual([
+      'Guten Tag,',
+      'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.',
+      'Danke, Tom Orbit',
+    ]);
+  });
+
+  it('ein Auszug über den Umbruch hinweg ist belegt (kein „ungebelegtes“ Anliegen, kein zusätzliches Restanliegen)', () => {
+    const verified = verifyConcerns(wrapped, {
+      concerns: [
+        { title: 'Rechnung', category: 'UNKNOWN', goal: 'Kopie', excerpt: 'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer' },
+        { title: 'Termin', category: 'UNKNOWN', goal: 'Termin verschoben', excerpt: 'zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11.\r\nverschieben' },
+        { title: 'Regler', category: 'UNKNOWN', goal: 'Angebot', excerpt: 'drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren' },
+      ],
+      sharedContext: '',
+    });
+    expect(verified.concerns.every((c) => c.grounded)).toBe(true);
+    expect(verified.concerns.some((c) => c.supplemented)).toBe(false);
   });
 });

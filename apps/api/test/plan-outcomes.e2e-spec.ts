@@ -142,6 +142,22 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
     expect(await prisma.forTenantId(open.tenantId).task.count({ where: { caseId: open.caseId } })).toBe(0);
   });
 
+  it('eine Nachricht der Kundschaft nach dem Abschluss bleibt nicht unbemerkt: Aufgabe mit Auszug, je Nachricht nur eine, der Vorgang bleibt abgeschlossen', async () => {
+    const { tenantId, caseId } = await newCase(true);
+    await orchestrator.startProcedure(tenantId, caseId, relayPlan, { intentSummary: 'Schlüsselbund' });
+    await orchestrator.advance(tenantId, caseId);
+    expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('COMPLETED');
+    const message = await prisma.forTenantId(tenantId).emailMessage.create({ data: { tenantId, caseId, direction: 'INBOUND', fromAddress: 'kunde@e2e.example', toAddresses: ['betrieb@e2e.example'], subject: 'Re: Schlüsselbund', bodyText: 'Noch eine Information: Der Schlüssel liegt im Heizungskeller, nicht im Flur.', receivedAt: new Date() } });
+    for (let i = 0; i < 2; i += 1) {
+      await orchestrator.receiveInbound(tenantId, caseId, { type: 'communication.received', payload: { emailMessageId: message.id, from: 'kunde@e2e.example' }, dedupeKey: i === 0 ? `inbound:${message.id}` : `inbound:${message.id}:again` });
+      await orchestrator.advance(tenantId, caseId);
+    }
+    const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId, title: { startsWith: 'Neue Nachricht nach Abschluss' } } });
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.description).toContain('Heizungskeller');
+    expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('COMPLETED');
+  });
+
   it('Übergabe mit Restziel: Aufgabe mit Beschreibung des Restziels, Vorgang bleibt in der Prüfung (nicht erledigt), Anliegen sind am Plan festgehalten', async () => {
     const { tenantId, caseId } = await newCase(false);
     const handover: PlanProposal = {

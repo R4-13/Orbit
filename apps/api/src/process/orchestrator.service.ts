@@ -237,6 +237,8 @@ export class OrchestratorService {
           // A finished case does not wake up: a late event is consumed (so nothing re-triggers it forever) and stays in the log.
           for (let event = await this.events.nextInbound(tenantId, caseId); event; event = await this.events.nextInbound(tenantId, caseId)) {
             await this.events.markProcessed(tenantId, event.id);
+            // …aber nicht unbemerkt: eine Nachricht der Kundschaft nach dem Abschluss steht als Aufgabe für eine Person da (Funktionsnachweis 23.10.).
+            if (caseRow.orchestrationStatus === 'COMPLETED' && event.type === CASE_EVENT_TYPES.COMMUNICATION_RECEIVED) await this.flagMessageAfterCompletion(tenantId, caseRow, event).catch(() => undefined);
           }
           return { status: 'TERMINAL', executed };
         }
@@ -760,6 +762,21 @@ export class OrchestratorService {
       await scoped.task.create({ data: { tenantId, caseId: caseRow.id, title: `Restziel übernehmen (${handovers.length})`, description: `ORBIT hat diese Anliegen der Kundschaft nicht selbst erledigt oder nachgewiesen; eine Person übernimmt sie:\n${remaining}`, source: 'AGENT' } });
     }
     return `Übergabe mit offenem Restziel: ${handovers.map((o) => `„${o.text}“`).join('; ')}. ${blockReason ?? ''}`.trim();
+  }
+
+  /**
+   * Eine Nachricht der Kundschaft nach dem Abschluss (Funktionsnachweis 23.10., Musterwerk B3: Angaben und Korrektur trafen nach der Übergabe ein und blieben unbemerkt): sie bleibt am Vorgang gespeichert und steht als
+   * Aufgabe für eine Person mit Auszug – der Vorgang selbst wird nicht neu gestartet. Je Nachricht eine Aufgabe.
+   */
+  private async flagMessageAfterCompletion(tenantId: string, caseRow: Case, event: { payload: unknown }): Promise<void> {
+    const messageId = (event.payload as Record<string, unknown> | undefined)?.emailMessageId;
+    if (typeof messageId !== 'string') return;
+    const scoped = this.prisma.forTenantId(tenantId);
+    const title = `Neue Nachricht nach Abschluss (${messageId.slice(0, 8)})`;
+    if ((await scoped.task.count({ where: { caseId: caseRow.id, title } })) > 0) return;
+    const message = await scoped.emailMessage.findUnique({ where: { id: messageId }, select: { fromAddress: true, bodyText: true } });
+    const excerpt = (message?.bodyText ?? '').replace(/\s+/g, ' ').trim().slice(0, 600);
+    await scoped.task.create({ data: { tenantId, caseId: caseRow.id, title, description: `Die Kundschaft (${message?.fromAddress ?? 'unbekannt'}) hat nach dem Abschluss dieses Vorgangs geschrieben. Bitte prüfen, ob etwas zu tun ist:\n${excerpt}`, source: 'AGENT' } });
   }
 
   // ── Waiting, events, approvals ──────────────────────────────────────────────
