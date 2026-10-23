@@ -281,7 +281,13 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
         const rejected: Array<{ key: string; reason: string }> = [];
         // Angaben, die die Prüfung auf Korrekturen für diese Nachricht schon beurteilt hat (Korrektur, Ergänzung, Widerspruch), werden hier nicht noch einmal – abweichend formuliert – angelegt.
         const handled = await this.corrections.handledKeys(ctx.tenantId, caseId, message.id);
+        // Nennt das Modell dieselbe Angabe in einer Auslese zweimal (mit anderen Worten), gilt die erste: zwei Fassungen derselben Aussage sind kein Widerspruch der Kundschaft (Funktionsnachweis 23.10.: „Angebot erbeten“ und „bitte um Angebot" ließen die Angabe als widersprüchlich gelten und lösten eine sinnlose Rückfrage aus).
+        const seenKeys = new Set<string>();
         for (const item of proposal.facts) {
+          if (seenKeys.has(item.key)) {
+            rejected.push({ key: item.key, reason: 'Angabe kommt in derselben Auslese mehrfach vor; die erste gilt' });
+            continue;
+          }
           if (handled.has(item.key)) {
             rejected.push({ key: item.key, reason: 'bereits als Korrektur/Ergänzung/Widerspruch beurteilt' });
             continue;
@@ -306,6 +312,7 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
           const created = await this.facts.propose(ctx.tenantId, caseId, [{ key: item.key, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence], confidence: item.confidence }]);
           // Confirmed by schema validation + a verified literal quote (never by model confidence alone).
           for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, definition.type);
+          seenKeys.add(item.key);
           recorded.push({ key: item.key, value: item.value, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
         }
         return { recorded, rejected, executionMode: mode };

@@ -304,6 +304,19 @@ describe('Reference process: request for quote (e2e)', () => {
     expect(sent).toHaveLength(0);
   });
 
+  it('dieselbe Angabe zweimal mit anderen Worten in einer Auslese ist kein Widerspruch: die erste gilt (Funktionsnachweis 23.10.)', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    seedExtraction([
+      { key: 'request.delivery_address', value: 'Hauptstraße 5, Frechen', evidence: 'Hauptstraße 5 in Frechen' },
+      { key: 'request.delivery_address', value: 'Frechen, Hauptstr. 5', evidence: 'Hauptstraße 5 in Frechen' },
+    ]);
+    const result = await intake.handleIntakeEvent(tenantId, undefined, mail({ subject: 'Angebot', content: 'Wir brauchen Fenster für die Hauptstraße 5 in Frechen.', threadId: 'thr-dup', rfcMessageId: '<dup1@firma-meier.example>' }));
+    const current = (await facts.getCurrent(tenantId, result.case!.id)).filter((f) => f.key === 'request.delivery_address');
+    expect(current).toHaveLength(1);
+    expect(current[0]!.status).not.toBe('CONFLICTED');
+  });
+
   it('a reply from a stranger with the right In-Reply-To is not merged into the case', async () => {
     const tenantId = await newTenant();
     seedTriage();

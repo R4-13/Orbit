@@ -63,7 +63,6 @@ const OUT = process.env.FN_OUT;
     // Verzeichnis wie Musterwerk: Inhaber und Büro, KEIN Monteur und keine Zuständigkeit „Weitergabe an Monteure“.
     await scoped().staffMember.create({ data: { tenantId, firstName: 'Frank', lastName: 'Test', roleKind: 'OWNER', email: 'chef@sanitaer.example', responsibilities: ['GENERAL', 'COMPLAINTS', 'EMERGENCY'], preferredChannel: 'EMAIL' } as never });
     await scoped().staffMember.create({ data: { tenantId, firstName: 'Test', lastName: 'Person', roleKind: 'OFFICE', email: 'vera@sanitaer.example', responsibilities: ['GENERAL', 'APPOINTMENTS'], preferredChannel: 'EMAIL' } as never });
-    await scoped().contact.create({ data: { tenantId, firstName: 'Tom', lastName: 'Orbit', email: sender } as never });
     await app.get(ReferenceProcessService).loadFixture(tenantId, JSON.parse(readFileSync(join(FIXTURES, 'reference-data.demo.json'), 'utf8')));
     const blueprints = app.get(BlueprintRegistryService);
     const blueprint = JSON.parse(readFileSync(join(FIXTURES, 'request-for-quote.handoff.blueprint.json'), 'utf8')) as { key: string; version: string };
@@ -178,10 +177,11 @@ const OUT = process.env.FN_OUT;
   }
 
   // ---------------------------------------------------------------- Ablauf B: fehlende Information und Korrektur
-  const wordingsB: Array<{ id: string; scenario: string; details: string; correction: string; old: string; fresh: string }> = [
-    { id: 'B1', scenario: 'fn-b1-heizung-knapp', details: 'Es ist eine Gasheizung von 1985, das Haus hat 120 m² Wohnfläche. Wir wohnen in Köln, Musterstraße 12.', correction: 'Entschuldigung, ich habe mich vertan: Es sind nicht 120 m², sondern 140 m².', old: '120', fresh: '140' },
-    { id: 'B2', scenario: 'fn-b2-waermepumpe-frechen', details: 'Das Haus ist von 1998 und hat etwa 150 m² Wohnfläche. Anschrift: Hauptstraße 5 in Frechen.', correction: 'Eine Korrektur: Das Baujahr ist 1989, ich habe mich vertippt.', old: '1998', fresh: '1989' },
-    { id: 'B3', scenario: 'fn-b3-bad-preisfrage', details: 'Das Bad hat 6 m². Wir wohnen im Musterweg 3 in Leverkusen.', correction: 'Doch etwas größer, es sind nicht 6 m², sondern 7 m².', old: '6 m', fresh: '7' },
+  // Die Antworten beantworten, was ORBIT erfragt (Antwort auf die Rückfrage), und die Korrektur betrifft eine Angabe, die darin genannt wurde – wie bei einer Kundin, die ihre Antwort nachträglich berichtigt.
+  const wordingsB: Array<{ id: string; scenario: string; details: string; correction: string; old: string[]; fresh: string[] }> = [
+    { id: 'B1', scenario: 'fn-b1-heizung-knapp', details: 'Wir hätten gern eine Wärmepumpe. Die vorhandene Heizung ist eine Gasheizung von 1985. Das Haus steht in Köln, Musterstraße 12.', correction: 'Entschuldigung, ich habe mich vertan: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.', old: ['1985'], fresh: ['1995'] },
+    { id: 'B2', scenario: 'fn-b2-heizkoerper-bonn', details: 'Es sind vier Heizkörper: Wohnzimmer, Schlafzimmer, Küche und Bad. Die Wohnung ist in der Bahnhofstraße 7 in Bonn.', correction: 'Entschuldigung, es sind nicht vier, sondern sechs Heizkörper – das Kinderzimmer und der Flur kommen dazu.', old: ['4', 'vier'], fresh: ['6', 'sechs'] },
+    { id: 'B3', scenario: 'fn-b3-bad-preisfrage', details: 'Das Bad hat 6 m². Wir wohnen im Musterweg 3 in Leverkusen.', correction: 'Doch etwas größer, es sind nicht 6 m², sondern 7 m².', old: ['6 m', '6,0', '6.0'], fresh: ['7'] },
   ];
   for (const w of wordingsB) {
     it(`Ablauf ${w.id}: Anfrage mit fehlender Information, Antwort und Korrektur bis zum fachlich richtigen nächsten Ergebnis`, async () => {
@@ -210,12 +210,12 @@ const OUT = process.env.FN_OUT;
       for (const mail of [...askedMails, ...afterDetails, ...afterCorrection]) expect(mail.to).toBe(sender);
       // 2. Der korrigierte Wert gilt; der alte gilt nicht mehr (oder die Korrektur ist ausdrücklich offen und sperrt die Wirkungen).
       const valueTexts = facts.map((f) => String(f.value));
-      const hasFresh = valueTexts.some((v) => v.includes(w.fresh));
-      const hasOldCurrent = facts.some((f) => f.status !== 'SUPERSEDED' && String(f.value).includes(w.old) && !String(f.value).includes(w.fresh));
+      const hasFresh = valueTexts.some((v) => w.fresh.some((x) => v.includes(x)));
+      const hasOldCurrent = facts.some((f) => f.status !== 'SUPERSEDED' && w.old.some((x) => new RegExp(`(^|\\D)${x.replace(/[.]/g, '\\.')}(\\D|$)`).test(String(f.value))) && !w.fresh.some((x) => String(f.value).includes(x)));
       expect(hasFresh || open.length > 0).toBe(true);
       if (hasFresh) expect(hasOldCurrent).toBe(false);
       // 3. Keine Folgemail nennt den alten Wert als gültig (ohne den neuen zu nennen).
-      for (const mail of afterCorrection) if (mail.bodyText.includes(w.old)) expect(mail.bodyText).toContain(w.fresh);
+      for (const mail of afterCorrection) if (w.old.some((x) => mail.bodyText.includes(x))) expect(w.fresh.some((x) => mail.bodyText.includes(x))).toBe(true);
       // 4. Kein erfundener Preis.
       for (const mail of [...askedMails, ...afterDetails, ...afterCorrection]) expect(mail.bodyText).not.toMatch(/\d\s?(€|EUR|Euro)|(€|EUR)\s?\d/);
       expect(view.status).not.toBe('FAILED');

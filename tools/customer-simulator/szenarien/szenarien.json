@@ -306,12 +306,12 @@
       "erwartung": "Gezielte Rückfrage nach fehlenden Angaben (Heizungsart/Alter, Wohnfläche, Ort); nach der Korrektur der Fläche gilt der neue Wert."
     },
     {
-      "id": "fn-b2-waermepumpe-frechen",
+      "id": "fn-b2-heizkoerper-bonn",
       "art": "anfrage",
-      "titel": "Funktionsnachweis B2: Wärmepumpe (Baujahr später korrigiert)",
-      "betreff": "Wärmepumpe für unser Haus in Frechen",
-      "text": "Guten Tag,\n\nwir überlegen, unsere alte Gasheizung gegen eine Wärmepumpe zu tauschen. Es geht um unser Einfamilienhaus in Frechen. Können Sie uns dazu ein Angebot machen?\n\nViele Grüße\nTom Orbit",
-      "erwartung": "Rückfrage nach Baujahr und Wohnfläche; nach der Korrektur des Baujahrs gilt der neue Wert; Besichtigung vor Ort statt Preis."
+      "titel": "Funktionsnachweis B2: Heizkörpertausch (Anzahl später korrigiert)",
+      "betreff": "Heizkörper tauschen in Bonn",
+      "text": "Guten Tag,\n\nwir möchten in unserer Wohnung in Bonn die Heizkörper tauschen lassen. Bitte um ein Angebot.\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Rückfrage nach Anzahl und Räumen; nach der Korrektur der Anzahl gilt der neue Wert; kein Preis ohne Grundlage."
     },
     {
       "id": "fn-b3-bad-preisfrage",
