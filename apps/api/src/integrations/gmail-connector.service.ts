@@ -224,6 +224,32 @@ export class GmailConnectorService {
     return this.idsWithToken(await this.getValidAccessToken(tenantId), maxTotal);
   }
 
+  /**
+   * Liest die Kennungen neueste zuerst, seitenweise, **bis zur Marke** (`stopBefore`, selbst nicht enthalten) – oder, ohne Marke, höchstens `maxTotal`. Ist die Menge durch `maxTotal` begrenzt, ist `boundary` die Kennung
+   * der nächsten, nicht mehr enthaltenen Nachricht (der neue Rand für den nächsten Takt); `markFound` sagt, ob die Marke gefunden wurde (eine gelöschte Marke wird nie gefunden – dann endet das Lesen an `maxTotal`).
+   */
+  async listMessageIdsSince(tenantId: string, stopBefore: string | null, maxTotal: number): Promise<{ ids: string[]; boundary: string | null; markFound: boolean }> {
+    const accessToken = await this.getValidAccessToken(tenantId);
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    let markFound = false;
+    scan: do {
+      const response = await this.gmailFetch(accessToken, `/users/me/messages?maxResults=100${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`);
+      const body = (await response.json()) as { messages?: { id: string }[]; nextPageToken?: string };
+      for (const message of body.messages ?? []) {
+        if (stopBefore !== null && message.id === stopBefore) {
+          markFound = true;
+          break scan;
+        }
+        ids.push(message.id);
+        if (ids.length > maxTotal) break scan;
+      }
+      pageToken = body.nextPageToken;
+    } while (pageToken);
+    const boundary = ids.length > maxTotal ? (ids.pop() ?? null) : null;
+    return { ids, boundary, markFound };
+  }
+
   private async idsWithToken(accessToken: string, maxTotal: number): Promise<string[]> {
     const ids: string[] = [];
     let pageToken: string | undefined;

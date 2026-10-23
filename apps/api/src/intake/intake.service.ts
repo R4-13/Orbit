@@ -196,10 +196,33 @@ export class IntakeService {
     if (intake.decision?.status !== 'PENDING_TRIAGE') {
       throw new ValidationFailedError('IntakeEvent is not waiting for triage.', { intakeEventId, status: intake.decision?.status });
     }
-    const stored = await scoped.document.findMany({ where: { id: { in: intake.documentIds } } });
+    const { event, documentIds } = await this.rebuildStoredEvent(tenantId, intake, intake.emailMessage);
+    return this.withFinalStatus(tenantId, await this.processIntake(tenantId, undefined, event, { inboundEmailId: intake.emailMessage.id, intakeEventId: intake.id, documentIds }));
+  }
+
+  /**
+   * Ein Eingang, der aufgenommen, aber nie weiterverarbeitet wurde (Absturz zwischen Aufnahme und Triage): wird aus dem Gespeicherten weiterverarbeitet. Nur wenn nachweislich noch nichts daraus geworden ist
+   * (Status `RECEIVED`, keine Entscheidung, kein Vorgang); sonst `null` – ein Eingang wird nie ein zweites Mal wirksam.
+   */
+  async resumeStranded(tenantId: string, intakeEventId: string): Promise<IntakeResult | null> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const intake = await scoped.intakeEvent.findUnique({ where: { id: intakeEventId }, include: { decision: true, emailMessage: true } });
+    if (!intake?.emailMessage || intake.status !== 'RECEIVED' || intake.decision || intake.caseId) return null;
+    const { event, documentIds } = await this.rebuildStoredEvent(tenantId, intake, intake.emailMessage);
+    return this.withFinalStatus(tenantId, await this.processIntake(tenantId, undefined, event, { inboundEmailId: intake.emailMessage.id, intakeEventId: intake.id, documentIds }));
+  }
+
+  /** Das Ereignis aus dem Gespeicherten (Text, Fadendaten, Richtung, Hinweise, Dokumente) – ohne erneuten Abruf beim Anbieter. */
+  private async rebuildStoredEvent(
+    tenantId: string,
+    intake: { connectionId: string | null; channel: NormalizedIntakeEvent['channel']; provider: string; externalEventId: string; occurredAt: Date; senderRef: unknown; recipientRefs: unknown; subject: string | null; documentIds: string[]; metadata: unknown },
+    message: { bodyText: string | null; bodyPreview: string | null; threadId: string | null; rfcMessageId: string | null; inReplyTo: string | null; references: string[]; direction: 'INBOUND' | 'OUTBOUND' },
+  ): Promise<{ event: NormalizedIntakeEvent; documentIds: string[] }> {
+    const stored = await this.prisma.forTenantId(tenantId).document.findMany({ where: { id: { in: intake.documentIds } } });
     // In der gespeicherten Reihenfolge, damit Anhang und Textauszug zueinander passen.
     const documents = intake.documentIds.map((id) => stored.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => d !== undefined);
     const sender = (intake.senderRef ?? {}) as { address?: string; displayName?: string };
+    const hints = ((intake.metadata ?? {}) as { hints?: NormalizedIntakeEvent['hints'] }).hints;
     const event: NormalizedIntakeEvent = {
       tenantId,
       connectionId: intake.connectionId ?? undefined,
@@ -210,22 +233,17 @@ export class IntakeService {
       sender,
       recipients: ((intake.recipientRefs ?? []) as Array<{ address?: string }>) ?? [],
       subject: intake.subject ?? undefined,
-      content: intake.emailMessage.bodyText ?? intake.emailMessage.bodyPreview ?? '',
+      content: message.bodyText ?? message.bodyPreview ?? '',
       // Attachment bytes already live in storage as Documents; triage only needs name and type.
       attachments: documents.map((d) => ({ fileName: d.fileName, mimeType: d.mimeType, contentBase64: '' })),
-      threadId: intake.emailMessage.threadId ?? undefined,
-      rfcMessageId: intake.emailMessage.rfcMessageId ?? undefined,
-      inReplyTo: intake.emailMessage.inReplyTo ?? undefined,
-      references: intake.emailMessage.references,
+      threadId: message.threadId ?? undefined,
+      rfcMessageId: message.rfcMessageId ?? undefined,
+      inReplyTo: message.inReplyTo ?? undefined,
+      references: message.references,
+      direction: message.direction,
+      ...(hints ? { hints } : {}),
     };
-    return this.withFinalStatus(
-      tenantId,
-      await this.processIntake(tenantId, undefined, event, {
-        inboundEmailId: intake.emailMessage.id,
-        intakeEventId: intake.id,
-        documentIds: intake.documentIds,
-      }),
-    );
+    return { event, documentIds: intake.documentIds };
   }
 
   /** Ergänzt die Anhänge um ihren Textauszug (BPF-02). Ein Fehler beim Lesen hält den Eingang nie auf. */
@@ -250,9 +268,10 @@ export class IntakeService {
 
     // Our own sent message comes back through the mailbox sync: it was already stored when it was sent (with its case),
     // so it is reused instead of violating the provider-id uniqueness or creating a second copy.
+    // Dasselbe gilt für eine früher gespeicherte, aber nie zu Ende aufgenommene Nachricht (Takt unterbrochen): sie wird weiterverwendet statt ein zweites Mal angelegt.
     const knownOwn =
-      direction === 'OUTBOUND' && event.channel !== 'SIMULATED'
-        ? await scoped.emailMessage.findFirst({ where: { providerMessageId: event.externalEventId, direction: 'OUTBOUND' } })
+      event.channel !== 'SIMULATED'
+        ? await scoped.emailMessage.findFirst({ where: { providerMessageId: event.externalEventId, direction } })
         : null;
     const inboundEmail =
       knownOwn ??
@@ -336,7 +355,7 @@ export class IntakeService {
     });
     await scoped.intakeEvent.update({
       where: { id: intakeEvent.id },
-      data: { metadata: { execution } as unknown as Prisma.InputJsonValue },
+      data: { metadata: { execution, ...(event.hints ? { hints: event.hints } : {}) } as unknown as Prisma.InputJsonValue },
     });
 
     return { inboundEmailId: inboundEmail.id, intakeEventId: intakeEvent.id, documentIds };

@@ -19,7 +19,8 @@ describe('ChannelSyncProcessor', () => {
   let processor: ChannelSyncProcessor;
   let concurrency: { acquireSlot: jest.Mock; releaseSlot: jest.Mock };
   let idempotency: { recordIfNew: jest.Mock };
-  let intake: { handleIntakeEvent: jest.Mock; retryPendingTriage: jest.Mock };
+  let intake: { handleIntakeEvent: jest.Mock; retryPendingTriage: jest.Mock; resumeStranded: jest.Mock };
+  let intakeEvent: { findFirst: jest.Mock };
   let adapter: { connectorType: string; poll: jest.Mock };
   let connectorSync: { findUnique: jest.Mock; update: jest.Mock };
   let prisma: { forTenantId: jest.Mock; withRlsBypass: jest.Mock };
@@ -37,12 +38,14 @@ describe('ChannelSyncProcessor', () => {
     intake = {
       handleIntakeEvent: jest.fn().mockResolvedValue({ category: 'OTHER', agentRunIds: [], intakeEventId: 'ie_1' }),
       retryPendingTriage: jest.fn().mockResolvedValue(undefined),
+      resumeStranded: jest.fn().mockResolvedValue(null),
     };
+    intakeEvent = { findFirst: jest.fn().mockResolvedValue({ id: 'ie_known' }) };
     adapter = { connectorType: 'GMAIL', poll: jest.fn().mockResolvedValue({ events: [], nextCursor: null }) };
     connectorSync = { findUnique: jest.fn().mockResolvedValue({ cursor: null }), update: jest.fn().mockResolvedValue(undefined) };
     prisma = {
-      forTenantId: jest.fn().mockReturnValue({ connectorSync }),
-      withRlsBypass: jest.fn(),
+      forTenantId: jest.fn().mockReturnValue({ connectorSync, intakeEvent }),
+      withRlsBypass: jest.fn().mockResolvedValue([]),
     };
     queue = { add: jest.fn().mockResolvedValue(undefined) };
 
@@ -97,13 +100,13 @@ describe('ChannelSyncProcessor', () => {
           { tenantId: 'tenant_a', intakeEventId: 'ie_a' },
           { tenantId: 'tenant_b', intakeEventId: 'ie_b' },
         ])
-        .mockResolvedValue(undefined);
+        .mockResolvedValue([]);
       intake.retryPendingTriage.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
 
       await processor.process({ name: 'triage-retry', data: {} } as Job<Record<string, never>>);
 
       expect(intake.retryPendingTriage).toHaveBeenCalledTimes(2);
-      expect(prisma.withRlsBypass).toHaveBeenCalledTimes(2); // the due-list lookup + the back-off update for the failed one
+      expect(prisma.withRlsBypass).toHaveBeenCalledTimes(3); // the due-list lookup + the back-off update for the failed one + the lookup of stranded inputs
     });
   });
 
@@ -144,6 +147,41 @@ describe('ChannelSyncProcessor', () => {
     await processor.process({ name: 'poll', data: pollData } as Job<typeof pollData>);
 
     expect(intake.handleIntakeEvent).not.toHaveBeenCalled();
+  });
+
+  it('holt eine Nachricht nach, die als „gesehen“ markiert, aber nie aufgenommen wurde (Takt zwischen Marke und Aufnahme unterbrochen)', async () => {
+    idempotency.recordIfNew.mockResolvedValue(false);
+    intakeEvent.findFirst.mockResolvedValue(null); // kein Eingang vorhanden
+    const event = { tenantId: 'tenant_1', channel: 'EMAIL', provider: 'gmail', externalEventId: 'msg-lost', occurredAt: new Date() };
+    adapter.poll.mockResolvedValue({ events: [event], nextCursor: 'neu' });
+
+    await processor.process({ name: 'poll', data: pollData } as Job<typeof pollData>);
+
+    expect(intake.handleIntakeEvent).toHaveBeenCalledWith('tenant_1', undefined, event);
+  });
+
+  it('ein nicht aufnehmbarer Eingang hält die übrigen nicht auf und lässt die Fortschrittsmarke stehen (er wird im nächsten Takt wieder angeboten)', async () => {
+    const events = ['a', 'b', 'c'].map((id) => ({ tenantId: 'tenant_1', channel: 'EMAIL', provider: 'gmail', externalEventId: id, occurredAt: new Date() }));
+    adapter.poll.mockResolvedValue({ events, nextCursor: 'vorgerueckt' });
+    intake.handleIntakeEvent.mockRejectedValueOnce(new Error('Datenbank kurz weg')).mockResolvedValue({ intakeEventId: 'x' });
+
+    await processor.process({ name: 'poll', data: pollData } as Job<typeof pollData>);
+
+    expect(intake.handleIntakeEvent).toHaveBeenCalledTimes(3); // b und c sind trotzdem aufgenommen
+    const update = connectorSync.update.mock.calls.at(-1)![0] as { data: Record<string, unknown> };
+    expect(update.data).toEqual(expect.objectContaining({ status: 'FAILED', retryCount: { increment: 1 } }));
+    expect(update.data).not.toHaveProperty('cursor');
+    expect(String(update.data.lastErrorCode)).toContain('Datenbank kurz weg');
+  });
+
+  it('nimmt hängengebliebene Eingänge (aufgenommen, nie weiterverarbeitet) im Takt der Wiederholungen wieder auf', async () => {
+    prisma.withRlsBypass.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'ie_s1', tenantId: 'tenant_a' }, { id: 'ie_s2', tenantId: 'tenant_b' }]);
+    intake.resumeStranded.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(null);
+
+    await processor.process({ name: 'triage-retry', data: {} } as Job<Record<string, never>>);
+
+    expect(intake.resumeStranded).toHaveBeenCalledWith('tenant_a', 'ie_s1');
+    expect(intake.resumeStranded).toHaveBeenCalledWith('tenant_b', 'ie_s2'); // der Fehler beim ersten stoppt den zweiten nicht
   });
 
   it('self-requeues (does not poll, does not throw) when the tenant is at its channel-sync concurrency limit', async () => {

@@ -24,6 +24,8 @@ const TRIAGE_RETRY_BATCH = 20;
 /** A retry that throws (not a provider outage — those are handled inside IntakeService) is pushed back so it cannot hot-loop every tick. */
 const TRIAGE_RETRY_ERROR_BACKOFF_MS = 5 * 60_000;
 const REQUEUE_DELAY_MS = 2000;
+/** Ab diesem Alter gilt ein nur aufgenommener, nie weiterverarbeiteter Eingang als hängengeblieben. */
+const STRANDED_INTAKE_AFTER_MS = 10 * 60_000;
 
 interface PollJobData {
   tenantId: string;
@@ -105,6 +107,7 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     }
     if (job.name === 'triage-retry') {
       await this.retryPendingTriage();
+      await this.resumeStrandedIntakes();
       return;
     }
     if (job.name === 'process-sweep') {
@@ -147,6 +150,32 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
             }),
           )
           .catch(() => undefined);
+      }
+    }
+  }
+
+  private async alreadyTakenIn(tenantId: string, provider: string, externalEventId: string): Promise<boolean> {
+    return (await this.prisma.forTenantId(tenantId).intakeEvent.findFirst({ where: { provider, externalEventId }, select: { id: true } })) !== null;
+  }
+
+  /**
+   * Ein Eingang, der aufgenommen, aber nie weiterverarbeitet wurde (Absturz zwischen Aufnahme und Triage; Status `RECEIVED`, keine Entscheidung, kein Vorgang), wird nach `STRANDED_INTAKE_AFTER_MS` aus dem
+   * Gespeicherten weiterverarbeitet. Nur solche ohne jede Wirkung – ein Eingang mit Entscheidung oder Vorgang wird nie ein zweites Mal verarbeitet.
+   */
+  private async resumeStrandedIntakes(): Promise<void> {
+    const stranded = await this.prisma.withRlsBypass((tx) =>
+      tx.intakeEvent.findMany({
+        where: { status: 'RECEIVED', caseId: null, decision: { is: null }, createdAt: { lt: new Date(Date.now() - STRANDED_INTAKE_AFTER_MS) } },
+        orderBy: { createdAt: 'asc' },
+        take: TRIAGE_RETRY_BATCH,
+        select: { id: true, tenantId: true },
+      }),
+    );
+    for (const { id, tenantId } of stranded) {
+      try {
+        await this.intake.resumeStranded(tenantId, id);
+      } catch (error) {
+        this.logger.warn(`Resume of stranded intake event ${id} failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
   }
@@ -247,22 +276,40 @@ export class ChannelSyncProcessor extends WorkerHost implements OnModuleInit {
     try {
       const { events, nextCursor } = await adapter.poll(data.tenantId, data.connectionId, sync?.cursor ?? null);
 
+      // Ein Eingang, der nicht aufgenommen werden kann, hält die übrigen nicht auf (kein „Kopf der Schlange“-Stau) und lässt die Fortschrittsmarke stehen: er wird im nächsten Takt wieder angeboten.
+      let failed = 0;
+      let firstError = '';
       for (const event of events) {
-        const isNew = await this.idempotency.recordIfNew(data.tenantId, event.provider, event.externalEventId, 'CHANNEL_EVENT_RECEIVED');
-        if (!isNew) continue;
-        await this.intake.handleIntakeEvent(data.tenantId, undefined, event);
+        try {
+          const isNew = await this.idempotency.recordIfNew(data.tenantId, event.provider, event.externalEventId, 'CHANNEL_EVENT_RECEIVED');
+          // Die Idempotenz-Marke allein genügt nicht: wurde der Takt zwischen Marke und Aufnahme unterbrochen, ist die Nachricht „gesehen“, aber nie aufgenommen – sie wird dann nachgeholt.
+          if (!isNew && (await this.alreadyTakenIn(data.tenantId, event.provider, event.externalEventId))) continue;
+          await this.intake.handleIntakeEvent(data.tenantId, undefined, event);
+        } catch (error) {
+          failed += 1;
+          firstError = firstError || (error instanceof Error ? error.message : String(error));
+          this.logger.error(`Intake of ${event.provider} message ${event.externalEventId} failed (tenant ${data.tenantId})`, error instanceof Error ? error.stack : undefined);
+        }
       }
 
       await scoped.connectorSync.update({
         where: { connectionId: data.connectionId },
-        data: {
-          status: 'SUCCEEDED',
-          cursor: nextCursor,
-          lastSuccessAt: new Date(),
-          retryCount: 0,
-          lastErrorCode: null,
-          nextRunAt: new Date(Date.now() + this.env.CHANNEL_SYNC_POLL_INTERVAL_MS),
-        },
+        data:
+          failed > 0
+            ? {
+                status: 'FAILED',
+                retryCount: { increment: 1 },
+                lastErrorCode: `${failed} Eingang/Eingänge nicht aufgenommen: ${firstError}`.slice(0, 255),
+                nextRunAt: new Date(Date.now() + this.env.CHANNEL_SYNC_POLL_INTERVAL_MS),
+              }
+            : {
+                status: 'SUCCEEDED',
+                cursor: nextCursor,
+                lastSuccessAt: new Date(),
+                retryCount: 0,
+                lastErrorCode: null,
+                nextRunAt: new Date(Date.now() + this.env.CHANNEL_SYNC_POLL_INTERVAL_MS),
+              },
       });
     } catch (error) {
       this.logger.error(`Channel sync failed for connection ${data.connectionId} (tenant ${data.tenantId})`, error instanceof Error ? error.stack : undefined);
