@@ -12,6 +12,9 @@ set -a; source "$ROOT/.env"; set +a
 # Live-Läufe mit echtem Modell (LIVE_AI=1): die lokale KI-Konfiguration überschreibt die Werte aus .env.
 if [ "${LIVE_AI:-}" = "1" ] && [ -f "$ROOT/.env.llm.local" ]; then set -a; source "$ROOT/.env.llm.local"; set +a; fi
 
+# Begrenzter Modellvergleich: Denkaufwand nur für diesen Lauf überschreiben (kein globaler Wechsel), z. B. OVERRIDE_REASONING_EFFORT=medium.
+if [ -n "${OVERRIDE_REASONING_EFFORT:-}" ]; then export OPENAI_REASONING_EFFORT="$OVERRIDE_REASONING_EFFORT"; fi
+
 E2E_DB="${E2E_DB_NAME:-orbit_e2e}"
 BASE_URL="${DATABASE_URL%%\?*}"          # postgresql://orbit:pw@localhost:5432/orbit
 BASE_URL="${BASE_URL%/*}"                # ohne Datenbankname

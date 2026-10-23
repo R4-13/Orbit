@@ -50,7 +50,10 @@ const OUT = process.env.FN_OUT;
   const scoped = () => prisma.forTenantId(tenantId);
   const flat = (text: string, max = 700) => text.replace(/\s+/g, ' ').trim().slice(0, max);
 
+  const previousCorrectionSwitch = process.env.FACT_CORRECTION_ENABLED;
   beforeAll(async () => {
+    // Die Testumgebung schaltet die Korrekturprüfung ab; der Funktionsnachweis prüft sie gerade (Lauf 1–4 liefen mit abgeschalteter Prüfung – das war ein Fehler des Aufbaus, nicht des Produkts).
+    process.env.FACT_CORRECTION_ENABLED = 'true';
     app = await bootstrapE2eApp();
     prisma = app.get(PrismaService);
     const suffix = randomUUID();
@@ -81,6 +84,8 @@ const OUT = process.env.FN_OUT;
   }, 240_000);
 
   afterAll(async () => {
+    if (previousCorrectionSwitch === undefined) delete process.env.FACT_CORRECTION_ENABLED;
+    else process.env.FACT_CORRECTION_ENABLED = previousCorrectionSwitch;
     if (OUT) writeFileSync(OUT, JSON.stringify(record, null, 2), 'utf8');
     jest.restoreAllMocks();
     await prisma.withRlsBypass((tx) => tx.tenant.deleteMany({ where: { id: tenantId } }));
