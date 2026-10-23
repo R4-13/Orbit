@@ -76,9 +76,29 @@ export const PlanAssumptionSchema = z
  * are assigned server-side from the authenticated context (§11.2) — a
  * model-supplied value can never override them.
  */
+/**
+ * Zielabdeckung (Funktionsnachweis 23.10.): Was will die Kundschaft **erreicht** haben? Jedes Anliegen steht hier einzeln und ist entweder einem prüfbaren Katalogziel zugeordnet (`goalKey`) oder eine Übergabe
+ * mit Restziel an eine Person (`handover`). Ein leichteres Ziel darf das verlangte nicht ersetzen: „Monteur informieren“ ist nicht dasselbe wie „Büro informieren“ (`intermediary`: das Ziel wird nur über eine
+ * Zwischenperson erreicht – gilt als erfüllt nur, wenn der Betrieb diese Weitergabe als Zuständigkeit dokumentiert hat).
+ */
+export const RequestedOutcomeSchema = z
+  .object({
+    /** Das Anliegen in einem Satz, in den Worten der Kundschaft (kein Plan-Jargon). */
+    text: z.string().min(1).max(240),
+    /** Das prüfbare Ziel aus dem Katalog, das dieses Anliegen erreicht. Fehlt es, ist `handover` gesetzt. */
+    goalKey: z.string().min(1).max(120).optional(),
+    /** ORBIT kann dieses Ziel nicht selbst nachweisen: eine Person übernimmt das Restziel (Aufgabe im Plan, `human.review` unter den Zielen). */
+    handover: z.boolean().default(false),
+    /** Das Ziel wird nur erreicht, wenn eine nicht direkt erreichbare Person (z. B. ein Monteur) Bescheid weiß – ORBIT erreicht sie nur über eine Zwischenperson. */
+    intermediary: z.boolean().default(false),
+  })
+  .strict();
+export type RequestedOutcome = z.infer<typeof RequestedOutcomeSchema>;
+
 export const PlanProposalSchema = z
   .object({
     goalKeys: z.array(z.string().min(1).max(120)).min(1).max(10),
+    requestedOutcomes: z.array(RequestedOutcomeSchema).max(12).optional(),
     nodes: z.array(PlanNodeSchema).min(1).max(60),
     edges: z.array(PlanEdgeSchema).max(120),
     unresolvedRequirements: z.array(z.string().max(120)).max(30).default([]),

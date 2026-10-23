@@ -255,7 +255,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
     sideEffect: 'INTERNAL_WRITE',
     riskClass: 'LOW',
     toolBindings: ['notify_staff'],
-    contract: { inputs: [{ name: 'message', required: true, hint: 'ein kurzer sachlicher Satz als {"literal": "…"} (3–400 Zeichen), ohne Zusagen' }, { name: 'urgent', required: false, hint: '{"literal": true} nur bei Notfall' }], outputs: ['attentionItemId', 'responsibility'], scope: 'ADHOC' },
+    contract: { inputs: [{ name: 'message', required: true, hint: 'ein kurzer sachlicher Satz als {"literal": "…"} (3–400 Zeichen), ohne Zusagen' }, { name: 'urgent', required: false, hint: '{"literal": true} nur bei Notfall' }, { name: 'relayTo', required: false, hint: '{"literal": "DISPATCH"} nur wenn eine nicht direkt erreichbare Person (Monteur) informiert werden soll und der Betrieb die Weitergabe hinterlegt hat; sonst weglassen' }], outputs: ['attentionItemId', 'responsibility'], scope: 'ADHOC' },
     idempotencyStrategy: 'PAYLOAD_HASH',
     confirmationStrategy: 'TOOL_RESULT',
     timeoutMs: 15_000,

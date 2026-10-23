@@ -209,6 +209,8 @@ export const envSchema = z.object({
   // TENANT_MAX_CONCURRENT_WORKFLOW_RUNS — polling is lightweight and a tenant only has a handful
   // of connectors, not dozens of simultaneous workflow runs).
   CHANNEL_SYNC_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(60000),
+  /** Frei geplante Abläufe müssen die Anliegen der Kundschaft einzeln einem Ziel oder einer Übergabe mit Restziel zuordnen (Zielabdeckung). Nur für skriptgesteuerte Tests mit festen Plänen abschaltbar. */
+  PLAN_REQUIRE_OUTCOMES: booleanEnvVar(true),
   TENANT_MAX_CONCURRENT_CHANNEL_SYNCS: z.coerce.number().int().positive().default(2),
 });
 

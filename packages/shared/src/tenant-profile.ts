@@ -23,7 +23,7 @@ export type StaffContactChannel = (typeof STAFF_CONTACT_CHANNELS)[number];
 export const STAFF_CHANNEL_LABELS: Readonly<Record<StaffContactChannel, string>> = { EMAIL: 'E-Mail', TEAMS: 'Microsoft Teams', WHATSAPP: 'WhatsApp', SMS: 'SMS', PHONE: 'Anruf' };
 
 /** Wofür eine Person zuständig ist – danach richtet sich, wen ORBIT informiert. */
-export const STAFF_RESPONSIBILITIES = ['EMERGENCY', 'QUOTES', 'INVOICES', 'APPLICATIONS', 'COMPLAINTS', 'APPOINTMENTS', 'GENERAL'] as const;
+export const STAFF_RESPONSIBILITIES = ['EMERGENCY', 'QUOTES', 'INVOICES', 'APPLICATIONS', 'COMPLAINTS', 'APPOINTMENTS', 'DISPATCH', 'GENERAL'] as const;
 export type StaffResponsibility = (typeof STAFF_RESPONSIBILITIES)[number];
 export const STAFF_RESPONSIBILITY_LABELS: Readonly<Record<StaffResponsibility, string>> = {
   EMERGENCY: 'Notfälle/Notdienst',
@@ -32,6 +32,7 @@ export const STAFF_RESPONSIBILITY_LABELS: Readonly<Record<StaffResponsibility, s
   APPLICATIONS: 'Bewerbungen/Personal',
   COMPLAINTS: 'Reklamationen/Service',
   APPOINTMENTS: 'Termine/Einsatzplanung',
+  DISPATCH: 'Weitergabe an Monteure/Außendienst',
   GENERAL: 'Allgemeine Anfragen',
 };
 

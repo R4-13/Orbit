@@ -1942,6 +1942,8 @@ model ProcessPlan {
   blueprintKey           String?           @map("blueprint_key")
   blueprintVersion       String?           @map("blueprint_version")
   goalKeys               String[]          @default([]) @map("goal_keys")
+  /// Was die Kundschaft erreichen will (Zielabdeckung, Funktionsnachweis 23.10.): je Anliegen ein Katalogziel oder eine Uebergabe mit Restziel.
+  requestedOutcomes      Json              @default("[]") @map("requested_outcomes")
   basedOnCaseRevision    Int               @map("based_on_case_revision")
   explanation            String
   assumptions            Json              @default("[]")
@@ -2792,7 +2794,7 @@ model StaffMember {
   teamsAddress     String?             @map("teams_address")
   whatsappNumber   String?             @map("whatsapp_number")
   preferredChannel StaffContactChannel @default(EMAIL) @map("preferred_channel")
-  /// EMERGENCY, QUOTES, INVOICES, APPLICATIONS, COMPLAINTS, APPOINTMENTS, GENERAL – wen ORBIT wofür informiert.
+  /// EMERGENCY, QUOTES, INVOICES, APPLICATIONS, COMPLAINTS, APPOINTMENTS, DISPATCH, GENERAL – wen ORBIT wofür informiert.
   responsibilities String[]            @default([])
   /// Google-Kalender-ID für die Verfügbarkeit bei Terminvorschlägen (z. B. Monteure).
   calendarId       String?             @map("calendar_id")

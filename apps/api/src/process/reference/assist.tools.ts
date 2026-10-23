@@ -155,7 +155,7 @@ ${profile}`);
   // ── Interne Benachrichtigung ───────────────────────────────────────────────
 
   private notifyStaff(): ToolDefinition {
-    const schema = z.object({ message: z.string().min(3).max(400), urgent: z.boolean().optional(), purpose: z.string().optional() });
+    const schema = z.object({ message: z.string().min(3).max(400), urgent: z.boolean().optional(), purpose: z.string().optional(), relayTo: z.enum(['DISPATCH']).optional() });
     return {
       name: 'notify_staff',
       description: 'Bittet die zuständige Person des Betriebs um Aufmerksamkeit für diesen Vorgang; bleibt eine Reaktion aus, erinnert ORBIT und eskaliert.',
@@ -163,7 +163,10 @@ ${profile}`);
       policyAction: 'staff.notify',
       execute: async (input: z.infer<typeof schema>, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
-        const raised = await this.attention.raise(ctx.tenantId, caseId, { message: input.message.trim(), urgent: input.urgent === true });
+        const raised = await this.attention.raise(ctx.tenantId, caseId, { message: input.message.trim(), urgent: input.urgent === true, ...(input.relayTo ? { relayTo: input.relayTo } : {}) }).catch((error: unknown) => {
+          if (input.relayTo) throw new ToolFailedError(error instanceof Error ? error.message : 'Weitergabe an Monteure nicht möglich.', { errorCode: 'NO_DISPATCH_RESPONSIBLE' });
+          throw error;
+        });
         return { attentionItemId: raised.id, responsibility: raised.responsibility, executionMode: 'LIVE' };
       },
     };

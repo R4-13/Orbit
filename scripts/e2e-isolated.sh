@@ -34,6 +34,8 @@ if [ "$(docker inspect -f '{{.State.Running}}' orbit-redis-e2e 2>/dev/null)" != 
 fi
 export REDIS_URL="redis://localhost:${E2E_REDIS_PORT:-16379}/${E2E_REDIS_DB:-0}"
 export E2E_ISOLATED=1
+# Zielabdeckung (Anliegenliste im Plan): Skript-Tests mit festen Plänen kennen sie nicht; Live-Läufe mit echtem Modell prüfen sie (LIVE_AI=1). Ausdrücklich überschreibbar.
+export PLAN_REQUIRE_OUTCOMES="${PLAN_REQUIRE_OUTCOMES:-$([ "${LIVE_AI:-}" = "1" ] && echo true || echo false)}"
 
 ( cd "$ROOT/packages/domain" && npx prisma migrate deploy >/dev/null && npx prisma db execute --file prisma/post-reset-grants.sql --schema prisma/schema.prisma >/dev/null )
 # Die Suiten setzen den Demo-Mandanten `musterwerk` (und seine Benutzer) voraus – in der frischen Datenbank einmal anlegen.

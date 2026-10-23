@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type ProcessNodeState, type ProcessPlan, type ProcessPlanEdge, type ProcessPlanNode, type ProcessPlanSource, type ProcessPlanStatus } from '@orbit/domain';
-import { NotFoundError, isReplanPoint, type PlanNode, type PlanProposal } from '@orbit/shared';
+import { NotFoundError, isReplanPoint, type PlanNode, type PlanProposal, type RequestedOutcome } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { hashOf } from './canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
@@ -69,6 +69,7 @@ export class PlanStoreService {
           blueprintKey: input.blueprint?.key,
           blueprintVersion: input.blueprint?.version,
           goalKeys: input.proposal.goalKeys,
+          requestedOutcomes: (input.proposal.requestedOutcomes ?? []) as unknown as Prisma.InputJsonValue,
           basedOnCaseRevision: input.basedOnCaseRevision,
           explanation: input.proposal.conciseExplanation,
           assumptions: input.proposal.assumptions as unknown as Prisma.InputJsonValue,
@@ -175,6 +176,13 @@ export class PlanStoreService {
     const understandingOnly = (p: (typeof plans)[number]): boolean => p.source === 'LLM_PLANNER' && p.nodes.some((n) => isReplanPoint(n.definition as unknown as PlanNode));
     const substantive = plans.find((p) => !understandingOnly(p));
     return substantive?.goalKeys ?? [];
+  }
+
+  /** Die Anliegen der Kundschaft laut der neuesten Revision, die nach dem Verstehen geplant wurde (Zielabdeckung): eine Neuplanung führt sie weiter. */
+  async latestOutcomes(tenantId: string, caseId: string): Promise<RequestedOutcome[]> {
+    const plans = await this.prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId }, orderBy: { revision: 'desc' }, select: { requestedOutcomes: true, source: true, nodes: { select: { definition: true } } } });
+    const substantive = plans.find((p) => !(p.source === 'LLM_PLANNER' && p.nodes.some((n) => isReplanPoint(n.definition as unknown as PlanNode))));
+    return ((substantive?.requestedOutcomes ?? []) as unknown as RequestedOutcome[]).filter((o) => typeof o?.text === 'string');
   }
 
   /** Der Plan, der auf die Planfreigabe wartet (D4): seine verstehenden Schritte dürfen vorher laufen. */

@@ -4,6 +4,7 @@ import { collectReferences, emptyReferences, expressionDepth, MAX_EXPRESSION_DEP
 import { PLAN_LIMITS, PlanProposalSchema, type PlanEdge, type PlanNode, type PlanProposal } from './plan';
 import type { PolicyMode } from '../policy';
 import { isReplanPoint as isReplanNode } from './plan-approval';
+import { GOAL_CATALOGUE } from './goal-catalogue';
 
 /**
  * Amendment 02 §11.3 — the deterministic plan validator. It is a pure
@@ -79,6 +80,13 @@ export interface PlanValidationContext {
   customerQuestionsOpen?: number;
   /** Frei geplanter Ablauf: ist die Anforderungsprüfung für diesen Vorgang schon gelaufen? `false`: ihr Ergebnis ist beim Planen noch unbekannt. */
   requirementsAnalyzed?: boolean;
+  /**
+   * Frei geplanter Ablauf mit Zielabdeckung (Funktionsnachweis 23.10.): Der Plan muss die Anliegen der Kundschaft einzeln nennen (`requestedOutcomes`), jedes entweder einem Katalogziel zuordnen oder als Übergabe
+   * mit Restziel planen. Gilt nicht für die Revision, die nur das Verstehen plant.
+   */
+  requireRequestedOutcomes?: boolean;
+  /** Der Betrieb hat im Mitarbeiterverzeichnis eine Person mit der Zuständigkeit „Weitergabe an Monteure/Außendienst“ (DISPATCH) hinterlegt: nur dann ist „Monteur informieren“ über das Büro erreichbar. */
+  dispatchAvailable?: boolean;
 }
 
 export interface PlanValidationResult {
@@ -88,6 +96,9 @@ export interface PlanValidationResult {
   proposal?: PlanProposal;
   stats?: { nodes: number; edges: number; externalActions: number; clarifications: number };
 }
+
+/** Rollen, die ORBIT nicht direkt erreicht (Außendienst): ein Anliegen, sie zu informieren, braucht die dokumentierte Weitergabe. */
+const FIELD_STAFF_WORDS = /\b(?:monteur\w*|techniker\w*|handwerker\w*|au(?:ß|ss)endienst\w*|fahrer\w*|installateur\w*|servicekr(?:a|ä)ft\w*)\b/i;
 
 /** Input keys under which a model must never supply a literal: recipients, prices, identities (§11.3 item 7). */
 export const FORBIDDEN_LITERAL_INPUT_KEYS = [
@@ -442,6 +453,39 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   if (!blueprint && ctx.contractGoalKeys && ctx.contractGoalKeys.length > 0) {
     const missing = ctx.contractGoalKeys.filter((goal) => !plan.goalKeys.includes(goal));
     if (missing.length > 0) add({ code: 'GOAL_CONTRACT_VIOLATION', check: 9, message: `Die Ziele der ersten Planung gelten weiter und dürfen nicht gestrichen werden: ${missing.join(', ')}.` });
+  }
+
+  // ── 9c. Zielabdeckung: jedes Anliegen ist einem prüfbaren Ziel zugeordnet oder eine Übergabe mit Restziel ──
+  if (!blueprint && ctx.requireRequestedOutcomes && !nodes.some((n) => isReplanNode(n))) {
+    const outcomes = plan.requestedOutcomes ?? [];
+    if (outcomes.length === 0) {
+      add({ code: 'OUTCOMES_MISSING', check: 9, message: 'Nenne in requestedOutcomes jedes Anliegen der Kundschaft einzeln (ein Satz in ihren Worten) und ordne ihm ein Ziel aus dem Katalog zu (goalKey) oder – wenn ORBIT es nicht selbst nachweisen kann – eine Übergabe mit Restziel (handover:true).' });
+    }
+    const hasManualTask = nodes.some((n) => n.type === 'MANUAL_TASK');
+    for (const outcome of outcomes) {
+      const label = `„${outcome.text.slice(0, 80)}“`;
+      if (outcome.handover) {
+        if (!plan.goalKeys.includes('human.review')) add({ code: 'OUTCOME_HANDOVER_NEEDS_GOAL', check: 9, message: `Das Anliegen ${label} bleibt bei einer Person: nimm das Ziel human.review zusätzlich auf, damit der Vorgang nicht als erledigt gilt.` });
+        if (!hasManualTask) add({ code: 'OUTCOME_HANDOVER_UNPLANNED', check: 9, message: `Das Anliegen ${label} ist als Übergabe markiert, aber der Plan enthält keine MANUAL_TASK: plane die Aufgabe für die Person und beschreibe im Feld purpose das Restziel (was noch zu tun ist).` });
+        continue;
+      }
+      if (!outcome.goalKey) {
+        add({ code: 'OUTCOME_UNCOVERED', check: 9, message: `Das Anliegen ${label} hat weder ein Ziel (goalKey) noch eine Übergabe (handover:true).` });
+        continue;
+      }
+      const definition = GOAL_CATALOGUE[outcome.goalKey];
+      if (!definition) add({ code: 'OUTCOME_UNKNOWN_GOAL', check: 9, message: `Das Ziel "${outcome.goalKey}" für ${label} steht nicht im Katalog.` });
+      else if (definition.humanOnly) add({ code: 'OUTCOME_HUMAN_GOAL_AS_COVERAGE', check: 9, message: `Das Anliegen ${label} liegt bei einer Person: markiere es als Übergabe (handover:true) statt mit dem Ziel ${outcome.goalKey}.` });
+      else if (!plan.goalKeys.includes(outcome.goalKey)) add({ code: 'OUTCOME_GOAL_NOT_PLANNED', check: 9, message: `Das Ziel "${outcome.goalKey}" für ${label} fehlt unter den goalKeys des Plans.` });
+      // Die Kennzeichnung „über eine Zwischenperson“ stammt vom Modell; als Netz gilt zusätzlich die Rollenbezeichnung im Anliegen selbst (Monteur, Techniker …): wer eine solche Person informieren will, ist mit einer Meldung an die Leitung/das Büro nicht erreicht.
+      if ((outcome.intermediary || FIELD_STAFF_WORDS.test(outcome.text)) && outcome.goalKey === 'staff.informed' && !ctx.dispatchAvailable) {
+        add({ code: 'OUTCOME_INTERMEDIARY_UNDOCUMENTED', check: 9, message: `${label} wird nur über eine Zwischenperson erreicht (z. B. Büro → Monteur). Der Betrieb hat diese Weitergabe nicht als Zuständigkeit hinterlegt; die Meldung an das Büro erreicht das Ziel daher nicht. Plane es als Übergabe mit Restziel (handover:true, human.review, MANUAL_TASK mit dem Restziel); die Eingangsbestätigung an die Kundschaft bleibt davon unberührt.` });
+      } else if ((outcome.intermediary || FIELD_STAFF_WORDS.test(outcome.text)) && outcome.goalKey === 'staff.informed' && ctx.dispatchAvailable) {
+        // Mit hinterlegter Weitergabe zählt die Meldung nur, wenn sie ausdrücklich an die dafür zuständige Person geht – eine Meldung an die allgemein Zuständigen erreicht den Monteur nicht.
+        const relayed = nodes.some((n) => n.capability?.key === 'staff.notify' && (n.inputs?.relayTo as { literal?: unknown } | undefined)?.literal === 'DISPATCH');
+        if (!relayed) add({ code: 'OUTCOME_RELAY_MISSING', check: 9, message: `Für ${label} muss die Meldung (staff.notify) mit der Eingabe relayTo = {"literal":"DISPATCH"} an die für die Weitergabe an Monteure zuständige Person gehen.` });
+      }
+    }
   }
 
   // ── 10. Checkable completion criteria, valid wait / timeout handling ──────

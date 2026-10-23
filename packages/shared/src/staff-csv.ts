@@ -74,6 +74,7 @@ const RESPONSIBILITY_ALIASES: Record<string, (typeof STAFF_RESPONSIBILITIES)[num
   applications: 'APPLICATIONS', bewerbungen: 'APPLICATIONS', bewerbung: 'APPLICATIONS', personal: 'APPLICATIONS',
   complaints: 'COMPLAINTS', reklamationen: 'COMPLAINTS', reklamation: 'COMPLAINTS', service: 'COMPLAINTS', beschwerden: 'COMPLAINTS',
   appointments: 'APPOINTMENTS', termine: 'APPOINTMENTS', termin: 'APPOINTMENTS', einsatzplanung: 'APPOINTMENTS', disposition: 'APPOINTMENTS',
+  dispatch: 'DISPATCH', weitergabe: 'DISPATCH', monteurweitergabe: 'DISPATCH', aussendienst: 'DISPATCH', außendienst: 'DISPATCH',
   general: 'GENERAL', allgemein: 'GENERAL', anfragen: 'GENERAL', sonstiges: 'GENERAL',
 };
 for (const responsibility of STAFF_RESPONSIBILITIES) RESPONSIBILITY_ALIASES[normalizeHeader(STAFF_RESPONSIBILITY_LABELS[responsibility])] = responsibility;

@@ -389,16 +389,21 @@ export class AttentionService {
    * Bittet ausdrücklich um Aufmerksamkeit für einen Vorgang (Fähigkeit „staff.notify“): ein Eintrag je Vorgang, dessen Text bei erneutem Aufruf aktualisiert wird.
    * Die Meldung selbst, Erinnerung und Eskalation übernimmt derselbe Takt wie bei den anderen Fällen.
    */
-  async raise(tenantId: string, caseId: string, input: { message: string; urgent: boolean }): Promise<{ id: string; responsibility: string; created: boolean }> {
+  async raise(tenantId: string, caseId: string, input: { message: string; urgent: boolean; relayTo?: 'DISPATCH' }): Promise<{ id: string; responsibility: string; created: boolean }> {
     const db = this.prisma.forTenantId(tenantId);
-    const existing = await db.attentionItem.findFirst({ where: { tenantId, caseId, kind: 'NOTIFY_REQUEST', state: { not: 'RESOLVED' } } });
+    // Die Weitergabe an Monteure ist ein eigener Auftrag: gibt es dafür niemanden im Verzeichnis, wird nicht still an die Leitung gemeldet (das wäre ein anderes, leichteres Ziel).
+    if (input.relayTo === 'DISPATCH') {
+      const directory = await db.staffMember.findMany({ where: { tenantId, active: true } });
+      if (!directory.some((s) => s.responsibilities.includes('DISPATCH'))) throw new Error('Im Mitarbeiterverzeichnis ist niemand für die Weitergabe an Monteure zuständig.');
+    }
+    const existing = await db.attentionItem.findFirst({ where: { tenantId, caseId, kind: 'NOTIFY_REQUEST', state: { not: 'RESOLVED' }, ...(input.relayTo ? { responsibility: input.relayTo } : {}) } });
     if (existing) {
       if (existing.reason !== input.message) await db.attentionItem.update({ where: { id: existing.id }, data: { reason: input.message, emergency: existing.emergency || input.urgent } });
       return { id: existing.id, responsibility: existing.responsibility, created: false };
     }
     const row = await db.case.findUnique({ where: { id: caseId }, select: { type: true } });
     const categories = await this.categoriesFor(tenantId, [caseId]);
-    const responsibility = responsibilityForCase({ category: categories.get(caseId), caseType: row?.type, emergency: input.urgent });
+    const responsibility = input.relayTo ?? responsibilityForCase({ category: categories.get(caseId), caseType: row?.type, emergency: input.urgent });
     const created = await db.attentionItem.create({ data: { tenantId, caseId, kind: 'NOTIFY_REQUEST', responsibility, emergency: input.urgent, reason: input.message, state: 'OPEN', firstSeenAt: new Date() } });
     return { id: created.id, responsibility, created: true };
   }
