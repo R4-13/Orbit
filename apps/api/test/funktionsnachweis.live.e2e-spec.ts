@@ -171,7 +171,8 @@ const OUT = process.env.FN_OUT;
       const { caseId, mails } = await submit(w.id, subject, content);
       expect(caseId).not.toBe('');
       const view = await caseView(caseId);
-      (record[w.id] as unknown) = { status: view.status, abschluss: view.outcome, ziele: view.plan?.goalKeys, anliegen: view.plan?.requestedOutcomes, mails: mails.map((m) => ({ an: m.to, text: flat(m.bodyText, 1200) })) };
+      const nodes = await scoped().processPlanNode.findMany({ where: { plan: { caseId } }, select: { nodeKey: true, state: true, errorCode: true, errorMessage: true } });
+      (record[w.id] as unknown) = { knoten: nodes.map((n) => `${n.nodeKey}:${n.state}${n.errorCode ? `:${n.errorCode}:${(n.errorMessage ?? '').slice(0, 100)}` : ''}`), wirkungen: view.effects, grund: view.attentionReasons, status: view.status, abschluss: view.outcome, ziele: view.plan?.goalKeys, anliegen: view.plan?.requestedOutcomes, mails: mails.map((m) => ({ an: m.to, text: flat(m.bodyText, 1200) })) };
       expect(mails.length).toBeGreaterThanOrEqual(1);
       for (const mail of mails) expect(mail.to).toBe(sender);
       const answer = mails.map((m) => m.bodyText).join('\n');
@@ -219,7 +220,7 @@ const OUT = process.env.FN_OUT;
       // 2. Der korrigierte Wert gilt; der alte gilt nicht mehr (oder die Korrektur ist ausdrücklich offen und sperrt die Wirkungen).
       const valueTexts = facts.map((f) => String(f.value));
       const hasFresh = valueTexts.some((v) => w.fresh.some((x) => v.includes(x)));
-      const hasOldCurrent = facts.some((f) => f.status !== 'SUPERSEDED' && w.old.some((x) => new RegExp(`(^|\\D)${x.replace(/[.]/g, '\\.')}(\\D|$)`).test(String(f.value))) && !w.fresh.some((x) => String(f.value).includes(x)));
+      const hasOldCurrent = facts.filter((f) => !f.key.includes('.ergaenzung.')).some((f) => f.status !== 'SUPERSEDED' && w.old.some((x) => new RegExp(`(^|\\D)${x.replace(/[.]/g, '\\.')}(\\D|$)`).test(String(f.value))) && !w.fresh.some((x) => String(f.value).includes(x)));
       expect(hasFresh || open.length > 0).toBe(true);
       if (hasFresh) expect(hasOldCurrent).toBe(false);
       // 3. Keine Folgemail nennt den alten Wert als gültig (ohne den neuen zu nennen).

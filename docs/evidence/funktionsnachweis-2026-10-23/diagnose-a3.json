@@ -1,0 +1,180 @@
+{
+  "menschlicheFreigaben": [],
+  "A1": {
+    "knoten": [
+      "sender_check:SUCCEEDED",
+      "know:SUCCEEDED",
+      "notify_staff:SKIPPED",
+      "plan_further:SKIPPED",
+      "human_answers:SKIPPED",
+      "reply_draft:SUCCEEDED",
+      "reply_send:SUCCEEDED",
+      "answered:SUCCEEDED"
+    ],
+    "wirkungen": [
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "INFORMATION"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "INFORMATION"
+      }
+    ],
+    "grund": [],
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "ADHOC_GOALS_PROVEN",
+      "goals": [
+        {
+          "goal": "inquiry.answered",
+          "label": "Anfrage beantwortet",
+          "evidence": [
+            "email.send/INFORMATION"
+          ]
+        }
+      ],
+      "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+      "evidenceRefs": [
+        "communication.draft/INFORMATION",
+        "email.send/INFORMATION:x-1"
+      ]
+    },
+    "ziele": [
+      "inquiry.answered"
+    ],
+    "anliegen": [],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht. Ja, wir führen Badsanierungen einschließlich barrierefreier Duschen durch. Leverkusen liegt in unserem Einsatzgebiet. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 4b793c"
+      }
+    ]
+  },
+  "A2": {
+    "knoten": [
+      "reply_draft:SUCCEEDED",
+      "sender_check:SUCCEEDED",
+      "know:SUCCEEDED",
+      "notify_staff:SKIPPED",
+      "plan_further:SKIPPED",
+      "human_answers:SKIPPED",
+      "reply_send:SUCCEEDED",
+      "answered:SUCCEEDED"
+    ],
+    "wirkungen": [
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "INFORMATION"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "INFORMATION"
+      }
+    ],
+    "grund": [],
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "ADHOC_GOALS_PROVEN",
+      "goals": [
+        {
+          "goal": "inquiry.answered",
+          "label": "Anfrage beantwortet",
+          "evidence": [
+            "email.send/INFORMATION"
+          ]
+        }
+      ],
+      "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+      "evidenceRefs": [
+        "communication.draft/INFORMATION",
+        "email.send/INFORMATION:x-2"
+      ]
+    },
+    "ziele": [
+      "inquiry.answered"
+    ],
+    "anliegen": [],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht. Am Freitag sind wir von 07:00 bis 16:00 Uhr erreichbar. Elektroarbeiten bieten wir nicht an. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 4b793c"
+      }
+    ]
+  },
+  "A3": {
+    "knoten": [
+      "extract:SUCCEEDED",
+      "ask1_draft:SKIPPED",
+      "extract4:SKIPPED",
+      "wait1:SKIPPED",
+      "extract2:SKIPPED",
+      "reqs2:SKIPPED",
+      "ask2_draft:SKIPPED",
+      "ask2:SKIPPED",
+      "wait2:SKIPPED",
+      "reqs3:SKIPPED",
+      "ask3_draft:SKIPPED",
+      "ask3:SKIPPED",
+      "wait3:SKIPPED",
+      "interpret:SUCCEEDED",
+      "context:SUCCEEDED",
+      "reqs4:SKIPPED",
+      "book:SKIPPED",
+      "confirm_draft:SKIPPED",
+      "confirm:SKIPPED",
+      "lead:SUCCEEDED",
+      "ack_draft:SUCCEEDED",
+      "done:SUCCEEDED",
+      "reqs:SUCCEEDED",
+      "ask1:SKIPPED",
+      "extract3:SKIPPED",
+      "notify:SUCCEEDED",
+      "ack:SUCCEEDED"
+    ],
+    "wirkungen": [
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "crm.lead.create",
+        "purpose": "CRM_HANDOFF"
+      },
+      {
+        "capabilityKey": "staff.notify",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "ACKNOWLEDGEMENT"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "ACKNOWLEDGEMENT"
+      }
+    ],
+    "grund": [],
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "crm.lead.create/CRM_HANDOFF",
+        "staff.notify",
+        "communication.draft/ACKNOWLEDGEMENT",
+        "email.send/ACKNOWLEDGEMENT:x-3"
+      ]
+    },
+    "ziele": [
+      "request.handed_over"
+    ],
+    "anliegen": [],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht zu „Wie läuft ein Angebot bei Ihnen ab?“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 4b793c"
+      }
+    ]
+  }
+}

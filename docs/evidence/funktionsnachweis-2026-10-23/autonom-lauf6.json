@@ -1,0 +1,772 @@
+{
+  "menschlicheFreigaben": [
+    {
+      "fall": "A3",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C1/Kopie der letzten Rechnung",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C1/Wartungstermin verschieben",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C1/Angebot für Heizungsregler",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C2/Schlüsselbund des Monteurs",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C2/Bestätigung des Nachrichteneingangs",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C2/Einsatzgebiet Frechen",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C2/Schlüsselbund des Monteurs/nach Antwort",
+      "art": "Planfreigabe (D4)"
+    },
+    {
+      "fall": "C2b",
+      "art": "Planfreigabe (D4)"
+    }
+  ],
+  "A1": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "ADHOC_GOALS_PROVEN",
+      "goals": [
+        {
+          "goal": "inquiry.answered",
+          "label": "Anfrage beantwortet",
+          "evidence": [
+            "email.send/INFORMATION"
+          ]
+        }
+      ],
+      "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+      "evidenceRefs": [
+        "communication.draft/INFORMATION",
+        "email.send/INFORMATION:x-1"
+      ]
+    },
+    "ziele": [
+      "inquiry.answered"
+    ],
+    "anliegen": [],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht. Ja, wir führen Badsanierungen einschließlich barrierefreier Duschen aus. Leverkusen gehört zu unserem Einsatzgebiet. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      }
+    ]
+  },
+  "A2": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "ADHOC_GOALS_PROVEN",
+      "goals": [
+        {
+          "goal": "inquiry.answered",
+          "label": "Anfrage beantwortet",
+          "evidence": [
+            "email.send/INFORMATION"
+          ]
+        }
+      ],
+      "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+      "evidenceRefs": [
+        "communication.draft/INFORMATION",
+        "email.send/INFORMATION:x-2"
+      ]
+    },
+    "ziele": [
+      "inquiry.answered"
+    ],
+    "anliegen": [],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht. Am Freitag erreichen Sie uns von 07:00 bis 16:00 Uhr. Elektroarbeiten bieten wir nicht an. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      }
+    ]
+  },
+  "A3": {
+    "status": "MANUAL_REVIEW",
+    "abschluss": null,
+    "ziele": [
+      "inquiry.answered"
+    ],
+    "anliegen": [
+      {
+        "text": "Ich möchte wissen, wie ein Angebot bei Ihnen abläuft.",
+        "goalKey": "inquiry.answered",
+        "handover": false,
+        "intermediary": false
+      },
+      {
+        "text": "Ich möchte wissen, ob Sie mir vorab schon einen Preis nennen können.",
+        "goalKey": "inquiry.answered",
+        "handover": false,
+        "intermediary": false
+      }
+    ],
+    "mails": [
+      {
+        "an": "tom.orbit@kunde.example",
+        "text": "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht. Wir schauen uns die Situation vor Ort an und erstellen danach ein schriftliches Angebot. Preise nennen wir nicht vorab am Telefon oder per Mail. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      }
+    ]
+  },
+  "B1": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "email.send/CLARIFICATION:x-4",
+        "facts.extract_from_message",
+        "crm.lead.create/CRM_HANDOFF",
+        "staff.notify",
+        "email.send/ACKNOWLEDGEMENT:x-5",
+        "communication.draft/ACKNOWLEDGEMENT"
+      ]
+    },
+    "grund": [],
+    "wirkungen": [
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "CLARIFICATION"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "CLARIFICATION"
+      },
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "crm.lead.create",
+        "purpose": "CRM_HANDOFF"
+      },
+      {
+        "capabilityKey": "staff.notify",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "ACKNOWLEDGEMENT"
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "ACKNOWLEDGEMENT"
+      }
+    ],
+    "aufgaben": [
+      {
+        "title": "Neuen Lead kontaktieren: Tom Orbit",
+        "description": "Anfrage über ORBIT (E-Mail, 23.10.2026, 17:32)\nKundschaft: Tom Orbit <tom.orbit@kunde.example>\nAnliegen: Tom Orbit bittet um ein Angebot für eine neue Heizung für sein Haus. Die konkrete Heizungsart, die bestehende Anlage und der Standort des Hauses sind nicht genannt; der Betrieb bietet unter anderem den Einbau von Wärmepumpen sowie Arbeiten an Gas- und Ölheizungen an.\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Objekt: Haus\n- Name: Tom Orbit\n- Angebotswunsch: Angebot erbeten\n- Standort: Köln\n- Gewünschte Heizungsart: Wärmepumpe\n- Bestehende Heizung: Die vorhandene Heizung ist eine Gasheizung von 1985.\n- Delivery address: Musterstraße 12\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+      },
+      {
+        "title": "Korrektur nach Übergabe (c0a08ff1)",
+        "description": "Die Kundschaft hat Angaben korrigiert, nachdem der Vorgang übergeben wurde. Bitte den Lead bzw. das Angebot mit den neuen Werten abgleichen:\n- ai.existing_heating: \"Die vorhandene Heizung ist eine Gasheizung von 1985.\" → \"Die vorhandene Heizung ist eine Gasheizung von 1995.\""
+      }
+    ],
+    "fakten": [
+      "ai.existing_heating=\"Die vorhandene Heizung ist eine Gasheizung von 1995.\" (CONFIRMED)",
+      "ai.heating_type=\"Wärmepumpe\" (CONFIRMED)",
+      "ai.location=\"Köln\" (CONFIRMED)",
+      "ai.property_type=\"Haus\" (CONFIRMED)",
+      "ai.quote_requested=\"Angebot erbeten\" (CONFIRMED)",
+      "ai.requested_service=\"Neue Heizung\" (CONFIRMED)",
+      "ai.requested_service.ergaenzung.a2e74090=\"Wärmepumpe\" (CANDIDATE)",
+      "ai.requester_name=\"Tom Orbit\" (CONFIRMED)",
+      "contact.email=\"tom.orbit@kunde.example\" (CONFIRMED)",
+      "property_type=\"Haus\" (CANDIDATE)",
+      "request.delivery_address=\"Musterstraße 12\" (CONFIRMED)",
+      "requested_service=\"Neue Heizung\" (CANDIDATE)"
+    ],
+    "offeneKorrekturhinweise": 0,
+    "korrekturEreignisse": [
+      "fact.update_assessed {\"ignored\":[{\"key\":\"ai.requested_service\",\"kind\":\"ADDITIONAL\",\"reason\":\"Ergänzung: frühere Angabe bleibt gültig, die neue steht als eigene Ergänzung (Schlüssel .ergaenzung)\"}],\"conflicts\":0,\"corrected\":0,\"knownKeys\":[\"ai.property_type\",\"ai.quote_requested\",\"ai",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"ec1f3072-09a0-4060-9423-067c143e09c6\",\"emailMessageId\":\"a2e74090-468b-426f-a5a1-aba7dbe005cc\"}",
+      "wait.satisfied {\"eventId\":\"c0904334-4b1a-411f-9cb7-38fadf8fd530\",\"nodeKey\":\"wait1\"}",
+      "fact.update_assessed {\"ignored\":[],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"ai.existing_heating\",\"ai.heating_type\",\"ai.location\",\"ai.property_type\",\"ai.quote_requested\",\"ai.requested_service\",\"ai.requester_name\",\"property_type\",\"request.delivery_address\",\"requested_service\"],\"mes",
+      "fact.corrected {\"key\":\"ai.existing_heating\",\"current\":\"Die vorhandene Heizung ist eine Gasheizung von 1995.\",\"previous\":\"Die vorhandene Heizung ist eine Gasheizung von 1985.\",\"messageId\":\"c0a08ff1-66f3-4848-a738-44387eb5389f\"}",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"ec1f3072-09a0-4060-9423-067c143e09c6\",\"emailMessageId\":\"c0a08ff1-66f3-4848-a738-44387eb5389f\"}"
+    ],
+    "eingaenge": [
+      "COMPLETED BUSINESS_ACTIONABLE fe1a0027 Re: Neue Heizung – bitte um Angebot ",
+      "COMPLETED BUSINESS_ACTIONABLE fe1a0027 Re: Neue Heizung – bitte um Angebot ",
+      "COMPLETED BUSINESS_ACTIONABLE fe1a0027 Neue Heizung – bitte um Angebot ",
+      "NEEDS_REVIEW BUSINESS_ACTIONABLE e3df9c73 Wie läuft ein Angebot bei Ihnen ab? Individuelle Preisfrage prüfen und über eine weitere Auskunft entscheiden: Bitte manuell bearbeiten."
+    ],
+    "vorgaengeDesMandanten": [
+      "15234750 COMPLETED Allgemeine Anfrage: Badsanierung in Leverkusen?",
+      "9fee2f28 COMPLETED Allgemeine Anfrage: Freitag erreichbar? Elektro?",
+      "e3df9c73 MANUAL_REVIEW Allgemeine Anfrage: Wie läuft ein Angebot bei Ihnen ab?",
+      "fe1a0027 COMPLETED Neue Anfrage: Neue Heizung – bitte um Angebot"
+    ],
+    "mails": {
+      "rueckfrage": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Neue Heizung – bitte um Angebot“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. In welchem Ort steht Ihr Haus? 2. Welche Heizungsart wünschen Sie, zum Beispiel eine Wärmepumpe oder eine Gas- beziehungsweise Ölheizung? 3. Welche Heizung ist derzeit eingebaut und soll sie ersetzt oder umgerüstet werden? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      ],
+      "nachAngaben": [
+        "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht zu „Neue Heizung – bitte um Angebot“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      ],
+      "nachKorrektur": []
+    }
+  },
+  "B2": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "facts.extract_from_message",
+        "staff.notify",
+        "email.send/ACKNOWLEDGEMENT:x-7",
+        "email.send/CLARIFICATION:x-6",
+        "crm.lead.create/CRM_HANDOFF",
+        "communication.draft/ACKNOWLEDGEMENT"
+      ]
+    },
+    "grund": [],
+    "wirkungen": [
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "CLARIFICATION"
+      },
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "staff.notify",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "ACKNOWLEDGEMENT"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "CLARIFICATION"
+      },
+      {
+        "capabilityKey": "crm.lead.create",
+        "purpose": "CRM_HANDOFF"
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "ACKNOWLEDGEMENT"
+      }
+    ],
+    "aufgaben": [
+      {
+        "title": "Neuen Lead kontaktieren: Tom Orbit",
+        "description": "Anfrage über ORBIT (E-Mail, 23.10.2026, 17:34)\nKundschaft: Tom Orbit <tom.orbit@kunde.example>\nAnliegen: Tom Orbit möchte in seiner Wohnung in Bonn die Heizkörper tauschen lassen und bittet um ein Angebot; Heizkörpertausch gehört zum Angebot des Betriebs und Bonn liegt im genannten Einsatzgebiet.\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Heizkörper tauschen lassen\n- Objektart: Wohnung\n- Ort: Bonn\n- Name: Tom Orbit\n- Angebotswunsch: Bitte um ein Angebot\n- Anzahl der Heizkörper: vier\n- Heizkörpertypen: Wohnzimmer, Schlafzimmer, Küche und Bad\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+      },
+      {
+        "title": "Korrektur nach Übergabe (c778b8e7)",
+        "description": "Die Kundschaft hat Angaben korrigiert, nachdem der Vorgang übergeben wurde. Bitte den Lead bzw. das Angebot mit den neuen Werten abgleichen:\n- ai.radiator_count: \"vier\" → \"sechs\""
+      }
+    ],
+    "fakten": [
+      "ai.location=\"Bonn\" (CONFIRMED)",
+      "ai.location.ergaenzung.416f15a2=\"Bonn; Bahnhofstraße 7\" (CANDIDATE)",
+      "ai.property_type=\"Wohnung\" (CONFIRMED)",
+      "ai.quote_request=\"Bitte um ein Angebot\" (CONFIRMED)",
+      "ai.radiator_count=\"sechs\" (CONFIRMED)",
+      "ai.radiator_types=\"Wohnzimmer, Schlafzimmer, Küche und Bad\" (CONFIRMED)",
+      "ai.radiator_types.ergaenzung.c778b8e7=\"Wohnzimmer, Schlafzimmer, Küche, Bad, Kinderzimmer und Flur\" (CANDIDATE)",
+      "ai.requester_name=\"Tom Orbit\" (CONFIRMED)",
+      "ai.service=\"Heizkörper tauschen lassen\" (CONFIRMED)",
+      "ai.service.ergaenzung.416f15a2=\"Heizkörper tauschen lassen; vier Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\" (CANDIDATE)",
+      "angebotsbitte=true (CANDIDATE)",
+      "angefragte_leistung=\"Heizkörpertausch\" (CANDIDATE)",
+      "angefragte_leistung.ergaenzung.416f15a2=\"Heizkörpertausch; vier Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\" (CANDIDATE)",
+      "contact.email=\"tom.orbit@kunde.example\" (CONFIRMED)",
+      "einsatzort=\"Bonn\" (CANDIDATE)",
+      "einsatzort.ergaenzung.416f15a2=\"Bonn; Bahnhofstraße 7\" (CANDIDATE)",
+      "objektart=\"Wohnung\" (CANDIDATE)"
+    ],
+    "offeneKorrekturhinweise": 0,
+    "korrekturEreignisse": [
+      "fact.update_assessed {\"ignored\":[{\"key\":\"ai.service\",\"kind\":\"ADDITIONAL\",\"reason\":\"Ergänzung: frühere Angabe bleibt gültig, die neue steht als eigene Ergänzung (Schlüssel .ergaenzung)\"},{\"key\":\"angefragte_leistung\",\"kind\":\"ADDITIONAL\",\"reason\":\"Ergänzung: frühere Angabe bleibt gül",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"12f1bbaa-ab84-4eea-b176-9cc792427588\",\"emailMessageId\":\"416f15a2-1c2f-4d6b-83b7-793ec8f939c5\"}",
+      "wait.satisfied {\"eventId\":\"bba1084d-0ca3-432c-9350-971a5d5fbd14\",\"nodeKey\":\"wait1\"}",
+      "fact.update_assessed {\"ignored\":[{\"key\":\"ai.radiator_types\",\"kind\":\"ADDITIONAL\",\"reason\":\"Ergänzung: frühere Angabe bleibt gültig, die neue steht als eigene Ergänzung (Schlüssel .ergaenzung)\"}],\"conflicts\":0,\"corrected\":1,\"knownKeys\":[\"ai.location\",\"ai.property_type\",\"ai.quote_req",
+      "fact.corrected {\"key\":\"ai.radiator_count\",\"current\":\"sechs\",\"previous\":\"vier\",\"messageId\":\"c778b8e7-e7c0-4ab3-83ab-891b6cfe7a96\"}",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"12f1bbaa-ab84-4eea-b176-9cc792427588\",\"emailMessageId\":\"c778b8e7-e7c0-4ab3-83ab-891b6cfe7a96\"}"
+    ],
+    "eingaenge": [
+      "COMPLETED BUSINESS_ACTIONABLE edb978c5 Re: Heizkörper tauschen in Bonn ",
+      "COMPLETED BUSINESS_ACTIONABLE edb978c5 Re: Heizkörper tauschen in Bonn ",
+      "COMPLETED BUSINESS_ACTIONABLE edb978c5 Heizkörper tauschen in Bonn ",
+      "COMPLETED BUSINESS_ACTIONABLE fe1a0027 Re: Neue Heizung – bitte um Angebot "
+    ],
+    "vorgaengeDesMandanten": [
+      "15234750 COMPLETED Allgemeine Anfrage: Badsanierung in Leverkusen?",
+      "9fee2f28 COMPLETED Allgemeine Anfrage: Freitag erreichbar? Elektro?",
+      "e3df9c73 MANUAL_REVIEW Allgemeine Anfrage: Wie läuft ein Angebot bei Ihnen ab?",
+      "fe1a0027 COMPLETED Neue Anfrage: Neue Heizung – bitte um Angebot",
+      "edb978c5 COMPLETED Neue Anfrage: Heizkörper tauschen in Bonn"
+    ],
+    "mails": {
+      "rueckfrage": [
+        "Guten Tag, vielen Dank für Ihre Anfrage „Heizkörper tauschen in Bonn“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Wie viele Heizkörper sollen getauscht werden? 2. Welche Heizkörpertypen sollen ersetzt werden, sofern Ihnen das bekannt ist? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      ],
+      "nachAngaben": [
+        "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht zu „Heizkörper tauschen in Bonn“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      ],
+      "nachKorrektur": []
+    }
+  },
+  "B3": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "crm.lead.create/CRM_HANDOFF",
+        "staff.notify",
+        "communication.draft/ACKNOWLEDGEMENT",
+        "email.send/ACKNOWLEDGEMENT:x-8"
+      ]
+    },
+    "grund": [],
+    "wirkungen": [
+      {
+        "capabilityKey": "facts.extract_from_message",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "crm.lead.create",
+        "purpose": "CRM_HANDOFF"
+      },
+      {
+        "capabilityKey": "staff.notify",
+        "purpose": null
+      },
+      {
+        "capabilityKey": "communication.draft",
+        "purpose": "ACKNOWLEDGEMENT"
+      },
+      {
+        "capabilityKey": "email.send",
+        "purpose": "ACKNOWLEDGEMENT"
+      }
+    ],
+    "aufgaben": [
+      {
+        "title": "Neuen Lead kontaktieren: Tom Orbit",
+        "description": "Anfrage über ORBIT (E-Mail, 23.10.2026, 17:34)\nKundschaft: Tom Orbit <tom.orbit@kunde.example>\nAnliegen: Tom Orbit fragt nach einer Preisorientierung für die komplette Erneuerung des Badezimmers mit ebenerdiger Dusche; der Betrieb bietet Badsanierungen im Raum Köln an, nennt laut freigegebener Information aber keine Preise vorab per Mail.\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Komplette Erneuerung des Badezimmers mit ebenerdiger Dusche\n- Anliegen: Preisliche Orientierung\n- Name: Tom Orbit\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+      }
+    ],
+    "fakten": [
+      "ai.customer_name=\"Tom Orbit\" (CONFIRMED)",
+      "ai.price_information=\"Preisliche Orientierung\" (CONFIRMED)",
+      "ai.requested_service=\"Komplette Erneuerung des Badezimmers mit ebenerdiger Dusche\" (CONFIRMED)",
+      "contact.email=\"tom.orbit@kunde.example\" (CONFIRMED)",
+      "korrekturhinweis.ergaenzung.59911161=\"Doch etwas größer, es sind nicht 6 m², sondern 7 m².\" (CANDIDATE)",
+      "price_request=\"Fragt nach voraussichtlichen Kosten\" (CANDIDATE)",
+      "requested_feature=\"Ebenerdige Dusche\" (CANDIDATE)",
+      "requested_service=\"Komplette Badsanierung\" (CANDIDATE)"
+    ],
+    "offeneKorrekturhinweise": 1,
+    "korrekturEreignisse": [
+      "fact.update_assessed {\"valid\":true,\"knownKeys\":[\"ai.customer_name\",\"ai.price_information\",\"ai.requested_service\",\"price_request\",\"requested_feature\",\"requested_service\"],\"messageId\":\"724e1466-908c-4289-a7a8-6971187e8bec\",\"proposals\":[]}",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"deb1b45e-4515-466f-b936-02a7ee3ae986\",\"emailMessageId\":\"724e1466-908c-4289-a7a8-6971187e8bec\"}",
+      "fact.update_assessed {\"valid\":true,\"knownKeys\":[\"ai.customer_name\",\"ai.price_information\",\"ai.requested_service\",\"price_request\",\"requested_feature\",\"requested_service\"],\"messageId\":\"59911161-23ec-49b6-80b8-dadc3b46c616\",\"proposals\":[],\"correctionCueUnresolved\":true}",
+      "communication.received {\"from\":\"tom.orbit@kunde.example\",\"rule\":\"IN_REPLY_TO\",\"threadId\":\"deb1b45e-4515-466f-b936-02a7ee3ae986\",\"emailMessageId\":\"59911161-23ec-49b6-80b8-dadc3b46c616\"}"
+    ],
+    "eingaenge": [
+      "COMPLETED BUSINESS_ACTIONABLE 27ae81ac Re: Badezimmer erneuern – was kostet das? ",
+      "COMPLETED BUSINESS_ACTIONABLE 27ae81ac Re: Badezimmer erneuern – was kostet das? ",
+      "COMPLETED BUSINESS_ACTIONABLE 27ae81ac Badezimmer erneuern – was kostet das? ",
+      "COMPLETED BUSINESS_ACTIONABLE edb978c5 Re: Heizkörper tauschen in Bonn "
+    ],
+    "vorgaengeDesMandanten": [
+      "15234750 COMPLETED Allgemeine Anfrage: Badsanierung in Leverkusen?",
+      "9fee2f28 COMPLETED Allgemeine Anfrage: Freitag erreichbar? Elektro?",
+      "e3df9c73 MANUAL_REVIEW Allgemeine Anfrage: Wie läuft ein Angebot bei Ihnen ab?",
+      "fe1a0027 COMPLETED Neue Anfrage: Neue Heizung – bitte um Angebot",
+      "edb978c5 COMPLETED Neue Anfrage: Heizkörper tauschen in Bonn",
+      "27ae81ac COMPLETED Neue Anfrage: Badezimmer erneuern – was kostet das?"
+    ],
+    "mails": {
+      "rueckfrage": [
+        "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht zu „Badezimmer erneuern – was kostet das?“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+      ],
+      "nachAngaben": [],
+      "nachKorrektur": []
+    }
+  },
+  "C1": {
+    "teilvorgaenge": [
+      {
+        "anliegen": "Kopie der letzten Rechnung: Drei Anliegen auf einmal",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "human.review",
+          "appointment.booked",
+          "quote.delivered"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.",
+            "handover": true,
+            "intermediary": false
+          },
+          {
+            "text": "Ich möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben.",
+            "handover": true,
+            "intermediary": false
+          },
+          {
+            "text": "Ich interessiere mich für ein Angebot für einen neuen Heizungsregler.",
+            "goalKey": "quote.delivered",
+            "handover": false,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Rechnungskopie bereitstellen und Terminänderung bearbeiten",
+            "description": "Die letzte Rechnung auffinden und der Kundschaft sicher bereitstellen; Verfügbarkeit am 4.11. prüfen, den Wartungstermin gegebenenfalls verlegen und der Kundschaft das Ergebnis mitteilen."
+          },
+          {
+            "title": "Rechnungskopie und Wartungsverschiebung bearbeiten",
+            "description": "Die Septemberrechnung für die Kundschaft bereitstellen und die gewünschte Wartungsterminverschiebung vom 28.10. auf den 4.11. für den Termin bei Herrn Weber prüfen und umsetzen oder mit der Kundschaft abstimmen."
+          }
+        ],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 1,
+        "grund": [
+          "Ein manueller Schritt ist offen."
+        ]
+      },
+      {
+        "anliegen": "Wartungstermin verschieben: Drei Anliegen auf einmal",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "human.review"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer.",
+            "handover": true,
+            "intermediary": false
+          },
+          {
+            "text": "Zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben.",
+            "handover": true,
+            "intermediary": false
+          },
+          {
+            "text": "Drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.",
+            "handover": true,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Rechnungskopie, Terminänderung und Regleranfrage bearbeiten",
+            "description": "Die September-Rechnungskopie bereitstellen, die Verfügbarkeit und Änderung des Wartungstermins prüfen und zum gewünschten Reglerangebot die noch offene Leistungsart klären; anschließend die Kundschaft zu den Ergebnissen informieren."
+          }
+        ],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 1,
+        "grund": [
+          "Rechnungskopie, Terminänderung und Regleranfrage bearbeiten: Bitte manuell bearbeiten."
+        ]
+      },
+      {
+        "anliegen": "Angebot für Heizungsregler: Drei Anliegen auf einmal",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "human.review"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Ein Angebot für einen neuen Heizungsregler erhalten.",
+            "handover": true,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Angebotsanfrage Heizungsregler fachlich prüfen und fehlenden Umfang klären",
+            "description": "Prüfen, ob und unter welchen Voraussetzungen ein Angebot für den Heizungsregler erbracht werden kann; den Angebotsumfang (Regler allein oder einschließlich Ausbau und Montage) klären und bei Bedarf die Kundschaft gezielt nach fehlenden Angaben fragen."
+          }
+        ],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 1,
+        "grund": [
+          "Angebotsanfrage Heizungsregler fachlich prüfen und fehlenden Umfang klären: Bitte manuell bearbeiten."
+        ]
+      }
+    ],
+    "mailsErsterLauf": [
+      "Guten Tag, vielen Dank für Ihre Anfrage „Drei Anliegen auf einmal“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Wünschen Sie neben dem neuen Heizungsregler auch dessen fachgerechten Einbau? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71",
+      "Guten Tag, vielen Dank für Ihre Anfrage „Drei Anliegen auf einmal“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Möchten Sie den Heizungsregler ersetzen lassen oder geht es um eine andere Leistung am Regler? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71",
+      "Guten Tag, vielen Dank für Ihre Anfrage „Drei Anliegen auf einmal“. Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben: 1. Für welche Heizungsanlage wird der neue Heizungsregler benötigt (Hersteller und Modell, sofern bekannt)? 2. Soll das Angebot nur den Regler oder auch den Ausbau des alten Reglers und die Montage umfassen? Sie können einfach auf diese E-Mail antworten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+    ],
+    "mailsNachGemeinsamerAntwort": [],
+    "antwortGesendet": true
+  },
+  "C2": {
+    "teilvorgaenge": [
+      {
+        "anliegen": "Schlüsselbund des Monteurs: Schlüsselbund Ihres Monteurs",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "receipt.acknowledged",
+          "human.review"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Dem Monteur Bescheid geben, dass er seinen Schlüsselbund abholen kann.",
+            "handover": true,
+            "intermediary": false
+          },
+          {
+            "text": "Eingang der Nachricht der Kundschaft kurz bestätigen.",
+            "goalKey": "receipt.acknowledged",
+            "handover": false,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Monteure informieren und Abholung des Schlüsselbunds veranlassen",
+            "description": "Der Monteur muss erfahren, dass sein Schlüsselbund bei der Kundschaft zur Abholung bereitliegt; die interne Weitergabe an Monteure ist nicht hinterlegt, daher bleibt die Information und Veranlassung bei einer Person."
+          },
+          {
+            "title": "Monteur informieren, dass er seinen Schlüsselbund abholen kann",
+            "description": "Die zuständige Person soll den Monteur direkt informieren, dass sein Schlüsselbund bei der Kundschaft abgeholt werden kann."
+          }
+        ],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 1,
+        "grund": [
+          "Monteur informieren, dass er seinen Schlüsselbund abholen kann: Bitte manuell bearbeiten."
+        ]
+      },
+      {
+        "anliegen": "Bestätigung des Nachrichteneingangs: Schlüsselbund Ihres Monteurs",
+        "status": "COMPLETED",
+        "abschluss": "ADHOC_GOALS_PROVEN",
+        "ziele": [
+          "receipt.acknowledged"
+        ],
+        "anliegenliste": [
+          {
+            "text": "„Eine kurze Bestätigung erhalten, dass die Nachricht angekommen ist.“",
+            "goalKey": "receipt.acknowledged",
+            "handover": false,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [],
+        "aufmerksamkeit": [],
+        "antwortErreicht": 0,
+        "grund": []
+      },
+      {
+        "anliegen": "Einsatzgebiet Frechen: Schlüsselbund Ihres Monteurs",
+        "status": "COMPLETED",
+        "abschluss": "ADHOC_GOALS_PROVEN",
+        "ziele": [
+          "inquiry.answered"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Erfahren, ob der Betrieb auch nach Frechen kommt.",
+            "goalKey": "inquiry.answered",
+            "handover": false,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 1,
+        "grund": []
+      }
+    ],
+    "mailsErsterLauf": [
+      "Guten Tag, vielen Dank für Ihre Nachricht zu „Schlüsselbund Ihres Monteurs“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71",
+      "Guten Tag, vielen Dank für Ihre Nachricht. Ja, wir sind auch in Frechen tätig. Bei weiteren Fragen melden Sie sich gern. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+    ],
+    "mailsNachGemeinsamerAntwort": [],
+    "antwortGesendet": true
+  },
+  "C2b": {
+    "status": "COMPLETED",
+    "abschluss": {
+      "code": "ADHOC_GOALS_PROVEN",
+      "goals": [
+        {
+          "goal": "receipt.acknowledged",
+          "label": "Eingang bestätigt",
+          "evidence": [
+            "email.send/ACKNOWLEDGEMENT"
+          ]
+        },
+        {
+          "goal": "staff.informed",
+          "label": "Zuständige Person informiert",
+          "evidence": [
+            "staff.notify"
+          ]
+        }
+      ],
+      "notProven": "Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).",
+      "evidenceRefs": [
+        "communication.draft/ACKNOWLEDGEMENT",
+        "email.send/ACKNOWLEDGEMENT:x-14",
+        "staff.notify"
+      ]
+    },
+    "ziele": [
+      "receipt.acknowledged",
+      "staff.informed"
+    ],
+    "anliegen": [
+      {
+        "text": "Bitte bestätigen Sie uns kurz den Eingang dieser Nachricht.",
+        "goalKey": "receipt.acknowledged",
+        "handover": false,
+        "intermediary": false
+      },
+      {
+        "text": "Bitte geben Sie dem Techniker Bescheid, damit er den Schlüsselbund abholen kann.",
+        "goalKey": "staff.informed",
+        "handover": false,
+        "intermediary": true
+      }
+    ],
+    "aufmerksamkeit": [
+      {
+        "responsibility": "DISPATCH",
+        "state": "OPEN",
+        "kind": "NOTIFY_REQUEST"
+      }
+    ],
+    "aufgaben": [],
+    "mails": [
+      "Guten Tag Tom Orbit, vielen Dank für Ihre Nachricht zu „Liegengebliebener Schlüsselbund“. Sie ist bei uns eingegangen. Wir kümmern uns darum und melden uns bei Ihnen. Sie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten. Mit freundlichen Grüßen Funktionsnachweis 7b6f71"
+    ]
+  },
+  "C3": {
+    "teilvorgaenge": [
+      {
+        "anliegen": "Doppelt erhaltene Rechnung Nr. 4711: Zwei Dinge",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "human.review"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Bitte klären Sie, warum mir Rechnung Nr. 4711 zweimal zugestellt wurde.",
+            "handover": true,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Ursache der doppelten Rechnungszustellung prüfen und dem Kunden mitteilen",
+            "description": "Die zuständige Person untersucht den Versandverlauf von Rechnung Nr. 4711, stellt die Ursache der doppelten Zustellung fest und informiert den Kunden über das Ergebnis."
+          }
+        ],
+        "aufmerksamkeit": [
+          {
+            "responsibility": "GENERAL",
+            "state": "OPEN",
+            "kind": "NOTIFY_REQUEST"
+          }
+        ],
+        "antwortErreicht": 0,
+        "grund": [
+          "Ursache der doppelten Rechnungszustellung prüfen und dem Kunden mitteilen: Bitte manuell bearbeiten."
+        ]
+      },
+      {
+        "anliegen": "Termin für eine Heizungswartung: Zwei Dinge",
+        "status": "MANUAL_REVIEW",
+        "ziele": [
+          "human.review"
+        ],
+        "anliegenliste": [
+          {
+            "text": "Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist.",
+            "handover": true,
+            "intermediary": false
+          }
+        ],
+        "aufgaben": [
+          {
+            "title": "Terminverfügbarkeit der Heizungswartung bis Freitag prüfen und der Kundschaft mitteilen",
+            "description": "Kalenderverfügbarkeit prüfen und der Kundschaft verbindlich mitteilen, ob bis Freitag ein Wartungstermin frei ist."
+          }
+        ],
+        "aufmerksamkeit": [],
+        "antwortErreicht": 0,
+        "grund": [
+          "Terminverfügbarkeit der Heizungswartung bis Freitag prüfen und der Kundschaft mitteilen: Bitte manuell bearbeiten."
+        ]
+      }
+    ],
+    "mailsErsterLauf": [],
+    "mailsNachGemeinsamerAntwort": [],
+    "antwortGesendet": false
+  }
+}
