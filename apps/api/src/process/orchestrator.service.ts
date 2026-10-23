@@ -155,7 +155,7 @@ export class OrchestratorService {
     const split = await scoped.caseEvent.findFirst({ where: { caseId, type: 'case.split_from' }, orderBy: { sequence: 'asc' }, select: { payload: true } });
     const goal = (split?.payload as { goal?: string; segment?: string } | null | undefined)?.goal;
     const message = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { bodyText: true, fromAddress: true } });
-    const excerpt = (message?.bodyText ?? '').replace(/s+/g, ' ').trim().slice(0, 600);
+    const excerpt = (message?.bodyText ?? '').replace(/\s+/g, ' ').trim().slice(0, 600);
     await scoped.task.create({ data: { tenantId, caseId, title, description: `ORBIT konnte für diesen Vorgang keinen zulässigen Ablauf planen (${reason.slice(0, 160)}). Bitte das Anliegen übernehmen.
 ${goal ? `Anliegen: ${goal}
 ` : ''}Vorgang: ${row?.title ?? ''}

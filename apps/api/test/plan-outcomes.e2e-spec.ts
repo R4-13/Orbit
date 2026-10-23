@@ -160,7 +160,8 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
 
   it('scheitert die Planung endgültig, steht das Anliegen im Wortlaut der Kundschaft als Aufgabe da – eine je Vorgang', async () => {
     const { tenantId, caseId } = await newCase(false);
-    await prisma.forTenantId(tenantId).emailMessage.create({ data: { tenantId, caseId, direction: 'INBOUND', fromAddress: 'kunde@e2e.example', toAddresses: ['betrieb@e2e.example'], subject: 'Rechnung', bodyText: 'Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.', receivedAt: new Date() } });
+    await prisma.forTenantId(tenantId).emailMessage.create({ data: { tenantId, caseId, direction: 'INBOUND', fromAddress: 'kunde@e2e.example', toAddresses: ['betrieb@e2e.example'], subject: 'Rechnung', bodyText: 'Ich brauche eine Kopie meiner letzten Rechnung
+für die Steuer, bitte zusammen mit dem Wartungsprotokoll.', receivedAt: new Date() } });
     const failing = orchestrator as unknown as { openPlanFailureTask(t: string, c: string, reason: string, trigger?: 'INITIAL' | 'REPLAN'): Promise<void> };
     const fresh = await newCase(false); // neuer Eingang ohne Teilvorgang: die Prüfaufgabe kommt vom Eingang selbst, nicht doppelt
     await failing.openPlanFailureTask(fresh.tenantId, fresh.caseId, 'x', 'INITIAL');
@@ -169,7 +170,7 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
     await failing.openPlanFailureTask(tenantId, caseId, 'noch einmal');
     const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId } });
     expect(tasks).toHaveLength(1);
-    expect(tasks[0]!.description).toContain('Kopie meiner letzten Rechnung');
+    expect(tasks[0]!.description).toContain('Kopie meiner letzten Rechnung für die Steuer, bitte zusammen mit dem Wartungsprotokoll.'); // Buchstaben und Umbrüche bleiben unverändert (Umbruch → Leerzeichen)
     expect(tasks[0]!.description).toContain('unzulässig');
   });
 

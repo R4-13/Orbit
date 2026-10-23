@@ -1,5 +1,13 @@
-code-stand e222197, bereitgestellt 2026-10-23T18:47:12Z
-Schattenplanungen verbraucht zu Beginn: 51
-A (572b3f06): Einzelfreigabe email.send INFORMATION
-A (00d27f6d): Einzelfreigabe email.send INFORMATION
-A (00c225e3): Einzelfreigabe email.send INFORMATION
+code-stand 5014b50 (Inhalt wie e222197+Fixes), bereitgestellt 2026-10-23T21:19:53Z; Tests: Gesamtlauf Gate 8 (76 Suiten/606 Tests gruen), Typpruefung/Lint/Unit gruen, autonomer Lauf 10 (10/10)
+Schattenplanungen verbraucht zu Beginn: 55
+process.split Standard: false
+A (0c119565): Einzelfreigabe email.send INFORMATION
+A (487331cb): Einzelfreigabe email.send INFORMATION
+A (d3636678): Einzelfreigabe email.send INFORMATION
+C1 (427bfdfa): Planfreigabe (D4)
+C1 (59bc320d): Planfreigabe (D4)
+C2 (799e2705): Planfreigabe (D4)
+C2 (ad5f1bee): Planfreigabe (D4)
+C2 (54fd3d23): Planfreigabe (D4)
+C2 (54fd3d23): Einzelfreigabe email.send INFORMATION
+Schattenplanungen verbraucht am Ende: 61

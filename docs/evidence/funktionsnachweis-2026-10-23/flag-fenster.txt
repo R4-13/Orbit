@@ -1,2 +1,4 @@
 2026-10-23T17:29:35Z process.split ON
 2026-10-23T17:51:23Z process.split entfernt (Vorlauf beendet)
+2026-10-23T21:44:35Z process.split ON (Endlauf)
+2026-10-23T22:14:12Z process.split entfernt (Endlauf beendet)
