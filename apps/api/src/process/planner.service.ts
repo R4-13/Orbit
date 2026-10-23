@@ -285,6 +285,8 @@ export class PlannerService {
     const system = buildLayeredSystemPrompt(this.taskPrompt());
     const messages: LLMMessage[] = [{ role: 'user', content: await this.buildUserMessage(tenantId, caseRow, request, context, parent) }];
 
+    // Bestätigte Schritte früherer Revisionen übernimmt ORBIT selbst, das Modell muss sie nicht fehlerfrei wiederholen (Funktionsnachweis 23.10.: Neuplanungen scheiterten wiederholt an REPLAN_DROPS_CONFIRMED_EFFECT).
+    const confirmedOriginals = request.trigger === 'INITIAL' && !parent ? [] : await this.confirmedOriginals(tenantId, caseRow.id, context);
     let lastIssue = `Kein Aufruf von ${SUBMIT_PLAN_TOOL}.`;
     let lastValidation: PlanValidationResult | undefined;
     let lastProposal: PlanProposal | undefined;
@@ -298,7 +300,7 @@ export class PlannerService {
         if (!submitted) {
           if (llm.providerName.toLowerCase().includes('mock')) return { status: 'UNAVAILABLE', reason: 'Kein KI-Provider verbunden: der simulierte Provider hat keinen Plan hinterlegt.' };
         } else if (submitted.result?.status === 'SUCCEEDED') {
-          const validation = validatePlan(this.normalizeProposal(submitted.output), context);
+          const validation = validatePlan(this.carryForwardConfirmed(this.normalizeProposal(submitted.output), confirmedOriginals), context);
           lastValidation = validation;
           lastProposal = validation.proposal as PlanProposal | undefined;
           if (validation.valid) return { status: 'PROPOSED', proposal: validation.proposal as PlanProposal, validation };
@@ -332,6 +334,62 @@ export class PlannerService {
    * Formfragen, die sich ohne Spielraum beheben lassen: ein zu langer fester Text für die interne Meldung (höchstens 400 Zeichen) wird gekürzt, statt den Plan erst bei der Ausführung scheitern zu lassen
    * (Live-Fund: Neuplanung fiel an `message: String must contain at most 400 character(s)`).
    */
+  /** Die Definitionen der bestätigten Schritte aus den bisherigen Revisionen (die jüngste, die den Schritt enthält). */
+  private async confirmedOriginals(tenantId: string, caseId: string, context: PlanValidationContext): Promise<PlanNode[]> {
+    const wanted = new Set((context.confirmedEffects ?? []).map((e) => e.nodeId));
+    if (wanted.size === 0) return [];
+    const plans = await this.prisma.forTenantId(tenantId).processPlan.findMany({ where: { caseId }, orderBy: { revision: 'desc' }, select: { nodes: { select: { nodeKey: true, definition: true } } } });
+    const found = new Map<string, PlanNode>();
+    for (const plan of plans) for (const n of plan.nodes) if (wanted.has(n.nodeKey) && !found.has(n.nodeKey)) found.set(n.nodeKey, n.definition as unknown as PlanNode);
+    return [...found.values()];
+  }
+
+  /**
+   * Übernimmt die bestätigten Schritte unverändert in den Vorschlag und entfernt Wiederholungen derselben Wirkung unter anderer Kennung (Kanten werden auf den bestätigten Schritt umgelegt). Eine weitere interne
+   * Meldung (staff.notify) gilt nicht als Wiederholung. Wirkt nur, wo der Vorschlag davon abweicht; ein gültiger Vorschlag bleibt unverändert.
+   */
+  private carryForwardConfirmed(output: unknown, originals: PlanNode[]): unknown {
+    const proposal = output as { nodes?: Array<Record<string, unknown> & { id?: string; type?: string; capability?: { key?: string }; config?: Record<string, unknown> }>; edges?: Array<{ id?: string; source?: string; target?: string }> } | null;
+    if (originals.length === 0 || !proposal || !Array.isArray(proposal.nodes) || !Array.isArray(proposal.edges)) return output;
+    const originalIds = new Set(originals.map((o) => o.id));
+    const redirect = new Map<string, string>();
+    for (const original of originals) {
+      const index = proposal.nodes.findIndex((n) => n.id === original.id);
+      if (index >= 0) proposal.nodes[index] = original as never;
+      else proposal.nodes.push(original as never);
+      if (original.type !== 'ACTION' || original.capability?.key === 'staff.notify') continue;
+      for (const dup of proposal.nodes.filter((n) => n.id !== original.id && !originalIds.has(String(n.id)) && n.type === 'ACTION' && n.capability?.key === original.capability?.key && (original.config.purpose === undefined || n.config?.purpose === original.config.purpose))) {
+        redirect.set(String(dup.id), original.id);
+      }
+    }
+    if (redirect.size > 0) {
+      proposal.nodes = proposal.nodes.filter((n) => !redirect.has(String(n.id)));
+      // Verweise auf das entfernte Duplikat (Eingaben, Vorbedingungen, Kantenbedingungen) zeigen auf den bestätigten Schritt.
+      const retarget = (value: unknown): void => {
+        if (Array.isArray(value)) return value.forEach(retarget);
+        if (value && typeof value === 'object') {
+          const record = value as Record<string, unknown>;
+          const ref = record.stepOutput as { node?: string } | undefined;
+          if (ref && typeof ref.node === 'string' && redirect.has(ref.node)) ref.node = redirect.get(ref.node)!;
+          Object.values(record).forEach(retarget);
+        }
+      };
+      retarget(proposal.nodes);
+      retarget(proposal.edges);
+      const seen = new Set<string>();
+      proposal.edges = proposal.edges
+        .map((e) => ({ ...e, source: redirect.get(String(e.source)) ?? e.source, target: redirect.get(String(e.target)) ?? e.target }))
+        .filter((e) => e.source !== e.target)
+        .filter((e) => {
+          const key = `${e.source}>${e.target}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+    }
+    return proposal;
+  }
+
   private normalizeProposal(output: unknown): unknown {
     const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }>; requestedOutcomes?: Array<{ goalKey?: string; handover?: boolean } | null>; goalKeys?: string[] } | null;
     if (!proposal || !Array.isArray(proposal.nodes)) return output;

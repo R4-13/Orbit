@@ -441,8 +441,9 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     if (!kept || kept.capability?.key !== effect.capability || (effect.purpose !== undefined && kept.config.purpose !== effect.purpose)) {
       add({ code: 'REPLAN_DROPS_CONFIRMED_EFFECT', check: 9, nodeId: effect.nodeId, message: `Der bereits bestätigte Schritt "${effect.nodeId}" muss unverändert erhalten bleiben.` });
     }
+    // Eine weitere interne Meldung mit neuem Stand (staff.notify) ist keine Wiederholung: derselbe Wortlaut wird ohnehin über den Nutzlast-Hash nicht ein zweites Mal gesendet.
     const duplicates = nodes.filter(
-      (n) => n.id !== effect.nodeId && n.type === 'ACTION' && n.capability?.key === effect.capability && (effect.purpose === undefined || n.config.purpose === effect.purpose),
+      (n) => n.id !== effect.nodeId && n.type === 'ACTION' && effect.capability !== 'staff.notify' && n.capability?.key === effect.capability && (effect.purpose === undefined || n.config.purpose === effect.purpose),
     );
     for (const duplicate of duplicates) {
       add({ code: 'REPLAN_REPEATS_CONFIRMED_EFFECT', check: 9, nodeId: duplicate.id, message: `"${duplicate.id}" würde die bereits bestätigte Wirkung "${effect.capability}${effect.purpose ? `/${effect.purpose}` : ''}" wiederholen.` });

@@ -203,6 +203,8 @@ const OUT = process.env.FN_OUT;
         aufgaben: view.tasks,
         fakten: factLines,
         offeneKorrekturhinweise: open.length,
+        korrekturEreignisse: (await scoped().caseEvent.findMany({ where: { caseId: run.caseId, type: { in: ['fact.update_assessed', 'fact.corrected', 'fact.conflict_detected', 'communication.received', 'wait.satisfied', 'plan.revised'] } }, orderBy: { sequence: 'asc' }, select: { type: true, payload: true } })).map((e) => `${e.type} ${JSON.stringify(e.payload).slice(0, 260)}`),
+        eingaenge: (await scoped().intakeEvent.findMany({ where: { createdAt: { gt: new Date(Date.now() - 20 * 60_000) } }, orderBy: { createdAt: 'desc' }, take: 4, select: { status: true, relevance: true, caseId: true, subject: true, errorMessage: true } })).map((e) => `${e.status} ${e.relevance ?? '-'} ${e.caseId?.slice(0, 8) ?? 'ohne Vorgang'} ${e.subject ?? ''} ${e.errorMessage ?? ''}`),
         vorgaengeDesMandanten: (await scoped().case.findMany({ select: { id: true, title: true, orchestrationStatus: true, parentCaseId: true }, orderBy: { createdAt: 'asc' } })).filter((c) => c.id === run.caseId || true).map((c) => `${c.id.slice(0, 8)} ${c.orchestrationStatus} ${c.title.slice(0, 60)}`).slice(-8),
         mails: { rueckfrage: askedMails.map((m) => flat(m.bodyText)), nachAngaben: afterDetails.map((m) => flat(m.bodyText)), nachKorrektur: afterCorrection.map((m) => flat(m.bodyText)) },
       };
