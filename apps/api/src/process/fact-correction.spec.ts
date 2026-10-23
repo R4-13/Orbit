@@ -47,3 +47,27 @@ describe('Korrektur unter Vorbehalt: Ähnlichkeit des Satzbaus ersetzt keine Bed
     expect(numericReplacements('Das Bad hat nicht 7 m², sondern 12 m².', [bad]).map((u) => [u.key, u.newValue])).toEqual([['bathroom.area_m2', 12]]);
   });
 });
+
+describe('Korrektur einer Zahl innerhalb eines Textwerts (Funktionsnachweis 23.10., Ablauf B1)', () => {
+  const heizung: AnchoredNumber = { key: 'ai.existing_heating', value: 'Gasheizung von 1985', anchors: contentWords('ai existing heating Gasheizung von 1985 Die vorhandene Heizung ist eine Gasheizung von 1985') };
+  const baujahr: AnchoredNumber = { key: 'ai.building_year', value: 'Baujahr 1985', anchors: contentWords('ai building year Baujahr 1985 Das Haus ist Baujahr 1985') };
+
+  it('ersetzt nur die Zahl im Text, der Rest bleibt', () => {
+    const update = numericReplacements('Entschuldigung, die vorhandene Heizung ist nicht von 1985, sondern von 1995.', [heizung]);
+    expect(update.map((u) => [u.key, u.newValue])).toEqual([['ai.existing_heating', 'Gasheizung von 1995']]);
+  });
+
+  it('ordnet nach Gegenstand zu, wenn zwei Textwerte dieselbe Zahl tragen', () => {
+    const update = numericReplacements('Die Heizung ist nicht von 1985, sondern von 1995.', [heizung, baujahr]);
+    expect(update.map((u) => u.key)).toEqual(['ai.existing_heating']);
+  });
+
+  it('eine Zahl, die im Text nur als Teil einer größeren Zahl vorkommt, wird nicht ersetzt', () => {
+    const fremd: AnchoredNumber = { key: 'ai.note', value: 'Bestellnummer 119850', anchors: contentWords('ai note Bestellnummer 119850') };
+    expect(numericReplacements('Das ist nicht 1985, sondern 1995.', [fremd])).toEqual([]);
+  });
+
+  it('unter Vorbehalt keine automatische Änderung', () => {
+    expect(numericReplacements('Die Heizung ist nicht von 1985, sondern vermutlich von 1995.', [heizung])).toEqual([]);
+  });
+});

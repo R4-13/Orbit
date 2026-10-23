@@ -85,6 +85,44 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
     expect(await prisma.forTenantId(tenantId).attentionItem.count({ where: { caseId, kind: 'NOTIFY_REQUEST' } })).toBe(0);
   });
 
+  it('Übergabe ohne geplante Aufgabe: der Abschluss legt die Aufgabe mit dem Restziel im Wortlaut der Kundschaft an; der Vorgang bleibt in der Prüfung', async () => {
+    const { tenantId, caseId } = await newCase(false);
+    const handover: PlanProposal = {
+      goalKeys: ['human.review'],
+      requestedOutcomes: [{ text: 'Der Monteur soll Bescheid wissen und den Schlüsselbund abholen', handover: true, intermediary: true }],
+      nodes: [node('summary', 'INTERPRET', { title: 'Anliegen zusammenfassen' }), node('done', 'COMPLETE', { title: 'Abschluss' })],
+      edges: [{ id: 'e_summary_done', source: 'summary', target: 'done' }],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'Übergabe: der Monteur ist nicht direkt erreichbar.',
+    };
+    await orchestrator.startProcedure(tenantId, caseId, handover, { intentSummary: 'Schlüsselbund' });
+    await orchestrator.advance(tenantId, caseId);
+    const row = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } });
+    expect(row.orchestrationStatus).toBe('MANUAL_REVIEW');
+    expect(row.completedAt).toBeNull();
+    expect(row.attentionReasons.join(' ')).toContain('Übergabe mit offenem Restziel');
+    const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId } });
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.title).toMatch(/^Restziel/);
+    expect(tasks[0]!.description).toContain('Der Monteur soll Bescheid wissen und den Schlüsselbund abholen');
+    await orchestrator.advance(tenantId, caseId); // erneutes Weiterschalten legt keine zweite Aufgabe an
+    expect(await prisma.forTenantId(tenantId).task.count({ where: { caseId } })).toBe(1);
+  });
+
+  it('der Planer zieht ein falsch benanntes Personenziel gerade: Anliegen mit Ziel human.review wird zur Übergabe, human.review kommt unter die Ziele', () => {
+    const planner = app.get(PlannerService) as unknown as { normalizeProposal(o: unknown): { requestedOutcomes: Array<Record<string, unknown>>; goalKeys: string[] } };
+    const out = planner.normalizeProposal({
+      goalKeys: ['receipt.acknowledged'],
+      requestedOutcomes: [{ text: 'Eingang bestätigen', goalKey: 'receipt.acknowledged' }, { text: 'Monteur informieren', goalKey: 'human.review' }],
+      nodes: [],
+    });
+    expect(out.requestedOutcomes[1]).toMatchObject({ text: 'Monteur informieren', handover: true });
+    expect(out.requestedOutcomes[1]!.goalKey).toBeUndefined();
+    expect(out.requestedOutcomes[0]!.goalKey).toBe('receipt.acknowledged');
+    expect(out.goalKeys).toContain('human.review');
+  });
+
   it('Übergabe mit Restziel: Aufgabe mit Beschreibung des Restziels, Vorgang bleibt in der Prüfung (nicht erledigt), Anliegen sind am Plan festgehalten', async () => {
     const { tenantId, caseId } = await newCase(false);
     const handover: PlanProposal = {

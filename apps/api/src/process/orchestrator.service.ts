@@ -730,6 +730,7 @@ export class OrchestratorService {
       });
     }
     if (!met) {
+      if (!blueprint) blockReason = await this.openHandoverTask(tenantId, caseRow, graph, blockReason);
       await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: blockReason ?? 'Die Abschlusskriterien sind nicht erfüllt.' });
       await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: [blockReason ?? 'Der Ablauf ist durchgelaufen, aber die Abschlusskriterien sind nicht nachweislich erfüllt.'] });
       return;
@@ -742,6 +743,23 @@ export class OrchestratorService {
         ...(provenGoals ? { goals: provenGoals, notProven: 'Nachgewiesen sind ausschließlich die genannten Ziele (bestätigte Wirkungen laut Protokoll). Nicht nachgewiesen: dass eine genannte Person oder ein Dritter daraufhin handelt (z. B. dass ein Gegenstand zurückgegeben wurde).' } : {}),
       },
     });
+  }
+
+  /**
+   * Übergabe mit Restziel (Zielabdeckung, Funktionsnachweis 23.10.): Was die Kundschaft verlangt hat und ORBIT nicht selbst nachweisen kann, steht als Aufgabe für eine Person am Vorgang – mit dem Restziel im Wortlaut der
+   * Kundschaft. Die Aufgabe legt der Abschluss an, nicht die Planung: ein Plan, der sie vergisst, lässt das Restziel nicht verschwinden. Wer zuständig ist, ergibt sich aus dem Vorgang (Aufmerksamkeit und Verzeichnis).
+   */
+  private async openHandoverTask(tenantId: string, caseRow: Case, graph: PlanGraph, blockReason: string | undefined): Promise<string | undefined> {
+    const handovers = (await this.store.latestOutcomes(tenantId, caseRow.id)).filter((o) => o.handover);
+    if (handovers.length === 0) return blockReason;
+    const scoped = this.prisma.forTenantId(tenantId);
+    const remaining = handovers.map((o) => `- ${o.text}`).join('\n');
+    const planned = graph.nodes.some((n) => (n.definition as unknown as PlanNode).type === 'MANUAL_TASK');
+    const existing = await scoped.task.count({ where: { caseId: caseRow.id, title: { startsWith: 'Restziel' } } });
+    if (!planned && existing === 0) {
+      await scoped.task.create({ data: { tenantId, caseId: caseRow.id, title: `Restziel übernehmen (${handovers.length})`, description: `ORBIT hat diese Anliegen der Kundschaft nicht selbst erledigt oder nachgewiesen; eine Person übernimmt sie:\n${remaining}`, source: 'AGENT' } });
+    }
+    return `Übergabe mit offenem Restziel: ${handovers.map((o) => `„${o.text}“`).join('; ')}. ${blockReason ?? ''}`.trim();
   }
 
   // ── Waiting, events, approvals ──────────────────────────────────────────────

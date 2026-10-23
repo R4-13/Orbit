@@ -13,6 +13,7 @@ import {
   planNeedsNewApproval,
   planNeedsWriteApproval,
   describeGoalCatalogue,
+  GOAL_CATALOGUE,
   type BlueprintDefinition,
   type PlanNode,
   type PlanProposal,
@@ -332,8 +333,19 @@ export class PlannerService {
    * (Live-Fund: Neuplanung fiel an `message: String must contain at most 400 character(s)`).
    */
   private normalizeProposal(output: unknown): unknown {
-    const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }> } | null;
+    const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }>; requestedOutcomes?: Array<{ goalKey?: string; handover?: boolean } | null>; goalKeys?: string[] } | null;
     if (!proposal || !Array.isArray(proposal.nodes)) return output;
+    // Zielabdeckung (Funktionsnachweis 23.10.): Ein Anliegen, das bei einer Person liegt, ist eine Übergabe mit Restziel – das Modell nennt dafür mehrfach das Personenziel statt `handover` (live beobachtet). Das wird hier
+    // ohne Spielraum gerade gezogen, statt den Plan abzulehnen: Personenziel → Übergabe; jede Übergabe trägt das Ziel human.review (damit der Vorgang nicht als erledigt gilt).
+    if (Array.isArray(proposal.requestedOutcomes)) {
+      for (const outcome of proposal.requestedOutcomes) {
+        if (outcome && typeof outcome.goalKey === 'string' && GOAL_CATALOGUE[outcome.goalKey]?.humanOnly) {
+          outcome.handover = true;
+          delete outcome.goalKey;
+        }
+      }
+      if (proposal.requestedOutcomes.some((o) => o?.handover) && Array.isArray(proposal.goalKeys) && !proposal.goalKeys.includes('human.review')) proposal.goalKeys.push('human.review');
+    }
     for (const node of proposal.nodes as Array<{ type?: string; timeout?: unknown }>) {
       // Warten ohne Frist: die Standardfrist für Antworten der Kundschaft (72 Stunden) wird eingesetzt, statt den Plan wegen einer Formfrage zu verwerfen (Live-Fund: Plan blieb nach dem Reparaturversuch an
       // „WAIT_WITHOUT_TIMEOUT“ unzulässig, der Vorgang ging ohne Zielarbeit an eine Person).

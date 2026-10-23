@@ -461,12 +461,10 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
     if (outcomes.length === 0) {
       add({ code: 'OUTCOMES_MISSING', check: 9, message: 'Nenne in requestedOutcomes jedes Anliegen der Kundschaft einzeln (ein Satz in ihren Worten) und ordne ihm ein Ziel aus dem Katalog zu (goalKey) oder – wenn ORBIT es nicht selbst nachweisen kann – eine Übergabe mit Restziel (handover:true).' });
     }
-    const hasManualTask = nodes.some((n) => n.type === 'MANUAL_TASK');
     for (const outcome of outcomes) {
       const label = `„${outcome.text.slice(0, 80)}“`;
       if (outcome.handover) {
         if (!plan.goalKeys.includes('human.review')) add({ code: 'OUTCOME_HANDOVER_NEEDS_GOAL', check: 9, message: `Das Anliegen ${label} bleibt bei einer Person: nimm das Ziel human.review zusätzlich auf, damit der Vorgang nicht als erledigt gilt.` });
-        if (!hasManualTask) add({ code: 'OUTCOME_HANDOVER_UNPLANNED', check: 9, message: `Das Anliegen ${label} ist als Übergabe markiert, aber der Plan enthält keine MANUAL_TASK: plane die Aufgabe für die Person und beschreibe im Feld purpose das Restziel (was noch zu tun ist).` });
         continue;
       }
       if (!outcome.goalKey) {
@@ -534,6 +532,33 @@ export function validatePlan(input: unknown, ctx: PlanValidationContext): PlanVa
   if (!blueprint) {
     const waits = nodes.filter((n) => n.type === 'WAIT_EVENT' && n.config.eventType === 'communication.received' && (out.get(n.id) ?? []).length > 0 && !(ctx.satisfiedWaitNodes ?? []).includes(n.id));
     for (const wait of waits) add({ code: 'PLAN_BEHIND_WAIT', check: 12, nodeId: wait.id, message: `Hinter dem Warten "${wait.id}" auf eine Antwort wird nichts geplant: ORBIT plant nach der Antwort neu und liest sie dabei aus. Beende die Revision am Warteknoten ohne ausgehende Kante.` });
+  }
+
+  // Eine neu gesendete Rückfrage wird abgewartet (Funktionsnachweis 23.10., Ablauf B2): Plant das Modell hinter der Rückfrage eine Aufgabe für eine Person oder den Abschluss („Angebot nach Eingang der Angaben prüfen“),
+  // endet der Vorgang in der Prüfung, die Antwort der Kundschaft trifft auf „kein Schritt wartet“ und geht ungelesen verloren. Nach einer Rückfrage kommt das Warten (WAIT_EVENT); erst die Antwort bestimmt, was folgt.
+  if (!blueprint) {
+    const confirmedNodes = new Set((ctx.confirmedEffects ?? []).map((e) => e.nodeId));
+    for (const ask of nodes.filter((n) => n.type === 'ACTION' && n.capability?.key === 'email.send' && n.config.purpose === 'CLARIFICATION' && !confirmedNodes.has(n.id))) {
+      const seen = new Set<string>();
+      const stack = (out.get(ask.id) ?? []).map((e) => e.target);
+      let hasWait = false;
+      let premature: string | undefined;
+      while (stack.length > 0) {
+        const id = stack.pop() as string;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const next = nodeById.get(id);
+        if (!next) continue;
+        if (next.type === 'WAIT_EVENT') {
+          hasWait = true;
+          continue; // was hinter dem Warten steht, prüft PLAN_BEHIND_WAIT
+        }
+        if ((next.type === 'MANUAL_TASK' || next.type === 'COMPLETE') && !premature) premature = next.id;
+        for (const edge of out.get(id) ?? []) stack.push(edge.target);
+      }
+      if (!hasWait) add({ code: 'CLARIFICATION_NOT_AWAITED', check: 12, nodeId: ask.id, message: `Auf die Rückfrage "${ask.id}" folgt kein Warten (WAIT_EVENT, config.eventType = "communication.received"). Ohne Warten geht die Antwort der Kundschaft verloren; beende die Revision an einem Warteknoten.` });
+      else if (premature) add({ code: 'CLARIFICATION_NOT_AWAITED', check: 12, nodeId: premature, message: `Hinter der Rückfrage "${ask.id}" steht "${premature}" (Aufgabe oder Abschluss), bevor die Antwort der Kundschaft abgewartet wird. Plane nach der Rückfrage nur das Warten; was danach folgt, hängt von der Antwort ab.` });
+    }
   }
 
   // Rückfrage und Neubewertung (frei geplant): Ein Rückfrage-Entwurf muss wissen, was er fragen soll – seine Eingabe "missing" kommt aus einem vorgelagerten Prüfschritt. Ohne sie scheitert der Entwurf erst bei

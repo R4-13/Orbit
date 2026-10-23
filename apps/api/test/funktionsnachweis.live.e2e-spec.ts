@@ -203,6 +203,7 @@ const OUT = process.env.FN_OUT;
         aufgaben: view.tasks,
         fakten: factLines,
         offeneKorrekturhinweise: open.length,
+        vorgaengeDesMandanten: (await scoped().case.findMany({ select: { id: true, title: true, orchestrationStatus: true, parentCaseId: true }, orderBy: { createdAt: 'asc' } })).filter((c) => c.id === run.caseId || true).map((c) => `${c.id.slice(0, 8)} ${c.orchestrationStatus} ${c.title.slice(0, 60)}`).slice(-8),
         mails: { rueckfrage: askedMails.map((m) => flat(m.bodyText)), nachAngaben: afterDetails.map((m) => flat(m.bodyText)), nachKorrektur: afterCorrection.map((m) => flat(m.bodyText)) },
       };
       // 1. Die erste Antwort fragt (die Anfrage ist knapp) und geht an den Absender.

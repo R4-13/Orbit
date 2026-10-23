@@ -74,10 +74,10 @@ describe('Zielabdeckung (requestedOutcomes)', () => {
     expect(codes(relayed, ctx({ dispatchAvailable: true })).filter((c) => c.startsWith('OUTCOME'))).toEqual([]);
   });
 
-  it('Übergabe mit Restziel: human.review unter den Zielen und eine Aufgabe für eine Person; sonst abgewiesen', () => {
+  it('Übergabe mit Restziel: human.review unter den Zielen; die Aufgabe für die Person legt der Abschluss an', () => {
     const handover = { text: 'Der Monteur soll Bescheid wissen und den Schlüsselbund abholen', handover: true };
     const noTask = plan({ goalKeys: ['receipt.acknowledged', 'human.review'], requestedOutcomes: [ackOutcome, handover] });
-    expect(codes(noTask)).toEqual(expect.arrayContaining(['OUTCOME_HANDOVER_UNPLANNED']));
+    expect(codes(noTask).filter((c) => c.startsWith('OUTCOME'))).toEqual([]);
     const noGoal = plan({ requestedOutcomes: [ackOutcome, handover], nodes: [...plan({}).nodes, node('task', 'MANUAL_TASK', { purpose: 'Monteur informieren: Schlüsselbund abholen' })], edges: [edge('e1', 'ack_draft', 'ack'), edge('e2', 'ack', 'notify'), edge('e3', 'notify', 'task')] });
     expect(codes(noGoal)).toContain('OUTCOME_HANDOVER_NEEDS_GOAL');
     const good = plan({
@@ -113,5 +113,36 @@ describe('Zielabdeckung: Netz gegen ein falsch gekennzeichnetes Anliegen', () =>
   it('eine allgemeine Meldung an die zuständige Person bleibt ein erreichbares Ziel', () => {
     const outcomes = [ack, { text: 'Die zuständige Person soll sich den Vorgang ansehen', goalKey: 'staff.informed' }];
     expect(codes(plan({ requestedOutcomes: outcomes }), ctx({ dispatchAvailable: false })).filter((c) => c.startsWith('OUTCOME'))).toEqual([]);
+  });
+});
+
+describe('Rückfrage wird abgewartet (Funktionsnachweis 23.10., Ablauf B2)', () => {
+  const ask = [
+    node('resolve', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }),
+    node('q_draft', 'PREPARE', { capability: { key: 'communication.draft' }, config: { purpose: 'CLARIFICATION' }, inputs: { to: { fact: 'sender.email' }, missing: { stepOutput: { node: 'resolve', path: 'missing' } } } }),
+    node('q_send', 'ACTION', { capability: { key: 'email.send' }, config: { purpose: 'CLARIFICATION' }, inputs: { to: { fact: 'sender.email' }, draft: { stepOutput: { node: 'q_draft', path: 'draftId' } } } }),
+  ];
+  const base = { goalKeys: ['inquiry.answered'], conciseExplanation: 'Rückfrage.' };
+  const askEdges = [edge('e1', 'resolve', 'q_draft'), edge('e2', 'q_draft', 'q_send')];
+  const noOutcomes = ctx({ requireRequestedOutcomes: false });
+  const wait = node('wait', 'WAIT_EVENT', { config: { eventType: 'communication.received' }, timeout: { hours: 72 } });
+
+  it('Rückfrage, dann Aufgabe für eine Person ohne Warten: die Antwort ginge verloren', () => {
+    const p = { ...base, nodes: [...ask, node('task', 'MANUAL_TASK', { title: 'Angebot nach Eingang der Angaben prüfen', purpose: 'Angebot prüfen' })], edges: [...askEdges, edge('e3', 'q_send', 'task')] };
+    expect(codes(p, noOutcomes)).toContain('CLARIFICATION_NOT_AWAITED');
+  });
+
+  it('Rückfrage, Meldung, Aufgabe – mit Warten daneben: die Aufgabe käme vor der Antwort', () => {
+    const p = {
+      ...base,
+      nodes: [...ask, wait, node('notify', 'ACTION', { capability: { key: 'staff.notify' }, inputs: { message: { literal: 'Rückfrage gesendet.' } } }), node('task', 'MANUAL_TASK', { title: 'Prüfen', purpose: 'Prüfen' })],
+      edges: [...askEdges, edge('e3', 'q_send', 'wait'), edge('e4', 'q_send', 'notify'), edge('e5', 'notify', 'task')],
+    };
+    expect(codes(p, noOutcomes)).toContain('CLARIFICATION_NOT_AWAITED');
+  });
+
+  it('Rückfrage, dann Warten als letzter Schritt: gültig', () => {
+    const p = { ...base, nodes: [...ask, wait], edges: [...askEdges, edge('e3', 'q_send', 'wait')] };
+    expect(codes(p, noOutcomes)).not.toContain('CLARIFICATION_NOT_AWAITED');
   });
 });
