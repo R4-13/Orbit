@@ -13,6 +13,7 @@ set -a; source "$ROOT/.env"; set +a
 if [ "${LIVE_AI:-}" = "1" ] && [ -f "$ROOT/.env.llm.local" ]; then set -a; source "$ROOT/.env.llm.local"; set +a; fi
 
 # Begrenzter Modellvergleich: Denkaufwand nur für diesen Lauf überschreiben (kein globaler Wechsel), z. B. OVERRIDE_REASONING_EFFORT=medium.
+if [ -n "${OVERRIDE_MODEL:-}" ]; then export OPENAI_MODEL="$OVERRIDE_MODEL"; fi
 if [ -n "${OVERRIDE_REASONING_EFFORT:-}" ]; then export OPENAI_REASONING_EFFORT="$OVERRIDE_REASONING_EFFORT"; fi
 
 E2E_DB="${E2E_DB_NAME:-orbit_e2e}"

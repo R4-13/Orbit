@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import type { PlanProposal } from '@orbit/shared';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { FactCorrectionService } from '../src/process/fact-correction.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
 import { PlannerService } from '../src/process/planner.service';
@@ -121,6 +122,24 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
     expect(out.requestedOutcomes[1]!.goalKey).toBeUndefined();
     expect(out.requestedOutcomes[0]!.goalKey).toBe('receipt.acknowledged');
     expect(out.goalKeys).toContain('human.review');
+    // Ohne Übergabe ist ein zusätzliches „Prüfung durch eine Person“ unbegründet und entfällt
+    const answered = planner.normalizeProposal({ goalKeys: ['inquiry.answered', 'human.review'], requestedOutcomes: [{ text: 'Frage beantworten', goalKey: 'inquiry.answered' }], nodes: [] });
+    expect(answered.goalKeys).toEqual(['inquiry.answered']);
+  });
+
+  it('eine Korrektur nach der Übergabe bleibt nicht unbemerkt: Aufgabe mit altem und neuem Wert, je Nachricht nur eine', async () => {
+    const { tenantId, caseId } = await newCase(false);
+    await prisma.forTenantId(tenantId).case.update({ where: { id: caseId }, data: { orchestrationStatus: 'COMPLETED' } });
+    const service = app.get(FactCorrectionService) as unknown as { flagCorrectionAfterHandover(t: string, c: string, m: string, corrected: Array<{ key: string; previous: unknown; current: unknown }>): Promise<void> };
+    await service.flagCorrectionAfterHandover(tenantId, caseId, 'abcdef12-aaaa', [{ key: 'ai.existing_heating', previous: 'Gasheizung von 1985', current: 'Gasheizung von 1995' }]);
+    await service.flagCorrectionAfterHandover(tenantId, caseId, 'abcdef12-aaaa', [{ key: 'ai.existing_heating', previous: 'Gasheizung von 1985', current: 'Gasheizung von 1995' }]);
+    const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId } });
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.description).toContain('Gasheizung von 1985');
+    expect(tasks[0]!.description).toContain('Gasheizung von 1995');
+    const open = await newCase(false); // ein noch laufender Vorgang ohne Übergabe bekommt keine Aufgabe
+    await service.flagCorrectionAfterHandover(open.tenantId, open.caseId, 'abcdef12-bbbb', [{ key: 'x', previous: 1, current: 2 }]);
+    expect(await prisma.forTenantId(open.tenantId).task.count({ where: { caseId: open.caseId } })).toBe(0);
   });
 
   it('Übergabe mit Restziel: Aufgabe mit Beschreibung des Restziels, Vorgang bleibt in der Prüfung (nicht erledigt), Anliegen sind am Plan festgehalten', async () => {

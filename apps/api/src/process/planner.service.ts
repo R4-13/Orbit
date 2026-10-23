@@ -300,7 +300,7 @@ export class PlannerService {
         if (!submitted) {
           if (llm.providerName.toLowerCase().includes('mock')) return { status: 'UNAVAILABLE', reason: 'Kein KI-Provider verbunden: der simulierte Provider hat keinen Plan hinterlegt.' };
         } else if (submitted.result?.status === 'SUCCEEDED') {
-          const validation = validatePlan(this.carryForwardConfirmed(this.normalizeProposal(submitted.output), confirmedOriginals), context);
+          const validation = validatePlan(this.repairBindings(this.carryForwardConfirmed(this.normalizeProposal(submitted.output), confirmedOriginals), context), context);
           lastValidation = validation;
           lastProposal = validation.proposal as PlanProposal | undefined;
           if (validation.valid) return { status: 'PROPOSED', proposal: validation.proposal as PlanProposal, validation };
@@ -390,6 +390,57 @@ export class PlannerService {
     return proposal;
   }
 
+  /**
+   * Formfehler bei den Bindungen eines Schritts, die sich ohne Spielraum beheben lassen (Funktionsnachweis 23.10.: dieselbe Ursache bei zwei Modellprofilen, gpt-6-luna und gpt-6-sol – kein Verständnisproblem, sondern
+   * eine Schwäche beim Verdrahten der Neuplanung):
+   *  - Ein Schritt liest die Ausgabe eines Schritts, den es im Plan nicht gibt (Kennung aus einer früheren Revision, z. B. "reqs" statt "reqs_2"): gibt es im Plan genau einen Schritt, dessen Fähigkeit dieses Ausgabefeld
+   *    liefert, zeigt die Bindung auf ihn.
+   *  - Ein Schritt liest die Ausgabe eines Schritts, der nicht vor ihm liegt (Kante vergessen): die Kante wird ergänzt, sofern dadurch kein Kreis entsteht.
+   * Alles Weitere prüft der Validator unverändert; ein Vorschlag ohne diese Mängel bleibt unverändert.
+   */
+  private repairBindings(output: unknown, context: PlanValidationContext): unknown {
+    const proposal = output as { nodes?: Array<{ id?: string; capability?: { key?: string }; inputs?: Record<string, unknown> }>; edges?: Array<{ id?: string; source?: string; target?: string }> } | null;
+    if (!proposal || !Array.isArray(proposal.nodes) || !Array.isArray(proposal.edges) || context.blueprint) return output;
+    const ids = new Set(proposal.nodes.map((n) => String(n.id)));
+    const producing = (path: string): string[] => proposal.nodes!.filter((n) => n.capability?.key && context.capabilities.get(n.capability.key)?.contract?.outputs.includes(path)).map((n) => String(n.id));
+    const refs: Array<{ consumer: string; ref: { node?: string; path?: string } }> = [];
+    const collect = (consumer: string, value: unknown): void => {
+      if (Array.isArray(value)) return value.forEach((v) => collect(consumer, v));
+      if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>;
+        const ref = record.stepOutput as { node?: string; path?: string } | undefined;
+        if (ref && typeof ref.node === 'string') refs.push({ consumer, ref });
+        Object.values(record).forEach((v) => collect(consumer, v));
+      }
+    };
+    for (const node of proposal.nodes) collect(String(node.id), node.inputs);
+    for (const { ref } of refs) {
+      if (ids.has(String(ref.node)) || typeof ref.path !== 'string') continue;
+      const candidates = producing(ref.path);
+      if (candidates.length === 1) ref.node = candidates[0];
+    }
+    const reaches = (from: string, to: string): boolean => {
+      const seen = new Set<string>();
+      const stack = [from];
+      while (stack.length > 0) {
+        const id = stack.pop() as string;
+        if (id === to) return true;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        for (const e of proposal.edges!) if (e.source === id) stack.push(String(e.target));
+      }
+      return false;
+    };
+    let added = 0;
+    for (const { consumer, ref } of refs) {
+      const producer = String(ref.node);
+      if (!ids.has(producer) || producer === consumer || reaches(producer, consumer) || reaches(consumer, producer)) continue;
+      added += 1;
+      proposal.edges.push({ id: `e_bind_${added}_${producer}_${consumer}`.slice(0, 64), source: producer, target: consumer });
+    }
+    return proposal;
+  }
+
   private normalizeProposal(output: unknown): unknown {
     const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }>; requestedOutcomes?: Array<{ goalKey?: string; handover?: boolean } | null>; goalKeys?: string[] } | null;
     if (!proposal || !Array.isArray(proposal.nodes)) return output;
@@ -403,6 +454,11 @@ export class PlannerService {
         }
       }
       if (proposal.requestedOutcomes.some((o) => o?.handover) && Array.isArray(proposal.goalKeys) && !proposal.goalKeys.includes('human.review')) proposal.goalKeys.push('human.review');
+      // Umgekehrt: Nennt der Plan für jedes Anliegen ein prüfbares Ziel und keine Übergabe, ist ein zusätzliches „Prüfung durch eine Person“ unbegründet – es hielte einen vollständig beantworteten Vorgang (Auskunft zugestellt) ohne Anlass in der Prüfung (Funktionsnachweis 23.10., A3).
+      const outcomes = proposal.requestedOutcomes.filter((o): o is { goalKey?: string; handover?: boolean } => Boolean(o));
+      if (outcomes.length > 0 && outcomes.every((o) => !o.handover && typeof o.goalKey === 'string' && (proposal.goalKeys ?? []).includes(o.goalKey)) && Array.isArray(proposal.goalKeys) && proposal.goalKeys.includes('human.review') && proposal.goalKeys.length > 1) {
+        proposal.goalKeys = proposal.goalKeys.filter((g) => g !== 'human.review');
+      }
     }
     for (const node of proposal.nodes as Array<{ type?: string; timeout?: unknown }>) {
       // Warten ohne Frist: die Standardfrist für Antworten der Kundschaft (72 Stunden) wird eingesetzt, statt den Plan wegen einer Formfrage zu verwerfen (Live-Fund: Plan blieb nach dem Reparaturversuch an

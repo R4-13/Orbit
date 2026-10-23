@@ -309,6 +309,26 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
             rejected.push({ key: item.key, reason });
             continue;
           }
+          // Eine genauere Fassung derselben Angabe ist kein Widerspruch („Bonn“ → „Bahnhofstraße 7 in Bonn“): die genauere ersetzt die gröbere, die gröbere neben einer genaueren wird nicht noch einmal angelegt
+          // (Funktionsnachweis 23.10., B2: sonst galt der Ort als widersprüchlich und wurde erneut erfragt). Nur für Textangaben, deren eine Fassung vollständig in der anderen steht.
+          if (definition.type === 'string' && typeof item.value === 'string') {
+            const existing = (await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => f.key === item.key && f.isCurrent && (f.status === 'CONFIRMED' || f.status === 'CANDIDATE') && typeof f.value === 'string');
+            const fresh = normalize(item.value);
+            const refined = existing.length === 1 ? existing[0] : undefined;
+            if (refined) {
+              const old = normalize(String(refined.value));
+              if (old !== fresh && fresh.includes(old)) {
+                await this.facts.supersedeBySelfCorrection(ctx.tenantId, caseId, { key: item.key, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence] });
+                recorded.push({ key: item.key, value: item.value, status: 'CONFIRMED' });
+                seenKeys.add(item.key);
+                continue;
+              }
+              if (old !== fresh && old.includes(fresh)) {
+                rejected.push({ key: item.key, reason: 'bereits genauer bekannt' });
+                continue;
+              }
+            }
+          }
           const created = await this.facts.propose(ctx.tenantId, caseId, [{ key: item.key, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence], confidence: item.confidence }]);
           // Confirmed by schema validation + a verified literal quote (never by model confidence alone).
           for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, definition.type);

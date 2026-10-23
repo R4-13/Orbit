@@ -317,6 +317,25 @@ describe('Reference process: request for quote (e2e)', () => {
     expect(current[0]!.status).not.toBe('CONFLICTED');
   });
 
+  it('eine genauere Fassung derselben Angabe in der Antwort ersetzt die gröbere und ist kein Widerspruch (Funktionsnachweis 23.10.)', async () => {
+    const tenantId = await newTenant();
+    seedTriage();
+    seedExtraction([
+      { key: 'request.product_sku', value: 'FENSTER-STD', evidence: 'neue Fenster' },
+      { key: 'request.delivery_address', value: 'Frechen', evidence: 'Frechen' },
+    ]);
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Fenster Frechen', content: 'Wir möchten ein Angebot für neue Fenster in Frechen.', threadId: 'thr-ref', rfcMessageId: '<r1@firma-meier.example>' }));
+    const caseId = first.case!.id;
+    const person = approver(tenantId);
+    const [intent] = await ledger.openIntents(tenantId, caseId);
+    await commands.execute(person, caseId, command('APPROVE_ACTION', (await caseOf(tenantId, caseId)).revision, { intentId: intent!.id }));
+    seedExtraction([{ key: 'request.delivery_address', value: 'Hauptstraße 5 in Frechen', evidence: 'Hauptstraße 5 in Frechen' }]);
+    await intake.handleIntakeEvent(tenantId, undefined, mail({ connectionId: connectionByTenant.get(tenantId), subject: 'Re: Fenster Frechen', content: 'Es ist die Hauptstraße 5 in Frechen.', threadId: 'thr-ref', rfcMessageId: '<r2@firma-meier.example>', inReplyTo: '<sent-1@mail.example>', references: ['<r1@firma-meier.example>', '<sent-1@mail.example>'] }));
+    const address = (await facts.getCurrent(tenantId, caseId)).filter((f) => f.key === 'request.delivery_address' && f.isCurrent);
+    expect(address).toHaveLength(1);
+    expect(address[0]).toMatchObject({ value: 'Hauptstraße 5 in Frechen', status: 'CONFIRMED' });
+  });
+
   it('a reply from a stranger with the right In-Reply-To is not merged into the case', async () => {
     const tenantId = await newTenant();
     seedTriage();

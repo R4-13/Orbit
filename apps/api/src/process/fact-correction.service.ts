@@ -339,6 +339,22 @@ ${lines}`,
     for (const c of outcome.conflicts) {
       await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.FACT_CONFLICT_DETECTED, payload: { ...c, messageId: message.id }, dedupeKey: `fact.conflict:${message.id}:${c.key}` });
     }
+    if (outcome.corrected.length > 0) await this.flagCorrectionAfterHandover(tenantId, caseId, message.id, outcome.corrected);
     return outcome;
+  }
+
+  /**
+   * Eine Korrektur nach der Übergabe (Lead angelegt oder Vorgang abgeschlossen) ändert die Angaben am Vorgang, nicht im bereits übergebenen Lead (Funktionsnachweis 23.10., Ablauf B1: der Lead trug noch das alte Baujahr).
+   * Damit sie nicht unbemerkt bleibt, steht sie als Aufgabe für eine Person am Vorgang – mit altem und neuem Wert.
+   */
+  private async flagCorrectionAfterHandover(tenantId: string, caseId: string, messageId: string, corrected: FactCorrectionOutcome['corrected']): Promise<void> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const row = await scoped.case.findUnique({ where: { id: caseId }, select: { orchestrationStatus: true } });
+    const handedOver = (await scoped.actionIntent.count({ where: { caseId, capabilityKey: 'crm.lead.create', status: 'CONFIRMED' } })) > 0;
+    if (!handedOver && row?.orchestrationStatus !== 'COMPLETED') return;
+    const title = `Korrektur nach Übergabe (${messageId.slice(0, 8)})`;
+    if ((await scoped.task.count({ where: { caseId, title } })) > 0) return;
+    const lines = corrected.map((c) => `- ${c.key}: ${JSON.stringify(c.previous)} → ${JSON.stringify(c.current)}`).join('\n');
+    await scoped.task.create({ data: { tenantId, caseId, title, description: `Die Kundschaft hat Angaben korrigiert, nachdem der Vorgang übergeben wurde. Bitte den Lead bzw. das Angebot mit den neuen Werten abgleichen:\n${lines}`, source: 'AGENT' } });
   }
 }

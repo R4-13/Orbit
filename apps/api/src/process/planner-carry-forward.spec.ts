@@ -48,3 +48,38 @@ describe('Bestätigte Schritte werden vom Planer-Dienst übernommen', () => {
     expect(carry(input, [])).toBe(input);
   });
 });
+
+describe('Bindungsfehler der Neuplanung werden ohne Spielraum behoben (Funktionsnachweis 23.10.)', () => {
+  const { DEFAULT_CAPABILITIES } = jest.requireActual('@orbit/shared') as typeof import('@orbit/shared');
+  const context = { capabilities: new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c])) } as never;
+  const repair = (output: Proposal): Proposal => (PlannerService.prototype as unknown as { repairBindings(o: unknown, c: unknown): Proposal }).repairBindings.call({}, output, context);
+
+  it('eine Bindung auf einen Schritt, den es im Plan nicht gibt (Kennung aus früherer Revision), zeigt auf den einzigen Schritt, der das Ausgabefeld liefert', () => {
+    const out = repair({
+      nodes: [node('reqs_2', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { missing: { stepOutput: { node: 'reqs', path: 'missing' } } } })],
+      edges: [edge('e1', 'reqs_2', 'draft')],
+    });
+    expect((out.nodes[1] as { inputs: { missing: { stepOutput: { node: string } } } }).inputs.missing.stepOutput.node).toBe('reqs_2');
+  });
+
+  it('eine Bindung auf einen Schritt, der nicht vor dem lesenden liegt (Kante vergessen), bekommt die Kante – sofern kein Kreis entsteht', () => {
+    const out = repair({
+      nodes: [node('draft', 'PREPARE', { capability: { key: 'communication.draft' } }), node('send', 'ACTION', { capability: { key: 'email.send' }, inputs: { draft: { stepOutput: { node: 'draft', path: 'draftId' } } } })],
+      edges: [],
+    });
+    expect(out.edges.map((e) => `${e.source}>${e.target}`)).toEqual(['draft>send']);
+    const cyclic = repair({
+      nodes: [node('a', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { x: { stepOutput: { node: 'b', path: 'draftId' } } } }), node('b', 'PREPARE', { capability: { key: 'communication.draft' } })],
+      edges: [edge('e1', 'a', 'b')],
+    });
+    expect(cyclic.edges).toHaveLength(1); // b liegt hinter a: keine Kante, die einen Kreis erzeugt
+  });
+
+  it('mehrdeutige Bindungen bleiben unberührt (der Validator weist sie ab)', () => {
+    const out = repair({
+      nodes: [node('r1', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), node('r2', 'EVALUATE_REQUIREMENTS', { capability: { key: 'requirements.resolve' } }), node('draft', 'PREPARE', { capability: { key: 'communication.draft' }, inputs: { missing: { stepOutput: { node: 'reqs', path: 'missing' } } } })],
+      edges: [edge('e1', 'r1', 'draft'), edge('e2', 'r2', 'draft')],
+    });
+    expect((out.nodes[2] as { inputs: { missing: { stepOutput: { node: string } } } }).inputs.missing.stepOutput.node).toBe('reqs');
+  });
+});

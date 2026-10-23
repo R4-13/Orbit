@@ -154,7 +154,7 @@ const OUT = process.env.FN_OUT;
       checks: (body) => {
         expect(body).not.toMatch(/\d\s?(€|EUR|Euro)|(€|EUR)\s?\d/);
         expect(body).toMatch(/vor Ort|Besichtigung|ansehen|anschauen/i);
-        expect(body).toMatch(/(nicht|keine)[^.]{0,80}Preis|Preise?[^.]{0,80}(nicht|keine)/i);
+        expect(body).toMatch(/(nicht|keine|weder)[^.]{0,80}Preis|Preise?[^.]{0,80}(nicht|keine|weder)/i);
       },
     },
   ];
