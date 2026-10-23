@@ -272,6 +272,78 @@
       "betreff": "Neue Praxisräume – Anschlüsse für Wasser, Druckluft und Gas",
       "text": "Guten Tag,\n\nEnde Januar zieht unsere Zahnarztpraxis um. In den neuen Räumen brauchen drei Behandlungsplätze Anschlüsse für Wasser und Druckluft, und für das Labor muss eine Gasleitung gelegt werden. Vor der Eröffnung am 3. Februar muss alles vom Prüfer abgenommen sein. Übernehmen Sie so etwas, und wie gehen Sie vor?\n\nMit freundlichen Grüßen\nTom Orbit",
       "erwartung": "Unbekannte Vorgangsart: Verstehen, gezielte Rückfrage, Antwort auswerten, begründete Übergabe; keine Zusage zur Frist, kein Preis."
+    },
+    {
+      "id": "fn-a1-badsanierung-leverkusen",
+      "art": "auskunft",
+      "titel": "Funktionsnachweis A1: Leistung und Einsatzgebiet",
+      "betreff": "Badsanierung in Leverkusen?",
+      "text": "Guten Tag,\n\nmachen Sie auch Badsanierungen mit ebenerdiger Dusche, und kommen Sie dafür nach Leverkusen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Auskunft aus dem Betriebsprofil: Badsanierung (barrierefreie Duschen) ja, Leverkusen liegt im Einsatzgebiet. Kein Preis, keine Terminzusage."
+    },
+    {
+      "id": "fn-a2-freitag-elektro",
+      "art": "auskunft",
+      "titel": "Funktionsnachweis A2: Zeiten knapp überschritten und Ausschluss",
+      "betreff": "Freitag erreichbar? Elektro?",
+      "text": "Hallo,\n\nsind Sie am Freitag bis 17 Uhr erreichbar? Und machen Sie auch Elektroarbeiten?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Freitag nur bis 16:00 laut Profil (nicht bis 17 Uhr); Elektroarbeiten gehören nicht zum Angebot (Ausschluss) – keine falsche Bejahung."
+    },
+    {
+      "id": "fn-a3-angebot-vorab-preis",
+      "art": "auskunft",
+      "titel": "Funktionsnachweis A3: Ablauf Angebot und Vorabpreis",
+      "betreff": "Wie läuft ein Angebot bei Ihnen ab?",
+      "text": "Guten Tag,\n\nwie läuft das bei Ihnen mit einem Angebot ab – können Sie mir vorab schon einen Preis nennen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Auskunft laut FAQ: Besichtigung vor Ort, danach schriftliches Angebot; Preise werden vorab nicht genannt."
+    },
+    {
+      "id": "fn-b1-heizung-knapp",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis B1: knappe Heizungsanfrage (Fläche später korrigiert)",
+      "betreff": "Neue Heizung – bitte um Angebot",
+      "text": "Hallo,\n\nwir brauchen eine neue Heizung für unser Haus. Bitte schicken Sie uns ein Angebot.\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Gezielte Rückfrage nach fehlenden Angaben (Heizungsart/Alter, Wohnfläche, Ort); nach der Korrektur der Fläche gilt der neue Wert."
+    },
+    {
+      "id": "fn-b2-waermepumpe-frechen",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis B2: Wärmepumpe (Baujahr später korrigiert)",
+      "betreff": "Wärmepumpe für unser Haus in Frechen",
+      "text": "Guten Tag,\n\nwir überlegen, unsere alte Gasheizung gegen eine Wärmepumpe zu tauschen. Es geht um unser Einfamilienhaus in Frechen. Können Sie uns dazu ein Angebot machen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Rückfrage nach Baujahr und Wohnfläche; nach der Korrektur des Baujahrs gilt der neue Wert; Besichtigung vor Ort statt Preis."
+    },
+    {
+      "id": "fn-b3-bad-preisfrage",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis B3: Badezimmer ohne Fläche (später korrigiert)",
+      "betreff": "Badezimmer erneuern – was kostet das?",
+      "text": "Guten Tag,\n\nwir möchten unser Badezimmer komplett erneuern lassen und hätten gern eine ebenerdige Dusche. Womit müssten wir preislich rechnen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Rückfrage nach der Fläche; keine Preisangabe ohne Grundlage; Besichtigung vor Ort als nächster Schritt; Korrektur der Fläche wird übernommen."
+    },
+    {
+      "id": "fn-c1-drei-anliegen",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis C1: Rechnungskopie, Terminänderung, Angebot",
+      "betreff": "Drei Anliegen auf einmal",
+      "text": "Guten Tag,\n\nerstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Alle drei Anliegen erkannt; je Anliegen ein Ergebnis (Rechnungskopie/Terminänderung als Übergabe mit Person und Restarbeit, Angebot als Anfrage); eine gemeinsame Antwort."
+    },
+    {
+      "id": "fn-c2-schluesselbund-frechen",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis C2: Schlüsselbund des Monteurs und Einsatzgebiet",
+      "betreff": "Schlüsselbund Ihres Monteurs",
+      "text": "Guten Tag,\n\nIhr Monteur hat gestern bei uns seinen Schlüsselbund liegen lassen. Bitte sagen Sie ihm Bescheid, dass er ihn bei uns abholen kann, und bestätigen Sie mir kurz, dass diese Nachricht angekommen ist. Außerdem: Kommen Sie auch nach Frechen?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Eingang bestätigt; „Monteur informieren“ ist ohne dokumentierte Weitergabe eine Übergabe mit offenem Restziel (keine Erfolgsmeldung); Einsatzgebiet Frechen laut Profil beantwortet."
+    },
+    {
+      "id": "fn-c3-rechnung-doppelt-termin",
+      "art": "anfrage",
+      "titel": "Funktionsnachweis C3: doppelte Rechnung und Wartungstermin",
+      "betreff": "Zwei Dinge",
+      "text": "Hallo,\n\nzwei Dinge: Die Rechnung Nr. 4711 habe ich zweimal bekommen, bitte klären Sie das. Und haben Sie bis Freitag noch einen Termin für eine Heizungswartung frei?\n\nViele Grüße\nTom Orbit",
+      "erwartung": "Beide Anliegen erkannt; Rechnungsklärung an die zuständige Person; Terminanfrage ohne Buchung (Vorschlag/Übergabe); eine gemeinsame Antwort."
     }
   ]
 }

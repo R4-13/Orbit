@@ -1,0 +1,52 @@
+{
+  "industry": "Heizung und Sanitär",
+  "description": "Müller Heizung & Sanitär GmbH ist ein Meisterbetrieb für Heizung und Sanitär in Köln. Seit über 20 Jahren kümmert sich der Betrieb um die Wärme- und Wasserversorgung von Einfamilienhäusern, Wohnungen und kleinen Gewerbebetrieben.",
+  "services": [
+    "Heizungswartung von Gas- und Ölheizungen",
+    "Reparatur von Gas- und Ölheizungen",
+    "Einbau von Wärmepumpen",
+    "Heizkörpertausch",
+    "Badsanierung, einschließlich barrierefreier Duschen, Fliesenarbeiten und Sanitärobjekten",
+    "Rohrreinigung",
+    "Rohrbruchbeseitigung",
+    "Warmwasserbereitung"
+  ],
+  "exclusions": [
+    "Elektroarbeiten",
+    "Dacharbeiten",
+    "Gartenbewässerung"
+  ],
+  "serviceArea": "Köln und im Umkreis von etwa 30 Kilometern, zum Beispiel Leverkusen, Bergisch Gladbach, Bonn und Frechen.",
+  "openingHours": [
+    {
+      "to": "16:00",
+      "days": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI"
+      ],
+      "from": "07:00"
+    }
+  ],
+  "faqs": [
+    {
+      "answer": "Ja, wir führen komplette Badsanierungen im Raum Köln aus, von der Planung bis zur Abnahme.",
+      "question": "Machen Sie Badsanierungen?"
+    },
+    {
+      "answer": "Wir schauen uns die Situation vor Ort an und erstellen danach ein schriftliches Angebot; Preise nennen wir nicht am Telefon oder per Mail vorab.",
+      "question": "Wie läuft ein Angebot ab?"
+    },
+    {
+      "answer": "Ja, im Rahmen eines Wartungsvertrags.",
+      "question": "Wartet ihr auch Wärmepumpen?"
+    }
+  ],
+  "emergencyService": true,
+  "languages": [
+    "de"
+  ],
+  "tone": "FORMAL"
+}
