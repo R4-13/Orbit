@@ -158,6 +158,18 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: caseId } })).orchestrationStatus).toBe('COMPLETED');
   });
 
+  it('scheitert die Planung endgültig, steht das Anliegen im Wortlaut der Kundschaft als Aufgabe da – eine je Vorgang', async () => {
+    const { tenantId, caseId } = await newCase(false);
+    await prisma.forTenantId(tenantId).emailMessage.create({ data: { tenantId, caseId, direction: 'INBOUND', fromAddress: 'kunde@e2e.example', toAddresses: ['betrieb@e2e.example'], subject: 'Rechnung', bodyText: 'Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.', receivedAt: new Date() } });
+    const failing = orchestrator as unknown as { openPlanFailureTask(t: string, c: string, reason: string): Promise<void> };
+    await failing.openPlanFailureTask(tenantId, caseId, 'Der Plan blieb auch nach einem Reparaturversuch unzulässig');
+    await failing.openPlanFailureTask(tenantId, caseId, 'noch einmal');
+    const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId } });
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]!.description).toContain('Kopie meiner letzten Rechnung');
+    expect(tasks[0]!.description).toContain('unzulässig');
+  });
+
   it('Übergabe mit Restziel: Aufgabe mit Beschreibung des Restziels, Vorgang bleibt in der Prüfung (nicht erledigt), Anliegen sind am Plan festgehalten', async () => {
     const { tenantId, caseId } = await newCase(false);
     const handover: PlanProposal = {

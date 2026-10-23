@@ -141,6 +141,25 @@ export class OrchestratorService {
   }
 
   /**
+   * Konnte keine zulässige Planung erstellt werden (Modell unbrauchbar oder nicht erreichbar), geht der Vorgang an eine Person – mit dem Anliegen im Wortlaut der Kundschaft. Ohne diese Aufgabe stünde nur ein technischer Grund
+   * am Vorgang und niemand wüsste, was die Kundschaft verlangt (Funktionsnachweis 23.10.: Teilvorgänge einer Mehrfach-Nachricht endeten so). Eine Aufgabe je Vorgang.
+   */
+  private async openPlanFailureTask(tenantId: string, caseId: string, reason: string): Promise<void> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const title = 'Anliegen manuell übernehmen (Planung nicht möglich)';
+    if ((await scoped.task.count({ where: { caseId, title } })) > 0) return;
+    const row = await scoped.case.findUnique({ where: { id: caseId }, select: { title: true } });
+    const split = await scoped.caseEvent.findFirst({ where: { caseId, type: 'case.split_from' }, orderBy: { sequence: 'asc' }, select: { payload: true } });
+    const goal = (split?.payload as { goal?: string; segment?: string } | null | undefined)?.goal;
+    const message = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { bodyText: true, fromAddress: true } });
+    const excerpt = (message?.bodyText ?? '').replace(/s+/g, ' ').trim().slice(0, 600);
+    await scoped.task.create({ data: { tenantId, caseId, title, description: `ORBIT konnte für diesen Vorgang keinen zulässigen Ablauf planen (${reason.slice(0, 160)}). Bitte das Anliegen übernehmen.
+${goal ? `Anliegen: ${goal}
+` : ''}Vorgang: ${row?.title ?? ''}
+Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, source: 'AGENT' } });
+  }
+
+  /**
    * Startet einen vom Betrieb fest vorgegebenen Ablauf (Verfahren) statt eines von der KI geplanten: derselbe Prüfpfad, keine Bestätigung des ganzen Plans.
    * Scheitert die Prüfung (z. B. eine Fähigkeit ist nicht ausführbar), kommt der Vorgang zur Prüfung – das Verfahren wird nie verkürzt oder umgangen.
    */
@@ -161,6 +180,7 @@ export class OrchestratorService {
     }
     if (outcome.status === 'REVIEW_REQUIRED') {
       const reasons = [outcome.reason, ...(outcome.validation?.issues.filter((i) => i.severity === 'ERROR').slice(0, 3).map((i) => i.message) ?? [])];
+      if (!request.procedure) await this.openPlanFailureTask(tenantId, caseId, outcome.reason).catch(() => undefined);
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: reasons });
       return { outcome: 'MANUAL_REVIEW', blueprint: blueprintRef, reasons };
     }
