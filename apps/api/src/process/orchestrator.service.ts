@@ -144,8 +144,11 @@ export class OrchestratorService {
    * Konnte keine zulässige Planung erstellt werden (Modell unbrauchbar oder nicht erreichbar), geht der Vorgang an eine Person – mit dem Anliegen im Wortlaut der Kundschaft. Ohne diese Aufgabe stünde nur ein technischer Grund
    * am Vorgang und niemand wüsste, was die Kundschaft verlangt (Funktionsnachweis 23.10.: Teilvorgänge einer Mehrfach-Nachricht endeten so). Eine Aufgabe je Vorgang.
    */
-  private async openPlanFailureTask(tenantId: string, caseId: string, reason: string): Promise<void> {
+  private async openPlanFailureTask(tenantId: string, caseId: string, reason: string, trigger: 'INITIAL' | 'REPLAN' = 'REPLAN'): Promise<void> {
     const scoped = this.prisma.forTenantId(tenantId);
+    // Ein neuer Eingang ohne Teilvorgang bekommt seine Prüfaufgabe bereits vom Eingang selbst (`sendToReview`): keine zweite für dasselbe.
+    const own = await scoped.case.findUnique({ where: { id: caseId }, select: { parentCaseId: true } });
+    if (trigger === 'INITIAL' && !own?.parentCaseId) return;
     const title = 'Anliegen manuell übernehmen (Planung nicht möglich)';
     if ((await scoped.task.count({ where: { caseId, title } })) > 0) return;
     const row = await scoped.case.findUnique({ where: { id: caseId }, select: { title: true } });
@@ -180,7 +183,7 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
     }
     if (outcome.status === 'REVIEW_REQUIRED') {
       const reasons = [outcome.reason, ...(outcome.validation?.issues.filter((i) => i.severity === 'ERROR').slice(0, 3).map((i) => i.message) ?? [])];
-      if (!request.procedure) await this.openPlanFailureTask(tenantId, caseId, outcome.reason).catch(() => undefined);
+      if (!request.procedure) await this.openPlanFailureTask(tenantId, caseId, outcome.reason, request.trigger).catch(() => undefined);
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: reasons });
       return { outcome: 'MANUAL_REVIEW', blueprint: blueprintRef, reasons };
     }

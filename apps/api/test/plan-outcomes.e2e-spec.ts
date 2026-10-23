@@ -161,7 +161,10 @@ describe('Zielabdeckung und Weitergabe an Monteure (e2e)', () => {
   it('scheitert die Planung endgültig, steht das Anliegen im Wortlaut der Kundschaft als Aufgabe da – eine je Vorgang', async () => {
     const { tenantId, caseId } = await newCase(false);
     await prisma.forTenantId(tenantId).emailMessage.create({ data: { tenantId, caseId, direction: 'INBOUND', fromAddress: 'kunde@e2e.example', toAddresses: ['betrieb@e2e.example'], subject: 'Rechnung', bodyText: 'Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.', receivedAt: new Date() } });
-    const failing = orchestrator as unknown as { openPlanFailureTask(t: string, c: string, reason: string): Promise<void> };
+    const failing = orchestrator as unknown as { openPlanFailureTask(t: string, c: string, reason: string, trigger?: 'INITIAL' | 'REPLAN'): Promise<void> };
+    const fresh = await newCase(false); // neuer Eingang ohne Teilvorgang: die Prüfaufgabe kommt vom Eingang selbst, nicht doppelt
+    await failing.openPlanFailureTask(fresh.tenantId, fresh.caseId, 'x', 'INITIAL');
+    expect(await prisma.forTenantId(fresh.tenantId).task.count({ where: { caseId: fresh.caseId } })).toBe(0);
     await failing.openPlanFailureTask(tenantId, caseId, 'Der Plan blieb auch nach einem Reparaturversuch unzulässig');
     await failing.openPlanFailureTask(tenantId, caseId, 'noch einmal');
     const tasks = await prisma.forTenantId(tenantId).task.findMany({ where: { caseId } });
