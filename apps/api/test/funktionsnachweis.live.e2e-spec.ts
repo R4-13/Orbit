@@ -29,7 +29,7 @@ const OUT = process.env.FN_OUT;
   let app: INestApplication;
   let prisma: PrismaService;
   let tenantId: string;
-  let sender = 'tom.orbit@kunde.example';
+  const sender = 'tom.orbit@kunde.example';
   const sent: Array<{ to: string; subject: string; bodyText: string }> = [];
   const record: Record<string, unknown> = { menschlicheFreigaben: [] as unknown[] };
   const approvals = record.menschlicheFreigaben as Array<{ fall: string; art: string }>;
