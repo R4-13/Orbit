@@ -30,3 +30,20 @@ describe('Sätze mit Korrekturhinweis', () => {
     expect(cueSentences('Alles in Ordnung, danke.')).toBeUndefined();
   });
 });
+
+describe('Korrektur unter Vorbehalt: Ähnlichkeit des Satzbaus ersetzt keine Bedeutung (Funktionsnachweis 23.10.)', () => {
+  it('eine Bedingung, Vermutung oder Alternative macht aus „nicht A, sondern B“ keine feste Änderung', () => {
+    expect(numericReplacements('Das Bad hat nicht 7 m², sondern 12 m², falls die Abstellkammer dazukommt.', [bad])).toEqual([]);
+    expect(numericReplacements('Das Bad hat nicht 7 m², sondern vermutlich 12 m².', [bad])).toEqual([]);
+    expect(numericReplacements('Das Bad hat nicht 7 m², sondern 12 oder 13 m².', [bad])).toEqual([]);
+    expect(numericReplacements('Das Bad hat nicht 7 m², sondern höchstens 12 m².', [bad])).toEqual([]);
+  });
+
+  it('„nicht nur A, sondern B“ ist eine Erweiterung, kein Ersatz', () => {
+    expect(numericReplacements('Das Bad hat nicht nur 7 m², sondern 12 m² mit Abstellraum.', [bad])).toEqual([]);
+  });
+
+  it('der feste Ersatz bleibt erkannt', () => {
+    expect(numericReplacements('Das Bad hat nicht 7 m², sondern 12 m².', [bad]).map((u) => [u.key, u.newValue])).toEqual([['bathroom.area_m2', 12]]);
+  });
+});

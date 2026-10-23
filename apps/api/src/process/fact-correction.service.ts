@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AgentRuntime, ToolRegistry, buildLayeredSystemPrompt, wrapUntrustedContent } from '@orbit/agent-core';
 import type { CaseFact } from '@orbit/domain';
-import { factValuesEqual, normalizeForMatch, splitSentences, validateFactValue } from '@orbit/shared';
+import { factValuesEqual, isHedged, normalizeForMatch, splitSentences, validateFactValue } from '@orbit/shared';
 import { z } from 'zod';
 import { TOOL_REGISTRY } from '../agent/agent.tokens';
 import { AgentRunRecorderService } from '../agent/agent-run-recorder.service';
@@ -57,7 +57,7 @@ export function cueSentences(body: string): string | undefined {
   return sentences.filter((_, index) => wanted.has(index)).join(' ').slice(0, 500);
 }
 
-const NUMERIC_REPLACEMENT = /\bnicht\s+(?:mehr\s+)?(?:nur\s+)?(\d+(?:[.,]\d+)?)\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:doch\s+|nun\s+|jetzt\s+)?(\d+(?:[.,]\d+)?)/gi;
+const NUMERIC_REPLACEMENT = /\bnicht\s+(?:mehr\s+)?(\d+(?:[.,]\d+)?)\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:doch\s+|nun\s+|jetzt\s+)?(\d+(?:[.,]\d+)?)/gi;
 const UNIT_ALIASES: Record<string, string> = { 'm²': 'm2', qm: 'm2', quadratmeter: 'm2', kilowatt: 'kw', euro: '€' };
 const normalizeUnit = (unit: string | undefined): string | undefined => (unit ? (UNIT_ALIASES[unit.toLowerCase()] ?? unit.toLowerCase()) : undefined);
 const STOPWORDS = new Set(
@@ -92,6 +92,8 @@ export function numericReplacements(body: string, known: AnchoredNumber[]): Arra
     const unit = normalizeUnit(match[2]);
     // Nicht die Zahl allein entscheidet: der Satz muss zum Gegenstand der bekannten Angabe passen (gleiche Einheit, gemeinsame Inhaltswörter). „Die Küche hat nicht 7 m², sondern 12“ ändert das Bad (7 m²) nicht.
     const sentence = splitSentences(body).find((s) => s.includes(match[0])) ?? match[0];
+    // Ein Satz unter Vorbehalt („falls der Keller mitzählt“, „140 oder 150“, „vermutlich“, „höchstens“) nennt keinen festen neuen Wert: keine automatische Änderung, der Korrekturhinweis bleibt als offene Klärung stehen.
+    if (isHedged(sentence)) continue;
     const words = contentWords(sentence.replace(match[0], ' '));
     const candidates = known
       .filter((fact) => typeof fact.value === 'number' && fact.value === from && !updates.some((u) => u.key === fact.key))
@@ -300,7 +302,10 @@ ${lines}`,
       const speakers = await Promise.all(old.map((f) => this.speakerOf(tenantId, f)));
       const sameVoice = speakers.every((s) => s !== undefined && s === sender);
       const input = { key: update.key, value, valueType, sourceType: 'EMAIL' as const, sourceRef: `message:${message.id}`, evidenceRefs: [update.evidence], confidence: undefined };
-      if (update.kind === 'CORRECTION' && sameVoice) {
+      // Steht der neue Wert unter Vorbehalt („falls …“, „oder …“, „vermutlich …“), ersetzt er den früheren nicht: beide bleiben sichtbar im Widerspruch, die Klärung folgt per Rückfrage.
+      const evidenceSentence = splitSentences(text).find((sentence) => normalizeForMatch(sentence).includes(quoted)) ?? update.evidence;
+      const hedged = update.kind === 'CORRECTION' && isHedged(evidenceSentence);
+      if (update.kind === 'CORRECTION' && sameVoice && !hedged) {
         const { previous } = await this.facts.supersedeBySelfCorrection(tenantId, caseId, input);
         outcome.corrected.push({ key: update.key, previous: previous.map((f) => f.value).at(-1) ?? null, current: value });
         continue;
@@ -310,7 +315,11 @@ ${lines}`,
       outcome.conflicts.push({
         key: update.key,
         values: [...old.map((f) => f.value), value],
-        reason: update.kind === 'CORRECTION' ? 'Die Korrektur stammt nicht nachweislich von derselben Person wie die frühere Angabe.' : update.reason || 'Unklar, welcher Wert gilt.',
+        reason: hedged
+          ? 'Der neue Wert steht unter Vorbehalt (Bedingung, Vermutung oder Alternative) und ersetzt den früheren nicht.'
+          : update.kind === 'CORRECTION'
+            ? 'Die Korrektur stammt nicht nachweislich von derselben Person wie die frühere Angabe.'
+            : update.reason || 'Unklar, welcher Wert gilt.',
       });
     }
     await this.events.append(tenantId, caseId, {

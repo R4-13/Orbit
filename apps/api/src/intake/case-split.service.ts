@@ -136,7 +136,7 @@ export class CaseSplitService {
     }
     await this.events.append(tenantId, parent.id, {
       type: CASE_EVENT_TYPES.CASE_SPLIT,
-      payload: { children: created.map(({ child, childCase }) => ({ caseId: childCase.id, intentKey: child.intentKey, goal: child.goal })), startedNow: created.filter((c) => c.immediate).length, reason: decision.reason, ...(segmentation ? { coverage: { substantive: segmentation.coverage.substantive, supplemented: segmentation.coverage.unassigned, ungrounded: segmentation.coverage.ungrounded } } : {}) },
+      payload: { children: created.map(({ child, childCase }) => ({ caseId: childCase.id, intentKey: child.intentKey, goal: child.goal })), startedNow: created.filter((c) => c.immediate).length, reason: decision.reason, ...(segmentation ? { coverage: { substantive: segmentation.coverage.substantive, supplemented: segmentation.coverage.unassigned, ungrounded: segmentation.coverage.ungrounded, meaningRisk: segmentation.coverage.meaningRisk, qualifiersAttached: segmentation.coverage.qualifiersAttached } } : {}) },
       dedupeKey: `case.split:${parent.id}`,
     });
     const waiting = created.filter((c) => !c.immediate).length;

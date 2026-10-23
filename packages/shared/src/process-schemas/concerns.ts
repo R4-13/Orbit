@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { SplitChild, SplitDecision } from './case-split';
+import { hasQualifier, insertedQualifiers, omittedQualifiers } from './meaning-guard';
 
 /**
  * Erkennung und Abgrenzung mehrerer Anliegen in einer Nachricht – unabhängig von einem einzelnen Merkmal der Einstufung (MULTIPLE_INTENTS).
@@ -41,6 +42,11 @@ export interface VerifiedConcern extends Concern {
   grounded: boolean;
   /** `true`: dieses Anliegen wurde nicht von der KI genannt, sondern aus nicht zugeordneten Aussagen der Nachricht ergänzt. */
   supplemented?: boolean;
+  /**
+   * Einschränkungen (Verneinung, Bedingung …), die der Originalsatz trägt, der Auszug der KI aber nicht. Titel und Ziel der KI können dann den Sinn verfehlen; für den Teilvorgang gilt der **vollständige Originaltext**
+   * (siehe `splitDecisionFromConcerns`).
+   */
+  meaningRisk?: string[];
 }
 
 export interface ConcernCoverage {
@@ -50,6 +56,10 @@ export interface ConcernCoverage {
   unassigned: string[];
   /** Nicht belegte Auszüge (Titel). */
   ungrounded: string[];
+  /** Anliegen, deren Auszug eine Einschränkung des Originalsatzes ausließ (Titel): für sie gilt der Originaltext statt des Ziels der KI. */
+  meaningRisk: string[];
+  /** Sätze mit Einschränkung (Verneinung/Bedingung), die keine eigene Aussage sind und dem benachbarten Anliegen (sonst dem gemeinsamen Kontext) zugeschlagen wurden. */
+  qualifiersAttached: string[];
 }
 
 export interface VerifiedConcerns {
@@ -137,48 +147,80 @@ function closestSentence(part: string, sentences: ReadonlyArray<{ raw: string; t
   return best?.sentence;
 }
 
+const tokenContains = (haystack: readonly string[], needle: readonly string[]): boolean => {
+  if (needle.length === 0) return false;
+  for (let i = 0; i + needle.length <= haystack.length; i += 1) if (needle.every((t, k) => haystack[i + k] === t)) return true;
+  return false;
+};
+
+
 export function verifyConcerns(message: string, segmentation: ConcernSegmentation): VerifiedConcerns {
   const messageSentences = splitSentences(message).map((raw) => ({ raw, tokens: tokensOf(raw) }));
   /**
-   * Belegt wird satzweise gegen die Sätze der Nachricht: alle Wörter des Auszugs (mindestens ein Wort; ab drei Wörtern in derselben Reihenfolge, darunter zusammenhängend) müssen in EINEM Satz
-   * der Nachricht stehen. Verwendet wird dann **immer der vollständige Originalsatz**, nie der gekürzte Text der KI: ausgelassene Verneinungen, Bedingungen oder Zuordnungen
-   * („…, aber nicht jetzt“, „im Gäste-WC“) können die Bedeutung also nicht ändern. Ein Auszug, dessen Wörter nicht in einem Satz stehen, ist nicht belegt.
+   * Belegt wird satzweise gegen die Sätze der Nachricht: alle Wörter des Auszugs (ab drei Wörtern in derselben Reihenfolge; kürzere nur, wenn sie praktisch den ganzen Satz ausmachen) müssen in EINEM Satz
+   * der Nachricht stehen. Verwendet wird dann **immer der vollständige Originalsatz**, nie der gekürzte Text der KI. Wortgleichheit und Zeichenähnlichkeit sind dabei nur Hilfen (Funktionsnachweis 23.10.):
+   *  - eine **ausgelassene** Verneinung/Bedingung bleibt im Originalsatz; sie wird als `meaningRisk` vermerkt, weil Titel und Ziel der KI den Sinn dann verfehlen können (für den Teilvorgang gilt der Originaltext),
+   *  - eine **eingefügte** Verneinung/Bedingung (Auszug trägt eine Einschränkung, der Originalsatz nicht) macht den Auszug unbelegt – auch bei hoher Zeichenähnlichkeit,
+   *  - ein Auszug, dessen Beleg unsicher bleibt, wird nicht verwendet; der Teilvorgang bekommt dann die vollständige Nachricht.
    */
-  const ground = (text: string): { ok: boolean; expanded: string } => {
+  const ground = (text: string): { ok: boolean; expanded: string; meaningRisk: string[] } => {
     const parts = splitSentences(text).filter((part) => tokensOf(part).length > 0);
     const used: string[] = [];
+    const risk = new Set<string>();
     let found = 0;
     for (const part of parts) {
       const tokens = tokensOf(part);
-      const matches = messageSentences.filter((m) => (tokens.length >= 3 ? isSubsequenceOf(tokens, m.tokens) : m.tokens.join(' ').includes(tokens.join(' '))));
-      // Ein Auszug mit Zeichenfehlern der KI („telefon isch“, ein eingestreuter Buchstabe) gilt als belegt, wenn fast alle Zeichen in der Reihenfolge eines einzigen Satzes stehen (≥ 92 %): so wird aus einem
-      // verstümmelten Auszug kein doppeltes „Restanliegen“. Verwendet wird auch dann der volle Originalsatz.
-      const best = [...matches].sort((x, y) => x.tokens.length - y.tokens.length)[0] ?? closestSentence(part, messageSentences);
+      const matches = messageSentences.filter((m) => (tokens.length >= 3 ? isSubsequenceOf(tokens, m.tokens) : m.tokens.length <= tokens.length + 2 && tokenContains(m.tokens, tokens)));
+      let best = [...matches].sort((x, y) => x.tokens.length - y.tokens.length)[0];
+      if (best) {
+        for (const marker of omittedQualifiers(part, best.raw)) risk.add(marker);
+      } else {
+        // Ein Auszug mit Zeichenfehlern der KI („telefon isch“, ein eingestreuter Buchstabe) gilt als belegt, wenn fast alle Zeichen in der Reihenfolge eines einzigen Satzes stehen (≥ 92 %) – aber nur, wenn
+        // beide dieselben Einschränkungen tragen: ein eingefügtes oder fehlendes „nicht“/„falls“ ändert die Zeichenähnlichkeit kaum und den Sinn vollständig.
+        const close = closestSentence(part, messageSentences);
+        if (close && insertedQualifiers(part, close.raw).length === 0 && omittedQualifiers(part, close.raw).length === 0) best = close;
+      }
       if (!best) continue;
       found += 1;
       if (!used.includes(best.raw)) used.push(best.raw);
     }
-    return { ok: parts.length > 0 && found / parts.length >= 0.8, expanded: used.join(' ') };
+    return { ok: parts.length > 0 && found / parts.length >= 0.8, expanded: used.join(' '), meaningRisk: [...risk].sort() };
   };
   const concerns: VerifiedConcern[] = segmentation.concerns.map((c) => {
     const grounded = ground(c.excerpt);
-    return { ...c, excerpt: grounded.ok ? grounded.expanded : c.excerpt, grounded: grounded.ok };
+    return { ...c, excerpt: grounded.ok ? grounded.expanded : c.excerpt, grounded: grounded.ok, ...(grounded.ok && grounded.meaningRisk.length > 0 ? { meaningRisk: grounded.meaningRisk } : {}) };
   });
-  const sharedResult = segmentation.sharedContext ? ground(segmentation.sharedContext) : { ok: false, expanded: '' };
-  const sharedGrounded = sharedResult.ok ? sharedResult.expanded : '';
+  const sharedResult = segmentation.sharedContext ? ground(segmentation.sharedContext) : { ok: false, expanded: '', meaningRisk: [] as string[] };
+  let sharedGrounded = sharedResult.ok ? sharedResult.expanded : '';
 
   const assigned = new Set<string>();
   for (const c of concerns) if (c.grounded) for (const s of splitSentences(c.excerpt)) assigned.add(normalizeForMatch(s));
   for (const s of splitSentences(sharedGrounded)) assigned.add(normalizeForMatch(s));
 
-  const substantive = splitSentences(message).filter(isSubstantiveSentence);
-  const unassigned = substantive.filter((s) => {
-    const n = normalizeForMatch(s);
-    if (assigned.has(n)) return false;
+  const all = splitSentences(message);
+  const substantive = all.filter(isSubstantiveSentence);
+  const isAssigned = (sentence: string): boolean => {
+    const n = normalizeForMatch(sentence);
+    if (assigned.has(n)) return true;
     // Ein Satz, der Teil eines längeren zugeordneten Satzes ist (oder umgekehrt), gilt als zugeordnet.
-    for (const a of assigned) if (a.includes(n) || n.includes(a)) return false;
-    return true;
+    for (const a of assigned) if (a.includes(n) || n.includes(a)) return true;
+    return false;
+  };
+  const unassigned = substantive.filter((s) => !isAssigned(s));
+
+  // Ein Satz mit Verneinung oder Bedingung, der selbst keine Frage oder Bitte ist („Aber nur, wenn Frau Meier da ist.“, „Vorher bitte nicht anrufen“ wäre tragend), gehört zu dem Satz davor oder danach.
+  // Fehlt er in der Zuordnung, geht eine Einschränkung verloren, die den Sinn des Anliegens bestimmt: er wird dem benachbarten Anliegen zugeschlagen, sonst dem gemeinsamen Kontext.
+  const qualifiersAttached: string[] = [];
+  const ownerOf = (sentence: string): VerifiedConcern | undefined => concerns.find((c) => c.grounded && splitSentences(c.excerpt).some((x) => normalizeForMatch(x) === normalizeForMatch(sentence)));
+  all.forEach((sentence, index) => {
+    if (isAssigned(sentence) || isSubstantiveSentence(sentence) || sentence.length < 12 || !hasQualifier(sentence)) return;
+    const owner = (index > 0 ? ownerOf(all[index - 1]!) : undefined) ?? (index + 1 < all.length ? ownerOf(all[index + 1]!) : undefined);
+    if (owner) owner.excerpt = `${owner.excerpt} ${sentence}`.trim();
+    else sharedGrounded = `${sharedGrounded} ${sentence}`.trim();
+    assigned.add(normalizeForMatch(sentence));
+    qualifiersAttached.push(sentence);
   });
+
   const result: VerifiedConcern[] = [...concerns];
   if (unassigned.length > 0) {
     result.push({
@@ -193,7 +235,13 @@ export function verifyConcerns(message: string, segmentation: ConcernSegmentatio
   return {
     concerns: result,
     sharedContext: sharedGrounded,
-    coverage: { substantive: substantive.length, unassigned, ungrounded: concerns.filter((c) => !c.grounded).map((c) => c.title) },
+    coverage: {
+      substantive: substantive.length,
+      unassigned,
+      ungrounded: concerns.filter((c) => !c.grounded).map((c) => c.title),
+      meaningRisk: concerns.filter((c) => c.meaningRisk && c.meaningRisk.length > 0).map((c) => c.title),
+      qualifiersAttached,
+    },
   };
 }
 
@@ -210,18 +258,29 @@ export function shouldSegment(message: string, hints: { multipleIntentsFlag?: bo
   return substantive >= 3 || questions >= 2 || listItems >= 2;
 }
 
+/** Das Ziel aus dem Originalwortlaut statt aus der Formulierung der KI – wenn deren Auszug eine Verneinung oder Bedingung ausließ, trägt nur der Originaltext den Sinn. */
+function goalFromOriginal(excerpt: string): string {
+  const quote = excerpt.length > 360 ? `${excerpt.slice(0, 357)}…` : excerpt;
+  return `Das Anliegen laut Originaltext bearbeiten, einschließlich aller Einschränkungen: „${quote}“`;
+}
+
 /** Aus der geprüften Zerlegung wird die Aufteilungsentscheidung: ab zwei Anliegen ein Teilvorgang je Anliegen (Obergrenze der gleichzeitig bearbeiteten regelt der Aufrufer). */
 export function splitDecisionFromConcerns(verified: VerifiedConcerns): SplitDecision {
   if (verified.concerns.length < 2) return { split: false, children: [], reason: 'Die Zerlegung ergab nur ein Anliegen.' };
   const children = verified.concerns.slice(0, MAX_CONCERNS).map(
     (c): SplitChild => ({
       intentKey: c.category,
-      goal: c.goal,
+      goal: c.grounded && c.meaningRisk && c.meaningRisk.length > 0 ? goalFromOriginal(c.excerpt) : c.goal,
       title: c.title,
       ...(c.grounded ? { segment: c.excerpt } : {}),
       ...(verified.sharedContext ? { sharedContext: verified.sharedContext } : {}),
     }),
   );
-  const note = verified.coverage.unassigned.length > 0 ? ' (nicht zugeordnete Aussagen wurden als eigenes Anliegen ergänzt)' : '';
+  const notes = [
+    verified.coverage.unassigned.length > 0 ? 'nicht zugeordnete Aussagen wurden als eigenes Anliegen ergänzt' : '',
+    verified.coverage.meaningRisk.length > 0 ? 'bei ausgelassenen Einschränkungen gilt der Originaltext' : '',
+    verified.coverage.qualifiersAttached.length > 0 ? 'Sätze mit Einschränkung wurden dem Anliegen zugeschlagen' : '',
+  ].filter(Boolean);
+  const note = notes.length > 0 ? ` (${notes.join('; ')})` : '';
   return { split: true, children, reason: `${children.length} getrennte Anliegen in der Nachricht erkannt${note}.` };
 }
