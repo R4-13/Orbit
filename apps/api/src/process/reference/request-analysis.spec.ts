@@ -1,4 +1,4 @@
-import { AI_FACT_PREFIX, RequestAnalysisSchema, isAppointmentSchedulingRequirement, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, type RequestAnalysisInput } from './request-analysis';
+import { AI_FACT_PREFIX, RequestAnalysisSchema, isAppointmentSchedulingRequirement, analysisPrompt, appointmentKindOf, evaluateAnalysis, isSafeCustomerText, isSecondReading, type RequestAnalysisInput } from './request-analysis';
 import { clarificationBody } from './communication-templates';
 
 const MESSAGE = 'Guten Tag, wir möchten unsere alte Ölheizung im Einfamilienhaus (Baujahr 1985, ca. 140 m²) gegen eine Wärmepumpe tauschen. Bitte um ein Angebot. Viele Grüße, Thomas Meier';
@@ -295,5 +295,19 @@ describe('Termin: fallbezogene Grundlage, Dauer nur mit Grundlage (Messlauf 21.1
     expect(without).toContain('- Donnerstag, 15.10.2026, ab 09:00 Uhr');
     const withMinutes = clarificationBody({ originalSubject: 'X', questions: [], companyName: 'Musterwerk GmbH', appointment: { kind: 'SITE_VISIT', slots, minutes: 120 } });
     expect(withMinutes).toContain('(ca. 120 Minuten)');
+  });
+});
+
+describe('Zweite Lesart derselben Aussage (Funktionsnachweis 23.10.)', () => {
+  const base = { key: 'ai.quote_request', oldValue: 'Angebot erbeten', newValue: 'bitte um Angebot', fromSameMessage: false, messageHasChangeCue: false };
+  it('eine andere Fassung einer Textangabe aus einer späteren Nachricht ohne Änderungshinweis ist nur eine zweite Lesart', () => {
+    expect(isSecondReading(base)).toBe(true);
+  });
+  it('mit Änderungshinweis, aus derselben Nachricht, mit Zahlen oder für andere Schlüssel gilt sie nicht', () => {
+    expect(isSecondReading({ ...base, messageHasChangeCue: true })).toBe(false);
+    expect(isSecondReading({ ...base, fromSameMessage: true })).toBe(false);
+    expect(isSecondReading({ ...base, oldValue: 'Gasheizung von 1985', newValue: 'Gasheizung von 1995' })).toBe(false);
+    expect(isSecondReading({ ...base, key: 'request.delivery_address' })).toBe(false);
+    expect(isSecondReading({ ...base, newValue: ' angebot erbeten ' })).toBe(false);
   });
 });

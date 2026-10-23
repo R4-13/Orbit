@@ -1,0 +1,5 @@
+code-stand e222197, bereitgestellt 2026-10-23T18:47:12Z
+Schattenplanungen verbraucht zu Beginn: 51
+A (572b3f06): Einzelfreigabe email.send INFORMATION
+A (00d27f6d): Einzelfreigabe email.send INFORMATION
+A (00c225e3): Einzelfreigabe email.send INFORMATION

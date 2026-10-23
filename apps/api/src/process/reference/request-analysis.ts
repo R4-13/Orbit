@@ -277,3 +277,15 @@ export function isConcreteAppointmentChoice(text: string): boolean {
   // Eine vertagende Teilaussage („den Rest sage ich Ihnen noch“) hebt eine konkrete Wahl in einer anderen Teilaussage nicht auf.
   return t.split(/[.!?;,]\s+|[.!?;]$/).some((clause) => !DEFERRAL.test(clause) && CHOICE_CUE.test(clause));
 }
+
+/**
+ * Ist eine andere Fassung einer vom Modell ermittelten Textangabe („ai.…“) nur eine zweite Lesart derselben Aussage – und keine Meinungsänderung der Kundschaft? Das gilt, wenn sie aus einer anderen Nachricht
+ * stammt und diese keinen Hinweis auf eine Änderung enthält (Funktionsnachweis 23.10., Musterwerk: „Angebot erbeten“ aus der Anfrage, „bitte um Angebot“ aus dem Betreff der Antwort ließen die Angabe als widersprüchlich gelten).
+ * Echte Änderungen erkennt die Korrekturprüfung an ihren Hinweiswörtern; Zahlen bleiben davon ausgenommen (zwei verschiedene Zahlen sind ein Widerspruch).
+ */
+export function isSecondReading(input: { key: string; oldValue: string; newValue: string; fromSameMessage: boolean; messageHasChangeCue: boolean }): boolean {
+  if (!input.key.startsWith(AI_FACT_PREFIX) || input.fromSameMessage || input.messageHasChangeCue) return false;
+  const norm = (t: string): string => t.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (norm(input.oldValue) === norm(input.newValue)) return false;
+  return !/\d/.test(input.oldValue) && !/\d/.test(input.newValue);
+}

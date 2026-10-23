@@ -4,6 +4,7 @@ import { AgentRuntime, ToolFailedError, ToolOutcomeUnknownError, buildLayeredSys
 import type { Prisma } from '@orbit/domain';
 import { AiProviderUnavailableError, ExternalSystemError, IntegrationUnavailableError, resolutionAttemptFor, resolutionDedupeKey, validateFactValue, type BlueprintDefinition } from '@orbit/shared';
 import { z } from 'zod';
+import { cueSentences } from '../fact-correction.service';
 import { TOOL_REGISTRY } from '../../agent/agent.tokens';
 import { AiProviderResolverService } from '../../ai-providers/ai-provider-resolver.service';
 import { GmailSendOutcomeUnknownError } from '../../integrations/gmail-connector.service';
@@ -19,7 +20,7 @@ import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
-import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, APPOINTMENT_REJECTION, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText } from './request-analysis';
+import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, APPOINTMENT_REJECTION, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText, isSecondReading } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
 import { computeTotals, formatEuro, fromCents, lineFor, type QuoteLine } from './money';
 import { ReferenceProcessService } from './reference-process.service';
@@ -332,6 +333,13 @@ Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.descript
               }
               if (old !== fresh && old.includes(fresh)) {
                 rejected.push({ key: item.key, reason: 'bereits genauer bekannt' });
+                continue;
+              }
+              // Eine andere Fassung derselben Textangabe aus einer späteren Nachricht ohne jeden Hinweis auf eine Änderung ist keine Meinungsänderung der Kundschaft, sondern eine zweite Lesart (Musterwerk, Funktionsnachweis 23.10.: „Angebot erbeten“ aus
+              // der Anfrage, „bitte um Angebot“ aus dem Betreff der Antwort → Widerspruch → sinnlose Rückfrage „Angebotswunsch?“). Sie wird als Ergänzung festgehalten; echte Änderungen erkennt die Korrekturprüfung (Hinweiswörter).
+              if (isSecondReading({ key: item.key, oldValue: String(refined.value), newValue: item.value, fromSameMessage: refined.sourceRef === `message:${message.id}`, messageHasChangeCue: cueSentences(String(message.bodyText ?? message.bodyPreview ?? '')) !== undefined })) {
+                await this.facts.propose(ctx.tenantId, caseId, [{ key: `${item.key}.ergaenzung.${message.id.slice(0, 8)}`, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence] }]);
+                rejected.push({ key: item.key, reason: 'andere Fassung ohne Änderungshinweis: als Ergänzung festgehalten' });
                 continue;
               }
             }
