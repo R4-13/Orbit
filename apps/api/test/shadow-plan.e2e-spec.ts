@@ -172,9 +172,28 @@ describe('Schattenbetrieb (e2e)', () => {
     const spy = jest.spyOn(app.get(PlannerService), 'shadowPropose');
     expect(await shadow.record(tenantId, next.id)).toBe('LIMIT_REACHED');
     expect(spy).not.toHaveBeenCalled();
-    const event = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: next.id, type: 'shadow.plan_proposed' } });
+    const event = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: next.id, type: 'shadow.plan_refused' } });
     expect(event.payload).toMatchObject({ available: false, limit: SHADOW_PLAN_LIMIT_PER_TENANT });
+    // Der abgelehnte Versuch verbraucht nichts: weder ein Planungs-Ereignis noch ein Verbrauchs-Eintrag (früher: Zähler 61 von 60)
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { tenantId, type: 'shadow.plan_proposed' } })).toBe(SHADOW_PLAN_LIMIT_PER_TENANT);
+    expect(await prisma.forTenantId(tenantId).auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } })).toBe(0);
+    expect(await shadow.record(tenantId, next.id)).toBe('LIMIT_REACHED'); // wiederholt: weiterhin abgelehnt, weiterhin ohne Verbrauch
+    expect(await prisma.forTenantId(tenantId).auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } })).toBe(0);
     spy.mockRestore();
+  });
+
+  it('gleichzeitige Aufrufe können die Obergrenze nicht gemeinsam überschreiten (Reservierung unter Sperre): bei 59 verbrauchten darf genau einer planen', async () => {
+    const tenantId = await newTenant();
+    await setShadow(tenantId, true);
+    const holder = await prisma.forTenantId(tenantId).case.create({ data: { tenantId, type: 'SALES', title: 'Zähler' } });
+    await prisma.forTenantId(tenantId).caseEvent.createMany({
+      data: Array.from({ length: SHADOW_PLAN_LIMIT_PER_TENANT - 1 }, (_, i) => ({ tenantId, caseId: holder.id, sequence: 1000 + i, type: 'shadow.plan_proposed', payload: { stage: 'DONE', available: true }, dedupeKey: `test-shadow-par-${i}` })),
+    });
+    const cases = await Promise.all([1, 2, 3, 4].map((n) => prisma.forTenantId(tenantId).case.create({ data: { tenantId, type: 'SALES', title: `Parallel ${n}` } })));
+    const results = await Promise.all(cases.map((c) => shadow.record(tenantId, c.id)));
+    expect(results.filter((r) => r !== 'LIMIT_REACHED')).toHaveLength(1); // genau eine Planung (hier „nicht verfügbar“, weil kein Plan hinterlegt ist), die übrigen abgelehnt
+    expect(results.filter((r) => r === 'LIMIT_REACHED')).toHaveLength(3);
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { tenantId, type: 'shadow.plan_proposed' } })).toBe(SHADOW_PLAN_LIMIT_PER_TENANT);
   });
 
   it('ist die Planung nicht verfügbar (z. B. Kill-Switch), steht das ehrlich im Protokoll – nichts wird ersatzweise ausgeführt', async () => {

@@ -54,6 +54,8 @@ export const CASE_EVENT_TYPES = {
   COMPLETED: 'case.completed',
   /** Schattenbetrieb: der freie Planer hat zu diesem Vorgang mitgeplant, ohne etwas auszuführen (Bewertung der Planung, kein Plan im Vorgang). */
   SHADOW_PLAN_PROPOSED: 'shadow.plan_proposed',
+  /** Ein Versuch, der an der Obergrenze scheiterte: zählt **nicht** als verbrauchte Planung. */
+  SHADOW_PLAN_REFUSED: 'shadow.plan_refused',
   /** Eine Person hat den Umfang der Wirkungen eines frei geplanten Plans freigegeben; spätere Neuplanungen innerhalb dieses Umfangs brauchen keine neue Freigabe. */
   PLAN_SCOPE_APPROVED: 'plan.scope_approved',
   /** Der Hauptvorgang einer Nachricht mit mehreren Anliegen wurde in Teilvorgänge aufgeteilt (nennt die Teilvorgänge). */

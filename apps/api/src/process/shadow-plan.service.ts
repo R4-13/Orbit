@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@orbit/domain';
 import { FEATURE_FLAGS, SHADOW_PLAN_LIMIT_PER_TENANT, rateShadowPlan } from '@orbit/shared';
-import { AuditService } from '../audit/audit.service';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CapabilityRegistryService } from './capability-registry.service';
@@ -30,7 +29,6 @@ export class ShadowPlanService {
     private readonly capabilities: CapabilityRegistryService,
     private readonly events: CaseEventsService,
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService,
   ) {}
 
   /** Ohne Rückgabewert und ohne Ausnahme – für den Aufruf aus dem Eingang ohne Warten (`void`). */
@@ -49,28 +47,42 @@ export class ShadowPlanService {
     return typeof category === 'string' ? category : undefined;
   }
 
+  /** Atomar: vorhandene Planung → `ALREADY_DONE`; Grenze erreicht → Ablehnung ohne Verbrauch; sonst Reservierung samt Audit-Eintrag (Rückgabe: Kennung des Ereignisses). */
+  private async reserve(tenantId: string, caseId: string): Promise<'ALREADY_DONE' | 'LIMIT_REACHED' | string> {
+    return this.prisma.inTenantTransaction(tenantId, async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shadow:${tenantId}`}))`;
+      if (await tx.caseEvent.findFirst({ where: { caseId, dedupeKey: `shadow:${caseId}` }, select: { id: true } })) return 'ALREADY_DONE' as const;
+      const used = Math.max(
+        await tx.caseEvent.count({ where: { tenantId, type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED } }),
+        await tx.auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } }),
+      );
+      if (used >= SHADOW_PLAN_LIMIT_PER_TENANT) {
+        await this.events.appendInTx(tx, tenantId, caseId, {
+          type: CASE_EVENT_TYPES.SHADOW_PLAN_REFUSED,
+          payload: { stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht.`, limit: SHADOW_PLAN_LIMIT_PER_TENANT, used },
+          dedupeKey: `shadow-refused:${caseId}`,
+        });
+        return 'LIMIT_REACHED' as const;
+      }
+      const reserved = await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED, payload: { stage: 'RESERVED', available: null }, dedupeKey: `shadow:${caseId}` });
+      await tx.auditLog.create({ data: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: reserved.event.id } } });
+      return reserved.event.id;
+    });
+  }
+
   async record(tenantId: string, caseId: string, intentSummary?: string): Promise<ShadowOutcome> {
     if (!(await this.platformControl.flagEnabled(FEATURE_FLAGS.PLANNER_SHADOW, tenantId))) return 'DISABLED';
 
-    // 1. Reservieren: das Ereignis ist zugleich die Zählung. Ein zweiter Aufruf für denselben Vorgang findet es (dedupeKey) und plant nicht noch einmal.
-    const reserved = await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED, payload: { stage: 'RESERVED', available: null }, dedupeKey: `shadow:${caseId}` });
-    if (reserved.duplicate) return 'ALREADY_DONE';
-    const eventId = reserved.event.id;
+    // 1. Zählen und Reservieren in EINEM Schritt unter einer Sperre je Mandant: wer an der Grenze scheitert, verbraucht nichts (früher schrieb auch der abgelehnte Versuch einen Verbrauchs-Eintrag – der
+    //    Zähler stand dann bei 61 von 60, obwohl genau 60 Planungen liefen), und zwei gleichzeitige Aufrufe können die Grenze nicht gemeinsam überschreiten.
+    //    Die Zählung ist **dauerhaft**: jede verbrauchte Planung hinterlässt zusätzlich einen Audit-Eintrag, der das Löschen des Vorgangs überlebt – wer Testvorgänge löscht, setzt den Zähler nicht zurück.
+    //    Maßgeblich ist der größere der beiden Werte. Ein zweiter Aufruf für denselben Vorgang findet das Ereignis (dedupeKey) und plant nicht noch einmal.
+    const reservation = await this.reserve(tenantId, caseId);
+    if (reservation === 'ALREADY_DONE') return 'ALREADY_DONE';
+    if (reservation === 'LIMIT_REACHED') return 'LIMIT_REACHED';
+    const eventId = reservation;
     const finish = (payload: Record<string, unknown>) =>
       this.prisma.forTenantId(tenantId).caseEvent.update({ where: { id: eventId }, data: { payload: payload as Prisma.InputJsonValue } });
-
-    // 2. Zählen (inklusive des eigenen Ereignisses): über der Grenze wird nicht geplant. Die Zählung ist **dauerhaft**: jede verbrauchte Planung hinterlässt zusätzlich einen Audit-Eintrag, der das
-    //    Löschen des Vorgangs überlebt – wer Testvorgänge löscht, setzt den Zähler nicht zurück. Maßgeblich ist der größere der beiden Werte.
-    await this.audit.record({ tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: eventId } });
-    const scoped = this.prisma.forTenantId(tenantId);
-    const used = Math.max(
-      await scoped.caseEvent.count({ where: { tenantId, type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED } }),
-      await scoped.auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } }),
-    );
-    if (used > SHADOW_PLAN_LIMIT_PER_TENANT) {
-      await finish({ stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht.`, limit: SHADOW_PLAN_LIMIT_PER_TENANT });
-      return 'LIMIT_REACHED';
-    }
 
     const proposed = await this.planner.shadowPropose(tenantId, caseId, intentSummary);
     if (proposed.status === 'UNAVAILABLE') {
