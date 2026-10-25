@@ -29,6 +29,13 @@ function check(name: string, ok: boolean, detail?: unknown): void {
   if (!ok) failures += 1;
 }
 
+async function dealStage(id: string): Promise<{ pipeline?: string; dealstage?: string } | undefined> {
+  const response = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${id}?properties=pipeline,dealstage`, { headers: { Authorization: `Bearer ${key}` } });
+  if (!response.ok) return undefined;
+  const body = (await response.json()) as { properties?: { pipeline?: string; dealstage?: string } };
+  return { pipeline: body.properties?.pipeline, dealstage: body.properties?.dealstage };
+}
+
 async function main(): Promise<void> {
   const access = await hub.verifyAccess(key as string);
   check('Schlüssel und Berechtigungen (Kontakte, Unternehmen, Deals)', access.ok, access);
@@ -61,6 +68,26 @@ async function main(): Promise<void> {
   const lead = await hub.createLead({ tenantId, contactExternalId: contact.externalId, companyExternalId: company.externalId, source: 'EMAIL', notes: `ORBIT-Test ${tag}: Anfrage Wärmepumpe` });
   created.push(['deals', lead.externalId]);
   check('Anfrage als Deal angelegt (erste Phase der ersten Pipeline)', /^\d+$/.test(lead.externalId), lead);
+
+
+  // Meilenstein B: den angelegten Lead lesen, ergänzen/korrigieren und zurücklesen – nur dieses eine Testobjekt, ohne Phase, Besitzer oder Verknüpfungen zu berühren.
+  const read1 = await hub.readLead({ tenantId, externalId: lead.externalId });
+  check('Lead (Deal) wird gelesen: Beschreibung und Name', read1?.notes === `ORBIT-Test ${tag}: Anfrage Wärmepumpe`, read1);
+  const stageBefore = await dealStage(lead.externalId);
+  const text = `ORBIT-Test ${tag}: Anfrage Wärmepumpe
+
+Angaben der Kundschaft:
+- Vorhandene Heizung: Gasheizung von 1995
+- Standort: Köln, Musterstraße 12`;
+  await hub.updateLead({ tenantId, externalId: lead.externalId, title: `ORBIT-Test ${tag} – Anfrage Wärmepumpe`, notes: text });
+  const read2 = await hub.readLead({ tenantId, externalId: lead.externalId });
+  check('Nach dem Ändern: Rücklesen liefert genau den geschriebenen Stand', read2?.notes?.replace(/s+/g, ' ') === text.replace(/s+/g, ' ') && read2?.title === `ORBIT-Test ${tag} – Anfrage Wärmepumpe`, read2);
+  await hub.updateLead({ tenantId, externalId: lead.externalId, title: `ORBIT-Test ${tag} – Anfrage Wärmepumpe`, notes: text });
+  const read3 = await hub.readLead({ tenantId, externalId: lead.externalId });
+  check('Dasselbe noch einmal geschrieben: unverändert, kein zweiter Deal', read3?.notes === read2?.notes && read3?.title === read2?.title);
+  const stageAfter = await dealStage(lead.externalId);
+  check('Phase und Pipeline blieben unberührt', stageBefore !== undefined && JSON.stringify(stageBefore) === JSON.stringify(stageAfter), { stageBefore, stageAfter });
+  check('Ein nicht vorhandener Deal liefert „nicht gefunden“ (kein Fehler)', (await hub.readLead({ tenantId, externalId: '999999999999' })) === null);
 
   await hub.logActivity({ tenantId, contactExternalId: contact.externalId, activityType: 'EMAIL_RECEIVED', summary: `ORBIT-Test ${tag}`, occurredAt: new Date() });
   check('Notiz am Kontakt angelegt', true);

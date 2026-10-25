@@ -1,0 +1,14 @@
+HubSpot-Live-Prüfung des Adapters (apps/api/scripts/hubspot-live-check.ts), 2026-10-25, gegen den echten HubSpot-Testaccount.
+Neu in dieser Fassung: Lead (Deal) lesen, ändern, zurücklesen (GET/PATCH /crm/v3/objects/deals/{id}); die Testobjekte (Unternehmen, Kontakt, Deal) wurden vom Skript angelegt und am Ende archiviert (HubSpot-Papierkorb, 90 Tage).
+
+OK     Schlüssel und Berechtigungen (Kontakte, Unternehmen, Deals)
+OK     Unternehmen angelegt / über die Domain wiedergefunden, nicht doppelt angelegt
+OK     Kontakt angelegt, wiedergefunden, nicht überschrieben
+OK     Anfrage als Deal angelegt (erste Phase der ersten Pipeline) – Deal 531270910161
+OK     Lead (Deal) wird gelesen: Beschreibung und Name
+OK     Nach dem Ändern: Rücklesen liefert genau den geschriebenen Stand (Name und Beschreibung mit Zeilenumbrüchen und Umlauten)
+OK     Dasselbe noch einmal geschrieben: unverändert, kein zweiter Deal
+OK     Phase und Pipeline blieben unberührt (pipeline "default", dealstage "appointmentscheduled" vorher und nachher)
+OK     Ein nicht vorhandener Deal liefert „nicht gefunden“ (kein Fehler)
+OK     Notiz am Kontakt angelegt
+Aufgeräumt: 3 Testdatensätze archiviert. Alles in Ordnung.
