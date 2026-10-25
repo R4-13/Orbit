@@ -57,7 +57,18 @@ export function cueSentences(body: string): string | undefined {
   return sentences.filter((_, index) => wanted.has(index)).join(' ').slice(0, 500);
 }
 
-const NUMERIC_REPLACEMENT = /\bnicht\s+(?:mehr\s+)?(?:(?:von|auf|bei|mit|um|ca\.?|etwa|circa)\s+)?(\d+(?:[.,]\d+)?)\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:(?:doch|nun|jetzt|von|auf|bei|mit|um|ca\.?|etwa|circa)\s+)*(\d+(?:[.,]\d+)?)/gi;
+/** Zahlwörter, die eine Menge nennen („nicht vier, sondern sechs Heizkörper“); größere Zahlen schreibt man meist als Ziffern. */
+const NUMBER_WORDS: Record<string, number> = { eins: 1, eine: 1, ein: 1, zwei: 2, drei: 3, vier: 4, fünf: 5, sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, zwölf: 12 };
+const WORD_ALTERNATIVES = Object.keys(NUMBER_WORDS).join('|');
+const NUMBER_TOKEN = String.raw`\d+(?:[.,]\d+)?|(?:${WORD_ALTERNATIVES})(?![a-zäöüß])`;
+const NUMERIC_REPLACEMENT = new RegExp(
+  String.raw`\bnicht\s+(?:mehr\s+)?(?:(?:von|auf|bei|mit|um|ca\.?|etwa|circa)\s+)?(${NUMBER_TOKEN})\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|m|l|%|€|euro)?\s*,?\s*sondern\s+(?:(?:doch|nun|jetzt|von|auf|bei|mit|um|ca\.?|etwa|circa)\s+)*(${NUMBER_TOKEN})`,
+  'gi',
+);
+const numberOf = (token: string): number => NUMBER_WORDS[token.toLowerCase()] ?? Number(token.replace(',', '.'));
+const WORD_RE = new RegExp(String.raw`(?:^|[^a-zäöüß])(?:${WORD_ALTERNATIVES})(?![a-zäöüß])`, 'i');
+/** Enthält ein Textwert eine Zahl (als Ziffern oder Zahlwort)? */
+const hasNumber = (value: string): boolean => /\d/.test(value) || WORD_RE.test(value);
 const UNIT_ALIASES: Record<string, string> = { 'm²': 'm2', qm: 'm2', quadratmeter: 'm2', kilowatt: 'kw', euro: '€' };
 const normalizeUnit = (unit: string | undefined): string | undefined => (unit ? (UNIT_ALIASES[unit.toLowerCase()] ?? unit.toLowerCase()) : undefined);
 const STOPWORDS = new Set(
@@ -72,6 +83,7 @@ const sameStem = (a: string, b: string): boolean => a === b || (a.length >= 4 &&
 
 /** Eine bekannte Zahl mit den Wörtern ihres Gegenstands (Schlüssel, Satz der ursprünglichen Nachricht) und ihrer Einheit. */
 const numberToken = (n: number): RegExp => new RegExp('(^|[^0-9])' + String(n).replace('.', '[.,]') + '([^0-9]|$)');
+const wordToken = (word: string): RegExp => (word.toLowerCase() in NUMBER_WORDS ? new RegExp(String.raw`(^|[^a-zäöüß])${word}(?![a-zäöüß])`, 'i') : /(?!)/);
 
 export interface AnchoredNumber {
   key: string;
@@ -88,8 +100,8 @@ export interface AnchoredNumber {
 export function numericReplacements(body: string, known: AnchoredNumber[]): Array<{ key: string; newValue: number | string; evidence: string; kind: 'CORRECTION'; reason: string }> {
   const updates: Array<{ key: string; newValue: number | string; evidence: string; kind: 'CORRECTION'; reason: string }> = [];
   for (const match of body.matchAll(NUMERIC_REPLACEMENT)) {
-    const from = Number(match[1]!.replace(',', '.'));
-    const to = Number(match[3]!.replace(',', '.'));
+    const from = numberOf(match[1]!);
+    const to = numberOf(match[3]!);
     if (to === from) continue;
     const evidence = match[0].trim().slice(0, 300);
     const unit = normalizeUnit(match[2]);
@@ -99,7 +111,7 @@ export function numericReplacements(body: string, known: AnchoredNumber[]): Arra
     if (isHedged(sentence)) continue;
     const words = contentWords(sentence.replace(match[0], ' '));
     const candidates = known
-      .filter((fact) => ((typeof fact.value === 'number' && fact.value === from) || (typeof fact.value === 'string' && numberToken(from).test(fact.value))) && !updates.some((u) => u.key === fact.key))
+      .filter((fact) => ((typeof fact.value === 'number' && fact.value === from) || (typeof fact.value === 'string' && (numberToken(from).test(fact.value) || wordToken(match[1]!).test(fact.value)))) && !updates.some((u) => u.key === fact.key))
       .filter((fact) => !unit || !fact.unit || normalizeUnit(fact.unit) === unit);
     if (candidates.length === 0) continue;
     const scored = candidates.map((fact) => ({ fact, overlap: fact.anchors.filter((anchor) => words.some((word) => sameStem(anchor, word))).length }));
@@ -108,7 +120,12 @@ export function numericReplacements(body: string, known: AnchoredNumber[]): Arra
     // Mehrdeutig (mehrere gleich passende Angaben) oder ohne Bezug zum Gegenstand: keine Zuordnung – dann klärt eine Rückfrage statt einer geratenen Änderung.
     if (chosen.length !== 1) continue;
     const target = chosen[0]!.fact;
-    const newValue = typeof target.value === 'string' ? target.value.replace(numberToken(from), (whole, before: string, after: string) => `${before}${match[3]}${after}`) : to;
+    const newValue =
+      typeof target.value === 'string'
+        ? numberToken(from).test(target.value)
+          ? target.value.replace(numberToken(from), (whole, before: string, after: string) => `${before}${match[3]}${after}`)
+          : target.value.replace(wordToken(match[1]!), (whole, before: string) => `${before}${match[3]}`)
+        : to;
     updates.push({ key: target.key, newValue, evidence, kind: 'CORRECTION', reason: 'ausdrücklicher Ersatz „nicht A, sondern B“ (Gegenstand passt)' });
   }
   return updates;
@@ -176,13 +193,13 @@ export class FactCorrectionService implements OnModuleInit {
     const scoped = this.prisma.forTenantId(tenantId);
     const result: AnchoredNumber[] = [];
     for (const fact of facts) {
-      const textWithNumber = typeof fact.value === 'string' && /\d/.test(fact.value);
+      const textWithNumber = typeof fact.value === 'string' && hasNumber(fact.value);
       if (typeof fact.value !== 'number' && !textWithNumber) continue;
       const messageId = /^message:(.+)$/.exec(fact.sourceRef ?? '')?.[1];
       const source = messageId ? await scoped.emailMessage.findFirst({ where: { id: messageId }, select: { bodyText: true } }) : null;
-      const digits = typeof fact.value === 'number' ? String(fact.value).replace('.', '[.,]') : '\\d+(?:[.,]\\d+)?';
+      const digits = typeof fact.value === 'number' ? String(fact.value).replace('.', '[.,]') : NUMBER_TOKEN;
       const sentences = splitSentences(source?.bodyText ?? '');
-      const at = sentences.findIndex((s) => new RegExp('(^|[^0-9])' + digits + '([^0-9]|$)').test(s));
+      const at = sentences.findIndex((s) => new RegExp('(^|[^0-9])(?:' + digits + ')([^0-9]|$)', 'i').test(s));
       // Der Satz mit der Zahl und der davor (Abkürzungen wie „ca.“ trennen sonst den Gegenstand von der Zahl).
       const sentence = at >= 0 ? sentences.slice(Math.max(0, at - 1), at + 1).join(' ') : (fact.evidenceRefs ?? []).join(' ');
       const unit = normalizeUnit(/\d\s*(m²|m2|qm|quadratmeter|stück|kw|kilowatt|liter|cm|mm|%|€|euro)\b/i.exec(sentence)?.[1] ?? /_(m2|kw|cm|mm|l)\b/i.exec(fact.key)?.[1]);
@@ -253,9 +270,19 @@ ${lines}`,
         if (collected.length > 0) parsed = { success: true, data: { updates: collected } } as typeof parsed;
       }
     }
-    if (!parsed.success || parsed.data.updates.length === 0) {
-      const replaced = numericReplacements(body, await this.anchored(tenantId, known));
-      if (replaced.length > 0) parsed = { success: true, data: { updates: replaced } } as typeof parsed;
+    // Der ausdrückliche Ersatz „nicht A, sondern B“ ist ein Satzbau, keine Deutung: wo er einer bekannten Zahl genau zugeordnet werden kann, gilt er – auch gegenüber dem Vorschlag der KI. Bei einem Textwert („Gasheizung von 1985“)
+    // ersetzt er nur die Zahl; die KI meldet gern nur den neuen Teil („1995“) und würde den unveränderten Rest („Gasheizung“) verlieren.
+    const replaced = numericReplacements(body, await this.anchored(tenantId, known));
+    if (replaced.length > 0) {
+      const modelUpdates = parsed.success ? parsed.data.updates : [];
+      const merged = [
+        ...modelUpdates.map((u) => {
+          const exact = replaced.find((r) => r.key === u.key && typeof r.newValue === 'string');
+          return exact ? { ...u, newValue: exact.newValue as string, evidence: exact.evidence, kind: 'CORRECTION' as const } : u;
+        }),
+        ...replaced.filter((r) => !modelUpdates.some((u) => u.key === r.key)),
+      ];
+      parsed = { success: true, data: { updates: merged } } as typeof parsed;
     }
     const knownKeys = [...new Set(known.map((f) => f.key))];
     if (!parsed.success || parsed.data.updates.length === 0) {
@@ -350,6 +377,8 @@ ${lines}`,
   private async flagCorrectionAfterHandover(tenantId: string, caseId: string, messageId: string, corrected: FactCorrectionOutcome['corrected']): Promise<void> {
     const scoped = this.prisma.forTenantId(tenantId);
     const row = await scoped.case.findUnique({ where: { id: caseId }, select: { orchestrationStatus: true } });
+    // Ein Lead mit CRM-Bezug wird vom Abgleich nach der Übergabe (SupplementService/LeadSyncService) nachgeführt – nicht mehr nur als Aufgabe vermerkt.
+    if ((await scoped.lead.count({ where: { caseId, crmExternalId: { not: null } } })) > 0) return;
     const handedOver = (await scoped.actionIntent.count({ where: { caseId, capabilityKey: 'crm.lead.create', status: 'CONFIRMED' } })) > 0;
     if (!handedOver && row?.orchestrationStatus !== 'COMPLETED') return;
     const title = `Korrektur nach Übergabe (${messageId.slice(0, 8)})`;

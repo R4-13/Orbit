@@ -42,6 +42,8 @@ interface Script {
   waits: Array<'ANSWER' | 'TIMEOUT'>;
   /** Ob die Kundschaft einen Termin gewählt hat (Fakt appointment.agreed) und die Buchung gelingt. */
   appointment?: 'BOOKED' | 'CHOSEN_BUT_REFUSED' | 'NONE';
+  /** Die Kundschaft hat eine Preisfrage gestellt; die Auskunft aus dem Betriebswissen ist beantwortbar oder nicht. */
+  price?: 'ANSWERABLE' | 'NOT_ANSWERABLE';
 }
 
 /** Spielt den Ablauf nach den Regeln der Engine (`nextActions`) durch und liefert die ausgeführten Schritte. */
@@ -55,7 +57,7 @@ function simulate(script: Script): { executed: string[]; skipped: string[] } {
   const edges: RuntimeEdge[] = graph.edges.map((e) => ({ key: e.id, source: e.source, target: e.target, condition: e.condition }));
   for (let guard = 0; guard < 200; guard += 1) {
     const ctx = {
-      facts: { 'contact.email': 'kunde@example.test', ...(script.appointment && script.appointment !== 'NONE' ? { 'appointment.agreed': 'Dienstag 10 Uhr' } : {}) },
+      facts: { 'contact.email': 'kunde@example.test', ...(script.appointment && script.appointment !== 'NONE' ? { 'appointment.agreed': 'Dienstag 10 Uhr' } : {}), ...(script.price ? { 'request.price_question': 'Was kostet das?' } : {}) },
       stepOutputs: outputs,
       config: {},
       sourceRefs: {},
@@ -87,6 +89,8 @@ function simulate(script: Script): { executed: string[]; skipped: string[] } {
           continue;
         }
         outputs.book = { eventId: 'cal-1', start: '2026-10-20T08:00:00Z', end: '2026-10-20T09:00:00Z', kind: 'SITE_VISIT' };
+      } else if (action.nodeKey === 'kb') {
+        outputs.kb = { answerable: script.price === 'ANSWERABLE', answer: script.price === 'ANSWERABLE' ? 'Preise nennen wir nach Besichtigung.' : '' };
       } else if (action.nodeKey === 'lead') {
         outputs.lead = { leadId: 'lead-1' };
       } else {
@@ -111,10 +115,10 @@ describe('Blueprint „Anfrage aufnehmen und übergeben“', () => {
     expect(blueprint.dynamicRequirements?.outcome).toBe('HANDOFF');
   });
 
-  it('ist als Plan zulässig – drei Klärungsrunden, höchstens sechs externe Aktionen', () => {
+  it('ist als Plan zulässig – zwei Klärungsrunden, höchstens sechs externe Aktionen', () => {
     const result = validatePlan(proposal(), validationContext());
     expect(errorCodes(result)).toEqual([]);
-    expect(result.stats).toMatchObject({ clarifications: 3, externalActions: 6 });
+    expect(result.stats).toMatchObject({ clarifications: 2, externalActions: 6 });
   });
 
   it('bleibt auch für Betriebe ohne Kalender zulässig (der Buchungsschritt entfällt dort), nicht aber ohne die Übergabe selbst', () => {
@@ -123,8 +127,8 @@ describe('Blueprint „Anfrage aufnehmen und übergeben“', () => {
     expect(errorCodes(validatePlan(proposal(), validationContext(['email.send'])))).toContain('CAPABILITY_NOT_EXECUTABLE:ask1');
   });
 
-  it('eine vierte Klärungsrunde wäre über der Plattformgrenze', () => {
-    const extra = { ...proposal(), nodes: [...graph.nodes, { ...(graph.nodes.find((n) => n.id === 'ask3') as PlanNode), id: 'ask4' }] };
+  it('eine dritte Klärungsrunde wäre über der Grenze dieses Ablaufs', () => {
+    const extra = { ...proposal(), nodes: [...graph.nodes, { ...(graph.nodes.find((n) => n.id === 'ask2') as PlanNode), id: 'ask3' }] };
     expect(errorCodes(validatePlan(extra, validationContext()))).toContain('LIMIT_QUESTIONS:');
   });
 
@@ -139,15 +143,15 @@ describe('Blueprint „Anfrage aufnehmen und übergeben“', () => {
       const { executed, skipped } = simulate({ available: FULL, complete: [false, true], waits: ['ANSWER'] });
       expect(asked(executed)).toEqual(['ask1']);
       expect(executed).toContain('reqs2');
-      expect(skipped).toEqual(expect.arrayContaining(['ask2', 'ask3', 'wait2', 'wait3']));
+      expect(skipped).toEqual(expect.arrayContaining(['ask2', 'wait2']));
       expect(executed.indexOf('lead')).toBeGreaterThan(executed.indexOf('reqs2'));
     });
 
-    it('fehlt auch nach drei Antworten noch etwas, wird nicht weiter gefragt: die Anfrage geht mit den offenen Punkten an einen Menschen', () => {
-      const { executed } = simulate({ available: FULL, complete: [false, false, false, false], waits: ['ANSWER', 'ANSWER', 'ANSWER'] });
-      expect(asked(executed)).toEqual(['ask1', 'ask2', 'ask3']);
+    it('fehlt auch nach zwei Antworten noch etwas, wird nicht weiter gefragt: die Anfrage geht mit den offenen Punkten an einen Menschen', () => {
+      const { executed } = simulate({ available: FULL, complete: [false, false, false], waits: ['ANSWER', 'ANSWER'] });
+      expect(asked(executed)).toEqual(['ask1', 'ask2']);
       expect(executed).toEqual(expect.arrayContaining(['lead', 'notify', 'done']));
-      expect(executed.indexOf('lead')).toBeGreaterThan(executed.indexOf('reqs4'));
+      expect(executed.indexOf('lead')).toBeGreaterThan(executed.indexOf('reqs3'));
     });
 
     it('bleibt die Antwort aus, entfallen die weiteren Runden – die Anfrage wird mit dem übergeben, was vorliegt', () => {
@@ -174,6 +178,25 @@ describe('Blueprint „Anfrage aufnehmen und übergeben“', () => {
       const { executed, skipped } = simulate({ available: FULL, complete: [false, true], waits: ['ANSWER'], appointment: 'CHOSEN_BUT_REFUSED' });
       expect(skipped).toContain('confirm');
       expect(executed).toEqual(expect.arrayContaining(['book', 'lead', 'ack']));
+    });
+
+    it('mit Preisfrage und gesicherter Auskunft: die Auskunft geht hinaus, die Eingangsbestätigung entfällt (sie ist darin enthalten)', () => {
+      const { executed, skipped } = simulate({ available: FULL, complete: [true], waits: [], price: 'ANSWERABLE' });
+      expect(executed).toEqual(expect.arrayContaining(['lead', 'kb', 'info_draft', 'info']));
+      expect(skipped).toEqual(expect.arrayContaining(['ack_draft', 'ack']));
+      expect(executed.indexOf('info')).toBeGreaterThan(executed.indexOf('lead'));
+    });
+
+    it('mit Preisfrage ohne gesicherte Auskunft: keine Auskunft aus dem Nichts – es bleibt bei der Eingangsbestätigung, die Frage steht im Lead als offen', () => {
+      const { executed, skipped } = simulate({ available: FULL, complete: [true], waits: [], price: 'NOT_ANSWERABLE' });
+      expect(skipped).toEqual(expect.arrayContaining(['info_draft', 'info']));
+      expect(executed).toEqual(expect.arrayContaining(['kb', 'ack_draft', 'ack']));
+    });
+
+    it('ohne Preisfrage entfällt der Auskunftsteil ganz', () => {
+      const { executed, skipped } = simulate({ available: FULL, complete: [true], waits: [] });
+      expect(skipped).toEqual(expect.arrayContaining(['kb', 'info_draft', 'info']));
+      expect(executed).not.toContain('kb');
     });
 
     it('der Abschluss verlangt die Übergabe: erst der bestätigte Nachweis der Übergabe erfüllt das Kriterium', () => {

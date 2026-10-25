@@ -71,3 +71,24 @@ describe('Korrektur einer Zahl innerhalb eines Textwerts (Funktionsnachweis 23.1
     expect(numericReplacements('Die Heizung ist nicht von 1985, sondern vermutlich von 1995.', [heizung])).toEqual([]);
   });
 });
+
+describe('Meilenstein B: Textwerte bleiben bei einer Korrektur erhalten, Zahlwörter werden erkannt', () => {
+  const heizungText: AnchoredNumber = { key: 'ai.vorhandene_heizung', value: 'Gasheizung von 1985', anchors: contentWords('ai vorhandene heizung Gasheizung von 1985 Die vorhandene Heizung ist eine Gasheizung von 1985'), };
+  const heizkoerper: AnchoredNumber = { key: 'ai.anzahl_heizkoerper', value: 'vier', anchors: contentWords('ai anzahl heizkoerper vier Es sind vier Heizkörper: Wohnzimmer, Schlafzimmer, Küche und Bad.') };
+  const flaeche: AnchoredNumber = { key: 'ai.flaeche', value: '6 m²', anchors: contentWords('ai flaeche 6 m² Das Bad hat 6 m²'), unit: 'm2' };
+
+  it('ersetzt in einem Textwert nur die Zahl: aus „Gasheizung von 1985“ wird „Gasheizung von 1995“, nicht „1995“', () => {
+    const update = numericReplacements('Eine Korrektur: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.', [heizungText]);
+    expect(update.map((u) => [u.key, u.newValue])).toEqual([['ai.vorhandene_heizung', 'Gasheizung von 1995']]);
+  });
+
+  it('ersetzt ein Zahlwort („nicht vier, sondern sechs Heizkörper“) und lässt den Rest des Wertes stehen', () => {
+    const update = numericReplacements('Es sind nicht vier, sondern sechs Heizkörper – das Kinderzimmer und der Flur kommen dazu.', [heizkoerper]);
+    expect(update.map((u) => [u.key, u.newValue])).toEqual([['ai.anzahl_heizkoerper', 'sechs']]);
+  });
+
+  it('ersetzt einen Flächenwert mit Einheit im Text', () => {
+    const update = numericReplacements('Das Bad hat nicht 6 m², sondern 7 m².', [flaeche]);
+    expect(update.map((u) => [u.key, u.newValue])).toEqual([['ai.flaeche', '7 m²']]);
+  });
+});

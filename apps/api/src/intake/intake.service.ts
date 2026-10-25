@@ -1,5 +1,5 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { LLMCompletionRequest, LLMProvider } from '@orbit/agent-core';
 import { MockLLMProvider } from '@orbit/agent-core';
 import type { OrbitEnv } from '@orbit/config';
@@ -18,6 +18,7 @@ import { CaseLifecycleService } from '../process/case-lifecycle.service';
 import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
 import { BlueprintFitService, LEGACY_SALES_GUIDE, type BlueprintFitResult } from '../process/blueprint-fit.service';
 import { FactCorrectionService } from '../process/fact-correction.service';
+import { SupplementService } from '../process/supplement.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../process/case-events.service';
 import { CaseSplitService } from './case-split.service';
 import { ShadowPlanService } from '../process/shadow-plan.service';
@@ -110,6 +111,8 @@ function retryDelayMs(retryCount: number): number {
  */
 @Injectable()
 export class IntakeService {
+  private readonly logger = new Logger(IntakeService.name);
+
   constructor(
     @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
     @Inject(ORBIT_ENV) private readonly env: OrbitEnv,
@@ -134,6 +137,7 @@ export class IntakeService {
     private readonly fit: BlueprintFitService,
     private readonly caseEvents: CaseEventsService,
     private readonly corrections: FactCorrectionService,
+    private readonly supplements: SupplementService,
     @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
@@ -713,6 +717,8 @@ export class IntakeService {
     try {
       // FX-20: Jede neue Nachricht wird – unabhängig vom Prozessschritt – auf Korrekturen früher genannter Angaben geprüft, bevor der Vorgang weiterläuft: Planung und Aktionen sehen den aktuellen Stand.
       await this.corrections.processInboundSafely(tenantId, matched.id, inboundEmailId);
+      // Nach der Übergabe an das CRM: Ergänzung/Korrektur auswerten, Lead abgleichen, Bestätigung an die Kundschaft (Meilenstein B). Ein Fehler hier darf die Nachricht nicht verlieren.
+      await this.supplements.processLateMessage(tenantId, matched.id, inboundEmailId).catch((error: unknown) => this.logger.warn(`supplement of case ${matched.id} failed: ${error instanceof Error ? error.message : String(error)}`));
       await this.orchestrator.receiveInbound(tenantId, matched.id, {
         type: 'communication.received',
         payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: result.rule },

@@ -4,6 +4,8 @@ import { CaseEventsService } from './case-events.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
 import { InternalOrderService } from './internal-order.service';
 import { OrchestratorService } from './orchestrator.service';
+import { LeadSyncService } from './lead-sync.service';
+import { SupplementService } from './supplement.service';
 
 const BATCH = 50;
 /** A case that is IN_PROGRESS but untouched for this long, with no live lease, was most likely abandoned by a crashed worker. */
@@ -30,6 +32,8 @@ export class ProcessSweepService {
     private readonly orchestrator: OrchestratorService,
     private readonly live: LiveReconciliationService,
     private readonly orders: InternalOrderService,
+    private readonly leadSync: LeadSyncService,
+    private readonly supplements: SupplementService,
   ) {}
 
   async sweep(now = new Date()): Promise<SweepResult> {
@@ -70,6 +74,14 @@ export class ProcessSweepService {
 
     // Fälligkeit interner Aufträge: überfällige, noch offene Aufträge werden der zuständigen Person gemeldet (der Vorgang schließt dadurch nicht).
     await this.orders.raiseOverdue(now);
+
+    // Offene Lead-Abgleiche (CRM zeitweise nicht erreichbar, Berechtigung inzwischen erteilt) werden wiederholt; ein Konflikt nie von selbst aufgelöst.
+    try {
+      const retried = await this.leadSync.retryOpen(now);
+      for (const c of retried.cases) await this.supplements.resumeAfterSync(c.tenantId, c.caseId);
+    } catch (error) {
+      this.logger.warn(`sweep: lead sync retry failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     let advanced = 0;
     let failed = 0;

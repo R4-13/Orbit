@@ -22,7 +22,7 @@ const SENDER = 'tom@kunde.example';
 const REQUEST = 'Guten Tag, wir möchten unsere alte Gasheizung durch eine Wärmepumpe ersetzen. Das Haus hat ca. 140 m² Wohnfläche. Bitte melden Sie sich. Tom Kunde';
 
 /**
- * Der Ablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.0.0) Ende zu Ende gegen echte Postgres: Klärungsrunden (höchstens drei), Termin nur mit angebundenem
+ * Der Ablauf „Anfrage aufnehmen und übergeben“ (REQUEST_FOR_QUOTE 2.1.0) Ende zu Ende gegen echte Postgres: Klärungsrunden (höchstens zwei), Termin nur mit angebundenem
  * Kalender, Übergabe an das CRM mit Zusammenfassung, Benachrichtigung, Bestätigung an die Kundschaft. Das Modell zählt als echte KI und antwortet aus der Skript-Warteschlange;
  * Versand und Kalender sind Aufzeichnungs-Doubles – nichts verlässt den Testprozess. ORBIT erstellt in diesem Ablauf weder ein Angebot noch einen Preis.
  */
@@ -157,11 +157,11 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     expect(await prisma.forTenantId(tenantId).attentionItem.count({ where: { caseId, kind: 'NOTIFY_REQUEST' } })).toBe(1);
 
     const row = await caseOf(tenantId, caseId);
-    expect(row).toMatchObject({ blueprintKey: 'REQUEST_FOR_QUOTE', blueprintVersion: '2.0.1', orchestrationStatus: 'COMPLETED' });
+    expect(row).toMatchObject({ blueprintKey: 'REQUEST_FOR_QUOTE', blueprintVersion: '2.1.0', orchestrationStatus: 'COMPLETED' });
     expect(row.outcome).toMatchObject({ code: 'COMPLETION_CRITERIA_MET' });
   });
 
-  it('bleibt die Antwort unvollständig, wird höchstens dreimal gefragt – danach geht die Anfrage mit den offenen Punkten an einen Menschen', async () => {
+  it('bleibt die Antwort unvollständig, wird höchstens zweimal gefragt – danach geht die Anfrage mit den offenen Punkten an einen Menschen', async () => {
     const tenantId = await newTenant();
     seedTriage();
     seedExtraction();
@@ -170,20 +170,18 @@ describe('Anfrage aufnehmen und übergeben (e2e)', () => {
     const caseId = first.case!.id;
     expect(sent).toHaveLength(1);
 
-    for (const n of [1, 2]) {
-      seedExtraction();
-      await reply(tenantId, `Das weiß ich leider nicht (${n}).`, n);
-      expect(sent).toHaveLength(n + 1);
-      expect(sent[n]!.bodyText).toContain('vielen Dank für Ihre Antwort');
-      expect(sent[n]!.bodyText).toContain('fehlen uns noch folgende Angaben');
-    }
     seedExtraction();
-    await reply(tenantId, 'Tut mir leid, dazu kann ich nichts sagen (3).', 3);
+    await reply(tenantId, 'Das weiß ich leider nicht (1).', 1);
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.bodyText).toContain('vielen Dank für Ihre Antwort');
+    expect(sent[1]!.bodyText).toContain('fehlen uns noch folgende Angaben');
+    seedExtraction();
+    await reply(tenantId, 'Tut mir leid, dazu kann ich nichts sagen (2).', 2);
 
-    // Nach der dritten Antwort keine vierte Frage: Übergabe mit offenem Punkt, dann Eingangsbestätigung.
-    expect(await nodeState(tenantId, caseId, 'ask3')).toBe('SUCCEEDED');
+    // Nach der zweiten Antwort keine dritte Frage: Übergabe mit offenem Punkt, dann Eingangsbestätigung.
+    expect(await nodeState(tenantId, caseId, 'ask2')).toBe('SUCCEEDED');
     expect(await nodeState(tenantId, caseId, 'lead')).toBe('SUCCEEDED');
-    expect(sent.map((m) => m.bodyText.includes('Sie ist bei uns eingegangen'))).toEqual([false, false, false, true]);
+    expect(sent.map((m) => m.bodyText.includes('Sie ist bei uns eingegangen'))).toEqual([false, false, true]);
     const lead = await prisma.forTenantId(tenantId).lead.findFirstOrThrow({ where: { caseId } });
     expect(lead.notes).toContain('Noch offen:\n- Soll die Wärmepumpe auch das Warmwasser übernehmen?');
     expect(lead.notes).toContain('- Wohnfläche: 140 m²');

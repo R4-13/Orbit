@@ -14,13 +14,11 @@ import { PolicyEnforcementService } from '../../policy/policy-enforcement.servic
 import { PrismaService } from '../../prisma/prisma.service';
 import { ActionLedgerService } from '../action-ledger.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
-import { CaseFactsService } from '../case-facts.service';
 import { CustomerRecordService, splitDisplayName } from '../customer/customer-record.service';
 import { APPOINTMENT_LABELS, type AppointmentKind } from './appointment-slots';
 import { buildCalendarPool, pickCalendar, type PoolCalendar } from './calendar-pool';
-import { buildHandoffSummary } from './handoff-summary';
-import { APPOINTMENT_AGREED_KEY, isSafeCustomerText } from './request-analysis';
-import { RequestAnalysisService } from './request-analysis.service';
+import { HandoffComposerService } from './handoff-composer.service';
+import { isSafeCustomerText } from './request-analysis';
 import { messageCaseIds } from '../case-scope';
 
 const SUBMIT_KNOWLEDGE_TOOL = 'submit_knowledge_answer';
@@ -28,8 +26,6 @@ const SUBMIT_SLOT_TOOL = 'submit_slot_choice';
 const MAX_TEXT_CHARS = 6_000;
 /** Unterhalb dieser Sicherheit wird nicht geantwortet: lieber ein Mensch als eine unsichere Auskunft im Namen des Betriebs. */
 const MIN_ANSWER_CONFIDENCE = 0.7;
-/** Länge der Übergabe-Zusammenfassung im CRM (HubSpot-Deal: Beschreibung). */
-const HANDOFF_MAX_CHARS = 2000;
 
 const normalize = (text: string): string => text.toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -66,8 +62,7 @@ export class AssistProcessTools implements OnModuleInit {
     private readonly leads: LeadsService,
     private readonly attention: AttentionService,
     private readonly caseEvents: CaseEventsService,
-    private readonly caseFacts: CaseFactsService,
-    private readonly analysis: RequestAnalysisService,
+    private readonly handoffs: HandoffComposerService,
     private readonly customers: CustomerRecordService,
     private readonly contacts: ContactsService,
     private readonly ledger: ActionLedgerService,
@@ -198,38 +193,6 @@ ${profile}`);
     return { id: created.id, name: `${created.firstName} ${created.lastName}`.trim(), email: created.email ?? watch.email };
   }
 
-  /** Die Übergabe-Zusammenfassung aus dem, was der Vorgang tatsächlich festgehalten hat (Analyse, bestätigte Angaben, Termin). */
-  private async handoffFor(tenantId: string, caseId: string, customer: { name: string; email: string }, note?: string) {
-    const scoped = this.prisma.forTenantId(tenantId);
-    const caseRow = await scoped.case.findUnique({ where: { id: caseId }, select: { title: true } });
-    const first = await scoped.emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } });
-    const tenantRow = await this.prisma.withRlsBypass((tx) => tx.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }));
-    const analysis = await this.analysis.latest(tenantId, caseId);
-    const facts = (await this.caseFacts.getCurrent(tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => ({ key: f.key, value: f.value }));
-    const booked = await scoped.caseEvent.findFirst({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_BOOKED }, orderBy: { sequence: 'desc' } });
-    const bookedPayload = booked?.payload as { kind?: string; start?: string; assignee?: { name?: string } } | null | undefined;
-    const proposed = await scoped.caseEvent.findFirst({ where: { caseId, type: CASE_EVENT_TYPES.APPOINTMENT_PROPOSED }, orderBy: { sequence: 'desc' } });
-    const proposedSlots = (proposed?.payload as { slots?: unknown[] } | null | undefined)?.slots?.length ?? 0;
-    const agreed = facts.find((f) => f.key === APPOINTMENT_AGREED_KEY)?.value;
-    const summary = buildHandoffSummary({
-      customer: { name: customer.name || undefined, email: customer.email },
-      title: caseRow?.title ?? 'Anfrage',
-      receivedAt: first?.createdAt ?? new Date(),
-      timeZone: tenantRow?.timezone || 'Europe/Berlin',
-      analysis,
-      facts,
-      openCorrections: (await this.caseFacts.openCorrectionNotes(tenantId, caseId)).map((n) => String(n.value)),
-      appointment: {
-        ...(bookedPayload?.kind && bookedPayload.start ? { booked: { kind: bookedPayload.kind, start: bookedPayload.start, ...(bookedPayload.assignee?.name ? { assignee: bookedPayload.assignee.name } : {}) } } : {}),
-        ...(typeof agreed === 'string' && agreed.trim() ? { agreed } : {}),
-        proposedSlots,
-      },
-    });
-    const extra = note?.trim() ? `\n\nHinweis: ${note.trim()}` : '';
-    const subject = analysis?.requestType ? `Anfrage ${analysis.requestType}` : (caseRow?.title ?? 'Anfrage');
-    return { summary, text: `${summary.text}${extra}`.slice(0, HANDOFF_MAX_CHARS), title: `${subject}${customer.name ? ` – ${customer.name}` : ''}`.slice(0, 150) };
-  }
-
   private createLeadForCase(): ToolDefinition {
     const schema = z.object({ note: z.string().max(300).optional(), purpose: z.string().optional() });
     return {
@@ -247,7 +210,7 @@ ${profile}`);
         if (!claim.claimed) throw new ToolFailedError('Für diesen Kontakt läuft gerade die CRM-Übergabe eines anderen Vorgangs; sie wird danach erneut geprüft.', { errorCode: 'RESOURCE_BUSY', retryable: true });
         const afterClaim = await this.prisma.forTenantId(ctx.tenantId).lead.findFirst({ where: { caseId } });
         if (afterClaim) return { leadId: afterClaim.id, reused: true, executionMode: 'LIVE' };
-        const handoff = await this.handoffFor(ctx.tenantId, caseId, contact, input.note);
+        const handoff = await this.handoffs.compose(ctx.tenantId, caseId, contact, input.note);
         const lead = await this.leads.create(ctx.tenantId, undefined, { contactId: contact.id, source: 'EMAIL', title: handoff.title, notes: handoff.text, caseId }, 'AGENT');
         return { leadId: lead.id, reused: false, known: handoff.summary.known.length, open: handoff.summary.open.length, executionMode: 'LIVE' };
       },

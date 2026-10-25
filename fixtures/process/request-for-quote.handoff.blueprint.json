@@ -1,10 +1,10 @@
 {
   "schemaVersion": "1.0",
   "key": "REQUEST_FOR_QUOTE",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "status": "DRAFT",
   "title": "Anfrage aufnehmen und übergeben",
-  "description": "Anfrage prüfen, Angaben in bis zu drei Klärungsrunden erfragen, einen Termin vereinbaren (wenn ein Kalender angebunden ist) und die Anfrage mit einer Zusammenfassung an das CRM übergeben. ORBIT erstellt kein Angebot und nennt keinen Preis; das übernimmt die zuständige Person im Angebotssystem. Schritte, die ein nicht angebundenes System brauchen, entfallen für den Betrieb von selbst.",
+  "description": "Anfrage prüfen, Angaben in bis zu zwei Klärungsrunden erfragen, einen Termin vereinbaren (wenn ein Kalender angebunden ist) und die Anfrage mit einer Zusammenfassung an das CRM übergeben. ORBIT erstellt kein Angebot und nennt keinen Preis; das übernimmt die zuständige Person im Angebotssystem. Schritte, die ein nicht angebundenes System brauchen, entfallen für den Betrieb von selbst. Ab 2.1.0 beantwortet der Ablauf eine Preisfrage der Kundschaft aus dem Betriebswissen (soweit gesichert beantwortbar; die Auskunft folgt der Berechtigung für Auskünfte) statt sie nur mit einer Eingangsbestätigung zu übergehen. (2.1.0: zwei statt drei Klärungsrunden – was danach offen bleibt, steht im Lead als „noch offen“; so bleibt die Auskunft zur Preisfrage innerhalb der Obergrenze von sechs externen Aktionen.)",
   "goals": [
     "request.handed_over"
   ],
@@ -37,7 +37,8 @@
     "email.send",
     "calendar.book",
     "crm.lead.create",
-    "staff.notify"
+    "staff.notify",
+    "knowledge.answer"
   ],
   "maxAutonomy": "REQUIRE_APPROVAL",
   "planMode": "CONSTRAINED_ADAPTIVE",
@@ -368,151 +369,6 @@
         ]
       },
       {
-        "id": "ask3_draft",
-        "type": "PREPARE",
-        "title": "Rückfrage 3 vorbereiten",
-        "capability": {
-          "key": "communication.draft"
-        },
-        "config": {
-          "purpose": "CLARIFICATION"
-        },
-        "inputs": {
-          "to": {
-            "fact": "contact.email"
-          },
-          "missing": {
-            "stepOutput": {
-              "node": "reqs3",
-              "path": "missing"
-            }
-          }
-        },
-        "preconditions": [
-          {
-            "eq": [
-              {
-                "stepOutput": {
-                  "node": "reqs3",
-                  "path": "complete"
-                }
-              },
-              {
-                "literal": false
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "ask3",
-        "type": "ACTION",
-        "title": "Rückfrage 3 senden",
-        "capability": {
-          "key": "email.send"
-        },
-        "config": {
-          "purpose": "CLARIFICATION"
-        },
-        "inputs": {
-          "draftId": {
-            "stepOutput": {
-              "node": "ask3_draft",
-              "path": "draftId"
-            }
-          }
-        },
-        "preconditions": [
-          {
-            "eq": [
-              {
-                "stepOutput": {
-                  "node": "reqs3",
-                  "path": "complete"
-                }
-              },
-              {
-                "literal": false
-              }
-            ]
-          }
-        ],
-        "onFailure": "REVIEW",
-        "retry": {
-          "maxAttempts": 3
-        }
-      },
-      {
-        "id": "wait3",
-        "type": "WAIT_EVENT",
-        "title": "Auf Antwort warten",
-        "config": {
-          "eventType": "communication.received"
-        },
-        "timeout": {
-          "hours": 72,
-          "policyRef": "default-72h"
-        },
-        "preconditions": [
-          {
-            "eq": [
-              {
-                "stepOutput": {
-                  "node": "reqs3",
-                  "path": "complete"
-                }
-              },
-              {
-                "literal": false
-              }
-            ]
-          }
-        ],
-        "optional": true,
-        "onFailure": "SKIP"
-      },
-      {
-        "id": "extract4",
-        "type": "PREPARE",
-        "title": "Angaben aus der Antwort entnehmen",
-        "capability": {
-          "key": "facts.extract_from_message"
-        },
-        "inputs": {
-          "messageId": {
-            "sourceRef": "inbound.latestMessageId"
-          }
-        },
-        "preconditions": [
-          {
-            "exists": {
-              "stepOutput": {
-                "node": "wait3",
-                "path": "eventId"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "id": "reqs4",
-        "type": "EVALUATE_REQUIREMENTS",
-        "title": "Angaben erneut prüfen",
-        "capability": {
-          "key": "requirements.resolve"
-        },
-        "preconditions": [
-          {
-            "exists": {
-              "stepOutput": {
-                "node": "wait3",
-                "path": "eventId"
-              }
-            }
-          }
-        ]
-      },
-      {
         "id": "book",
         "type": "ACTION",
         "title": "Gewählten Termin im Kalender buchen",
@@ -655,6 +511,101 @@
         }
       },
       {
+        "id": "kb",
+        "type": "ACTION",
+        "title": "Preisfrage aus dem Betriebswissen beantworten",
+        "capability": {
+          "key": "knowledge.answer"
+        },
+        "inputs": {
+          "question": {
+            "fact": "request.price_question"
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "fact": "request.price_question"
+            }
+          }
+        ],
+        "optional": true,
+        "onFailure": "SKIP",
+        "retry": {
+          "maxAttempts": 3
+        }
+      },
+      {
+        "id": "info_draft",
+        "type": "PREPARE",
+        "title": "Auskunft vorbereiten",
+        "capability": {
+          "key": "communication.draft"
+        },
+        "config": {
+          "purpose": "INFORMATION"
+        },
+        "inputs": {
+          "to": {
+            "fact": "contact.email"
+          },
+          "answer": {
+            "stepOutput": {
+              "node": "kb",
+              "path": "answer"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "eq": [
+              {
+                "stepOutput": {
+                  "node": "kb",
+                  "path": "answerable"
+                }
+              },
+              {
+                "literal": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "info",
+        "type": "ACTION",
+        "title": "Auskunft senden",
+        "capability": {
+          "key": "email.send"
+        },
+        "config": {
+          "purpose": "INFORMATION"
+        },
+        "inputs": {
+          "draftId": {
+            "stepOutput": {
+              "node": "info_draft",
+              "path": "draftId"
+            }
+          }
+        },
+        "preconditions": [
+          {
+            "exists": {
+              "stepOutput": {
+                "node": "info_draft",
+                "path": "draftId"
+              }
+            }
+          }
+        ],
+        "onFailure": "REVIEW",
+        "retry": {
+          "maxAttempts": 3
+        }
+      },
+      {
         "id": "ack_draft",
         "type": "PREPARE",
         "title": "Eingangsbestätigung vorbereiten",
@@ -671,14 +622,28 @@
         },
         "preconditions": [
           {
-            "not": {
-              "exists": {
-                "stepOutput": {
-                  "node": "book",
-                  "path": "eventId"
+            "all": [
+              {
+                "not": {
+                  "exists": {
+                    "stepOutput": {
+                      "node": "book",
+                      "path": "eventId"
+                    }
+                  }
+                }
+              },
+              {
+                "not": {
+                  "exists": {
+                    "stepOutput": {
+                      "node": "info_draft",
+                      "path": "draftId"
+                    }
+                  }
                 }
               }
-            }
+            ]
           }
         ]
       },
@@ -702,14 +667,28 @@
         },
         "preconditions": [
           {
-            "not": {
-              "exists": {
-                "stepOutput": {
-                  "node": "book",
-                  "path": "eventId"
+            "all": [
+              {
+                "not": {
+                  "exists": {
+                    "stepOutput": {
+                      "node": "book",
+                      "path": "eventId"
+                    }
+                  }
+                }
+              },
+              {
+                "not": {
+                  "exists": {
+                    "stepOutput": {
+                      "node": "info_draft",
+                      "path": "draftId"
+                    }
+                  }
                 }
               }
-            }
+            ]
           }
         ],
         "onFailure": "REVIEW",
@@ -790,36 +769,6 @@
         "target": "reqs3"
       },
       {
-        "id": "e14",
-        "source": "reqs3",
-        "target": "ask3_draft"
-      },
-      {
-        "id": "e15",
-        "source": "ask3_draft",
-        "target": "ask3"
-      },
-      {
-        "id": "e16",
-        "source": "ask3",
-        "target": "wait3"
-      },
-      {
-        "id": "e17",
-        "source": "wait3",
-        "target": "extract4"
-      },
-      {
-        "id": "e18",
-        "source": "extract4",
-        "target": "reqs4"
-      },
-      {
-        "id": "e19",
-        "source": "reqs4",
-        "target": "book"
-      },
-      {
         "id": "e20",
         "source": "book",
         "target": "confirm_draft"
@@ -840,8 +789,23 @@
         "target": "notify"
       },
       {
-        "id": "e24",
+        "id": "e24a",
         "source": "notify",
+        "target": "kb"
+      },
+      {
+        "id": "e24b",
+        "source": "kb",
+        "target": "info_draft"
+      },
+      {
+        "id": "e24c",
+        "source": "info_draft",
+        "target": "info"
+      },
+      {
+        "id": "e24d",
+        "source": "info",
         "target": "ack_draft"
       },
       {
@@ -853,6 +817,11 @@
         "id": "e26",
         "source": "ack",
         "target": "done"
+      },
+      {
+        "id": "e18b",
+        "source": "reqs3",
+        "target": "book"
       }
     ]
   },
@@ -865,7 +834,7 @@
   "limits": {
     "maxReplans": 3,
     "maxSteps": 40,
-    "maxAutoQuestions": 3,
+    "maxAutoQuestions": 2,
     "maxRuntimeHours": 720
   },
   "waitRules": [

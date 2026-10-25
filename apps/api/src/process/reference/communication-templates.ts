@@ -233,3 +233,29 @@ export function appointmentConfirmationBody(input: { kind: AppointmentKind; labe
     ...closing(input.companyName),
   ].join('\n');
 }
+
+export interface SupplementChange {
+  /** Bezeichnung der Angabe („Vorhandene Heizung“). */
+  label: string;
+  /** Der Wert, der jetzt gilt. */
+  value: string;
+  /** Bei einer Korrektur: der frühere Wert. */
+  previous?: string;
+  kind: 'NEW' | 'CORRECTED' | 'SUPPLEMENTED';
+}
+
+/**
+ * Bestätigung nach einer Ergänzung oder Korrektur der Kundschaft (nach der Übergabe): nennt wörtlich, was übernommen wurde – ohne Zusage über Preise, Termine oder Fristen.
+ * Die Werte stammen aus den eigenen Nachrichten der Person; die Vorlage fügt nur den Rahmen hinzu.
+ */
+export function supplementConfirmationBody(input: { changes: SupplementChange[]; companyName: string; lang?: ReplyLanguage; name?: string }): string {
+  const lang = input.lang ?? 'de';
+  const line = (c: SupplementChange): string => {
+    if (lang === 'en') return c.kind === 'CORRECTED' && c.previous ? `- ${c.label}: ${c.value} (corrected, previously: ${c.previous})` : c.kind === 'SUPPLEMENTED' ? `- ${c.label} (addition): ${c.value}` : `- ${c.label}: ${c.value}`;
+    return c.kind === 'CORRECTED' && c.previous ? `- ${c.label}: ${c.value} (korrigiert, bisher: ${c.previous})` : c.kind === 'SUPPLEMENTED' ? `- ${c.label} (Ergänzung): ${c.value}` : `- ${c.label}: ${c.value}`;
+  };
+  if (lang === 'en') {
+    return [...greeting('en', input.name), 'thank you for your message. We have noted the following in your request and passed it on to the person responsible:', ...input.changes.map(line), 'If anything is not right, please simply reply to this email.', ...closing(input.companyName, lang)].join('\n');
+  }
+  return [...greeting('de', input.name), 'vielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:', ...input.changes.map(line), 'Sollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.', ...closing(input.companyName)].join('\n');
+}

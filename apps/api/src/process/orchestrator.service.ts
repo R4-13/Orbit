@@ -43,6 +43,7 @@ import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { LiveReconciliationService } from './live-reconciliation.service';
 import { CaseRollupService } from './case-rollup.service';
 import { assertProcessingPath } from './processing-path';
+import { LeadSyncService } from './lead-sync.service';
 
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
@@ -118,6 +119,7 @@ export class OrchestratorService {
     private readonly live: LiveReconciliationService,
     private readonly rollup: CaseRollupService,
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
+    private readonly leadSync: LeadSyncService,
   ) {}
 
   // ── Starting a case ─────────────────────────────────────────────────────────
@@ -754,6 +756,15 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
         },
       });
     }
+    // Abschlussmaßstab unabhängig vom Bearbeitungsweg: eine ungeklärte Korrektur oder ein Lead, der nicht auf dem Stand der Falldaten ist, verhindert den Abschluss – dass ein Lead oder eine Aufgabe angelegt wurde, genügt nicht.
+    if (met) {
+      const leadBlocker = await this.leadSync.completionBlocker(tenantId, caseRow.id);
+      if (leadBlocker) {
+        met = false;
+        blockReason = leadBlocker;
+        await this.events.append(tenantId, caseRow.id, { type: CASE_EVENT_TYPES.COMPLETION_EVALUATED, payload: { met: false, criteriaMet: false, reason: 'LEAD_NOT_IN_SYNC_OR_CORRECTION_OPEN', blocker: leadBlocker } });
+      }
+    }
     if (!met) {
       if (!blueprint) blockReason = await this.openHandoverTask(tenantId, caseRow, graph, blockReason);
       await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'BLOCKED', errorCode: 'COMPLETION_CRITERIA_NOT_MET', errorMessage: blockReason ?? 'Die Abschlusskriterien sind nicht erfüllt.' });
@@ -795,6 +806,8 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
     const messageId = (event.payload as Record<string, unknown> | undefined)?.emailMessageId;
     if (typeof messageId !== 'string') return;
     const scoped = this.prisma.forTenantId(tenantId);
+    // Eine Nachricht, die als Ergänzung/Korrektur zum übergebenen Vorgang verarbeitet wurde (Lead abgeglichen, Bestätigung), braucht keine zusätzliche Aufgabe.
+    if (await scoped.caseEvent.findFirst({ where: { tenantId, dedupeKey: `supplement.applied:${messageId}` } })) return;
     const title = `Neue Nachricht nach Abschluss (${messageId.slice(0, 8)})`;
     if ((await scoped.task.count({ where: { caseId: caseRow.id, title } })) > 0) return;
     const message = await scoped.emailMessage.findUnique({ where: { id: messageId }, select: { fromAddress: true, bodyText: true } });
@@ -818,7 +831,10 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
     const activePlan = await this.store.getActive(tenantId, caseRow.id);
     const subscription = await this.prisma.forTenantId(tenantId).waitSubscription.findFirst({ where: { caseId: caseRow.id, status: 'WAITING', eventType: 'communication.received', ...(activePlan ? { planId: activePlan.plan.id } : {}) }, orderBy: { createdAt: 'asc' } });
     if (!subscription || !subscription.planId || !subscription.nodeKey) {
-      if (!TERMINAL_CASE_STATUSES.has(caseRow.orchestrationStatus)) {
+      // Eine Nachricht, die als Ergänzung/Korrektur zum übergebenen Vorgang verarbeitet wurde (Lead-Abgleich), ist behandelt: kein zusätzlicher Hinweis „keine Erwartung“.
+      const messageId = (event.payload as Record<string, unknown> | undefined)?.emailMessageId;
+      const supplemented = typeof messageId === 'string' && Boolean(await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { tenantId, dedupeKey: `supplement.applied:${messageId}` } }));
+      if (!supplemented && !TERMINAL_CASE_STATUSES.has(caseRow.orchestrationStatus)) {
         await this.lifecycle.transition(tenantId, caseRow.id, { to: caseRow.orchestrationStatus === 'RECEIVED' ? 'RECEIVED' : 'MANUAL_REVIEW', attentionReasons: [...caseRow.attentionReasons, 'Eine neue Nachricht ist eingegangen, auf die kein Schritt wartet.'].slice(-5) });
       }
       return;

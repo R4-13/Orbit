@@ -44,6 +44,9 @@ import { AppointmentSlotsService } from './reference/appointment-slots.service';
 import { ReferenceProcessTools } from './reference/reference-process.tools';
 import { RequestAnalysisService } from './reference/request-analysis.service';
 import { ShadowPlanService } from './shadow-plan.service';
+import { HandoffComposerService } from './reference/handoff-composer.service';
+import { LeadSyncService } from './lead-sync.service';
+import { SupplementService } from './supplement.service';
 
 /**
  * Business Process Framework (Amendment 02). Everything here builds on the
@@ -87,6 +90,9 @@ import { ShadowPlanService } from './shadow-plan.service';
     CaseOrchestrationService,
     HumanInteractionService,
     ShadowPlanService,
+    HandoffComposerService,
+    LeadSyncService,
+    SupplementService,
     OrbitContactsDirectory,
     // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.
     { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory, hubspot: HubSpotCustomerDirectory) => [orbit, hubspot], inject: [OrbitContactsDirectory, HubSpotCustomerDirectory] },
@@ -114,6 +120,8 @@ import { ShadowPlanService } from './shadow-plan.service';
     CaseOrchestrationService,
     HumanInteractionService,
     ShadowPlanService,
+    LeadSyncService,
+    SupplementService,
     CustomerRecordService,
     CUSTOMER_DIRECTORIES,
   ],

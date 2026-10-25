@@ -24,6 +24,8 @@ export interface HandoffInput {
   };
   /** Angekündigte Änderungen der Kundschaft, die keiner Angabe zugeordnet werden konnten und noch nicht geklärt sind (Wortlaut). */
   openCorrections?: string[];
+  /** Eine Preisfrage der Kundschaft (Wortlaut) und ob sie per E-Mail beantwortet wurde. */
+  priceQuestion?: { text: string; answered: boolean };
 }
 
 export interface HandoffSummary {
@@ -35,7 +37,7 @@ export interface HandoffSummary {
 }
 
 /** Schlüssel, die nie als „Angabe der Kundschaft“ erscheinen (sie stehen an anderer Stelle oder sind interne Marker). */
-const HIDDEN_PREFIXES = ['contact.', 'appointment.', 'case.', 'inbound.', 'crm.'];
+const HIDDEN_PREFIXES = ['contact.', 'appointment.', 'case.', 'inbound.', 'crm.', 'request.price_question'];
 
 const display = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
@@ -74,20 +76,26 @@ export function buildHandoffSummary(input: HandoffInput): HandoffSummary {
     seen.add(item.key);
     known.push({ label: item.label, value: display(factValue.get(item.key) ?? item.value) });
   }
-  // 3. Weitere bestätigte Angaben des Vorgangs (z. B. aus Antworten), ohne interne Marker.
+  // 3. Weitere bestätigte Angaben des Vorgangs (z. B. aus Antworten), ohne interne Marker. Eine Ergänzung („.ergaenzung.“) steht als Ergänzung zur Angabe, die sie präzisiert.
+  const labelOf = new Map<string, string>([...(input.analysis?.requirements ?? []).map((r) => [r.key, r.label] as const), ...(input.analysis?.known ?? []).map((k) => [k.key, k.label] as const)]);
   for (const fact of input.facts) {
-    if (seen.has(fact.key) || HIDDEN_PREFIXES.some((p) => fact.key.startsWith(p))) continue;
+    if (seen.has(fact.key) || HIDDEN_PREFIXES.some((p) => fact.key.startsWith(p)) || fact.key.startsWith('korrekturhinweis.')) continue;
     const value = display(fact.value);
-    if (value !== '') known.push({ label: prettyKey(fact.key), value });
+    if (value === '') continue;
+    const supplement = /^(.+)\.ergaenzung\.[^.]+$/.exec(fact.key);
+    known.push({ label: supplement ? `Ergänzung zu ${labelOf.get(supplement[1]!) ?? prettyKey(supplement[1]!)}` : (labelOf.get(fact.key) ?? prettyKey(fact.key)), value });
   }
 
+  // „Anliegen“ ist die Bezeichnung des Vorgangs, nicht die Kurzfassung der ersten Nachricht: diese stammt aus dem Stand vor den Rückfragen und widersprach dem späteren Stand („Ort nicht genannt“ neben „Köln“).
   const lines: string[] = [
     `Anfrage über ORBIT (E-Mail, ${new Intl.DateTimeFormat('de-DE', { timeZone: input.timeZone, dateStyle: 'medium', timeStyle: 'short' }).format(input.receivedAt)})`,
     `Kundschaft: ${input.customer.name ? `${input.customer.name} ` : ''}<${input.customer.email}>`,
-    `Anliegen: ${input.analysis?.summary?.trim() || input.title}`,
+    `Anliegen: ${input.title}`,
   ];
   if (known.length > 0) lines.push('', 'Angaben der Kundschaft:', ...known.map((k) => `- ${k.label}: ${k.value}`));
   if (open.length > 0) lines.push('', 'Noch offen:', ...open.map((q) => `- ${q}`));
+
+  if (input.priceQuestion) lines.push('', `Preisfrage der Kundschaft: „${input.priceQuestion.text.slice(0, 300)}“ – ${input.priceQuestion.answered ? 'per E-Mail beantwortet.' : 'noch offen (aus dem Betriebswissen nicht gesichert beantwortbar oder noch nicht freigegeben).'}`);
 
   const { appointment } = input;
   const wantsVisit = input.analysis?.siteVisit.recommended === true || input.analysis?.nextStep === 'PROPOSE_SITE_VISIT';
@@ -101,4 +109,11 @@ export function buildHandoffSummary(input: HandoffInput): HandoffSummary {
   if ((input.openCorrections ?? []).length > 0) lines.push('', 'Ungeklärt – angekündigte Änderung der Kundschaft:', ...(input.openCorrections ?? []).map((c) => `- „${c.slice(0, 300)}“ (keiner Angabe zugeordnet; vor dem Weiterrechnen klären)`));
   lines.push('', 'Erfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft.');
   return { text: lines.join('\n'), known, open };
+}
+
+/** Bezeichnung einer Angabe für Menschen: die der Analyse (Anforderung/Entnahme), sonst aus dem Schlüssel abgeleitet. */
+export function factLabel(key: string, analysis?: AnalysisResult): string {
+  const labelOf = new Map<string, string>([...(analysis?.requirements ?? []).map((r) => [r.key, r.label] as const), ...(analysis?.known ?? []).map((k) => [k.key, k.label] as const)]);
+  const supplement = /^(.+)\.ergaenzung\.[^.]+$/.exec(key);
+  return supplement ? (labelOf.get(supplement[1]!) ?? prettyKey(supplement[1]!)) : (labelOf.get(key) ?? prettyKey(key));
 }

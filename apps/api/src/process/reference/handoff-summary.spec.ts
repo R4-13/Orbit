@@ -40,7 +40,8 @@ describe('Übergabe-Zusammenfassung', () => {
     ]);
     expect(summary.open).toEqual(['Soll die Wärmepumpe auch das Warmwasser übernehmen?', 'Wie hoch war der jährliche Gasverbrauch?']);
     expect(summary.text).toContain('Kundschaft: Tom Orbit <tom@kunde.example>');
-    expect(summary.text).toContain('Anliegen: Ersatz einer Gasheizung');
+    expect(summary.text).toContain('Anliegen: Anfrage Wärmepumpe'); // die Bezeichnung des Vorgangs; die Kurzfassung der ersten Nachricht steht nicht darin (sie widersprach dem späteren Stand)
+    expect(summary.text).not.toContain('Köln-Porz');
     expect(summary.text).toContain('- Wohnfläche: 140 m²');
     expect(summary.text).toContain('Noch offen:\n- Soll die Wärmepumpe auch das Warmwasser übernehmen?');
     expect(summary.text).not.toContain('contact.email'); // interne Marker erscheinen nicht
@@ -69,5 +70,28 @@ describe('Übergabe-Zusammenfassung', () => {
     expect(summary.text).toContain('Kundschaft: <a@b.example>');
     expect(summary.text).toContain('Anliegen: Frage zur Heizung');
     expect(summary.known).toEqual([{ label: 'Quantity', value: '4' }]);
+  });
+});
+
+describe('Übergabe-Zusammenfassung widerspricht den strukturierten Angaben nicht (Meilenstein B)', () => {
+  it('der Text enthält nur aktuelle Werte: eine korrigierte Angabe steht einmal, mit dem neuen Wert; Ergänzungen sind als solche bezeichnet', () => {
+    const summary = buildHandoffSummary({
+      ...base,
+      facts: [
+        { key: 'contact.email', value: 'tom@kunde.example' },
+        { key: 'ai.existing_heating', value: 'Gasheizung von 1995' },
+        { key: 'ai.existing_heating.ergaenzung.ab12cd34', value: 'mit Speicher im Keller' },
+        { key: 'korrekturhinweis.ergaenzung.ef56gh78', value: 'Die Fläche stimmt so nicht' },
+      ],
+    });
+    expect(summary.text).toContain('- Bestehende Heizung: Gasheizung von 1995');
+    expect(summary.text).not.toContain('2003');
+    expect(summary.text).toContain('- Ergänzung zu Bestehende Heizung: mit Speicher im Keller');
+    expect(summary.text).not.toContain('korrekturhinweis');
+  });
+
+  it('eine ungeklärte Korrektur steht ausdrücklich als ungeklärt im Text', () => {
+    const summary = buildHandoffSummary({ ...base, openCorrections: ['Die Fläche stimmt so nicht'] });
+    expect(summary.text).toContain('Ungeklärt – angekündigte Änderung der Kundschaft:');
   });
 });
