@@ -136,6 +136,7 @@ export const DEFAULT_CAPABILITIES: readonly CapabilityDefinition[] = [
         { name: 'start', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "start"' },
         { name: 'end', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "end"' },
         { name: 'kind', required: false, hint: 'APPOINTMENT_CONFIRMATION: stepOutput von calendar.book, Pfad "kind"' },
+        { name: 'changes', required: false, hint: 'STATUS_UPDATE nach einer Ergänzung/Korrektur: setzt das System selbst (Bestätigung der übernommenen Angaben); nicht planen' },
       ],
       outputs: ['draftId', 'version', 'contentHash', 'to', 'subject'],
       purposes: ['CLARIFICATION', 'QUOTE_DELIVERY', 'ACKNOWLEDGEMENT', 'STATUS_UPDATE', 'ATTACHMENT_REQUEST', 'INFORMATION', 'APPOINTMENT_CONFIRMATION'],

@@ -61,7 +61,10 @@ export class SupplementService {
     const lead = await this.leadSync.leadOf(tenantId, caseId);
     if (!lead) return none;
     const row = await scoped.case.findUnique({ where: { id: caseId } });
-    if (!row || !['COMPLETED', 'MANUAL_REVIEW'].includes(row.orchestrationStatus)) return none;
+    if (!row || ['CANCELLED', 'REJECTED'].includes(row.orchestrationStatus)) return none;
+    // Wartet noch ein Schritt auf eine Antwort der Kundschaft, gehört die Nachricht diesem Schritt; erst danach (Übergabe erfolgt, nichts erwartet) ist es eine Ergänzung zum Lead.
+    if ((await scoped.waitSubscription.count({ where: { caseId, status: 'WAITING', eventType: 'communication.received' } })) > 0) return none;
+    const settled = ['COMPLETED', 'MANUAL_REVIEW'].includes(row.orchestrationStatus);
     const message = await scoped.emailMessage.findFirst({ where: { id: messageId, direction: 'INBOUND' } });
     // Nur die Kundschaft des Vorgangs ergänzt ihren Lead: andere Absender ändern nichts.
     const replyTarget = (await this.facts.getCurrent(tenantId, caseId)).find((f) => f.key === 'contact.email' && f.status === 'CONFIRMED')?.value;
@@ -101,7 +104,7 @@ export class SupplementService {
     if (extractionFailure) problems.push(`Die Nachricht nach der Übergabe konnte nicht ausgewertet werden (${extractionFailure.slice(0, 120)}).`);
     if (conflicts.length > 0) problems.push('Eine Angabe widerspricht einer früheren, ohne dass erkennbar ist, welche gilt; bitte klären.');
     if (unresolved.length > 0) problems.push(`Eine angekündigte Korrektur ist noch nicht zugeordnet („${String(unresolved[0]!.value).slice(0, 100)}“).`);
-    if (problems.length > 0) {
+    if (problems.length > 0 && settled) {
       await this.lifecycle.transition(tenantId, caseId, { to: 'MANUAL_REVIEW', attentionReasons: [...row.attentionReasons.filter((r) => !problems.includes(r)), ...problems].slice(-5) });
     }
     await this.leadSync.reflectOnCase(tenantId, caseId, outcome);
