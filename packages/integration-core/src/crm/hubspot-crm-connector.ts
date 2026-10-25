@@ -4,7 +4,10 @@ import type {
   CrmCompanyRecord,
   CrmConnector,
   CrmContactRecord,
+  CrmLeadRecord,
   LogActivityInput,
+  ReadLeadInput,
+  UpdateLeadInput,
   UpsertCompanyInput,
   UpsertContactInput,
 } from './types';
@@ -185,6 +188,33 @@ export class HubSpotCrmConnector implements CrmConnector {
     await this.associate(token, 'deals', deal.id, 'contacts', input.contactExternalId);
     if (input.companyExternalId) await this.associate(token, 'deals', deal.id, 'companies', input.companyExternalId);
     return { externalId: deal.id };
+  }
+
+  /**
+   * Liest einen Deal (`GET /crm/v3/objects/deals/{id}?properties=dealname,description`, offizielle Referenz „Retrieve deals“). Ein nicht gefundener Deal (404) ist `null`; jeder andere Fehler wird gemeldet.
+   */
+  async readLead(input: ReadLeadInput): Promise<CrmLeadRecord | null> {
+    const token = await this.options.tokenFor(input.tenantId);
+    try {
+      const deal = await this.request<HubSpotObject>(token, 'GET', `/crm/v3/objects/deals/${encodeURIComponent(input.externalId)}?properties=dealname,description`);
+      return { externalId: deal.id, title: nonEmpty(deal.properties.dealname), notes: nonEmpty(deal.properties.description) };
+    } catch (error) {
+      if (error instanceof HubSpotApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
+
+  /**
+   * Ändert genau die genannten Eigenschaften eines **vorhandenen** Deals (`PATCH /crm/v3/objects/deals/{id}`, offizielle Referenz „Update deals“; Aufruf ohne Wiederholung). Es werden nur `dealname` und
+   * `description` geschrieben – nie Phase, Besitzer, Verknüpfungen oder andere Eigenschaften.
+   */
+  async updateLead(input: UpdateLeadInput): Promise<void> {
+    const token = await this.options.tokenFor(input.tenantId);
+    const properties: Record<string, string> = {};
+    if (nonEmpty(input.title)) properties.dealname = (input.title as string).trim().slice(0, 200);
+    if (input.notes !== undefined) properties.description = input.notes.slice(0, 2000);
+    if (Object.keys(properties).length === 0) return;
+    await this.request(token, 'PATCH', `/crm/v3/objects/deals/${encodeURIComponent(input.externalId)}`, { properties });
   }
 
   /** Eine Notiz am Kontakt (Zeitpunkt = Zeitpunkt des Ereignisses). */

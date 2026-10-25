@@ -196,3 +196,38 @@ describe('HubSpotCrmConnector – Fehler und Prüfung', () => {
     expect(await connector(bad.fetchImpl).verifyAccess('pat-y')).toEqual({ ok: false, contacts: 'INVALID_KEY', companies: 'INVALID_KEY', deals: 'INVALID_KEY' });
   });
 });
+
+describe('HubSpotCrmConnector – Lead lesen und ändern (Meilenstein B)', () => {
+  it('liest den Deal mit Name und Beschreibung; ein nicht vorhandener Deal ist null, ein Ausfall ein Fehler', async () => {
+    const { calls, fetchImpl } = fakeHubSpot([
+      route('GET', '/crm/v3/objects/deals/900', () => ({ status: 200, body: { id: '900', properties: { dealname: 'Anfrage Wärmepumpe – Tom', description: 'Gasheizung von 1995' } } })),
+      route('GET', '/crm/v3/objects/deals/404', () => ({ status: 404, body: { category: 'OBJECT_NOT_FOUND' } })),
+      route('GET', '/crm/v3/objects/deals/500', () => ({ status: 500, body: {} })),
+    ]);
+    const crm = connector(fetchImpl);
+    expect(await crm.readLead({ tenantId: 't1', externalId: '900' })).toEqual({ externalId: '900', title: 'Anfrage Wärmepumpe – Tom', notes: 'Gasheizung von 1995' });
+    expect(calls[0]?.path).toBe('/crm/v3/objects/deals/900?properties=dealname,description');
+    expect(await crm.readLead({ tenantId: 't1', externalId: '404' })).toBeNull();
+    await expect(crm.readLead({ tenantId: 't1', externalId: '500' })).rejects.toBeInstanceOf(HubSpotApiError);
+  });
+
+  it('ändert nur Name und Beschreibung des genannten Deals (PATCH, ein Versuch) – nie Phase, Besitzer oder Verknüpfungen', async () => {
+    const { calls, fetchImpl } = fakeHubSpot([route('PATCH', '/crm/v3/objects/deals/900', () => ({ status: 200, body: { id: '900', properties: {} } }))]);
+    await connector(fetchImpl).updateLead({ tenantId: 't1', externalId: '900', title: ' Neuer Name ', notes: 'x'.repeat(2500) });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'PATCH', path: '/crm/v3/objects/deals/900', auth: 'Bearer pat-t1' });
+    const properties = (calls[0]?.body as { properties: Record<string, string> }).properties;
+    expect(Object.keys(properties).sort()).toEqual(['dealname', 'description']);
+    expect(properties.dealname).toBe('Neuer Name');
+    expect(properties.description).toHaveLength(2000);
+  });
+
+  it('ohne zu schreibende Felder passiert nichts; ein Fehler von HubSpot wird gemeldet und nicht wiederholt', async () => {
+    const { calls, fetchImpl } = fakeHubSpot([route('PATCH', '/crm/v3/objects/deals/900', () => ({ status: 503, body: {} }))]);
+    const crm = connector(fetchImpl);
+    await crm.updateLead({ tenantId: 't1', externalId: '900' });
+    expect(calls).toHaveLength(0);
+    await expect(crm.updateLead({ tenantId: 't1', externalId: '900', notes: 'x' })).rejects.toMatchObject({ status: 503, retryable: true });
+    expect(calls).toHaveLength(1);
+  });
+});

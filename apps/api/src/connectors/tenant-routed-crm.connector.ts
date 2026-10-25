@@ -1,4 +1,4 @@
-import type { CreateLeadInput, CreateLeadResult, CrmCompanyRecord, CrmConnector, CrmContactRecord, LogActivityInput, UpsertCompanyInput, UpsertContactInput } from '@orbit/integration-core';
+import type { CreateLeadInput, CreateLeadResult, CrmCompanyRecord, CrmConnector, CrmContactRecord, CrmLeadRecord, LogActivityInput, ReadLeadInput, UpdateLeadInput, UpsertCompanyInput, UpsertContactInput } from '@orbit/integration-core';
 import { ExternalSystemError } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { HubSpotService } from './hubspot.service';
@@ -74,6 +74,28 @@ export class TenantRoutedCrmConnector implements CrmConnector {
           : input,
       ),
     );
+  }
+
+  /**
+   * Lesen und Ändern eines Leads gehen dorthin, wo er liegt: eine HubSpot-Kennung (reine Zahl) nach HubSpot, eine Kennung der Test-Ablage dorthin. Ist HubSpot nicht verbunden, obwohl der Lead dort liegt, ist
+   * das ein Fehler – es wird nie auf die Test-Ablage ausgewichen.
+   */
+  private async leadRoute<T>(tenantId: string, externalId: string, action: (crm: CrmConnector) => Promise<T>): Promise<T> {
+    if (!isHubSpotId(externalId)) return action(this.fallback);
+    if (!(await this.hubspot.isConnected(tenantId))) throw new ExternalSystemError('Der Lead liegt in HubSpot, HubSpot ist aber nicht verbunden.', { provider: 'hubspot', retryable: true });
+    try {
+      return await action(this.hubspot.connector);
+    } catch (error) {
+      throw await this.hubspot.toOrbitError(tenantId, error);
+    }
+  }
+
+  readLead(input: ReadLeadInput): Promise<CrmLeadRecord | null> {
+    return this.leadRoute(input.tenantId, input.externalId, (crm) => crm.readLead(input));
+  }
+
+  updateLead(input: UpdateLeadInput): Promise<void> {
+    return this.leadRoute(input.tenantId, input.externalId, (crm) => crm.updateLead(input));
   }
 
   logActivity(input: LogActivityInput): Promise<void> {

@@ -5,7 +5,10 @@ import type {
   CrmCompanyRecord,
   CrmConnector,
   CrmContactRecord,
+  CrmLeadRecord,
   LogActivityInput,
+  ReadLeadInput,
+  UpdateLeadInput,
   UpsertCompanyInput,
   UpsertContactInput,
 } from '@orbit/integration-core';
@@ -78,10 +81,28 @@ export class PersistentMockCrmConnector implements CrmConnector {
         tenantId: input.tenantId,
         kind: 'LEAD',
         externalId,
-        data: { contactExternalId: input.contactExternalId, source: input.source, notes: input.notes ?? null } as Prisma.InputJsonValue,
+        data: { contactExternalId: input.contactExternalId, source: input.source, title: input.title ?? null, notes: input.notes ?? null } as Prisma.InputJsonValue,
       },
     });
     return { externalId };
+  }
+
+  async readLead(input: ReadLeadInput): Promise<CrmLeadRecord | null> {
+    const found = await this.prisma.forTenantId(input.tenantId).mockCrmRecord.findFirst({ where: { tenantId: input.tenantId, kind: 'LEAD', externalId: input.externalId } });
+    if (!found) return null;
+    const data = found.data as { title?: string | null; notes?: string | null };
+    return { externalId: input.externalId, title: data.title ?? undefined, notes: data.notes ?? undefined };
+  }
+
+  async updateLead(input: UpdateLeadInput): Promise<void> {
+    const scoped = this.prisma.forTenantId(input.tenantId);
+    const found = await scoped.mockCrmRecord.findFirst({ where: { tenantId: input.tenantId, kind: 'LEAD', externalId: input.externalId } });
+    if (!found) throw new Error(`Mock CRM: unknown lead "${input.externalId}".`);
+    const data = found.data as Record<string, unknown>;
+    await scoped.mockCrmRecord.update({
+      where: { id: found.id },
+      data: { data: { ...data, ...(input.title !== undefined ? { title: input.title } : {}), ...(input.notes !== undefined ? { notes: input.notes } : {}) } as Prisma.InputJsonValue },
+    });
   }
 
   async logActivity(input: LogActivityInput): Promise<void> {

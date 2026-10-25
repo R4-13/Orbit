@@ -5,7 +5,10 @@ import type {
   CrmCompanyRecord,
   CrmConnector,
   CrmContactRecord,
+  CrmLeadRecord,
   LogActivityInput,
+  ReadLeadInput,
+  UpdateLeadInput,
   UpsertCompanyInput,
   UpsertContactInput,
 } from './types';
@@ -27,6 +30,7 @@ export class MockCrmConnector implements CrmConnector {
   private readonly companiesByDomain = new Map<string, CrmCompanyRecord>();
   private readonly companiesById = new Map<string, CrmCompanyRecord>();
   private readonly leads: CreateLeadInput[] = [];
+  private readonly leadsById = new Map<string, CrmLeadRecord>();
   private readonly activities: LogActivityInput[] = [];
 
   async testConnection(): Promise<boolean> {
@@ -62,7 +66,20 @@ export class MockCrmConnector implements CrmConnector {
       throw new Error(`Mock CRM: unknown contact "${input.contactExternalId}".`);
     }
     this.leads.push(input);
-    return { externalId: `mock-lead-${randomUUID()}` };
+    const externalId = `mock-lead-${randomUUID()}`;
+    this.leadsById.set(`${input.tenantId}|${externalId}`, { externalId, title: input.title, notes: input.notes });
+    return { externalId };
+  }
+
+  async readLead(input: ReadLeadInput): Promise<CrmLeadRecord | null> {
+    return this.leadsById.get(`${input.tenantId}|${input.externalId}`) ?? null;
+  }
+
+  async updateLead(input: UpdateLeadInput): Promise<void> {
+    const key = `${input.tenantId}|${input.externalId}`;
+    const found = this.leadsById.get(key);
+    if (!found) throw new Error(`Mock CRM: unknown lead "${input.externalId}".`);
+    this.leadsById.set(key, { ...found, ...(input.title !== undefined ? { title: input.title } : {}), ...(input.notes !== undefined ? { notes: input.notes } : {}) });
   }
 
   async logActivity(input: LogActivityInput): Promise<void> {

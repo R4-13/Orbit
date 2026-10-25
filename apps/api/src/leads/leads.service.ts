@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NotFoundError } from '@orbit/shared';
+import { NotFoundError, crmFieldText, leadContentHash } from '@orbit/shared';
 import type { Company, Contact, Lead, LeadSource, LeadStatus, Opportunity } from '@orbit/domain';
 import type { CrmConnector } from '@orbit/integration-core';
 import { AuditService, type AuditActorType } from '../audit/audit.service';
@@ -63,6 +63,13 @@ export class LeadsService {
         companyId: input.companyId,
         source: input.source,
         notes: input.notes,
+        // Der CRM-Bezug und der geschriebene Stand: Grundlage für das spätere Ergänzen und Korrigieren genau dieses Leads (Meilenstein B).
+        crmExternalId: crmLead.externalId,
+        crmSyncState: 'SYNCED',
+        crmSyncedTitle: input.title?.trim() || null,
+        crmSyncedText: input.notes ? crmFieldText(input.notes) : null,
+        crmSyncedHash: leadContentHash(input.title ?? '', input.notes ?? ''),
+        crmSyncedAt: new Date(),
       },
     });
 

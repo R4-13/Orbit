@@ -877,6 +877,19 @@ model Lead {
   source    LeadSource
   status    LeadStatus @default(NEW)
   notes     String?
+  /// Kennung des Leads (Deals) im CRM – nur der vom Vorgang angelegte Lead wird später ergänzt/korrigiert, nie ein anderes Objekt.
+  crmExternalId String? @map("crm_external_id")
+  /// NONE (kein CRM-Bezug), SYNCED (zuletzt geschriebener Stand liegt im CRM, durch Rücklesen belegt), OUT_OF_SYNC, FAILED (Schreiben/Rücklesen gescheitert, wird wiederholt), CONFLICT (im CRM wurde von Hand geändert; nichts überschrieben).
+  crmSyncState String @default("NONE") @map("crm_sync_state")
+  /// SHA-256 über Titel und Beschreibung, die zuletzt ins CRM geschrieben wurden (Idempotenz: gleicher Stand = keine zweite Wirkung).
+  crmSyncedHash String? @map("crm_synced_hash")
+  crmSyncedTitle String? @map("crm_synced_title")
+  /// Der Wortlaut, den ORBIT zuletzt ins CRM geschrieben hat (so, wie das CRM ihn hält) – Grundlage der Prüfung auf Handänderungen im CRM.
+  crmSyncedText String? @map("crm_synced_text")
+  crmSyncedAt DateTime? @map("crm_synced_at")
+  crmSyncError String? @map("crm_sync_error")
+  /// Kurzer Sperrvermerk gegen gleichzeitige Abgleiche desselben Leads.
+  crmSyncLockedUntil DateTime? @map("crm_sync_locked_until")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 

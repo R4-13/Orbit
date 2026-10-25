@@ -51,6 +51,24 @@ export interface CreateLeadResult {
   externalId: string;
 }
 
+/** Ein Lead (Deal) so, wie das CRM ihn führt – zum Rücklesen nach einer Änderung. */
+export interface CrmLeadRecord {
+  externalId: string;
+  title?: string;
+  notes?: string;
+}
+
+export interface ReadLeadInput extends CrmCallContext {
+  externalId: string;
+}
+
+/** Ergänzt/ändert den **bereits angelegten** Lead (nie einen anderen, nie einen neuen). Nur genannte Felder werden geschrieben. */
+export interface UpdateLeadInput extends CrmCallContext {
+  externalId: string;
+  title?: string;
+  notes?: string;
+}
+
 export interface LogActivityInput extends CrmCallContext {
   contactExternalId: string;
   activityType: string;
@@ -68,5 +86,8 @@ export interface CrmConnector {
   /** Matched by domain when provided, otherwise creates a new company. */
   upsertCompany(input: UpsertCompanyInput): Promise<CrmCompanyRecord>;
   createLead(input: CreateLeadInput): Promise<CreateLeadResult>;
+  /** Liest den Lead; `null`, wenn es ihn im CRM nicht (mehr) gibt. Ein Ausfall ist ein Fehler, nie `null`. */
+  readLead(input: ReadLeadInput): Promise<CrmLeadRecord | null>;
+  updateLead(input: UpdateLeadInput): Promise<void>;
   logActivity(input: LogActivityInput): Promise<void>;
 }

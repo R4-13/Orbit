@@ -28,3 +28,4 @@ export * from './setup-assistant';
 export * from './file-signature';
 export * from './api-keys';
 export * from './password-policy';
+export * from './lead-sync';
