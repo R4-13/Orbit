@@ -20,6 +20,7 @@ import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, supplementConfirmationBody, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
 import { PRICE_QUESTION_KEY, findPriceQuestion } from './price-question';
+import { findStreetAddress } from './street-address';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
 import { APPOINTMENT_AGREED_KEY, APPOINTMENT_OUTCOME_KEY, APPOINTMENT_REJECTION, appointmentKindOf, isAppointmentSchedulingRequirement, isConcreteAppointmentChoice, isSafeCustomerText, isSecondReading } from './request-analysis';
 import { RequestAnalysisService } from './request-analysis.service';
@@ -365,6 +366,16 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
       for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, definition.type);
       seenKeys.add(item.key);
       recorded.push({ key: item.key, value: item.value, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
+    }
+    // Eine genannte Anschrift (Straße mit Hausnummer) geht nie verloren, auch wenn die Auslese sie nicht meldet: sie wird im Wortlaut als Angabe festgehalten, sofern nicht schon eine Angabe sie enthält.
+    const street = !options.only && message.direction === 'INBOUND' ? findStreetAddress(message.bodyText ?? message.bodyPreview) : undefined;
+    if (street) {
+      const known = (await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => ['CANDIDATE', 'CONFIRMED'].includes(f.status) && typeof f.value === 'string');
+      if (!known.some((f) => normalize(String(f.value)).includes(normalize(street)))) {
+        const created = await this.facts.propose(ctx.tenantId, caseId, [{ key: 'ai.anschrift', value: street, valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [street] }]);
+        for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, 'string');
+        if (created.length > 0) recorded.push({ key: 'ai.anschrift', value: street, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
+      }
     }
     // Zweite, gezielte Auslese (Meilenstein B): eine Antwort kann eine erfragte Angabe enthalten, ohne dass die erste Auslese sie dem erfragten Schlüssel zuordnet (z. B. „Wärmepumpe“ als Zusatz zur Anfrage statt als Heizungsart);
     // dann würde ORBIT dieselbe Frage noch einmal stellen. Für jede noch fehlende erfragte Angabe wird die Nachricht einzeln darauf geprüft – nur bei einer Antwort auf eine Rückfrage (nicht bei der ersten Nachricht).
