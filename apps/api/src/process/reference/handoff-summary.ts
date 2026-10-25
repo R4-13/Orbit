@@ -78,12 +78,25 @@ export function buildHandoffSummary(input: HandoffInput): HandoffSummary {
   }
   // 3. Weitere bestätigte Angaben des Vorgangs (z. B. aus Antworten), ohne interne Marker. Eine Ergänzung („.ergaenzung.“) steht als Ergänzung zur Angabe, die sie präzisiert.
   const labelOf = new Map<string, string>([...(input.analysis?.requirements ?? []).map((r) => [r.key, r.label] as const), ...(input.analysis?.known ?? []).map((k) => [k.key, k.label] as const)]);
+  const supplements: Array<{ base: string; value: string }> = [];
   for (const fact of input.facts) {
     if (seen.has(fact.key) || HIDDEN_PREFIXES.some((p) => fact.key.startsWith(p)) || fact.key.startsWith('korrekturhinweis.')) continue;
     const value = display(fact.value);
     if (value === '') continue;
     const supplement = /^(.+)\.ergaenzung\.[^.]+$/.exec(fact.key);
-    known.push({ label: supplement ? `Ergänzung zu ${labelOf.get(supplement[1]!) ?? prettyKey(supplement[1]!)}` : (labelOf.get(fact.key) ?? prettyKey(fact.key)), value });
+    if (supplement) {
+      supplements.push({ base: supplement[1]!, value });
+      continue;
+    }
+    known.push({ label: labelOf.get(fact.key) ?? prettyKey(fact.key), value });
+  }
+  // Eine Ergänzung nennt etwas Neues: sagt sie nur noch einmal, was in den Angaben schon steht (jedes ihrer Wörter kommt dort vor), bleibt sie weg.
+  const wordsOf = (text: string): string[] => text.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [];
+  const knownWords = new Set(known.flatMap((k) => wordsOf(k.value)));
+  for (const item of supplements) {
+    const words = wordsOf(item.value);
+    if (words.length > 0 && words.every((w) => knownWords.has(w))) continue;
+    known.push({ label: `Ergänzung zu ${labelOf.get(item.base) ?? prettyKey(item.base)}`, value: item.value });
   }
 
   // „Anliegen“ ist die Bezeichnung des Vorgangs, nicht die Kurzfassung der ersten Nachricht: diese stammt aus dem Stand vor den Rückfragen und widersprach dem späteren Stand („Ort nicht genannt“ neben „Köln“).

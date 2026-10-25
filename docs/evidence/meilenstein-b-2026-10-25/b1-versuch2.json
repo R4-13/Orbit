@@ -1,0 +1,433 @@
+{
+  "case": {
+    "id": "039e4a57-08ed-4d9c-86d2-6eb35bbe43a3",
+    "title": "Neue Anfrage: Neue Heizung – bitte um Angebot",
+    "status": "COMPLETED",
+    "attentionReasons": [],
+    "outcome": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "facts.extract_from_message",
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "email.send/CLARIFICATION:1a173f3f8d3e24e1",
+        "email.send/CLARIFICATION:1a173f58af1d61c9",
+        "crm.lead.create/CRM_HANDOFF",
+        "staff.notify",
+        "communication.draft/ACKNOWLEDGEMENT",
+        "email.send/ACKNOWLEDGEMENT:1a173f93c3e9a61b"
+      ]
+    },
+    "blueprint": "REQUEST_FOR_QUOTE 2.1.0"
+  },
+  "facts": [
+    {
+      "key": "absendername",
+      "value": "Tom Orbit",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.angebotswunsch",
+      "value": "Angebot erbeten",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.angebotswunsch.ergaenzung.02e45df7",
+      "value": "bitte um Angebot",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.anschrift",
+      "value": "Musterstraße 12",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.gebaeude_situation",
+      "value": "Die vorhandene Heizung ist eine Gasheizung von 1985.",
+      "status": "CONFIRMED",
+      "current": false,
+      "revision": 1
+    },
+    {
+      "key": "ai.gebaeude_situation",
+      "value": "Die vorhandene Heizung ist eine Gasheizung von 1995.",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 2
+    },
+    {
+      "key": "ai.heizung_neu",
+      "value": "Neue Heizung für ein Haus",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.heizung_neu.ergaenzung.02e45df7",
+      "value": "Eine Wärmepumpe",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.heizung_neu.ergaenzung.17da64eb",
+      "value": "Wärmepumpe; vorhandene Gasheizung von 1985",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.heizungsalter",
+      "value": "1995",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.heizungsart",
+      "value": "Wärmepumpe",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.kontaktname",
+      "value": "Tom Orbit",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.standort",
+      "value": "Köln",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "angefragte_leistung",
+      "value": "Neue Heizung",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "angefragte_leistung.ergaenzung.17da64eb",
+      "value": "Neue Heizung: Wärmepumpe",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "contact.email",
+      "value": "tomorbit777@gmail.com",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "objekt",
+      "value": "Haus",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "objekt.ergaenzung.17da64eb",
+      "value": "Haus in Köln, Musterstraße 12",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    }
+  ],
+  "lead": {
+    "id": "721bc2fd-d8da-48f6-a0d5-8134a441514b",
+    "crmExternalId": "531038381272",
+    "syncState": "SYNCED",
+    "syncError": null,
+    "syncedAt": "2026-10-25T16:53:10.412Z",
+    "orbitNotes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 17:45)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung für ein Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Heizungssystem: Wärmepumpe\n- Gebäudesituation: Die vorhandene Heizung ist eine Gasheizung von 1995.\n- Standort: Köln\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Anschrift: Musterstraße 12\n- Ergänzung zu Gewünschte Leistung: Eine Wärmepumpe\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe; vorhandene Gasheizung von 1985\n- Heizungsalter: 1995\n- Ergänzung zu Angefragte leistung: Neue Heizung: Wärmepumpe\n- Ergänzung zu Objekt: Haus in Köln, Musterstraße 12\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "crmReadBack": {
+    "externalId": "531038381272",
+    "title": "Anfrage Angebotsanfrage für eine neue Heizung – Tom Orbit",
+    "notes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 17:45)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung für ein Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Heizungssystem: Wärmepumpe\n- Gebäudesituation: Die vorhandene Heizung ist eine Gasheizung von 1995.\n- Standort: Köln\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Anschrift: Musterstraße 12\n- Ergänzung zu Gewünschte Leistung: Eine Wärmepumpe\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe; vorhandene Gasheizung von 1985\n- Heizungsalter: 1995\n- Ergänzung zu Angefragte leistung: Neue Heizung: Wärmepumpe\n- Ergänzung zu Objekt: Haus in Köln, Musterstraße 12\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "messages": [
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Neue Heizung – bitte um Angebot",
+      "body": "Hallo,\r\n\r\nwir brauchen eine neue Heizung für unser Haus. Bitte schicken Sie uns\r\nein Angebot.\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+      "at": "2026-10-25T16:45:01.152Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Anfrage „Neue Heizung – bitte um Angebot“.\n\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Welche Heizungsart wünschen Sie, oder möchten Sie sich dazu beraten lassen?\n2. Wie wird das Haus derzeit beheizt, und welche Angaben zu Baujahr oder energetischem Zustand können Sie uns nennen?\n3. In welchem Ort befindet sich das Haus?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:45:31.375Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Wärmepumpe. Die vorhandene Heizung ist eine Gasheizung von 1985. Das\r\nHaus steht in Köln, Musterstraße 12.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T16:47:01.744Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Antwort.\n\nDamit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:\n\n1. Welche Heizungsart wünschen Sie, oder möchten Sie sich dazu beraten lassen?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:47:14.533Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Eine Wärmepumpe, wie gesagt.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T16:51:00.904Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht zu „Neue Heizung – bitte um Angebot“. Sie ist bei uns eingegangen.\nWir kümmern uns darum und melden uns bei Ihnen.\nSie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:51:16.480Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Eine Korrektur: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T16:53:01.299Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Neue Heizung – bitte um Angebot",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:\n- Gebäudesituation: Die vorhandene Heizung ist eine Gasheizung von 1995. (korrigiert, bisher: Die vorhandene Heizung ist eine Gasheizung von 1985.)\n- Heizungsalter: 1995\nSollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:53:11.610Z"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Neuen Lead kontaktieren: Tom Orbit",
+      "status": "OPEN",
+      "description": "Anfrage über ORBIT (E-Mail, 25.10.2026, 17:45)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung für ein Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Heizungssystem: Wärmepumpe\n- Gebäudesituation: Die vorhandene Heizung ist eine Gasheizung von 1995.\n- Standort: Köln\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Anschrift: Musterstraße 12\n- Ergänzung zu Gewünschte Leistung: Eine Wärmepumpe\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe; vorhandene Gasheizung von 1985\n- Heizungsalter: 1995\n- Ergänzung zu Angefragte leistung: Neue Heizung: Wärmepumpe\n- Ergänzung zu Objekt: Haus in Köln, Musterstraße 12\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+    }
+  ],
+  "actions": [
+    {
+      "id": "66648614-163a-4122-aa82-138ad673ff83",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract"
+    },
+    {
+      "id": "72bce73d-2310-41b4-9cd6-c2384c7f341e",
+      "capabilityKey": "communication.draft",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1_draft"
+    },
+    {
+      "id": "e0412fb8-0069-444c-a624-05eda86afc74",
+      "capabilityKey": "email.send",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1"
+    },
+    {
+      "id": "8d21fb55-cd97-4a07-9c9c-633a8941ddcd",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract2"
+    },
+    {
+      "id": "d9066d93-5ac4-4b7b-b064-b9385300d72d",
+      "capabilityKey": "communication.draft",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask2_draft"
+    },
+    {
+      "id": "1e1cb61b-ba86-45e6-8252-5fa881fdb9f1",
+      "capabilityKey": "email.send",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask2"
+    },
+    {
+      "id": "78702d64-bb73-439c-9673-d0141bf7cb86",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract3"
+    },
+    {
+      "id": "6dce56ab-3903-4d64-81c8-a2186c3360e6",
+      "capabilityKey": "crm.lead.create",
+      "purpose": "CRM_HANDOFF",
+      "status": "CONFIRMED",
+      "nodeKey": "lead"
+    },
+    {
+      "id": "013d0cb7-4ac1-496d-8aea-f12aac7aa65e",
+      "capabilityKey": "staff.notify",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "notify"
+    },
+    {
+      "id": "552a59ec-49c4-40d5-b5aa-a075e91d06a8",
+      "capabilityKey": "communication.draft",
+      "purpose": "ACKNOWLEDGEMENT",
+      "status": "CONFIRMED",
+      "nodeKey": "ack_draft"
+    },
+    {
+      "id": "f8440458-751b-4fcf-aed8-2020713c2f34",
+      "capabilityKey": "email.send",
+      "purpose": "ACKNOWLEDGEMENT",
+      "status": "CONFIRMED",
+      "nodeKey": "ack"
+    },
+    {
+      "id": "5974cc23-6d98-4681-80e2-9c6f89c5c177",
+      "capabilityKey": "email.send",
+      "purpose": "STATUS_UPDATE",
+      "status": "CONFIRMED",
+      "nodeKey": "supplement:2f2a4c81-02e9-47ba-80fe-66c19e1b38e9"
+    }
+  ],
+  "approvals": [],
+  "events": [
+    {
+      "type": "completion.evaluated",
+      "payload": {
+        "met": true,
+        "goals": [
+          {
+            "goal": "request.handed_over",
+            "basis": "COMPLETION_CRITERIA",
+            "status": "ACHIEVED"
+          }
+        ],
+        "criteriaMet": true,
+        "evidenceRefs": [
+          "facts.extract_from_message",
+          "communication.draft/CLARIFICATION",
+          "facts.extract_from_message",
+          "facts.extract_from_message",
+          "communication.draft/CLARIFICATION",
+          "email.send/CLARIFICATION:1a173f3f8d3e24e1",
+          "email.send/CLARIFICATION:1a173f58af1d61c9",
+          "crm.lead.create/CRM_HANDOFF",
+          "staff.notify",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "email.send/ACKNOWLEDGEMENT:1a173f93c3e9a61b"
+        ]
+      }
+    },
+    {
+      "type": "case.completed",
+      "payload": {
+        "to": "COMPLETED",
+        "from": "IN_PROGRESS",
+        "revision": 37,
+        "attentionReasons": []
+      }
+    },
+    {
+      "type": "fact.corrected",
+      "payload": {
+        "key": "ai.gebaeude_situation",
+        "current": "Die vorhandene Heizung ist eine Gasheizung von 1995.",
+        "previous": "Die vorhandene Heizung ist eine Gasheizung von 1985.",
+        "messageId": "2f2a4c81-02e9-47ba-80fe-66c19e1b38e9"
+      }
+    },
+    {
+      "type": "lead.synced",
+      "payload": {
+        "hash": "b9b56826a78d7612b7b7d7787017def1469f8312ddb1497f1ed4107be3d4b82d",
+        "open": 0,
+        "known": 13,
+        "leadId": "721bc2fd-d8da-48f6-a0d5-8134a441514b",
+        "trigger": {
+          "reason": "SUPPLEMENT",
+          "messageId": "2f2a4c81-02e9-47ba-80fe-66c19e1b38e9"
+        },
+        "written": true,
+        "readBack": "CONFIRMED",
+        "crmExternalId": "531038381272"
+      }
+    },
+    {
+      "type": "supplement.confirmed",
+      "payload": {
+        "messageId": "2f2a4c81-02e9-47ba-80fe-66c19e1b38e9"
+      }
+    },
+    {
+      "type": "supplement.applied",
+      "payload": {
+        "sync": "SYNCED",
+        "changes": [
+          {
+            "kind": "CORRECTED",
+            "label": "Gebäudesituation",
+            "value": "Die vorhandene Heizung ist eine Gasheizung von 1995.",
+            "previous": "Die vorhandene Heizung ist eine Gasheizung von 1985."
+          },
+          {
+            "kind": "NEW",
+            "label": "Heizungsalter",
+            "value": "1995"
+          }
+        ],
+        "problems": [],
+        "messageId": "2f2a4c81-02e9-47ba-80fe-66c19e1b38e9",
+        "confirmation": "SENT"
+      }
+    }
+  ]
+}

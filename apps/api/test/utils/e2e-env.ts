@@ -41,3 +41,6 @@ process.env.ESCALATION_ENABLED ??= 'false';
 
 // Die Prüfung neuer Nachrichten auf Korrekturen früherer Angaben (FX-20) ist ein zusätzlicher KI-Aufruf je Antwort; die Suiten mit skriptgesteuertem Modell zählen ihre Aufrufe. Sie läuft im Test nur dort, wo sie ausdrücklich geprüft wird.
 process.env.FACT_CORRECTION_ENABLED ??= 'false';
+
+// Die zweite, gezielte Auslese einer Antwort (je noch fehlender erfragter Angabe ein KI-Aufruf) wird im Test nur dort zugeschaltet, wo sie ausdrücklich geprüft wird: Suiten mit Warteschlange zählen ihre Aufrufe.
+process.env.EXTRACTION_SECOND_PASS ??= 'false';

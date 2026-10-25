@@ -235,7 +235,7 @@ export class ReferenceProcessTools implements OnModuleInit {
    * Entnimmt einer Nachricht die benötigten (und, mit wörtlichem Beleg, weitere für die Anfrage erkennbare) Angaben. Öffentlich, weil auch die Verarbeitung einer Nachricht nach der Übergabe
    * (`SupplementService`) sie braucht – ohne Planknoten, aber mit eigenem Lauf (`ctx.agentRunId`).
    */
-  async extractFromMessage(ctx: { tenantId: string; agentRunId: string }, caseId: string, messageId: string): Promise<{ recorded: Array<{ key: string; value: unknown; status: string }>; rejected: Array<{ key: string; reason: string }>; executionMode: 'LIVE' | 'SIMULATED' }> {
+  async extractFromMessage(ctx: { tenantId: string; agentRunId: string }, caseId: string, messageId: string, options: { only?: string[] } = {}): Promise<{ recorded: Array<{ key: string; value: unknown; status: string }>; rejected: Array<{ key: string; reason: string }>; executionMode: 'LIVE' | 'SIMULATED' }> {
     const message = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { id: messageId, caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) } } }); // Teilvorgang: die Nachricht liegt am Hauptvorgang
     if (!message) throw new ToolFailedError('Die Nachricht gehört nicht zu diesem Vorgang.', { errorCode: 'MESSAGE_NOT_IN_CASE' });
 
@@ -258,6 +258,10 @@ export class ReferenceProcessTools implements OnModuleInit {
     }
     if (analysed && appointmentKindOf(analysed.nextStep)) allowed.set(APPOINTMENT_AGREED_KEY, { type: 'string', description: 'Der von der Person KONKRET gewählte Termin bzw. Terminwunsch (welcher der vorgeschlagenen Termine, Datum, Uhrzeit) oder ihre konkrete Erreichbarkeit. Eine vertagende Antwort („sage ich Ihnen noch“, „melde mich“) ist KEINE Wahl: dann nichts angeben.' });
 
+    // Gezielte Auslese: nur diese Angaben, keine freien Zusatzangaben.
+    if (options.only) for (const key of [...allowed.keys()]) if (!options.only.includes(key)) allowed.delete(key);
+    const freeKeys = !options.only;
+
     const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
       if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
       throw error;
@@ -272,7 +276,7 @@ Regeln: Nur Werte, die in der Nachricht stehen. Zu jedem Wert ein wörtliches Zi
 Für request.product_sku gibt es nur diese Katalogeinträge: ${catalog.map((c) => `${c.sku} = ${c.name} (${c.category})`).join('; ') || '(Katalog leer)'}. Wähle einen SKU nur, wenn die Nachricht eindeutig dazu passt.
 request.quantity ist ausschließlich die Menge des gewählten Katalogartikels (request.product_sku). Flächen (m²) sowie die Anzahl von Wänden oder Räumen sind keine Menge eines Katalogartikels: ohne passenden Katalogartikel keine request.quantity angeben.
 Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.description}`).join('; ')}.
-Gehört eine Angabe inhaltlich zu einer erlaubten Angabe (z. B. Ort, Wohnort oder Standort → die erlaubte Angabe zum Ort; Fläche, Größe → die erlaubte Angabe zur Größe), MUSST du den Schlüssel der erlaubten Angabe verwenden und darfst keinen eigenen erfinden; beantwortet ein Satz mehrere erlaubte Angaben, melde ihn unter jedem passenden Schlüssel.
+${options.only ? 'Es geht ausschließlich um die oben erlaubten Angaben: nenne sie nur, wenn die Nachricht sie ausdrücklich beantwortet (auch beiläufig, in anderen Worten), sonst gib nichts an.\n' : ''}Gehört eine Angabe inhaltlich zu einer erlaubten Angabe (z. B. Ort, Wohnort oder Standort → die erlaubte Angabe zum Ort; Fläche, Größe → die erlaubte Angabe zur Größe), MUSST du den Schlüssel der erlaubten Angabe verwenden und darfst keinen eigenen erfinden; beantwortet ein Satz mehrere erlaubte Angaben, melde ihn unter jedem passenden Schlüssel.
 Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer Anfrage macht (Anschrift, Anzahl, Räume, Baujahr …), meldest du mit dem Schlüssel ai.<kurzer_deutscher_name_in_kleinbuchstaben_ohne_umlaute> (Typ string, z. B. ai.heizungsalter) und dem Wert in den Worten der Person samt Einheit (z. B. „6 m²“, „vier“); auch hier ist ein wörtliches Zitat Pflicht.`,
     );
     const turn = await runtime
@@ -311,7 +315,7 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
         continue;
       }
       // Freie Zusatzangabe der Kundschaft: nur mit Schlüssel ai.<name> und wörtlichem Beleg (der Wert ist, was die Person schrieb – nichts wird abgeleitet).
-      const definition = allowed.get(item.key) ?? (/^ai\.[a-z][a-z0-9_]{2,40}$/.test(item.key) && typeof item.value === 'string' ? { type: 'string', description: 'Zusatzangabe der Kundschaft' } : undefined);
+      const definition = allowed.get(item.key) ?? (freeKeys && /^ai\.[a-z][a-z0-9_]{2,40}$/.test(item.key) && typeof item.value === 'string' ? { type: 'string', description: 'Zusatzangabe der Kundschaft' } : undefined);
       if (!definition) {
         rejected.push({ key: item.key, reason: 'Angabe nicht vorgesehen' });
         continue;
@@ -361,6 +365,23 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
       for (const fact of created) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, definition.type);
       seenKeys.add(item.key);
       recorded.push({ key: item.key, value: item.value, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
+    }
+    // Zweite, gezielte Auslese (Meilenstein B): eine Antwort kann eine erfragte Angabe enthalten, ohne dass die erste Auslese sie dem erfragten Schlüssel zuordnet (z. B. „Wärmepumpe“ als Zusatz zur Anfrage statt als Heizungsart);
+    // dann würde ORBIT dieselbe Frage noch einmal stellen. Für jede noch fehlende erfragte Angabe wird die Nachricht einzeln darauf geprüft – nur bei einer Antwort auf eine Rückfrage (nicht bei der ersten Nachricht).
+    if (!options.only && mode === 'LIVE' && process.env.EXTRACTION_SECOND_PASS !== 'false') {
+      const family = await messageCaseIds(this.prisma, ctx.tenantId, caseId);
+      const firstInbound = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { id: true } });
+      if (firstInbound && firstInbound.id !== message.id) {
+        const asked = new Set<string>([...(analysed?.requirements ?? []).filter((r) => r.blocking).map((r) => r.key), ...(blueprint?.requiredFacts ?? []).map((f) => f.key)]);
+        asked.delete('contact.email');
+        asked.delete(APPOINTMENT_AGREED_KEY);
+        const have = new Set((await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => f.key));
+        for (const key of [...asked].filter((k) => !have.has(k) && allowed.has(k)).slice(0, 4)) {
+          const second = await this.extractFromMessage(ctx, caseId, messageId, { only: [key] });
+          recorded.push(...second.recorded);
+          rejected.push(...second.rejected.map((r) => ({ ...r, reason: `gezielte Auslese: ${r.reason}` })));
+        }
+      }
     }
     return { recorded, rejected, executionMode: mode };
   }

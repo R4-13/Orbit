@@ -1,4 +1,4 @@
-import { contentWords, cueSentences, numericReplacements, type AnchoredNumber } from './fact-correction.service';
+import { changedSegment, contentWords, cueSentences, numericReplacements, type AnchoredNumber } from './fact-correction.service';
 
 const bad: AnchoredNumber = { key: 'bathroom.area_m2', value: 7, anchors: contentWords('bathroom area m2 Mein Bad hat ca. 7 m²'), unit: 'm2' };
 const kueche: AnchoredNumber = { key: 'kitchen.area_m2', value: 7, anchors: contentWords('kitchen area m2 Die Küche im Erdgeschoss hat 7 m²'), unit: 'm2' };
@@ -90,5 +90,29 @@ describe('Meilenstein B: Textwerte bleiben bei einer Korrektur erhalten, Zahlwö
   it('ersetzt einen Flächenwert mit Einheit im Text', () => {
     const update = numericReplacements('Das Bad hat nicht 6 m², sondern 7 m².', [flaeche]);
     expect(update.map((u) => [u.key, u.newValue])).toEqual([['ai.flaeche', '7 m²']]);
+  });
+});
+
+describe('Folgekorrektur: was sich geändert hat, wird auch in anderen Angaben ersetzt', () => {
+  const apply = (previous: string, current: string, text: string): string => {
+    const change = changedSegment(previous, current);
+    if (!change) return text;
+    const found = change.pattern.exec(text);
+    return found ? text.slice(0, found.index + found[1]!.length) + change.to + text.slice(found.index + found[0].length - found[3]!.length) : text;
+  };
+
+  it('ersetzt nur das abweichende Wortstück', () => {
+    expect(apply('Die vorhandene Heizung ist eine Gasheizung von 1985.', 'Die vorhandene Heizung ist eine Gasheizung von 1995.', 'Wärmepumpe; vorhandene Gasheizung von 1985')).toBe('Wärmepumpe; vorhandene Gasheizung von 1995');
+    expect(apply('vier Heizkörper', 'sechs Heizkörper', 'Heizkörper tauschen lassen; vier Heizkörper in Wohnzimmer und Bad')).toBe('Heizkörper tauschen lassen; sechs Heizkörper in Wohnzimmer und Bad');
+  });
+
+  it('eine kurze Zahl wird mit ihrer Einheit verfolgt und steht nicht in fremden Zahlen', () => {
+    expect(apply('6 m²', '7 m²', 'Bad mit 6 m² und 16 m² Flur')).toBe('Bad mit 7 m² und 16 m² Flur');
+    expect(changedSegment('6', '7')).toBeUndefined();
+  });
+
+  it('ohne erkennbaren Unterschied oder ohne Fund bleibt alles wie es ist', () => {
+    expect(changedSegment('Gasheizung', 'gasheizung')).toBeUndefined();
+    expect(apply('1985', '1995', 'Baujahr 2003')).toBe('Baujahr 2003');
   });
 });

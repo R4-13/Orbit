@@ -39,6 +39,7 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
   const connectionByTenant = new Map<string, string>();
   const scripts = new Map<string, Array<Record<string, unknown>>>();
   const previousSwitch = process.env.FACT_CORRECTION_ENABLED;
+  const previousSecondPass = process.env.EXTRACTION_SECOND_PASS;
 
   const script = (tool: string, input: Record<string, unknown>) => {
     const queue = scripts.get(tool) ?? [];
@@ -102,6 +103,7 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
 
   beforeAll(async () => {
     process.env.FACT_CORRECTION_ENABLED = 'true';
+    process.env.EXTRACTION_SECOND_PASS = 'true';
     app = await bootstrapE2eApp();
     prisma = app.get(PrismaService);
     intake = app.get(IntakeService);
@@ -137,6 +139,8 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
     for (const id of tenants) await prisma.withRlsBypass((tx) => tx.tenant.deleteMany({ where: { id } }));
     if (previousSwitch === undefined) delete process.env.FACT_CORRECTION_ENABLED;
     else process.env.FACT_CORRECTION_ENABLED = previousSwitch;
+    if (previousSecondPass === undefined) delete process.env.EXTRACTION_SECOND_PASS;
+    else process.env.EXTRACTION_SECOND_PASS = previousSecondPass;
     await app.close();
   });
 
@@ -277,6 +281,26 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
     expect(lead.notes).toContain('Alte Gasheizung von 1995 im Keller'); // der Rest der Angabe bleibt, nur der alte Wert wird ersetzt
     expect(lead.notes).not.toContain('1985');
     expect(lead.crmSyncState).toBe('SYNCED');
+  });
+
+  it('eine erfragte Angabe, die die Antwort nennt, aber die erste Auslese anders zuordnet, wird gezielt nachgelesen – dieselbe Frage wird nicht noch einmal gestellt', async () => {
+    const tenantId = await newTenant();
+    script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);
+    script('submit_blueprint_fit', { fits: true, reason: 'Eine klassische Angebotsanfrage.' });
+    scriptExtraction();
+    scriptAnalysis({ missingInformation: [{ key: 'heizungsart', label: 'Gewünschte Heizungsart', question: 'Welche Heizungsart wünschen Sie?' }] });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    expect(sent).toHaveLength(1);
+    // Erste Auslese: die Antwort landet als freie Angabe (nicht unter dem erfragten Schlüssel) – danach die gezielte Auslese für ai.heizungsart.
+    scriptExtraction([{ key: 'ai.zusatz', value: 'Wärmepumpe', evidence: 'Wärmepumpe' }]);
+    scriptExtraction([{ key: 'ai.heizungsart', value: 'Wärmepumpe', evidence: 'Wärmepumpe' }]);
+    await reply(tenantId, 'Wir hätten gern eine Wärmepumpe.', 1);
+
+    expect(sent).toHaveLength(2); // keine zweite Rückfrage nach derselben Angabe: nur die Eingangsbestätigung
+    expect(sent[1]!.bodyText).toContain('Sie ist bei uns eingegangen');
+    expect((await leadOf(tenantId, caseId)).notes).toContain('Gewünschte Heizungsart: Wärmepumpe');
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
   });
 
   it('Preisfrage: wird aus dem Betriebswissen beantwortet (statt nur den Eingang zu bestätigen); der Lead nennt die Frage als beantwortet', async () => {

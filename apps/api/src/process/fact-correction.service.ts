@@ -75,6 +75,35 @@ const STOPWORDS = new Set(
   'der die das den dem des ein eine einer einen einem und oder aber doch nicht sondern auch noch nur mit für von zu im in am an auf ist sind hat haben wird werden wir sie ich es bei als wie dass sich mehr nun jetzt dann so etwa circa ungefähr korrektur korrigieren muss müssen weil'.split(' '),
 );
 
+/**
+ * Was sich zwischen dem alten und dem neuen Wert einer Angabe geändert hat: das abweichende Wortstück (gemeinsamer Anfang und gemeinsames Ende der Wörter bleiben außen vor), z. B. „1985“ → „1995“ oder „vier“ → „sechs“.
+ * Ein sehr kurzes Stück (unter drei Zeichen, etwa „6“) wird mit dem folgenden gemeinsamen Wort verlängert („6 m²“), damit es nicht in fremden Zahlen steht. Liefert das Muster (Gruppen: Rand, Stück, Rand),
+ * mit dem das alte Stück als eigenes Wort in einem anderen Text gefunden wird.
+ */
+export function changedSegment(previous: string, current: string): { from: string; to: string; pattern: RegExp } | undefined {
+  const words = (text: string): string[] => text.trim().split(/\s+/).map((w) => w.replace(/[.,;:!?]+$/, ''));
+  const a = words(previous);
+  const b = words(current);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start]!.toLowerCase() === b[start]!.toLowerCase()) start += 1;
+  let endA = a.length;
+  let endB = b.length;
+  while (endA > start && endB > start && a[endA - 1]!.toLowerCase() === b[endB - 1]!.toLowerCase()) {
+    endA -= 1;
+    endB -= 1;
+  }
+  let from = a.slice(start, endA).join(' ');
+  let to = b.slice(start, endB).join(' ');
+  if (!from || !to || from.toLowerCase() === to.toLowerCase()) return undefined;
+  if (from.length < 3 && endA < a.length && endB < b.length) {
+    from = `${from} ${a[endA]!}`;
+    to = `${to} ${b[endB]!}`;
+  }
+  if (from.length < 3) return undefined;
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  return { from, to, pattern: new RegExp(String.raw`(^|[^\p{L}\p{N}])(${escaped})($|[^\p{L}\p{N}])`, 'iu') };
+}
+
 /** Inhaltswörter (ab 3 Buchstaben, ohne Zahlen und Füllwörter) eines Textes – die Anker, an denen eine Zahl ihrem Gegenstand zugeordnet wird. */
 export function contentWords(text: string): string[] {
   return [...new Set(normalizeForMatch(text).split(' ').map((w) => w.replace(/[^a-zäöüß]/g, '')).filter((w) => w.length >= 3 && !STOPWORDS.has(w)))];
@@ -379,13 +408,14 @@ ${lines}`,
    * nur den Wortlaut des alten Wertes, der Rest der Angabe bleibt –, damit die Falldaten (und der Lead) sich nicht widersprechen. Nur Textangaben aus E-Mails; ein kurzer alter Wert (unter vier Zeichen) wird nicht verfolgt.
    */
   private async propagateCorrection(tenantId: string, caseId: string, messageId: string, key: string, previous: unknown, current: unknown): Promise<void> {
-    if (typeof previous !== 'string' || typeof current !== 'string' || previous.trim().length < 4) return;
-    const needle = previous.trim().toLowerCase();
+    if (typeof previous !== 'string' || typeof current !== 'string') return;
+    const change = changedSegment(previous, current);
+    if (!change) return;
     for (const fact of await this.facts.getCurrent(tenantId, caseId)) {
       if (fact.key === key || fact.sourceType !== 'EMAIL' || typeof fact.value !== 'string' || !['CANDIDATE', 'CONFIRMED'].includes(fact.status)) continue;
-      const at = fact.value.toLowerCase().indexOf(needle);
-      if (at < 0) continue;
-      const replaced = fact.value.slice(0, at) + current.trim() + fact.value.slice(at + needle.length);
+      const found = change.pattern.exec(fact.value);
+      if (!found) continue;
+      const replaced = fact.value.slice(0, found.index + found[1]!.length) + change.to + fact.value.slice(found.index + found[0].length - found[3]!.length);
       await this.facts.supersedeBySelfCorrection(tenantId, caseId, { key: fact.key, value: replaced, valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${messageId}`, evidenceRefs: [`Folge der Korrektur von ${key}`] });
     }
   }
