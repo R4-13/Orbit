@@ -221,7 +221,7 @@ describe('Korrekturen früher genannter Angaben (FX-20, e2e)', () => {
       const messageId = await message(tenantId, caseId, TOM, `Zur Technik: ${addition}.`);
       const outcome = await service.processInbound(tenantId, caseId, messageId);
       expect(outcome.conflicts).toEqual([]);
-      expect(await druckluft(tenantId, caseId)).toEqual(expect.arrayContaining([{ key: 'ai.druckluft', value: LONG_BASE, status: 'CANDIDATE' }, { key: 'ai.druckluft.ergaenzung', value: addition, status: 'CANDIDATE' }]));
+      expect(await druckluft(tenantId, caseId)).toEqual(expect.arrayContaining([{ key: 'ai.druckluft', value: LONG_BASE, status: 'CANDIDATE' }, { key: 'ai.druckluft.ergaenzung', value: addition, status: 'CONFIRMED' }]));
       expect(await service.handledKeys(tenantId, caseId, messageId)).toEqual(new Set(['ai.druckluft'])); // die spätere Auslese derselben Nachricht legt den Schlüssel nicht noch einmal an
     });
 
