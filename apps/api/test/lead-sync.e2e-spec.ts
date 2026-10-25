@@ -303,6 +303,34 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
     expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
   });
 
+  it('eine Korrektur noch in der zweiten Antwort (vor der Übergabe): die Eingangsbestätigung nennt den übernommenen Wert statt ihn zu übergehen', async () => {
+    const tenantId = await newTenant();
+    script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);
+    script('submit_blueprint_fit', { fits: true, reason: 'Eine klassische Angebotsanfrage.' });
+    scriptExtraction();
+    scriptAnalysis({
+      missingInformation: [
+        { key: 'existing_heating', label: 'Vorhandene Heizung', question: 'Welche Heizung ist bisher vorhanden?' },
+        { key: 'location', label: 'Ort', question: 'In welchem Ort steht das Haus?' },
+      ],
+    });
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    scriptExtraction([{ key: 'ai.existing_heating', value: 'Gasheizung von 1985', evidence: 'Gasheizung von 1985' }]);
+    await reply(tenantId, 'Die vorhandene Heizung ist eine Gasheizung von 1985.', 1);
+    expect(sent).toHaveLength(2); // zweite Rückfrage nach dem Ort
+    scriptExtraction([{ key: 'ai.location', value: 'Köln', evidence: 'Köln' }]);
+    await reply(tenantId, 'Das Haus steht in Köln. Eine Korrektur: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.', 2);
+
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
+    const lead = await leadOf(tenantId, caseId);
+    expect(lead.notes).toContain('Vorhandene Heizung: Gasheizung von 1995');
+    expect(lead.notes).not.toContain('1985');
+    const last = sent[sent.length - 1]!;
+    expect(last.bodyText).toContain('Gasheizung von 1995 (korrigiert, bisher: Gasheizung von 1985)');
+    expect(last.to).toBe(SENDER);
+  });
+
   it('Preisfrage: wird aus dem Betriebswissen beantwortet (statt nur den Eingang zu bestätigen); der Lead nennt die Frage als beantwortet', async () => {
     const tenantId = await newTenant(true);
     script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);

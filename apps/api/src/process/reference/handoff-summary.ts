@@ -93,9 +93,12 @@ export function buildHandoffSummary(input: HandoffInput): HandoffSummary {
   // Eine Ergänzung nennt etwas Neues: sagt sie nur noch einmal, was in den Angaben schon steht (jedes ihrer Wörter kommt dort vor), bleibt sie weg.
   const wordsOf = (text: string): string[] => text.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [];
   const knownWords = new Set(known.flatMap((k) => wordsOf(k.value)));
+  const shownValues = new Set(known.map((k) => k.value.toLowerCase().replace(/\s+/g, ' ').trim()));
   for (const item of supplements) {
     const words = wordsOf(item.value);
-    if (words.length > 0 && words.every((w) => knownWords.has(w))) continue;
+    const normalized = item.value.toLowerCase().replace(/\s+/g, ' ').trim();
+    if ((words.length > 0 && words.every((w) => knownWords.has(w))) || shownValues.has(normalized)) continue;
+    shownValues.add(normalized);
     known.push({ label: `Ergänzung zu ${labelOf.get(item.base) ?? prettyKey(item.base)}`, value: item.value });
   }
 

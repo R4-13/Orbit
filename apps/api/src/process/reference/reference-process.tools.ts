@@ -18,7 +18,9 @@ import { CASE_EVENT_TYPES, CaseEventsService } from '../case-events.service';
 import { CaseFactsService } from '../case-facts.service';
 import { AppointmentSlotsService } from './appointment-slots.service';
 import { safeSalutationName, supplementConfirmationBody, acknowledgementBody, appointmentConfirmationBody, attachmentRequestBody, clarificationBody, informationBody, quoteDeliveryBody, replySubject, statusUpdateBody } from './communication-templates';
+import type { SupplementChange } from './communication-templates';
 import { formatSlotLabel } from './appointment-slots';
+import { factLabel } from './handoff-summary';
 import { PRICE_QUESTION_KEY, findPriceQuestion } from './price-question';
 import { findStreetAddress } from './street-address';
 import { replyLanguage, type ReplyLanguage } from './reply-language';
@@ -388,7 +390,9 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
         asked.delete(APPOINTMENT_AGREED_KEY);
         const have = new Set((await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => f.status === 'CONFIRMED').map((f) => f.key));
         for (const key of [...asked].filter((k) => !have.has(k) && allowed.has(k)).slice(0, 4)) {
-          const second = await this.extractFromMessage(ctx, caseId, messageId, { only: [key] });
+          // Die gezielte Auslese ist eine Zugabe: ein Ausfall oder eine leere Antwort darf die bereits gelungene Hauptauslese nicht scheitern lassen.
+          const second = await this.extractFromMessage(ctx, caseId, messageId, { only: [key] }).catch(() => undefined);
+          if (!second) continue;
           recorded.push(...second.recorded);
           rejected.push(...second.rejected.map((r) => ({ ...r, reason: `gezielte Auslese: ${r.reason}` })));
         }
@@ -592,7 +596,12 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
           attachmentDocumentIds.push(input.documentId);
         } else if (input.purpose === 'ACKNOWLEDGEMENT') {
           const pending = await this.appointmentState(ctx.tenantId, caseId);
-          bodyText = acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang, name, appointmentPending: pending.outstanding && !pending.rejected });
+          // Hat die Kundschaft seit der letzten Nachricht von uns Angaben korrigiert und ist der Vorgang schon übergeben, nennt die Eingangsbestätigung, was übernommen wurde (Meilenstein B), statt es zu übergehen.
+          const corrections = await this.correctionsSinceLastReply(ctx.tenantId, caseId);
+          bodyText =
+            corrections.length > 0
+              ? supplementConfirmationBody({ changes: corrections, companyName, lang, name })
+              : acknowledgementBody({ originalSubject: inbound?.subject, companyName, emergency: await this.isEmergency(ctx.tenantId, caseId), lang, name, appointmentPending: pending.outstanding && !pending.rejected });
         } else if (input.purpose === 'STATUS_UPDATE' && input.changes && input.changes.length > 0) {
           // Die Werte sind Wortlaut der Kundschaft; was für eine Nachricht an sie nicht geeignet ist (Links, Kontodaten …), wird nicht eingesetzt.
           const usable = input.changes.filter((c) => isSafeCustomerText(c.value).safe && (!c.previous || isSafeCustomerText(c.previous).safe) && isSafeCustomerText(c.label).safe);
@@ -634,6 +643,28 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
         return { draftId: draft.id, version: draft.version, contentHash: draft.contentHash, to: draft.toAddress, subject: draft.subject, appointment: appointmentInfo ?? null, executionMode: 'LIVE' };
       },
     };
+  }
+
+  /** Korrekturen früherer Angaben seit unserer letzten ausgehenden Nachricht – nur, wenn der Lead schon angelegt ist (dann ist „an die zuständige Stelle weitergegeben“ zutreffend) und die Werte unbedenklich sind. */
+  private async correctionsSinceLastReply(tenantId: string, caseId: string): Promise<SupplementChange[]> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    if ((await scoped.lead.count({ where: { caseId } })) === 0) return [];
+    const family = await messageCaseIds(this.prisma, tenantId, caseId);
+    const lastOut = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'OUTBOUND' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } });
+    const events = await scoped.caseEvent.findMany({ where: { caseId, type: CASE_EVENT_TYPES.FACT_CORRECTED, ...(lastOut ? { createdAt: { gt: lastOut.createdAt } } : {}) }, orderBy: { sequence: 'asc' } });
+    const analysis = await this.analysis.latest(tenantId, caseId);
+    const changes: SupplementChange[] = [];
+    for (const event of events) {
+      const p = event.payload as { key?: string; previous?: unknown; current?: unknown };
+      const show = (v: unknown): string => (typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : '');
+      if (typeof p.key !== 'string' || /^(contact|appointment|case|inbound|crm)\./.test(p.key) || !show(p.current)) continue;
+      const label = factLabel(p.key, analysis);
+      const value = show(p.current);
+      const previous = show(p.previous);
+      if (![label, value, previous].every((t) => isSafeCustomerText(t).safe)) continue;
+      changes.push({ label, value, ...(previous ? { previous } : {}), kind: 'CORRECTED' });
+    }
+    return changes.slice(0, 6);
   }
 
   /** Stand der Terminvorschläge dieses Vorgangs: früher angebotene Beginne, ob noch ein Vorschlag offen ist, ob die Kundschaft seither geantwortet und die Zeiten abgelehnt hat. */
