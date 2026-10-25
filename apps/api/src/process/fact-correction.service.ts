@@ -328,7 +328,9 @@ ${lines}`,
       // eine Verneinung im neuen Text macht aus der „Ergänzung“ einen Widerspruch (Sicherung gegen eine falsche Einstufung durch die KI).
       const negated = typeof update.newValue === 'string' && /\b(nicht|kein|keine|keinen|keiner|ohne|nie|niemals)\b/i.test(update.newValue);
       if (update.kind === 'ADDITIONAL' && !negated) {
-        await this.facts.propose(tenantId, caseId, [{ key: `${update.key}.ergaenzung.${message.id.slice(0, 8)}`, value, valueType, sourceType: 'EMAIL' as const, sourceRef: `message:${message.id}`, evidenceRefs: [update.evidence] }]);
+        // Die Ergänzung ist wörtlich belegt und gültig: sie gilt (und erscheint im Lead als Ergänzung), die frühere Angabe bleibt daneben bestehen.
+        const supplement = await this.facts.propose(tenantId, caseId, [{ key: `${update.key}.ergaenzung.${message.id.slice(0, 8)}`, value, valueType, sourceType: 'EMAIL' as const, sourceRef: `message:${message.id}`, evidenceRefs: [update.evidence] }]);
+        for (const fact of supplement) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(tenantId, fact.id, valueType);
         outcome.ignored.push({ key: update.key, kind: 'ADDITIONAL', reason: 'Ergänzung: frühere Angabe bleibt gültig, die neue steht als eigene Ergänzung (Schlüssel .ergaenzung)' });
         continue;
       }
@@ -340,7 +342,9 @@ ${lines}`,
       const hedged = update.kind === 'CORRECTION' && isHedged(evidenceSentence);
       if (update.kind === 'CORRECTION' && sameVoice && !hedged) {
         const { previous } = await this.facts.supersedeBySelfCorrection(tenantId, caseId, input);
-        outcome.corrected.push({ key: update.key, previous: previous.map((f) => f.value).at(-1) ?? null, current: value });
+        const before = previous.map((f) => f.value).at(-1) ?? null;
+        outcome.corrected.push({ key: update.key, previous: before, current: value });
+        await this.propagateCorrection(tenantId, caseId, message.id, update.key, before, value);
         continue;
       }
       // Mehrdeutig (oder die Korrektur stammt nicht nachweislich von derselben Person): nicht entscheiden, beide Werte sichtbar im Widerspruch lassen.
@@ -368,6 +372,22 @@ ${lines}`,
     }
     if (outcome.corrected.length > 0) await this.flagCorrectionAfterHandover(tenantId, caseId, message.id, outcome.corrected);
     return outcome;
+  }
+
+  /**
+   * Der alte Wert steht oft noch in anderen Angaben desselben Vorgangs (eine Ergänzung oder Zusammenfassung der ersten Nachricht: „vier Heizkörper in Wohnzimmer, …“). Eine Korrektur ersetzt ihn dort ebenfalls –
+   * nur den Wortlaut des alten Wertes, der Rest der Angabe bleibt –, damit die Falldaten (und der Lead) sich nicht widersprechen. Nur Textangaben aus E-Mails; ein kurzer alter Wert (unter vier Zeichen) wird nicht verfolgt.
+   */
+  private async propagateCorrection(tenantId: string, caseId: string, messageId: string, key: string, previous: unknown, current: unknown): Promise<void> {
+    if (typeof previous !== 'string' || typeof current !== 'string' || previous.trim().length < 4) return;
+    const needle = previous.trim().toLowerCase();
+    for (const fact of await this.facts.getCurrent(tenantId, caseId)) {
+      if (fact.key === key || fact.sourceType !== 'EMAIL' || typeof fact.value !== 'string' || !['CANDIDATE', 'CONFIRMED'].includes(fact.status)) continue;
+      const at = fact.value.toLowerCase().indexOf(needle);
+      if (at < 0) continue;
+      const replaced = fact.value.slice(0, at) + current.trim() + fact.value.slice(at + needle.length);
+      await this.facts.supersedeBySelfCorrection(tenantId, caseId, { key: fact.key, value: replaced, valueType: 'string', sourceType: 'EMAIL', sourceRef: `message:${messageId}`, evidenceRefs: [`Folge der Korrektur von ${key}`] });
+    }
   }
 
   /**

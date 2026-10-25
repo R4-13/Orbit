@@ -238,6 +238,47 @@ describe('Lead-Abgleich nach der Übergabe (Meilenstein B, e2e)', () => {
     expect(sent).toHaveLength(sentBefore + 1); // nicht ein zweites Mal
   });
 
+  it('eine Ergänzung (zweite Fassung einer Angabe) steht im Lead als Ergänzung, nicht verloren und nicht als Widerspruch', async () => {
+    const tenantId = await newTenant();
+    const caseId = await handedOverCase(tenantId);
+    scriptExtraction([{ key: 'ai.standort', value: 'Köln', evidence: 'Köln' }]);
+    await reply(tenantId, 'Das Haus steht in Köln.', 2);
+    scriptExtraction([{ key: 'ai.standort', value: 'Porz', evidence: 'Porz' }]);
+    await reply(tenantId, 'Genauer: im Stadtteil Porz.', 3);
+
+    const lead = await leadOf(tenantId, caseId);
+    expect(lead.crmSyncState).toBe('SYNCED');
+    expect(lead.notes).toContain('- Standort: Köln');
+    expect(lead.notes).toContain('- Ergänzung zu Standort: Porz');
+    expect((await caseOf(tenantId, caseId)).orchestrationStatus).toBe('COMPLETED');
+  });
+
+  it('eine Korrektur ersetzt den alten Wert auch dort, wo er in einer anderen Angabe mit steht – der Rest bleibt, Falldaten und Lead widersprechen sich nicht', async () => {
+    const tenantId = await newTenant();
+    script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);
+    script('submit_blueprint_fit', { fits: true, reason: 'Eine klassische Angebotsanfrage.' });
+    scriptExtraction();
+    scriptAnalysis();
+    const first = await intake.handleIntakeEvent(tenantId, undefined, mail(tenantId));
+    const caseId = first.case!.id;
+    scriptExtraction([
+      { key: 'ai.existing_heating', value: 'Gasheizung von 1985', evidence: 'Gasheizung von 1985' },
+      { key: 'ai.notiz', value: 'Alte Gasheizung von 1985 im Keller', evidence: 'Alte Gasheizung von 1985 im Keller' },
+    ]);
+    await reply(tenantId, 'Die vorhandene Heizung ist eine Gasheizung von 1985. Alte Gasheizung von 1985 im Keller.', 1);
+    expect((await leadOf(tenantId, caseId)).notes).toContain('Alte Gasheizung von 1985 im Keller');
+
+    scriptExtraction();
+    script('submit_fact_updates', { updates: [{ key: 'ai.existing_heating', newValue: 'Gasheizung von 1995', evidence: 'nicht von 1985, sondern von 1995', kind: 'CORRECTION', reason: '' }] });
+    await reply(tenantId, 'Eine Korrektur: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.', 2);
+
+    const lead = await leadOf(tenantId, caseId);
+    expect(lead.notes).toContain('Vorhandene Heizung: Gasheizung von 1995');
+    expect(lead.notes).toContain('Alte Gasheizung von 1995 im Keller'); // der Rest der Angabe bleibt, nur der alte Wert wird ersetzt
+    expect(lead.notes).not.toContain('1985');
+    expect(lead.crmSyncState).toBe('SYNCED');
+  });
+
   it('Preisfrage: wird aus dem Betriebswissen beantwortet (statt nur den Eingang zu bestätigen); der Lead nennt die Frage als beantwortet', async () => {
     const tenantId = await newTenant(true);
     script('submit_triage_result', triageFixtureForScenario('REQUEST_FOR_QUOTE') as unknown as Record<string, unknown>);

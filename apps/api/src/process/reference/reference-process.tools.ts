@@ -272,7 +272,8 @@ Regeln: Nur Werte, die in der Nachricht stehen. Zu jedem Wert ein wörtliches Zi
 Für request.product_sku gibt es nur diese Katalogeinträge: ${catalog.map((c) => `${c.sku} = ${c.name} (${c.category})`).join('; ') || '(Katalog leer)'}. Wähle einen SKU nur, wenn die Nachricht eindeutig dazu passt.
 request.quantity ist ausschließlich die Menge des gewählten Katalogartikels (request.product_sku). Flächen (m²) sowie die Anzahl von Wänden oder Räumen sind keine Menge eines Katalogartikels: ohne passenden Katalogartikel keine request.quantity angeben.
 Erlaubte Angaben: ${[...allowed].map(([k, v]) => `${k} (${v.type}): ${v.description}`).join('; ')}.
-Weitere Angaben, die die Person zu ihrer Anfrage macht und die nicht in der Liste stehen (Fläche, Anzahl, Räume, Anschrift, Baujahr …), meldest du mit dem Schlüssel ai.<kurzer_name_in_kleinbuchstaben> (Typ string) und dem Wert in den Worten der Person samt Einheit (z. B. „6 m²“, „vier“); auch hier ist ein wörtliches Zitat Pflicht.`,
+Gehört eine Angabe inhaltlich zu einer erlaubten Angabe (z. B. Ort, Wohnort oder Standort → die erlaubte Angabe zum Ort; Fläche, Größe → die erlaubte Angabe zur Größe), MUSST du den Schlüssel der erlaubten Angabe verwenden und darfst keinen eigenen erfinden; beantwortet ein Satz mehrere erlaubte Angaben, melde ihn unter jedem passenden Schlüssel.
+Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer Anfrage macht (Anschrift, Anzahl, Räume, Baujahr …), meldest du mit dem Schlüssel ai.<kurzer_deutscher_name_in_kleinbuchstaben_ohne_umlaute> (Typ string, z. B. ai.heizungsalter) und dem Wert in den Worten der Person samt Einheit (z. B. „6 m²“, „vier“); auch hier ist ein wörtliches Zitat Pflicht.`,
     );
     const turn = await runtime
       .runTurn({ tenantId: ctx.tenantId, agentRunId: ctx.agentRunId }, { systemPrompt: system, messages: [{ role: 'user', content: wrapUntrustedContent(text) }], maxToolIterations: 2 })
@@ -348,7 +349,8 @@ Weitere Angaben, die die Person zu ihrer Anfrage macht und die nicht in der List
           // Eine andere Fassung derselben Textangabe aus einer späteren Nachricht ohne jeden Hinweis auf eine Änderung ist keine Meinungsänderung der Kundschaft, sondern eine zweite Lesart (Musterwerk, Funktionsnachweis 23.10.: „Angebot erbeten“ aus
           // der Anfrage, „bitte um Angebot“ aus dem Betreff der Antwort → Widerspruch → sinnlose Rückfrage „Angebotswunsch?“). Sie wird als Ergänzung festgehalten; echte Änderungen erkennt die Korrekturprüfung (Hinweiswörter).
           if (isSecondReading({ key: item.key, oldValue: String(refined.value), newValue: item.value, fromSameMessage: refined.sourceRef === `message:${message.id}`, messageHasChangeCue: cueSentences(String(message.bodyText ?? message.bodyPreview ?? '')) !== undefined })) {
-            await this.facts.propose(ctx.tenantId, caseId, [{ key: `${item.key}.ergaenzung.${message.id.slice(0, 8)}`, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence] }]);
+            const supplement = await this.facts.propose(ctx.tenantId, caseId, [{ key: `${item.key}.ergaenzung.${message.id.slice(0, 8)}`, value: item.value, valueType: definition.type, sourceType: 'EMAIL', sourceRef: `message:${message.id}`, evidenceRefs: [item.evidence] }]);
+            for (const fact of supplement) if (fact.status === 'CANDIDATE') await this.facts.confirmBySchema(ctx.tenantId, fact.id, definition.type);
             rejected.push({ key: item.key, reason: 'andere Fassung ohne Änderungshinweis: als Ergänzung festgehalten' });
             continue;
           }

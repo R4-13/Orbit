@@ -1,0 +1,420 @@
+{
+  "case": {
+    "id": "6a4ca894-9b78-41cb-9f5a-3c2bf493ef6d",
+    "title": "Neue Anfrage: Badezimmer erneuern – was kostet das?",
+    "status": "COMPLETED",
+    "attentionReasons": [],
+    "outcome": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "email.send/CLARIFICATION:1a173c44f451c102",
+        "facts.extract_from_message",
+        "communication.draft/CLARIFICATION",
+        "email.send/CLARIFICATION:1a173c5e56c3e2b2",
+        "facts.extract_from_message",
+        "crm.lead.create/CRM_HANDOFF",
+        "communication.draft/INFORMATION",
+        "staff.notify",
+        "email.send/INFORMATION:1a173cd1fc203232"
+      ]
+    },
+    "blueprint": "REQUEST_FOR_QUOTE 2.1.0"
+  },
+  "facts": [
+    {
+      "key": "absendername",
+      "value": "Tom Orbit",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.anschrift",
+      "value": "Musterweg 3",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.bathroom_size",
+      "value": "6 m²",
+      "status": "CONFIRMED",
+      "current": false,
+      "revision": 1
+    },
+    {
+      "key": "ai.bathroom_size",
+      "value": "7 m²",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 2
+    },
+    {
+      "key": "ai.customer_name",
+      "value": "Tom Orbit",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.price_request",
+      "value": "Preisliche Einschätzung",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.project_location",
+      "value": "Leverkusen",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.service",
+      "value": "Komplette Erneuerung des Badezimmers",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.shower_type",
+      "value": "Ebenerdige Dusche",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.wohnort",
+      "value": "Leverkusen",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "angefragte_leistung",
+      "value": "Komplette Badsanierung mit ebenerdiger Dusche",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "contact.email",
+      "value": "tomorbit777@gmail.com",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "preisangebot_erbeten",
+      "value": true,
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "request.price_question",
+      "value": "Badezimmer erneuern – was kostet das?",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    }
+  ],
+  "lead": {
+    "id": "67385586-0402-475f-9c68-e347b16a9247",
+    "crmExternalId": "531274624214",
+    "syncState": "SYNCED",
+    "syncError": null,
+    "syncedAt": "2026-10-25T16:05:15.521Z",
+    "orbitNotes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 16:53)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Badezimmer erneuern – was kostet das?\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Komplette Erneuerung des Badezimmers\n- Gewünschte Dusche: Ebenerdige Dusche\n- Preisauskunft gewünscht: Preisliche Einschätzung\n- Name: Tom Orbit\n- Ort der Immobilie: Leverkusen\n- Größe des Badezimmers: 7 m²\n- Anschrift: Musterweg 3\n- Wohnort: Leverkusen\n\nPreisfrage der Kundschaft: „Badezimmer erneuern – was kostet das?“ – per E-Mail beantwortet.\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "crmReadBack": {
+    "externalId": "531274624214",
+    "title": "Anfrage Preisanfrage für eine komplette Badsanierung mit ebenerdiger Dusche – Tom Orbit",
+    "notes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 16:53)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Badezimmer erneuern – was kostet das?\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Komplette Erneuerung des Badezimmers\n- Gewünschte Dusche: Ebenerdige Dusche\n- Preisauskunft gewünscht: Preisliche Einschätzung\n- Name: Tom Orbit\n- Ort der Immobilie: Leverkusen\n- Größe des Badezimmers: 7 m²\n- Anschrift: Musterweg 3\n- Wohnort: Leverkusen\n\nPreisfrage der Kundschaft: „Badezimmer erneuern – was kostet das?“ – per E-Mail beantwortet.\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "messages": [
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Badezimmer erneuern – was kostet das?",
+      "body": "Guten Tag,\r\n\r\nwir möchten unser Badezimmer komplett erneuern lassen und hätten gern\r\neine ebenerdige Dusche. Womit müssten wir preislich rechnen?\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+      "at": "2026-10-25T15:53:01.227Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Anfrage „Badezimmer erneuern – was kostet das?“.\n\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. In welchem Ort befindet sich das Badezimmer?\n2. Wie groß ist das Badezimmer ungefähr (in Quadratmetern)?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T15:53:27.718Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Das Bad hat 6 m². Wir wohnen im Musterweg 3 in Leverkusen.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T15:55:01.386Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Antwort.\n\nDamit wir Ihre Anfrage gut vorbereiten können, fehlen uns noch folgende Angaben:\n\n1. In welchem Ort befindet sich das Badezimmer?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T15:55:11.640Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Das Badezimmer ist in Leverkusen.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T16:01:00.981Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht.\n\nWir führen komplette Badsanierungen im Raum Köln aus. Für ein Angebot schauen wir uns die Situation vor Ort an und erstellen danach ein schriftliches Angebot; Preise nennen wir nicht vorab am Telefon oder per E-Mail.\n\nBei weiteren Fragen melden Sie sich gern.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:03:05.286Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Eine Korrektur: Das Bad hat nicht 6 m², sondern 7 m².\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T16:05:01.213Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Badezimmer erneuern – was kostet das?",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:\n- Größe des Badezimmers: 7 m² (korrigiert, bisher: 6 m²)\nSollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T16:05:16.687Z"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Neuen Lead kontaktieren: Tom Orbit",
+      "status": "OPEN",
+      "description": "Anfrage über ORBIT (E-Mail, 25.10.2026, 16:53)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Badezimmer erneuern – was kostet das?\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Komplette Erneuerung des Badezimmers\n- Gewünschte Dusche: Ebenerdige Dusche\n- Preisauskunft gewünscht: Preisliche Einschätzung\n- Name: Tom Orbit\n- Ort der Immobilie: Leverkusen\n- Größe des Badezimmers: 7 m²\n- Anschrift: Musterweg 3\n- Wohnort: Leverkusen\n\nPreisfrage der Kundschaft: „Badezimmer erneuern – was kostet das?“ – per E-Mail beantwortet.\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+    }
+  ],
+  "actions": [
+    {
+      "id": "30057e56-7417-4af8-b31f-c8a4d2686720",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract"
+    },
+    {
+      "id": "f04cfeba-7e08-400b-ac8f-1f4c32763660",
+      "capabilityKey": "communication.draft",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1_draft"
+    },
+    {
+      "id": "24a7b33e-31b4-4ed7-b91f-bb302763d9b1",
+      "capabilityKey": "email.send",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1"
+    },
+    {
+      "id": "cd443c7f-f96b-4e13-8265-a0fd2bae4f5a",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract2"
+    },
+    {
+      "id": "d8bec7e6-e9a8-4f5f-9ad1-39669ad5832b",
+      "capabilityKey": "communication.draft",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask2_draft"
+    },
+    {
+      "id": "46c4f4d2-39ae-4d89-ab94-565914f3c502",
+      "capabilityKey": "email.send",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask2"
+    },
+    {
+      "id": "1c3a8137-3783-46dd-b691-c30d60e5b72e",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract3"
+    },
+    {
+      "id": "2d309102-ef1b-427a-ab48-6d6024775f58",
+      "capabilityKey": "crm.lead.create",
+      "purpose": "CRM_HANDOFF",
+      "status": "CONFIRMED",
+      "nodeKey": "lead"
+    },
+    {
+      "id": "4129adf1-29c8-4b77-9911-59f82e9ea083",
+      "capabilityKey": "staff.notify",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "notify"
+    },
+    {
+      "id": "ab21d031-aebc-4b4d-a862-71a2f1782de9",
+      "capabilityKey": "communication.draft",
+      "purpose": "INFORMATION",
+      "status": "CONFIRMED",
+      "nodeKey": "info_draft"
+    },
+    {
+      "id": "f5000ca4-067b-435a-a7e8-7e2ea09aee24",
+      "capabilityKey": "email.send",
+      "purpose": "INFORMATION",
+      "status": "CONFIRMED",
+      "nodeKey": "info"
+    },
+    {
+      "id": "1b0bc5d2-d448-461a-abf6-db10159964b2",
+      "capabilityKey": "email.send",
+      "purpose": "STATUS_UPDATE",
+      "status": "CONFIRMED",
+      "nodeKey": "supplement:d690ad9d-baaf-44f7-b3dc-8ed9f1522201"
+    }
+  ],
+  "approvals": [
+    {
+      "status": "APPROVED",
+      "policyAction": "email.send.information"
+    }
+  ],
+  "events": [
+    {
+      "type": "completion.evaluated",
+      "payload": {
+        "met": true,
+        "goals": [
+          {
+            "goal": "request.handed_over",
+            "basis": "COMPLETION_CRITERIA",
+            "status": "ACHIEVED"
+          }
+        ],
+        "criteriaMet": true,
+        "evidenceRefs": [
+          "facts.extract_from_message",
+          "communication.draft/CLARIFICATION",
+          "email.send/CLARIFICATION:1a173c44f451c102",
+          "facts.extract_from_message",
+          "communication.draft/CLARIFICATION",
+          "email.send/CLARIFICATION:1a173c5e56c3e2b2",
+          "facts.extract_from_message",
+          "crm.lead.create/CRM_HANDOFF",
+          "communication.draft/INFORMATION",
+          "staff.notify",
+          "email.send/INFORMATION:1a173cd1fc203232"
+        ]
+      }
+    },
+    {
+      "type": "lead.synced",
+      "payload": {
+        "hash": "c523991205f0951ceb07d43fb6da81a6cf314c92efeb8c37eeccf9928ae6f479",
+        "open": 0,
+        "known": 8,
+        "leadId": "67385586-0402-475f-9c68-e347b16a9247",
+        "trigger": {
+          "reason": "COMPLETION"
+        },
+        "written": true,
+        "readBack": "CONFIRMED",
+        "crmExternalId": "531274624214"
+      }
+    },
+    {
+      "type": "case.completed",
+      "payload": {
+        "to": "COMPLETED",
+        "from": "IN_PROGRESS",
+        "revision": 33,
+        "attentionReasons": []
+      }
+    },
+    {
+      "type": "fact.corrected",
+      "payload": {
+        "key": "ai.bathroom_size",
+        "current": "7 m²",
+        "previous": "6 m²",
+        "messageId": "d690ad9d-baaf-44f7-b3dc-8ed9f1522201"
+      }
+    },
+    {
+      "type": "lead.synced",
+      "payload": {
+        "hash": "439af9b6bf9555d46c9579d573b607958339f66640c9244fefeeff601b801f15",
+        "open": 0,
+        "known": 8,
+        "leadId": "67385586-0402-475f-9c68-e347b16a9247",
+        "trigger": {
+          "reason": "SUPPLEMENT",
+          "messageId": "d690ad9d-baaf-44f7-b3dc-8ed9f1522201"
+        },
+        "written": true,
+        "readBack": "CONFIRMED",
+        "crmExternalId": "531274624214"
+      }
+    },
+    {
+      "type": "supplement.confirmed",
+      "payload": {
+        "messageId": "d690ad9d-baaf-44f7-b3dc-8ed9f1522201"
+      }
+    },
+    {
+      "type": "supplement.applied",
+      "payload": {
+        "sync": "SYNCED",
+        "changes": [
+          {
+            "kind": "CORRECTED",
+            "label": "Größe des Badezimmers",
+            "value": "7 m²",
+            "previous": "6 m²"
+          }
+        ],
+        "problems": [],
+        "messageId": "d690ad9d-baaf-44f7-b3dc-8ed9f1522201",
+        "confirmation": "SENT"
+      }
+    }
+  ]
+}
