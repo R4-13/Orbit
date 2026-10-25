@@ -1,0 +1,370 @@
+{
+  "case": {
+    "id": "9e604c99-2983-44d9-8a16-181b63be579a",
+    "title": "Neue Anfrage: Heizkörper tauschen in Bonn",
+    "status": "COMPLETED",
+    "attentionReasons": [],
+    "outcome": {
+      "code": "COMPLETION_CRITERIA_MET",
+      "evidenceRefs": [
+        "communication.draft/CLARIFICATION",
+        "facts.extract_from_message",
+        "crm.lead.create/CRM_HANDOFF",
+        "communication.draft/ACKNOWLEDGEMENT",
+        "facts.extract_from_message",
+        "email.send/CLARIFICATION:1a1746bd812adf7a",
+        "staff.notify",
+        "email.send/ACKNOWLEDGEMENT:1a1746d81aee7711"
+      ]
+    },
+    "blueprint": "REQUEST_FOR_QUOTE 2.1.0"
+  },
+  "facts": [
+    {
+      "key": "ai.customer_name",
+      "value": "Tom Orbit",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.location",
+      "value": "Bonn",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.location.ergaenzung.afec4e31",
+      "value": "Bahnhofstraße 7, Bonn",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.property_type",
+      "value": "Wohnung",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.quote_requested",
+      "value": "Angebot erbeten",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.radiator_quantity",
+      "value": "vier",
+      "status": "CONFIRMED",
+      "current": false,
+      "revision": 1
+    },
+    {
+      "key": "ai.radiator_quantity",
+      "value": "sechs",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 2
+    },
+    {
+      "key": "ai.service",
+      "value": "Heizkörper tauschen",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.service.ergaenzung.4db8400d",
+      "value": "Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.service.ergaenzung.afec4e31",
+      "value": "Heizkörper tauschen; vier Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)",
+      "status": "CONFIRMED",
+      "current": false,
+      "revision": 1
+    },
+    {
+      "key": "ai.service.ergaenzung.afec4e31",
+      "value": "Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 2
+    },
+    {
+      "key": "contact.email",
+      "value": "tomorbit777@gmail.com",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "location",
+      "value": "Bonn",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "request_for_quote",
+      "value": true,
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "requested_service",
+      "value": "Heizkörpertausch",
+      "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    }
+  ],
+  "lead": {
+    "id": "67dc7c9f-3ae4-4b8a-ab95-01941fa796b0",
+    "crmExternalId": "530981028041",
+    "syncState": "SYNCED",
+    "syncError": null,
+    "syncedAt": "2026-10-25T19:00:11.237Z",
+    "orbitNotes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:56)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Heizkörper tauschen in Bonn\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Heizkörper tauschen\n- Ort: Bonn\n- Objektart: Wohnung\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Anzahl der Heizkörper: sechs\n- Ergänzung zu Ort: Bahnhofstraße 7, Bonn\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "crmReadBack": {
+    "externalId": "530981028041",
+    "title": "Anfrage Anfrage für Heizkörpertausch – Tom Orbit",
+    "notes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:56)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Heizkörper tauschen in Bonn\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Heizkörper tauschen\n- Ort: Bonn\n- Objektart: Wohnung\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Anzahl der Heizkörper: sechs\n- Ergänzung zu Ort: Bahnhofstraße 7, Bonn\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+  },
+  "messages": [
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Heizkörper tauschen in Bonn",
+      "body": "Guten Tag,\r\n\r\nwir möchten in unserer Wohnung in Bonn die Heizkörper tauschen lassen.\r\nBitte um ein Angebot.\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+      "at": "2026-10-25T18:56:01.232Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Heizkörper tauschen in Bonn",
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Anfrage „Heizkörper tauschen in Bonn“.\n\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Wie viele Heizkörper sollen getauscht werden?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T18:56:27.723Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Heizkörper tauschen in Bonn",
+      "body": "Es sind vier Heizkörper: Wohnzimmer, Schlafzimmer, Küche und Bad. Die\r\nWohnung ist in der Bahnhofstraße 7 in Bonn.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T18:58:01.191Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Heizkörper tauschen in Bonn",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht zu „Heizkörper tauschen in Bonn“. Sie ist bei uns eingegangen.\nWir kümmern uns darum und melden uns bei Ihnen.\nSie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T18:58:16.160Z"
+    },
+    {
+      "direction": "INBOUND",
+      "from": "tomorbit777@gmail.com",
+      "to": [
+        "handwerkernull@gmail.com"
+      ],
+      "subject": "Re: Heizkörper tauschen in Bonn",
+      "body": "Eine Korrektur: Es sind nicht vier, sondern sechs Heizkörper – das\r\nKinderzimmer und der Flur kommen dazu.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
+      "at": "2026-10-25T19:00:01.862Z"
+    },
+    {
+      "direction": "OUTBOUND",
+      "from": "handwerkernull@gmail.com",
+      "to": [
+        "tomorbit777@gmail.com"
+      ],
+      "subject": "Re: Heizkörper tauschen in Bonn",
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:\n- Anzahl der Heizkörper: sechs (korrigiert, bisher: vier)\n- Gewünschte Leistung (Ergänzung): Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur\n- Gewünschte Leistung (Ergänzung): Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\nSollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T19:00:12.260Z"
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Neuen Lead kontaktieren: Tom Orbit",
+      "status": "OPEN",
+      "description": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:56)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Heizkörper tauschen in Bonn\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Heizkörper tauschen\n- Ort: Bonn\n- Objektart: Wohnung\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Anzahl der Heizkörper: sechs\n- Ergänzung zu Ort: Bahnhofstraße 7, Bonn\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur\n- Ergänzung zu Gewünschte Leistung: Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+    }
+  ],
+  "actions": [
+    {
+      "id": "b0beb8d6-c233-4f3b-ac00-a8ff17510860",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract"
+    },
+    {
+      "id": "48230e1b-6379-45af-a498-0f21a2d0f3fe",
+      "capabilityKey": "communication.draft",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1_draft"
+    },
+    {
+      "id": "e8eddf72-378c-4837-b9dc-2013ba975c2d",
+      "capabilityKey": "email.send",
+      "purpose": "CLARIFICATION",
+      "status": "CONFIRMED",
+      "nodeKey": "ask1"
+    },
+    {
+      "id": "83f018ce-3271-4a4c-bc05-f003a310e54d",
+      "capabilityKey": "facts.extract_from_message",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "extract2"
+    },
+    {
+      "id": "00365e18-aa9b-42bd-9075-e218ff8012b1",
+      "capabilityKey": "crm.lead.create",
+      "purpose": "CRM_HANDOFF",
+      "status": "CONFIRMED",
+      "nodeKey": "lead"
+    },
+    {
+      "id": "d5234bcd-2adf-4409-a913-7708fe32c770",
+      "capabilityKey": "staff.notify",
+      "purpose": null,
+      "status": "CONFIRMED",
+      "nodeKey": "notify"
+    },
+    {
+      "id": "98797efa-ec51-48fe-91fb-92ebb4cf6df7",
+      "capabilityKey": "communication.draft",
+      "purpose": "ACKNOWLEDGEMENT",
+      "status": "CONFIRMED",
+      "nodeKey": "ack_draft"
+    },
+    {
+      "id": "67e1c40a-83cc-468a-a3fe-0014fdfc05e9",
+      "capabilityKey": "email.send",
+      "purpose": "ACKNOWLEDGEMENT",
+      "status": "CONFIRMED",
+      "nodeKey": "ack"
+    },
+    {
+      "id": "bc943686-1dcd-4626-924c-cbf83ea1758a",
+      "capabilityKey": "email.send",
+      "purpose": "STATUS_UPDATE",
+      "status": "CONFIRMED",
+      "nodeKey": "supplement:4db8400d-5ab0-4585-bc8f-af87c9a4a739"
+    }
+  ],
+  "approvals": [],
+  "events": [
+    {
+      "type": "completion.evaluated",
+      "payload": {
+        "met": true,
+        "goals": [
+          {
+            "goal": "request.handed_over",
+            "basis": "COMPLETION_CRITERIA",
+            "status": "ACHIEVED"
+          }
+        ],
+        "criteriaMet": true,
+        "evidenceRefs": [
+          "communication.draft/CLARIFICATION",
+          "facts.extract_from_message",
+          "crm.lead.create/CRM_HANDOFF",
+          "communication.draft/ACKNOWLEDGEMENT",
+          "facts.extract_from_message",
+          "email.send/CLARIFICATION:1a1746bd812adf7a",
+          "staff.notify",
+          "email.send/ACKNOWLEDGEMENT:1a1746d81aee7711"
+        ]
+      }
+    },
+    {
+      "type": "case.completed",
+      "payload": {
+        "to": "COMPLETED",
+        "from": "IN_PROGRESS",
+        "revision": 27,
+        "attentionReasons": []
+      }
+    },
+    {
+      "type": "fact.corrected",
+      "payload": {
+        "key": "ai.radiator_quantity",
+        "current": "sechs",
+        "previous": "vier",
+        "messageId": "4db8400d-5ab0-4585-bc8f-af87c9a4a739"
+      }
+    },
+    {
+      "type": "lead.synced",
+      "payload": {
+        "hash": "f6e65b2684c78926ecd125a7ac3327ab32101e8f31a1c27b042efb30752e853c",
+        "open": 0,
+        "known": 9,
+        "leadId": "67dc7c9f-3ae4-4b8a-ab95-01941fa796b0",
+        "trigger": {
+          "reason": "SUPPLEMENT",
+          "messageId": "4db8400d-5ab0-4585-bc8f-af87c9a4a739"
+        },
+        "written": true,
+        "readBack": "CONFIRMED",
+        "crmExternalId": "530981028041"
+      }
+    },
+    {
+      "type": "supplement.confirmed",
+      "payload": {
+        "messageId": "4db8400d-5ab0-4585-bc8f-af87c9a4a739"
+      }
+    },
+    {
+      "type": "supplement.applied",
+      "payload": {
+        "sync": "SYNCED",
+        "changes": [
+          {
+            "kind": "CORRECTED",
+            "label": "Anzahl der Heizkörper",
+            "value": "sechs",
+            "previous": "vier"
+          },
+          {
+            "kind": "SUPPLEMENTED",
+            "label": "Gewünschte Leistung",
+            "value": "Heizkörper tauschen; zusätzlich Kinderzimmer und der Flur"
+          },
+          {
+            "kind": "SUPPLEMENTED",
+            "label": "Gewünschte Leistung",
+            "value": "Heizkörper tauschen; sechs Heizkörper (Wohnzimmer, Schlafzimmer, Küche und Bad)"
+          }
+        ],
+        "problems": [],
+        "messageId": "4db8400d-5ab0-4585-bc8f-af87c9a4a739",
+        "confirmation": "SENT"
+      }
+    }
+  ]
+}

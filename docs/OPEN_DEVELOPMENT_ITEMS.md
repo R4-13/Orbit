@@ -180,15 +180,18 @@ Quelle: [`ORBIT_UI_UX_V2_ACCEPTANCE_REPORT.md`](ORBIT_UI_UX_V2_ACCEPTANCE_REPORT
 
 | ID | Punkt | Art | Aufwand | Prio | Anmerkung |
 |---|---|---|---|---|---|
-| FN-01 | **Lead/CRM nach der Übergabe aktualisieren** (Angaben und Korrekturen der Kundschaft): heute nur Aufgabe „Korrektur nach Übergabe“ / „Neue Nachricht nach Abschluss“ | ENG | M | P1 | Befund F-B1; braucht eine Fähigkeit „CRM-Objekt ergänzen“ mit Richtlinie und HubSpot-Dokumentation |
-| FN-02 | Preisfrage ohne Angaben (B3): Frage beantworten („Preise nennen wir nicht vorab …“) und fehlende Angaben erfragen, bevor der Lead angelegt wird | ENG | M | P1 | Befund F-B2 |
+| FN-01 | **Lead/CRM nach der Übergabe aktualisieren** (Angaben und Korrekturen der Kundschaft): heute nur Aufgabe „Korrektur nach Übergabe“ / „Neue Nachricht nach Abschluss“ | ENG | M | P1 | Befund F-B1; braucht eine Fähigkeit „CRM-Objekt ergänzen“ mit Richtlinie und HubSpot-Dokumentation. **ERLEDIGT 25.10.2026** (Meilenstein B: `LeadSyncService`, `SupplementService`; live gegen HubSpot geprüft, B1–B3 bestanden) |
+| FN-02 | Preisfrage ohne Angaben (B3): Frage beantworten („Preise nennen wir nicht vorab …“) und fehlende Angaben erfragen, bevor der Lead angelegt wird | ENG | M | P1 | Befund F-B2. **ERLEDIGT 25.10.2026** (Ablauf 2.1.0: Preisfrage als Angabe, Auskunft nach Einzelfreigabe oder „noch offen“ im Lead; Rückfrage nach Ort/Größe) |
 | FN-03 | Mehrfachanliegen: Rückfragen der Teilvorgänge nur zum eigenen Anliegen; **eine zusammengefasste ausgehende Antwort** und nur eine Eingangsbestätigung je Nachricht | ENG | L | P1 | Befunde F-C1, F-C3; neue Produktfunktion |
 | FN-04 | Planausfall eines Teilvorgangs (etwa jeder dritte): Ursache in der Verdrahtung der Neuplanung (fehlender Knoten für `requirements.resolve`, Sackgasse) weiter eingrenzen; Reparaturen in `repairBindings` erweitern | ENG | M | P1 | Befund F-C2; nicht modellabhängig (`gpt-6-sol` gleich) |
 | FN-05 | Responses-Schnittstelle des Anbieters für Function-Tools (aktiviertes Denken) und danach der begrenzte Modellvergleich | ENG | M | P2 | Chat Completions lehnt `reasoning_effort` ≥ low mit Tools ab |
 | FN-06 | Zuständigkeit `DISPATCH` und Monteure im Mitarbeiterverzeichnis von Musterwerk pflegen (Entscheidung des Betriebs); bis dahin bleibt „Monteur informieren“ eine Übergabe mit offenem Restziel | MAN | S | P2 | Regel dokumentiert in `ASSUMPTIONS.md` #633 |
 | FN-07 | Fähigkeiten für die übergebenen Anliegen: Dokumentkopie versenden (Rechnung), Terminänderung (Kalender ausgeschlossen), Angebotserstellung im freien Ablauf | ENG | L | P3 | nur nach Entscheidung des Auftraggebers |
-| FN-08 | Zusammenfassungszeile des Leads kann der Liste der Angaben widersprechen („nicht genannt“); Korrektur über das Modell kann Textwerte verkürzen | ENG | S | P3 | |
+| FN-08 | Zusammenfassungszeile des Leads kann der Liste der Angaben widersprechen („nicht genannt“); Korrektur über das Modell kann Textwerte verkürzen | ENG | S | P3 | **ERLEDIGT 25.10.2026** (Anliegen = Vorgangsbezeichnung; Textkorrektur ersetzt nur das geänderte Wortstück) |
 | FN-09 | Überholter zweiter Planungsversuch erzeugt an einem Teilvorgang eine überflüssige Aufgabe „Planung nicht möglich“ (Race zwischen Planfreigabe und Weiterplanen-Knoten der Vorrevision) | ENG | S | P3 | beobachtet in Musterwerk C2 |
+| FN-10 | Abgleichstand des Leads (SYNCED / FAILED / CONFLICT) und Konflikt-Hinweis in der Web-Oberfläche (Lead-Detail, Vorgangsansicht) anzeigen; heute nur in Status, Hinweisen, Ereignissen | ENG | S | P2 | Meilenstein B |
+| FN-11 | Tom-Zustimmung (Google „Testing“, 7 Tage) dauerhaft lösen (App veröffentlichen oder Workspace-intern), damit Abnahmeläufe nicht an der Erneuerung hängen | MAN | S | P2 | Auftraggeber; Erneuerung am 25.10. von Hand |
+| FN-12 | Zeilenbeschriftungen freier Angaben im Lead vereinheitlichen (Schlüssel → deutsche Bezeichnung, z. B. „Heizkoerperraeume“); Wärmepumpe als eigene Heizungsart führen, wenn die Analyse sie erfragt | ENG | S | P3 | Meilenstein B, Modellvarianz |
 
 ---
 

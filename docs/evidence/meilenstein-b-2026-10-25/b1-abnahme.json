@@ -1,6 +1,6 @@
 {
   "case": {
-    "id": "996358c8-8e47-4a3f-81f3-35d8e2be2bf6",
+    "id": "4c9b2d30-c58f-4a57-9863-f226d8adae89",
     "title": "Neue Anfrage: Neue Heizung – bitte um Angebot",
     "status": "COMPLETED",
     "attentionReasons": [],
@@ -9,12 +9,12 @@
       "evidenceRefs": [
         "facts.extract_from_message",
         "communication.draft/CLARIFICATION",
-        "email.send/CLARIFICATION:1a1742821176fd8e",
-        "facts.extract_from_message",
         "crm.lead.create/CRM_HANDOFF",
         "staff.notify",
-        "communication.draft/ACKNOWLEDGEMENT",
-        "email.send/ACKNOWLEDGEMENT:1a17429f5a750cc8"
+        "email.send/ACKNOWLEDGEMENT:1a1746813a654b78",
+        "email.send/CLARIFICATION:1a174667de0a628b",
+        "facts.extract_from_message",
+        "communication.draft/ACKNOWLEDGEMENT"
       ]
     },
     "blueprint": "REQUEST_FOR_QUOTE 2.1.0"
@@ -24,6 +24,13 @@
       "key": "absendername",
       "value": "Tom Orbit",
       "status": "CANDIDATE",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.anschrift",
+      "value": "Musterstraße 12",
+      "status": "CONFIRMED",
       "current": true,
       "revision": 1
     },
@@ -49,13 +56,6 @@
       "revision": 2
     },
     {
-      "key": "ai.heating_scope",
-      "value": "Wärmepumpe",
-      "status": "CONFIRMED",
-      "current": true,
-      "revision": 1
-    },
-    {
       "key": "ai.heizungsalter",
       "value": "1995",
       "status": "CONFIRMED",
@@ -77,8 +77,15 @@
       "revision": 1
     },
     {
-      "key": "ai.request_intent",
+      "key": "ai.quote_requested",
       "value": "Angebot erbeten",
+      "status": "CONFIRMED",
+      "current": true,
+      "revision": 1
+    },
+    {
+      "key": "ai.quote_requested.ergaenzung.0b6fc4e8",
+      "value": "bitte um Angebot",
       "status": "CONFIRMED",
       "current": true,
       "revision": 1
@@ -91,7 +98,7 @@
       "revision": 1
     },
     {
-      "key": "ai.requested_service.ergaenzung.bdf9bfbe",
+      "key": "ai.requested_service.ergaenzung.0b6fc4e8",
       "value": "Wärmepumpe",
       "status": "CONFIRMED",
       "current": true,
@@ -101,13 +108,6 @@
       "key": "angefragte_leistung",
       "value": "Neue Heizung",
       "status": "CANDIDATE",
-      "current": true,
-      "revision": 1
-    },
-    {
-      "key": "angefragte_leistung.ergaenzung.bdf9bfbe",
-      "value": "Wärmepumpe",
-      "status": "CONFIRMED",
       "current": true,
       "revision": 1
     },
@@ -127,17 +127,17 @@
     }
   ],
   "lead": {
-    "id": "21efea8f-f4c5-42ca-ba1a-309a373cc77b",
-    "crmExternalId": "531276465364",
+    "id": "b77443c8-bdf9-4ec2-b9d2-cdfadf513fd2",
+    "crmExternalId": "531176315093",
     "syncState": "SYNCED",
     "syncError": null,
-    "syncedAt": "2026-10-25T17:46:10.854Z",
-    "orbitNotes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 18:42)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Gebäudeart: Haus\n- Anliegen: Angebot erbeten\n- Name: Tom Orbit\n- Art und Umfang der Heizungsanlage: Wärmepumpe\n- Ort des Hauses: Köln\n- Bestehende Heizung und Situation: Gasheizung von 1995\n- Heizungsalter: 1995\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+    "syncedAt": "2026-10-25T18:54:32.621Z",
+    "orbitNotes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:50)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Objektart: Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Bestehende Heizungsanlage: Gasheizung von 1995\n- Standort: Köln\n- Anschrift: Musterstraße 12\n- Heizungsalter: 1995\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
   },
   "crmReadBack": {
-    "externalId": "531276465364",
+    "externalId": "531176315093",
     "title": "Anfrage Angebotsanfrage für eine neue Heizung – Tom Orbit",
-    "notes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 18:42)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Gebäudeart: Haus\n- Anliegen: Angebot erbeten\n- Name: Tom Orbit\n- Art und Umfang der Heizungsanlage: Wärmepumpe\n- Ort des Hauses: Köln\n- Bestehende Heizung und Situation: Gasheizung von 1995\n- Heizungsalter: 1995\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+    "notes": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:50)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Objektart: Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Bestehende Heizungsanlage: Gasheizung von 1995\n- Standort: Köln\n- Anschrift: Musterstraße 12\n- Heizungsalter: 1995\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
   },
   "messages": [
     {
@@ -148,7 +148,7 @@
       ],
       "subject": "Neue Heizung – bitte um Angebot",
       "body": "Hallo,\r\n\r\nwir brauchen eine neue Heizung für unser Haus. Bitte schicken Sie uns\r\nein Angebot.\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
-      "at": "2026-10-25T17:42:01.048Z"
+      "at": "2026-10-25T18:50:01.187Z"
     },
     {
       "direction": "OUTBOUND",
@@ -157,8 +157,8 @@
         "tomorbit777@gmail.com"
       ],
       "subject": "Re: Neue Heizung – bitte um Angebot",
-      "body": "Guten Tag,\n\nvielen Dank für Ihre Anfrage „Neue Heizung – bitte um Angebot“.\n\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Welche Heizungsart wünschen Sie beziehungsweise welche Anlage soll ersetzt oder neu eingebaut werden?\n2. In welchem Ort befindet sich das Haus?\n3. Welche Heizung ist derzeit vorhanden, und gibt es besondere Gegebenheiten, die beim Austausch oder Einbau zu berücksichtigen sind?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
-      "at": "2026-10-25T17:42:29.698Z"
+      "body": "Guten Tag,\n\nvielen Dank für Ihre Anfrage „Neue Heizung – bitte um Angebot“.\n\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Welche Heizungsanlage ist derzeit vorhanden, und was wissen Sie über ihr Alter und ihren Zustand?\n2. In welchem Ort befindet sich das Haus?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T18:50:36.204Z"
     },
     {
       "direction": "INBOUND",
@@ -168,7 +168,7 @@
       ],
       "subject": "Re: Neue Heizung – bitte um Angebot",
       "body": "Wärmepumpe. Die vorhandene Heizung ist eine Gasheizung von 1985. Das\r\nHaus steht in Köln, Musterstraße 12.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
-      "at": "2026-10-25T17:44:01.440Z"
+      "at": "2026-10-25T18:52:01.273Z"
     },
     {
       "direction": "OUTBOUND",
@@ -178,7 +178,7 @@
       ],
       "subject": "Re: Neue Heizung – bitte um Angebot",
       "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht zu „Neue Heizung – bitte um Angebot“. Sie ist bei uns eingegangen.\nWir kümmern uns darum und melden uns bei Ihnen.\nSie können einfach auf diese E-Mail antworten, wenn Sie etwas ergänzen möchten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
-      "at": "2026-10-25T17:44:29.459Z"
+      "at": "2026-10-25T18:52:20.496Z"
     },
     {
       "direction": "INBOUND",
@@ -188,7 +188,7 @@
       ],
       "subject": "Re: Neue Heizung – bitte um Angebot",
       "body": "Eine Korrektur: Die vorhandene Heizung ist nicht von 1985, sondern von 1995.\r\n\r\n[Simulation] Diese Nachricht stammt aus einem Testwerkzeug.\r\n",
-      "at": "2026-10-25T17:46:01.296Z"
+      "at": "2026-10-25T18:54:01.298Z"
     },
     {
       "direction": "OUTBOUND",
@@ -197,80 +197,80 @@
         "tomorbit777@gmail.com"
       ],
       "subject": "Re: Neue Heizung – bitte um Angebot",
-      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:\n- Bestehende Heizung und Situation: Gasheizung von 1995 (korrigiert, bisher: Gasheizung von 1985)\n- Heizungsalter: 1995\nSollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
-      "at": "2026-10-25T17:46:12.002Z"
+      "body": "Guten Tag Tom Orbit,\n\nvielen Dank für Ihre Nachricht. Wir haben in Ihrer Anfrage Folgendes übernommen und an die zuständige Stelle weitergegeben:\n- Bestehende Heizungsanlage: Gasheizung von 1995 (korrigiert, bisher: Gasheizung von 1985)\n- Heizungsalter: 1995\nSollte etwas nicht stimmen, antworten Sie uns bitte einfach auf diese E-Mail.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+      "at": "2026-10-25T18:54:33.747Z"
     }
   ],
   "tasks": [
     {
       "title": "Neuen Lead kontaktieren: Tom Orbit",
       "status": "OPEN",
-      "description": "Anfrage über ORBIT (E-Mail, 25.10.2026, 18:42)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Gebäudeart: Haus\n- Anliegen: Angebot erbeten\n- Name: Tom Orbit\n- Art und Umfang der Heizungsanlage: Wärmepumpe\n- Ort des Hauses: Köln\n- Bestehende Heizung und Situation: Gasheizung von 1995\n- Heizungsalter: 1995\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
+      "description": "Anfrage über ORBIT (E-Mail, 25.10.2026, 19:50)\nKundschaft: Tom Orbit <tomorbit777@gmail.com>\nAnliegen: Neue Anfrage: Neue Heizung – bitte um Angebot\n\nAngaben der Kundschaft:\n- Gewünschte Leistung: Neue Heizung\n- Objektart: Haus\n- Angebotswunsch: Angebot erbeten\n- Name: Tom Orbit\n- Bestehende Heizungsanlage: Gasheizung von 1995\n- Standort: Köln\n- Anschrift: Musterstraße 12\n- Heizungsalter: 1995\n- Ergänzung zu Angebotswunsch: bitte um Angebot\n- Ergänzung zu Gewünschte Leistung: Wärmepumpe\n\nErfasst von ORBIT; die Angaben stammen aus den Nachrichten der Kundschaft."
     }
   ],
   "actions": [
     {
-      "id": "af7f13f5-1aba-4ee9-b895-b64765d882ee",
+      "id": "49f236f7-f525-403c-a1ea-ee1c23ac9dfe",
       "capabilityKey": "facts.extract_from_message",
       "purpose": null,
       "status": "CONFIRMED",
       "nodeKey": "extract"
     },
     {
-      "id": "39077d8d-718f-4d48-bdd5-de67ed7da868",
+      "id": "b8336be0-b2c1-4be9-a42f-63930b0b1c05",
       "capabilityKey": "communication.draft",
       "purpose": "CLARIFICATION",
       "status": "CONFIRMED",
       "nodeKey": "ask1_draft"
     },
     {
-      "id": "8d6cc45b-3462-4342-ab44-c75ec8028c2a",
+      "id": "4554460d-9d9f-4dc3-95a9-b4e1e34fc17b",
       "capabilityKey": "email.send",
       "purpose": "CLARIFICATION",
       "status": "CONFIRMED",
       "nodeKey": "ask1"
     },
     {
-      "id": "2062c904-f4e2-4787-8a08-7a4774d9c8cf",
+      "id": "eefb0c81-b883-4e41-8ce4-3d09c129b02c",
       "capabilityKey": "facts.extract_from_message",
       "purpose": null,
       "status": "CONFIRMED",
       "nodeKey": "extract2"
     },
     {
-      "id": "862b35a9-efdd-4093-9b9a-4b9a30ff9c9b",
+      "id": "4213e67e-b3d9-4117-8b9d-828f7af3c74d",
       "capabilityKey": "crm.lead.create",
       "purpose": "CRM_HANDOFF",
       "status": "CONFIRMED",
       "nodeKey": "lead"
     },
     {
-      "id": "ffa2835f-f88f-466e-a05b-fccf6044b43d",
+      "id": "61b54851-e860-47b3-b1c3-efefda1117de",
       "capabilityKey": "staff.notify",
       "purpose": null,
       "status": "CONFIRMED",
       "nodeKey": "notify"
     },
     {
-      "id": "659cc9e2-1740-46b7-9f53-8f545cfd4cd8",
+      "id": "d8b13cc0-5f0c-40d1-9db4-b65ca87ab916",
       "capabilityKey": "communication.draft",
       "purpose": "ACKNOWLEDGEMENT",
       "status": "CONFIRMED",
       "nodeKey": "ack_draft"
     },
     {
-      "id": "8d427943-da14-4f94-b1fa-8aa76dcb65d1",
+      "id": "68c11090-b364-4902-adf7-ab302c118e2d",
       "capabilityKey": "email.send",
       "purpose": "ACKNOWLEDGEMENT",
       "status": "CONFIRMED",
       "nodeKey": "ack"
     },
     {
-      "id": "066b36ac-76da-4a47-8e0d-e5d245db17b6",
+      "id": "8d07437d-8923-45c3-be87-631ff5fce725",
       "capabilityKey": "email.send",
       "purpose": "STATUS_UPDATE",
       "status": "CONFIRMED",
-      "nodeKey": "supplement:da9a2f56-d46d-4403-b2ac-fa610d7f5d65"
+      "nodeKey": "supplement:8c93cf5e-eda4-4b4d-ad47-88d2efc8d0fc"
     }
   ],
   "approvals": [],
@@ -290,12 +290,12 @@
         "evidenceRefs": [
           "facts.extract_from_message",
           "communication.draft/CLARIFICATION",
-          "email.send/CLARIFICATION:1a1742821176fd8e",
-          "facts.extract_from_message",
           "crm.lead.create/CRM_HANDOFF",
           "staff.notify",
-          "communication.draft/ACKNOWLEDGEMENT",
-          "email.send/ACKNOWLEDGEMENT:1a17429f5a750cc8"
+          "email.send/ACKNOWLEDGEMENT:1a1746813a654b78",
+          "email.send/CLARIFICATION:1a174667de0a628b",
+          "facts.extract_from_message",
+          "communication.draft/ACKNOWLEDGEMENT"
         ]
       }
     },
@@ -314,29 +314,29 @@
         "key": "ai.existing_heating",
         "current": "Gasheizung von 1995",
         "previous": "Gasheizung von 1985",
-        "messageId": "da9a2f56-d46d-4403-b2ac-fa610d7f5d65"
+        "messageId": "8c93cf5e-eda4-4b4d-ad47-88d2efc8d0fc"
       }
     },
     {
       "type": "lead.synced",
       "payload": {
-        "hash": "abf6eb38da048b3a6d71595a43a39b4d02422ce318069230cfa7048a5c701e13",
+        "hash": "93e3232a5fbc1bdeb50aa25ad4ac7a2c248e36fbf2d28b357dfbe0177918a677",
         "open": 0,
-        "known": 8,
-        "leadId": "21efea8f-f4c5-42ca-ba1a-309a373cc77b",
+        "known": 10,
+        "leadId": "b77443c8-bdf9-4ec2-b9d2-cdfadf513fd2",
         "trigger": {
           "reason": "SUPPLEMENT",
-          "messageId": "da9a2f56-d46d-4403-b2ac-fa610d7f5d65"
+          "messageId": "8c93cf5e-eda4-4b4d-ad47-88d2efc8d0fc"
         },
         "written": true,
         "readBack": "CONFIRMED",
-        "crmExternalId": "531276465364"
+        "crmExternalId": "531176315093"
       }
     },
     {
       "type": "supplement.confirmed",
       "payload": {
-        "messageId": "da9a2f56-d46d-4403-b2ac-fa610d7f5d65"
+        "messageId": "8c93cf5e-eda4-4b4d-ad47-88d2efc8d0fc"
       }
     },
     {
@@ -346,7 +346,7 @@
         "changes": [
           {
             "kind": "CORRECTED",
-            "label": "Bestehende Heizung und Situation",
+            "label": "Bestehende Heizungsanlage",
             "value": "Gasheizung von 1995",
             "previous": "Gasheizung von 1985"
           },
@@ -357,7 +357,7 @@
           }
         ],
         "problems": [],
-        "messageId": "da9a2f56-d46d-4403-b2ac-fa610d7f5d65",
+        "messageId": "8c93cf5e-eda4-4b4d-ad47-88d2efc8d0fc",
         "confirmation": "SENT"
       }
     }
