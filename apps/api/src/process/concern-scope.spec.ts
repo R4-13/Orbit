@@ -1,4 +1,4 @@
-import { belongsToOtherConcern, mentionsOtherConcern, overlap, type ConcernScope } from './concern-scope';
+import { belongsToOtherConcern, belongsToOwnConcern, mentionsOtherConcern, overlap, type ConcernScope } from './concern-scope';
 
 const scope: ConcernScope = {
   own: 'Kopie der letzten Rechnung für die Steuer erhalten. Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer.',
@@ -30,5 +30,20 @@ describe('Vermischte Aussagen', () => {
     expect(mentionsOtherConcern('Rechnungskopie bereitstellen und Terminverschiebung bearbeiten', own)).toBe(true);
     expect(mentionsOtherConcern('Letzte Rechnung ermitteln und Kopie bereitstellen', own)).toBe(false);
     expect(mentionsOtherConcern('Angebot für den Regler prüfen', own)).toBe(true);
+  });
+});
+
+describe('gemeinsame Kundenantwort (Meilenstein C)', () => {
+  const termin: ConcernScope = {
+    own: 'Den Wartungstermin vom 28.10. auf den 4.11. verschieben. zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben',
+    siblings: ['Eine Kopie der letzten Rechnung für die Steuer erhalten.', 'Ein Angebot für einen neuen Heizungsregler erhalten.'],
+  };
+  const rechnung: ConcernScope = { own: 'Eine Kopie der letzten Rechnung für die Steuer erhalten. erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer', siblings: [termin.own, 'Ein Angebot für einen neuen Heizungsregler erhalten.'] };
+  it('ordnet die Sätze der Antwort dem Anliegen zu, über dessen Gegenstand sie sprechen', () => {
+    expect(belongsToOwnConcern('Zum Termin: der Wartungstermin war bei Herrn Weber.', termin)).toBe(true);
+    expect(belongsToOwnConcern('Zum Termin: der Wartungstermin war bei Herrn Weber.', rechnung)).toBe(false);
+    expect(belongsToOwnConcern('Zur Rechnung: es ist die vom September.', rechnung)).toBe(true);
+    expect(belongsToOwnConcern('Zur Rechnung: es ist die vom September.', termin)).toBe(false);
+    expect(belongsToOwnConcern('Zum Termin: der Wartungstermin', termin)).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ActionIntent, Case, CommunicationDraft } from '@orbit/domain';
+import { splitSentences } from '@orbit/shared';
 import { isSafeCustomerText } from './reference/request-analysis';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { GmailSendOutcomeUnknownError } from '../integrations/gmail-connector.service';
@@ -166,20 +167,26 @@ export class FamilyReplyService {
       .filter((p) => !state.covered.has(p.draftId));
     const everHeld = new Set(heldRows.map((r) => r.caseId));
 
-    // Der Stand der Anliegen ohne eigenen Inhalt – nur, was seit der letzten Antwort neu ist.
+    // Die letzte Nachricht der Kundschaft in der Familie: Empfänger und Bezug der Antwort, und worauf sich zugeordnete Angaben beziehen.
+    const family = [parentId, ...children.map((c) => c.id)];
+    const inbound = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+    const assignedRows = inbound ? await scoped.caseEvent.findMany({ where: { caseId: { in: children.map((c) => c.id) }, type: 'family.reply_assigned' }, select: { caseId: true, payload: true } }) : [];
+    const withNewInfo = new Set(assignedRows.filter((r) => (r.payload as { messageId?: string } | null)?.messageId === inbound?.id).map((r) => r.caseId));
+
+    // Der Stand der Anliegen ohne eigenen Inhalt – nur, was seit der letzten Antwort neu ist. Hat die Kundschaft zu einem Anliegen Angaben gemacht, die bei der zuständigen Person liegen, sagt die Antwort das.
     const states = new Map<string, FamilyStateKind>();
     for (const child of children) {
       if (pending.some((p) => p.childId === child.id && p.purpose !== 'ACKNOWLEDGEMENT')) continue;
-      const kind = await this.stateOf(tenantId, child, everHeld.has(child.id));
-      if (kind && state.states.get(child.id) !== kind) states.set(child.id, kind);
+      let kind = await this.stateOf(tenantId, child, everHeld.has(child.id));
+      if (kind === 'HANDOVER' && withNewInfo.has(child.id) && inbound && !state.repliedTo.has(inbound.id)) kind = 'INFO_PASSED';
+      const reported = state.states.get(child.id);
+      if (kind && reported !== kind && !(kind === 'HANDOVER' && reported === 'INFO_PASSED')) states.set(child.id, kind);
     }
     const contentParts = pending.filter((p) => p.purpose !== 'ACKNOWLEDGEMENT' && p.core.length > 0);
     const wantsReceipt = pending.some((p) => p.purpose === 'ACKNOWLEDGEMENT');
     if (contentParts.length === 0 && states.size === 0 && !wantsReceipt) return 'NOTHING';
 
-    // Empfänger und Bezug: die letzte Nachricht der Kundschaft in der Familie; die Antwortadresse ist die bestätigte des Vorgangs.
-    const family = [parentId, ...children.map((c) => c.id)];
-    const inbound = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+    // Empfänger: die Antwortadresse ist die bestätigte des Vorgangs.
     const confirmed = (await this.facts.getCurrent(tenantId, parentId)).find((f) => f.key === 'contact.email' && f.status === 'CONFIRMED')?.value;
     const to = typeof confirmed === 'string' && confirmed.length > 3 ? confirmed : inbound?.fromAddress;
     if (!inbound || !to || NO_REPLY_SENDER.test(to)) {
@@ -322,7 +329,7 @@ export class FamilyReplyService {
     const message = await scoped.emailMessage.findFirst({ where: { id: messageId, direction: 'INBOUND' }, select: { bodyText: true, bodyPreview: true, createdAt: true } });
     if (!scope || !message) return;
     const text = (message.bodyText ?? message.bodyPreview ?? '').split(/\n\s*\[Simulation\]/)[0] ?? '';
-    const mine = text.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])|\n+/).map((s) => s.trim()).filter((s) => s.length > 3 && belongsToOwnConcern(s, scope));
+    const mine = splitSentences(text).filter((s) => s.length > 3 && belongsToOwnConcern(s, scope));
     if (mine.length === 0) return;
     const task = await scoped.task.findFirst({ where: { caseId: childCaseId, status: { notIn: ['DONE', 'CANCELLED'] } }, orderBy: { createdAt: 'desc' } });
     if (!task) return;

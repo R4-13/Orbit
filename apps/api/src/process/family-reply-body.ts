@@ -7,7 +7,7 @@ import type { ReplyLanguage } from './reference/reply-language';
  */
 
 /** Wie sich der Stand eines Anliegens der Kundschaft mitteilen lässt (nur wahre Aussagen). */
-export type FamilyStateKind = 'HANDOVER' | 'IN_REVIEW' | 'DONE';
+export type FamilyStateKind = 'HANDOVER' | 'IN_REVIEW' | 'DONE' | 'INFO_PASSED';
 
 export interface FamilyReplySection {
   /** Wie die Kundschaft das Anliegen kennt (Kurzfassung des Anliegens). */
@@ -35,11 +35,13 @@ const STATE_DE: Record<FamilyStateKind, string> = {
   HANDOVER: 'Dieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.',
   IN_REVIEW: 'Dieses Anliegen prüfen wir noch intern; wir melden uns dazu gesondert bei Ihnen.',
   DONE: 'Dieses Anliegen ist erledigt.',
+  INFO_PASSED: 'Ihre Angaben dazu haben wir an die zuständige Person weitergegeben; sie kümmert sich darum und meldet sich bei Ihnen.',
 };
 const STATE_EN: Record<FamilyStateKind, string> = {
   HANDOVER: 'We cannot complete this request automatically. We have passed it on to a responsible person on our team, who will take care of it and get back to you.',
   IN_REVIEW: 'We are still reviewing this request internally and will get back to you about it separately.',
   DONE: 'This request has been completed.',
+  INFO_PASSED: 'We have passed your details on to the responsible person, who will take care of it and get back to you.',
 };
 
 export const familyStateSentence = (kind: FamilyStateKind, lang: ReplyLanguage): string => (lang === 'en' ? STATE_EN[kind] : STATE_DE[kind]);

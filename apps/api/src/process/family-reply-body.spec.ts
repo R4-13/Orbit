@@ -50,6 +50,13 @@ describe('Gemeinsame Antwort', () => {
     expect(familyStateSentence('DONE', 'de')).toContain('erledigt');
   });
 
+  it('Angaben der Kundschaft, die bei einer Person liegen, werden so gemeldet – ohne Erledigt-Zusage', () => {
+    const body = familyReplyBody({ ...base, confirmsReceipt: false, sections: [{ label: 'Rechnung', lines: [], state: 'INFO_PASSED' }] });
+    expect(body).toContain('Zu „Rechnung“:\nIhre Angaben dazu haben wir an die zuständige Person weitergegeben');
+    expect(familyStateSentence('INFO_PASSED', 'de')).not.toMatch(/erledigt/);
+    expect(familyStateSentence('INFO_PASSED', 'en')).toContain('passed your details on');
+  });
+
   it('englische Kundschaft bekommt eine englische Antwort', () => {
     const body = familyReplyBody({ ...base, lang: 'en', confirmsReceipt: true, sections: [{ label: 'Invoice copy', lines: [], state: 'HANDOVER' }] });
     expect(body).toContain('Hello Tom Orbit,');
