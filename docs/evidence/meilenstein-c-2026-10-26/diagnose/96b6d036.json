@@ -1,0 +1,1147 @@
+{
+    "vorgaenge": [
+        {
+            "id": "96b6d036-e816-408a-8aed-a5da18fe3d18",
+            "titel": "Mehrere Anliegen: Drei Anliegen auf einmal",
+            "plaene": [
+            ],
+            "status": "IN_PROGRESS",
+            "angaben": [
+            ],
+            "aktionen": [
+                {
+                    "zweck": "STATUS_UPDATE",
+                    "status": "CONFIRMED",
+                    "schritt": "family-reply:1",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                },
+                {
+                    "zweck": "STATUS_UPDATE",
+                    "status": "CONFIRMED",
+                    "schritt": "family-reply:2",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                }
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T08:24:21.159",
+            "hinweise": [
+                "Teilvorgang „Wartungstermin verschieben: Drei Anliegen auf einmal“ braucht Prüfung.",
+                "Teilvorgang „Angebot für einen neuen Heizungsregler: Drei Anliegen auf einmal“ braucht Prüfung."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 3, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.split",
+                    "nutzlast": "{\"reason\": \"3 getrennte Anliegen in der Nachricht erkannt (bei ausgelassenen Einschränkungen gilt der Originaltext).\", \"children\": [{\"goal\": \"Das Anliegen laut Originaltext bearbeiten, einschließlich aller Einschränkungen: „erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.“\", \"caseId\": \"4b7392fe-787a-41a6-a653-c1f130d3ba3b\", \"intentKey\": \"GENERAL_INQUIRY\"}, {\"goal\": \"Das Anliegen laut Originaltext bearbeiten, einschli"
+                },
+                {
+                    "nr": 3,
+                    "typ": "family.reply_claimed",
+                    "nutzlast": "{\"draftIds\": [\"23688543-6579-4d2c-b6aa-5360bc04a23f\", \"76ce79d5-fd3d-410c-9c30-c5e63c46c93e\"], \"messageId\": \"1368a4ef-8a83-4d63-a942-98758a38be10\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"ad3ea1ca-2a97-4b8b-8f2b-e13021b45a06\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"ad3ea1ca-2a97-4b8b-8f2b-e13021b45a06\", \"capability\": \"email.send\", \"providerRef\": \"1a177544e502693f\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "family.reply_sent",
+                    "nutzlast": "{\"states\": {\"80d57880-771d-4dd5-af24-e10bebc86981\": \"HANDOVER\"}, \"draftIds\": [\"23688543-6579-4d2c-b6aa-5360bc04a23f\", \"76ce79d5-fd3d-410c-9c30-c5e63c46c93e\"], \"intentId\": \"ad3ea1ca-2a97-4b8b-8f2b-e13021b45a06\", \"messageId\": \"1368a4ef-8a83-4d63-a942-98758a38be10\", \"providerRef\": \"1a177544e502693f\"}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "family.reply_claimed",
+                    "nutzlast": "{\"draftIds\": [], \"messageId\": \"1368a4ef-8a83-4d63-a942-98758a38be10\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:2\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"bb00d288-d6a8-4b8e-8bb7-207d11b19f35\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:2\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"bb00d288-d6a8-4b8e-8bb7-207d11b19f35\", \"capability\": \"email.send\", \"providerRef\": \"1a17754ae90aee9b\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "family.reply_sent",
+                    "nutzlast": "{\"states\": {\"9ff5405b-0ee1-4cbf-910c-d330aea47180\": \"HANDOVER\"}, \"draftIds\": [], \"intentId\": \"bb00d288-d6a8-4b8e-8bb7-207d11b19f35\", \"messageId\": \"1368a4ef-8a83-4d63-a942-98758a38be10\", \"providerRef\": \"1a17754ae90aee9b\"}"
+                }
+            ],
+            "nachrichten": [
+                {
+                    "an": [
+                        "handwerkernull@gmail.com"
+                    ],
+                    "von": "tomorbit777@gmail.com",
+                    "text": "Guten Tag,\r\n\r\nerstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer,\r\nzweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11.\r\nverschieben und drittens würde mich ein Angebot für einen neuen\r\nHeizungsregler interessieren.\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+                    "zeit": "2026-10-26T08:24:01.642",
+                    "betreff": "Drei Anliegen auf einmal",
+                    "richtung": "INBOUND"
+                },
+                {
+                    "an": [
+                        "tomorbit777@gmail.com"
+                    ],
+                    "von": "handwerkernull@gmail.com",
+                    "text": "Guten Tag,\n\nvielen Dank für Ihre Nachricht „Drei Anliegen auf einmal“. Sie ist bei uns eingegangen; wir bearbeiten Ihre 3 Anliegen getrennt. Hier der Stand zu jedem:\n\nZu „Kopie der letzten Rechnung“:\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Um welche Heizungsanlage und welchen Heizungsregler handelt es sich, oder können Sie ein Foto des vorhandenen Reglers und der Anlage beschreiben?\n\nZu „Wartungstermin verschieben“:\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Um welche Heizungsanlage beziehungsweise welchen Heizungsregler handelt es sich, soweit Ihnen das bekannt ist?\n\nZu „Angebot für einen neuen Heizungsregler“:\nDieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+                    "zeit": "2026-10-26T08:29:36.517",
+                    "betreff": "Re: Drei Anliegen auf einmal",
+                    "richtung": "OUTBOUND"
+                },
+                {
+                    "an": [
+                        "tomorbit777@gmail.com"
+                    ],
+                    "von": "handwerkernull@gmail.com",
+                    "text": "Guten Tag,\n\nvielen Dank für Ihre Antwort. Hier der aktuelle Stand zu Ihren Anliegen:\n\nZu „Wartungstermin verschieben“:\nDieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+                    "zeit": "2026-10-26T08:30:01.373",
+                    "betreff": "Re: Drei Anliegen auf einmal",
+                    "richtung": "OUTBOUND"
+                }
+            ],
+            "elternvorgang": null
+        },
+        {
+            "id": "4b7392fe-787a-41a6-a653-c1f130d3ba3b",
+            "titel": "Kopie der letzten Rechnung: Drei Anliegen auf einmal",
+            "plaene": [
+                {
+                    "ziele": [
+                        "receipt.acknowledged",
+                        "appointment.booked",
+                        "quote.delivered",
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit dem Prüfungsergebnis weiterplanen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "replan"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben und mögliche Bearbeitung ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reqs"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review",
+                        "task.created"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Kunden- und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "PREPARE",
+                            "titel": "Gebündelte Rückfrage zum Heizungsregler vorbereiten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "draft"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Fehlende Angaben zum Angebot ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reqs"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Rückfrage zur Heizungsanlage und zum Heizungsregler senden",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "send"
+                        },
+                        {
+                            "art": "WAIT_EVENT",
+                            "titel": "Antwort der Kundschaft auf die Rückfrage abwarten",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "wait"
+                        }
+                    ]
+                }
+            ],
+            "status": "WAITING_FOR_INFORMATION",
+            "angaben": [
+                {
+                    "wert": "28.10.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_original_appointment_date"
+                },
+                {
+                    "wert": "4.11.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_new_appointment_date"
+                },
+                {
+                    "wert": "Heizungsregler",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_equipment"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                },
+                {
+                    "wert": "Angebot für einen neuen Heizungsregler",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.quote_interest"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "draft",
+                    "freigabe": null,
+                    "faehigkeit": "communication.draft"
+                },
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "send",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                }
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T08:24:21.253",
+            "hinweise": [
+                "Antwort der Kundschaft auf die Rückfrage abwarten: Wartet auf eine Antwort."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Das Anliegen laut Originaltext bearbeiten, einschließlich aller Einschränkungen: „erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.“\", \"triage\": {\"intents\": [{\"key\": \"GENERAL_INQUIRY\", \"confidence\": 0.99, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"GENERAL_INQUIRY\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.99, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E1\"], \"conciseReason\": \"Dr"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "blueprint.fit_assessed",
+                    "nutzlast": "{\"fits\": false, \"reason\": \"Die Kundschaft stellt keine Frage aus dem Betriebswissen, sondern veranlasst zwei konkrete Vorgänge (Rechnungskopie und Terminverschiebung) und bittet zusätzlich um ein Angebot. Der Leitfaden würde diese Anliegen nicht passend bearbeiten.\", \"assessed\": true, \"attempts\": 1, \"procedure\": true, \"blueprintKey\": \"STANDARD_INFORMATION\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"revision\": 1}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 11,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [{\"key\": \"ai.quote_interest\", \"label\": \"Angebotsinteresse\", \"value\": \"Angebot für einen neuen Heizungsregler\", \"evidence\": \"würde mich ein Angebot für einen neuen Heizungsregler interessieren\", \"confidence\": 1}], \"summary\": \"Die Kundschaft bittet um eine Kopie der letzten Rechnung für die Steuer, möchte einen Wartungstermin vom 28.10. auf den 4.11. verschieben und interessiert sich für ein Angebot für einen neuen Heizungsregler.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Rechnungskopie\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Termin"
+                },
+                {
+                    "nr": 12,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"53279a3f-c40d-4d3a-8243-19a002db930e\"], \"requirementKey\": \"ai.quote_interest\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"NOT_FOUND\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [], \"requirementKey\": \"ai.regler_art_und_bestehende_anlage\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": [\"EXTERNAL_CLARIFICATION\", \"HUMAN_REVIEW\"]}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"replan\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"replan\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"draft\", \"send\", \"wait\"], \"changed\": [\"context\", \"reqs\"], \"removed\": [\"replan\"]}, \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"source\": \"LLM_PLANNER\", \"status\": \"AWAITING_APPROVAL\", \"revision\": 2}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_APPROVAL\", \"from\": \"IN_PROGRESS\", \"revision\": 10, \"attentionReasons\": [\"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.\"]}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"nodeKey\": \"replan\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"0d5e3a6c-07d8-43bc-bc1b-00c84dfef1b3\", \"revision\": 1}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"revision\": 2}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"WAITING_FOR_APPROVAL\", \"revision\": 11, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "plan.scope_approved",
+                    "nutzlast": "{\"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"effects\": [\"email.send/CLARIFICATION>to=fact:contact.email\"], \"approvedByUserId\": \"6aa840e9-213b-4978-9d87-4c3a5363744d\"}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 27,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 28,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"draft\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 29,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"draft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"5d3b4724-a69f-4370-87f3-ec383a23e8b1\", \"capability\": \"communication.draft\"}"
+                },
+                {
+                    "nr": 30,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"draft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"5d3b4724-a69f-4370-87f3-ec383a23e8b1\", \"capability\": \"communication.draft\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 31,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"draft\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 32,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"send\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 33,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"send\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"d6792303-f818-447e-b3bb-979b67b22529\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 34,
+                    "typ": "family.part_held",
+                    "nutzlast": "{\"core\": [\"Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\", \"\", \"1. Um welche Heizungsanlage und welchen Heizungsregler handelt es sich, oder können Sie ein Foto des vorhandenen Reglers und der Anlage beschreiben?\"], \"draftId\": \"23688543-6579-4d2c-b6aa-5360bc04a23f\", \"purpose\": \"CLARIFICATION\", \"parentCaseId\": \"96b6d036-e816-408a-8aed-a5da18fe3d18\"}"
+                },
+                {
+                    "nr": 35,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"send\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"d6792303-f818-447e-b3bb-979b67b22529\", \"capability\": \"email.send\", \"providerRef\": \"family-reply:96b6d036-e816-408a-8aed-a5da18fe3d18:23688543-6579-4d2c-b6aa-5360bc04a23f\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 36,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"send\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 37,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 38,
+                    "typ": "wait.started",
+                    "nutzlast": "{\"nodeKey\": \"wait\", \"eventType\": \"communication.received\", \"deadlineHours\": 72}"
+                },
+                {
+                    "nr": 39,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"dcbc114e-ee60-4690-b93c-891978adc5db\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 40,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_INFORMATION\", \"from\": \"IN_PROGRESS\", \"revision\": 12, \"attentionReasons\": [\"Antwort der Kundschaft auf die Rückfrage abwarten: Wartet auf eine Antwort.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "96b6d036-e816-408a-8aed-a5da18fe3d18"
+        },
+        {
+            "id": "9ff5405b-0ee1-4cbf-910c-d330aea47180",
+            "titel": "Wartungstermin verschieben: Drei Anliegen auf einmal",
+            "plaene": [
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und vorhandenen Vorgang prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit dem Ergebnis der Anforderungsprüfung weiterplanen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Angaben und betriebliche Anforderungen für die drei Anliegen ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "COMPLETE",
+                            "titel": "Abschluss prüfen",
+                            "fehler": "Übergabe mit offenem Restziel: „„Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.““; „„Ich möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben.““; „„Mich würde ein Angebot für einen neuen Heizungsregler interessieren.““. Es sind noch nicht alle Schritte des Ablaufs abgeschlossen.",
+                            "zustand": "BLOCKED",
+                            "schluessel": "abschluss"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und vorhandenen Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "PREPARE",
+                            "titel": "Rückfrage zum Heizungsreglertyp vorbereiten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "draft"
+                        },
+                        {
+                            "art": "MANUAL_TASK",
+                            "titel": "Rechnungskopie bereitstellen und Terminverschiebung prüfen",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "manual"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Zuständige Person über die Rechnungs- und Terminwünsche informieren",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "notify"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Fehlende Angaben für das Heizungsregler-Angebot prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reqs"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Rückfrage zum Heizungsreglertyp senden",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "send"
+                        },
+                        {
+                            "art": "WAIT_EVENT",
+                            "titel": "Auf Antwort der Kundschaft warten",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "wait"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "28.10.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_original_appointment_date"
+                },
+                {
+                    "wert": "4.11.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_new_appointment_date"
+                },
+                {
+                    "wert": "Heizungsregler",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_equipment"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "notify",
+                    "freigabe": null,
+                    "faehigkeit": "staff.notify"
+                },
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "draft",
+                    "freigabe": null,
+                    "faehigkeit": "communication.draft"
+                },
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "send",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                }
+            ],
+            "aufgaben": [
+                {
+                    "titel": "Rechnungskopie bereitstellen und Terminverschiebung prüfen",
+                    "status": "OPEN",
+                    "beschreibung": "Die letzte Rechnung auffinden und eine Kopie bereitstellen; Verfügbarkeit und Änderung des Wartungstermins prüfen und gegebenenfalls umsetzen."
+                }
+            ],
+            "erstellt": "2026-10-26T08:24:21.448",
+            "hinweise": [
+                "Auf Antwort der Kundschaft warten: Wartet auf eine Antwort."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Das Anliegen laut Originaltext bearbeiten, einschließlich aller Einschränkungen: „erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.“\", \"triage\": {\"intents\": [{\"key\": \"GENERAL_INQUIRY\", \"confidence\": 0.99, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"GENERAL_INQUIRY\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.99, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E1\"], \"conciseReason\": \"Dr"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "blueprint.fit_assessed",
+                    "nutzlast": "{\"fits\": false, \"reason\": \"Die Nachricht stellt keine allgemeine Wissensfrage, sondern fordert zwei konkrete Vorgänge (Rechnungskopie und Terminverschiebung) sowie ein Angebot an. Der Leitfaden zum Beantworten von Betriebswissensfragen deckt diese Ziele nicht ab.\", \"assessed\": true, \"attempts\": 1, \"procedure\": true, \"blueprintKey\": \"STANDARD_INFORMATION\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"revision\": 1}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 11,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [], \"summary\": \"Die Kundin bzw. der Kunde bittet um eine Kopie der letzten Rechnung, möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben und interessiert sich für ein Angebot für einen neuen Heizungsregler.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Angeforderte Rechnungskopie\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Bisheriger Wartungstermin\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Gewünschtes neues Wartungsdatum\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Gewünschte"
+                },
+                {
+                    "nr": 12,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"NOT_FOUND\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [], \"requirementKey\": \"ai.heizungsregler_art\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": [\"EXTERNAL_CLARIFICATION\", \"HUMAN_REVIEW\"]}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"reqs\", \"draft\", \"send\", \"wait\", \"notify\", \"manual\", \"abschluss\"], \"changed\": [\"context\"], \"removed\": [\"reassess\", \"requirements\"]}, \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"source\": \"LLM_PLANNER\", \"status\": \"AWAITING_APPROVAL\", \"revision\": 2}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_APPROVAL\", \"from\": \"IN_PROGRESS\", \"revision\": 8, \"attentionReasons\": [\"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.\"]}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"98f305ee-18fa-4495-8420-f9cdcaafe53a\", \"revision\": 1}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"revision\": 2}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"WAITING_FOR_APPROVAL\", \"revision\": 9, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "plan.scope_approved",
+                    "nutzlast": "{\"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"effects\": [\"email.send/CLARIFICATION>to=fact:contact.email\"], \"approvedByUserId\": \"6aa840e9-213b-4978-9d87-4c3a5363744d\"}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"manual\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"manual\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 27,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 10, \"attentionReasons\": [\"Rechnungskopie bereitstellen und Terminverschiebung prüfen: Bitte manuell bearbeiten.\"]}"
+                },
+                {
+                    "nr": 28,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"MANUAL_REVIEW\", \"revision\": 11, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 29,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 30,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"2013fd63-51d3-41a1-a725-e67c963ed540\", \"capability\": \"staff.notify\"}"
+                },
+                {
+                    "nr": 31,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"2013fd63-51d3-41a1-a725-e67c963ed540\", \"capability\": \"staff.notify\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 32,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 33,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"abschluss\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 34,
+                    "typ": "completion.evaluated",
+                    "nutzlast": "{\"met\": false, \"goals\": [{\"goal\": \"Prüfung durch eine Person\", \"basis\": \"GOAL_CRITERIA\", \"status\": \"NOT_EVALUABLE\"}], \"reason\": \"NODES_PENDING\", \"criteriaMet\": false, \"evidenceRefs\": []}"
+                },
+                {
+                    "nr": 35,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"BLOCKED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"abschluss\", \"errorCode\": \"COMPLETION_CRITERIA_NOT_MET\", \"executionMode\": null}"
+                },
+                {
+                    "nr": 36,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 12, \"attentionReasons\": [\"Übergabe mit offenem Restziel: „„Ich brauche eine Kopie meiner letzten Rechnung für die Steuer.““; „„Ich möchte den Wartungstermin vom 28.10. auf den 4.11. verschieben.““; „„Mich würde ein Angebot für einen neuen Heizungsregler interessieren.““. Es sind noch nicht alle Schritte des Ablaufs abgeschlossen.\"]}"
+                },
+                {
+                    "nr": 37,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"MANUAL_REVIEW\", \"revision\": 13, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 38,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 39,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 40,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"draft\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 41,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"draft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"cc7c72c8-c674-4917-a632-a994ed81f68c\", \"capability\": \"communication.draft\"}"
+                },
+                {
+                    "nr": 42,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"draft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"cc7c72c8-c674-4917-a632-a994ed81f68c\", \"capability\": \"communication.draft\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 43,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"draft\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 44,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"send\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 45,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"send\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"6c2e1605-6cef-471e-8039-d557fe60e97a\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 46,
+                    "typ": "family.part_held",
+                    "nutzlast": "{\"core\": [\"Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\", \"\", \"1. Um welche Heizungsanlage beziehungsweise welchen Heizungsregler handelt es sich, soweit Ihnen das bekannt ist?\"], \"draftId\": \"76ce79d5-fd3d-410c-9c30-c5e63c46c93e\", \"purpose\": \"CLARIFICATION\", \"parentCaseId\": \"96b6d036-e816-408a-8aed-a5da18fe3d18\"}"
+                },
+                {
+                    "nr": 47,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"send\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"6c2e1605-6cef-471e-8039-d557fe60e97a\", \"capability\": \"email.send\", \"providerRef\": \"family-reply:96b6d036-e816-408a-8aed-a5da18fe3d18:76ce79d5-fd3d-410c-9c30-c5e63c46c93e\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 48,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"send\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 49,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 50,
+                    "typ": "wait.started",
+                    "nutzlast": "{\"nodeKey\": \"wait\", \"eventType\": \"communication.received\", \"deadlineHours\": 168}"
+                },
+                {
+                    "nr": 51,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"c95cc613-7b93-4040-b831-987908337c12\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 52,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_INFORMATION\", \"from\": \"IN_PROGRESS\", \"revision\": 14, \"attentionReasons\": [\"Auf Antwort der Kundschaft warten: Wartet auf eine Antwort.\"]}"
+                },
+                {
+                    "nr": 53,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"WAITING_FOR_INFORMATION\", \"revision\": 15, \"attentionReasons\": [\"Auf Antwort der Kundschaft warten: Wartet auf eine Antwort.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "96b6d036-e816-408a-8aed-a5da18fe3d18"
+        },
+        {
+            "id": "80d57880-771d-4dd5-af24-e10bebc86981",
+            "titel": "Angebot für einen neuen Heizungsregler: Drei Anliegen auf einmal",
+            "plaene": [
+                {
+                    "ziele": [
+                        "quote.delivered",
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und bisherigen Vorgang prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Nach Anforderungsprüfung neu planen",
+                            "fehler": null,
+                            "zustand": "SUPERSEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben für das Angebot ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reqs"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "COMPLETE",
+                            "titel": "Abschluss prüfen",
+                            "fehler": "Übergabe mit offenem Restziel: „Ein Angebot für einen neuen Heizungsregler erhalten.“. Der Ablauf ist durchgelaufen. „Prüfung durch eine Person“ liegt bei einer Person (oder ist kein bekanntes Ziel) und wird nicht von ORBIT abgeschlossen – bitte prüfen und abschließen.",
+                            "zustand": "BLOCKED",
+                            "schluessel": "abschluss"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Vorhandenen Kunden- und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Anforderungen für das Heizungsregler-Angebot neu bewerten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "28.10.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_original_appointment_date"
+                },
+                {
+                    "wert": "4.11.",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_new_appointment_date"
+                },
+                {
+                    "wert": "Heizungsregler",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_equipment"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                }
+            ],
+            "aktionen": [
+            ],
+            "aufgaben": [
+                {
+                    "titel": "Restziel übernehmen (1)",
+                    "status": "OPEN",
+                    "beschreibung": "ORBIT hat diese Anliegen der Kundschaft nicht selbst erledigt oder nachgewiesen; eine Person übernimmt sie:\n- Ein Angebot für einen neuen Heizungsregler erhalten."
+                }
+            ],
+            "erstellt": "2026-10-26T08:24:21.586",
+            "hinweise": [
+                "Übergabe mit offenem Restziel: „Ein Angebot für einen neuen Heizungsregler erhalten.“. Der Ablauf ist durchgelaufen. „Prüfung durch eine Person“ liegt bei einer Person (oder ist kein bekanntes Ziel) und wird nicht von ORBIT abgeschlossen – bitte prüfen und abschließen."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Ein Angebot für einen neuen Heizungsregler erhalten.\", \"triage\": {\"intents\": [{\"key\": \"REQUEST_FOR_QUOTE\", \"confidence\": 0.99, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"REQUEST_FOR_QUOTE\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.99, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E1\"], \"conciseReason\": \"Drei geschäftliche Anliegen: Kopie der letzten Rechnung, Verschiebung eines Wartungstermins und Interesse an einem Angebot für einen Heizungsregler. Die Simulationskennzeichnung ist Nachrichteninhalt und belegt weder Identität noch Kundenbeziehung.\", \"schem"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "blueprint.fit_assessed",
+                    "nutzlast": "{\"fits\": false, \"reason\": \"Die Nachricht bündelt drei unterschiedliche Anliegen: Rechnungskopie, Verschiebung eines bestehenden Wartungstermins und ein neues Angebot. Der Leitfaden ist auf Aufnahme und Übergabe einer Anfrage ausgelegt; er deckt weder die direkte Rechnungsbereitstellung noch die Änderung eines bestehenden Termins passend ab. Nur das Interesse am neuen Heizungsregler-Angebot passt dazu.\", \"assessed\": true, \"attempts\": 1, \"blueprintKey\": \"REQUEST_FOR_QUOTE\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"revision\": 1}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 11,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [], \"summary\": \"Die Kundschaft möchte ein Angebot für einen neuen Heizungsregler; die Rechnungskopie und die Verschiebung des Wartungstermins sind separate Anliegen. Ein neuer Heizungsregler ist im Betriebsprofil nicht ausdrücklich als Leistung genannt.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Gewünschte Leistung\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}], \"siteVisit\": {\"reason\": \"Aus der Nachricht ergeben sich keine konkreten Umstände, die einen Vor-Ort-Termin begründen.\", \"recommended\": false}, \"inquiryKind\": \"QUOTE_OR_ORDER\", \"requestType\""
+                },
+                {
+                    "nr": 12,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"reqs\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"requirements\", \"abschluss\"], \"changed\": [\"context\"], \"removed\": [\"reassess\", \"reqs\"]}, \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 2}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"0870ac4a-cba9-401f-bd47-abe4a1066af9\", \"revision\": 1}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"revision\": 2}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 8, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"abschluss\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "completion.evaluated",
+                    "nutzlast": "{\"met\": false, \"goals\": [{\"goal\": \"Prüfung durch eine Person\", \"basis\": \"GOAL_CRITERIA\", \"status\": \"NOT_EVALUABLE\"}], \"reason\": \"GOAL_NEEDS_HUMAN\", \"criteriaMet\": false, \"evidenceRefs\": []}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"BLOCKED\", \"planId\": \"579d157c-f4d2-421a-9188-af224f5c57f0\", \"nodeKey\": \"abschluss\", \"errorCode\": \"COMPLETION_CRITERIA_NOT_MET\", \"executionMode\": null}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 9, \"attentionReasons\": [\"Übergabe mit offenem Restziel: „Ein Angebot für einen neuen Heizungsregler erhalten.“. Der Ablauf ist durchgelaufen. „Prüfung durch eine Person“ liegt bei einer Person (oder ist kein bekanntes Ziel) und wird nicht von ORBIT abgeschlossen – bitte prüfen und abschließen.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "96b6d036-e816-408a-8aed-a5da18fe3d18"
+        }
+    ],
+    "erstelltAm": "2026-10-26T13:06:11.118987+00:00",
+    "hauptvorgang": "96b6d036-e816-408a-8aed-a5da18fe3d18"
+}

@@ -1,0 +1,939 @@
+{
+    "vorgaenge": [
+        {
+            "id": "077f684a-cd1b-46cf-a8f1-2017a4aa864d",
+            "titel": "Mehrere Anliegen: Zwei Dinge",
+            "plaene": [
+            ],
+            "status": "IN_PROGRESS",
+            "angaben": [
+                {
+                    "wert": true,
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "invoice_received_twice"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": "STATUS_UPDATE",
+                    "status": "CONFIRMED",
+                    "schritt": "family-reply:1",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                },
+                {
+                    "zweck": "STATUS_UPDATE",
+                    "status": "CONFIRMED",
+                    "schritt": "family-reply:2",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                }
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T07:59:16.535",
+            "hinweise": [
+                "Teilvorgang „Doppelt erhaltene Rechnung Nr. 4711: Zwei Dinge“ braucht Prüfung.",
+                "Teilvorgang „Termin für Heizungswartung: Zwei Dinge“ braucht Prüfung."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 3, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.split",
+                    "nutzlast": "{\"reason\": \"2 getrennte Anliegen in der Nachricht erkannt.\", \"children\": [{\"goal\": \"Die doppelt erhaltene Rechnung klären lassen.\", \"caseId\": \"a748f4dd-e74f-4079-bd15-5d3d9be04765\", \"intentKey\": \"COMPLAINT_OR_SERVICE\"}, {\"goal\": \"Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist.\", \"caseId\": \"be9d1b2d-d35b-48c1-a874-3d29caf5caac\", \"intentKey\": \"SALES_INQUIRY\"}], \"coverage\": {\"ungrounded\": [], \"meaningRisk\": [], \"substantive\": 2, \"supplemented\": [], \"qualifiersAttached\": []}, \"startedNow\": 2}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "family.reply_claimed",
+                    "nutzlast": "{\"draftIds\": [], \"messageId\": \"7764e33f-3019-474b-a502-54c11da4c31d\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"34608209-4235-4a1a-82a2-c57f1fdf031c\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"34608209-4235-4a1a-82a2-c57f1fdf031c\", \"capability\": \"email.send\", \"providerRef\": \"1a1773a565e914da\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "family.reply_sent",
+                    "nutzlast": "{\"states\": {\"a748f4dd-e74f-4079-bd15-5d3d9be04765\": \"HANDOVER\", \"be9d1b2d-d35b-48c1-a874-3d29caf5caac\": \"HANDOVER\"}, \"draftIds\": [], \"intentId\": \"34608209-4235-4a1a-82a2-c57f1fdf031c\", \"messageId\": \"7764e33f-3019-474b-a502-54c11da4c31d\", \"providerRef\": \"1a1773a565e914da\"}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "family.reply_claimed",
+                    "nutzlast": "{\"draftIds\": [\"ebaa368e-1ae1-4e99-b43a-db6a35a4950f\"], \"messageId\": \"7764e33f-3019-474b-a502-54c11da4c31d\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:2\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"0cc11bff-1fc0-40cf-868d-e6868f2e11ea\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:2\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"0cc11bff-1fc0-40cf-868d-e6868f2e11ea\", \"capability\": \"email.send\", \"providerRef\": \"1a1773b4fcfef168\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "family.reply_sent",
+                    "nutzlast": "{\"states\": {}, \"draftIds\": [\"ebaa368e-1ae1-4e99-b43a-db6a35a4950f\"], \"intentId\": \"0cc11bff-1fc0-40cf-868d-e6868f2e11ea\", \"messageId\": \"7764e33f-3019-474b-a502-54c11da4c31d\", \"providerRef\": \"1a1773b4fcfef168\"}"
+                }
+            ],
+            "nachrichten": [
+                {
+                    "an": [
+                        "handwerkernull@gmail.com"
+                    ],
+                    "von": "tomorbit777@gmail.com",
+                    "text": "Hallo,\r\n\r\nzwei Dinge: Die Rechnung Nr. 4711 habe ich zweimal bekommen, bitte\r\nklären Sie das. Und haben Sie bis Freitag noch einen Termin für eine\r\nHeizungswartung frei?\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+                    "zeit": "2026-10-26T07:59:01.362",
+                    "betreff": "Zwei Dinge",
+                    "richtung": "INBOUND"
+                },
+                {
+                    "an": [
+                        "tomorbit777@gmail.com"
+                    ],
+                    "von": "handwerkernull@gmail.com",
+                    "text": "Guten Tag,\n\nvielen Dank für Ihre Nachricht „Zwei Dinge“. Sie ist bei uns eingegangen; wir bearbeiten Ihre 2 Anliegen getrennt. Hier der Stand zu jedem:\n\nZu „Doppelt erhaltene Rechnung Nr. 4711“:\nDieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.\n\nZu „Termin für Heizungswartung“:\nDieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+                    "zeit": "2026-10-26T08:01:14.939",
+                    "betreff": "Re: Zwei Dinge",
+                    "richtung": "OUTBOUND"
+                },
+                {
+                    "an": [
+                        "tomorbit777@gmail.com"
+                    ],
+                    "von": "handwerkernull@gmail.com",
+                    "text": "Guten Tag,\n\nvielen Dank für Ihre Antwort. Hier der aktuelle Stand zu Ihren Anliegen:\n\nZu „Termin für Heizungswartung“:\nDamit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\n\n1. Handelt es sich um eine Gas- oder Ölheizung?\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+                    "zeit": "2026-10-26T08:02:18.424",
+                    "betreff": "Re: Zwei Dinge",
+                    "richtung": "OUTBOUND"
+                }
+            ],
+            "elternvorgang": null
+        },
+        {
+            "id": "a748f4dd-e74f-4079-bd15-5d3d9be04765",
+            "titel": "Doppelt erhaltene Rechnung Nr. 4711: Zwei Dinge",
+            "plaene": [
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und vorhandenen Vorgang prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit dem Ergebnis der Anforderungsprüfung neu planen",
+                            "fehler": null,
+                            "zustand": "SUPERSEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Ermitteln, welche Angaben zur Klärung der Doppelrechnung erforderlich sind",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und bisherigen Rechnungsfall prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "MANUAL_TASK",
+                            "titel": "Person prüft Rechnung Nr. 4711 und klärt den Sachverhalt mit dem Kunden",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "handover"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Zuständige Person über die doppelt erhaltene Rechnung informieren",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "notify"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben für die Rechnungsprüfung neu bewerten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Aufgabe zur Prüfung und Klärung anlegen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "task"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "4711",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "invoice_number"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                },
+                {
+                    "wert": "4711",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.invoice_number"
+                },
+                {
+                    "wert": "Der Kunde gibt an, die Rechnung zweimal erhalten zu haben.",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.duplicate_invoice"
+                },
+                {
+                    "wert": "Der Kunde bittet um Klärung.",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.requested_action"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "notify",
+                    "freigabe": null,
+                    "faehigkeit": "staff.notify"
+                },
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "task",
+                    "freigabe": null,
+                    "faehigkeit": "task.create"
+                }
+            ],
+            "aufgaben": [
+                {
+                    "titel": "Doppelte Rechnung Nr. 4711 prüfen und mit dem Kunden klären",
+                    "status": "OPEN",
+                    "beschreibung": "Rechnungs- und Versandvorgang prüfen und dem Kunden das Ergebnis mitteilen."
+                },
+                {
+                    "titel": "Person prüft Rechnung Nr. 4711 und klärt den Sachverhalt mit dem Kunden",
+                    "status": "OPEN",
+                    "beschreibung": "Restziel: den Rechnungs- und Versandvorgang prüfen und das Ergebnis der Kundschaft mitteilen."
+                }
+            ],
+            "erstellt": "2026-10-26T07:59:16.619",
+            "hinweise": [
+                "Person prüft Rechnung Nr. 4711 und klärt den Sachverhalt mit dem Kunden: Bitte manuell bearbeiten."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Die doppelt erhaltene Rechnung klären lassen.\", \"triage\": {\"intents\": [{\"key\": \"COMPLAINT_OR_SERVICE\", \"confidence\": 0.98, \"evidenceRefs\": []}], \"urgency\": \"HIGH\", \"category\": \"COMPLAINT_OR_SERVICE\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.98, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"email.body: Rechnung Nr. 4711 zweimal erhalten, bitte klären\", \"email.body: bis Freitag noch einen Termin für eine Heizungswartung frei?\"], \"conciseReason\": \"Zwei geschäftliche Anliegen: Klärung einer doppelt erhaltenen Rechnung und Anfrage nach einem Heizungswartungstermin bis Freit"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [{\"key\": \"ai.invoice_number\", \"label\": \"Rechnungsnummer\", \"value\": \"4711\", \"evidence\": \"Die Rechnung Nr. 4711 habe ich zweimal bekommen\", \"confidence\": 1}, {\"key\": \"ai.duplicate_invoice\", \"label\": \"Rechnung doppelt erhalten\", \"value\": \"Der Kunde gibt an, die Rechnung zweimal erhalten zu haben.\", \"evidence\": \"Die Rechnung Nr. 4711 habe ich zweimal bekommen\", \"confidence\": 1}, {\"key\": \"ai.requested_action\", \"label\": \"Gewünschte Klärung\", \"value\": \"Der Kunde bittet um Klärung.\", \"evidence\": \"bitte klären Sie das.\", \"confidence\": 1}], \"summary\": \"Der Kunde bittet darum, die "
+                },
+                {
+                    "nr": 11,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"19d70cd4-1e90-4721-b738-9a4ad7afcb33\"], \"requirementKey\": \"ai.invoice_number\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 12,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"4ccca286-1b96-4b8b-a368-8a63946cc374\"], \"requirementKey\": \"ai.duplicate_invoice\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"f6ef825a-bf56-4f91-8b89-6b6452602e95\"], \"requirementKey\": \"ai.requested_action\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"notify\", \"task\", \"handover\"], \"changed\": [\"context\", \"requirements\"], \"removed\": [\"reassess\"]}, \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 2}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"a4a4f3fe-0665-438f-8595-d7452d421e24\", \"revision\": 1}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"revision\": 2}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 14, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"516398fd-c8f7-4933-97bd-127d00404f8e\", \"capability\": \"staff.notify\"}"
+                },
+                {
+                    "nr": 27,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"516398fd-c8f7-4933-97bd-127d00404f8e\", \"capability\": \"staff.notify\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 28,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 29,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"task\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 30,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"task\", \"purpose\": null, \"intentId\": \"61cccc5e-bbe3-4339-96d8-d48fb824e802\", \"capability\": \"task.create\"}"
+                },
+                {
+                    "nr": 31,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"task\", \"purpose\": null, \"intentId\": \"61cccc5e-bbe3-4339-96d8-d48fb824e802\", \"capability\": \"task.create\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 32,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"task\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 33,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"handover\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 34,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"b693f8f5-1607-4849-bcf7-b201d98030b6\", \"nodeKey\": \"handover\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 35,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 15, \"attentionReasons\": [\"Person prüft Rechnung Nr. 4711 und klärt den Sachverhalt mit dem Kunden: Bitte manuell bearbeiten.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "077f684a-cd1b-46cf-a8f1-2017a4aa864d"
+        },
+        {
+            "id": "be9d1b2d-d35b-48c1-a874-3d29caf5caac",
+            "titel": "Termin für Heizungswartung: Zwei Dinge",
+            "plaene": [
+                {
+                    "ziele": [
+                        "appointment.booked",
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und bisherigen Vorgang prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit dem Ergebnis der Anforderungsprüfung weiterplanen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben für die Heizungswartung ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "ACTION",
+                            "titel": "Rückfrage zur Heizungsart senden",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "ask"
+                        },
+                        {
+                            "art": "PREPARE",
+                            "titel": "Rückfrage zur Heizungsart vorbereiten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "askdraft"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Bisherigen Kunden- und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Neue Nachricht zum Heizungswartungstermin auswerten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "extract"
+                        },
+                        {
+                            "art": "MANUAL_TASK",
+                            "titel": "Anliegen übernehmen: Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "manual"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Zuständige Person über Anfrage und fehlende Angabe informieren",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "notify"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Angaben zur Wartungsanfrage erneut bewerten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        },
+                        {
+                            "art": "WAIT_EVENT",
+                            "titel": "Auf Antwort zur Heizungsart warten",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "wait"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "Heizungswartung",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_service"
+                },
+                {
+                    "wert": "Freitag",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "requested_deadline"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                },
+                {
+                    "wert": "Heizungswartung",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.service"
+                },
+                {
+                    "wert": "bis Freitag",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.deadline"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "extract",
+                    "freigabe": null,
+                    "faehigkeit": "facts.extract_from_message"
+                },
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "askdraft",
+                    "freigabe": null,
+                    "faehigkeit": "communication.draft"
+                },
+                {
+                    "zweck": "CLARIFICATION",
+                    "status": "CONFIRMED",
+                    "schritt": "ask",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                },
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "notify",
+                    "freigabe": null,
+                    "faehigkeit": "staff.notify"
+                }
+            ],
+            "aufgaben": [
+                {
+                    "titel": "Anliegen übernehmen: Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist",
+                    "status": "OPEN",
+                    "beschreibung": "Und haben Sie bis Freitag noch einen Termin für eine Heizungswartung frei?"
+                }
+            ],
+            "erstellt": "2026-10-26T07:59:16.731",
+            "hinweise": [
+                "Auf Antwort zur Heizungsart warten: Wartet auf eine Antwort."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist.\", \"triage\": {\"intents\": [{\"key\": \"SALES_INQUIRY\", \"confidence\": 0.98, \"evidenceRefs\": []}], \"urgency\": \"HIGH\", \"category\": \"SALES_INQUIRY\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.98, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"email.body: Rechnung Nr. 4711 zweimal erhalten, bitte klären\", \"email.body: bis Freitag noch einen Termin für eine Heizungswartung frei?\"], \"conciseReason\": \"Zwei geschäftliche Anliegen: Klärung einer doppelt erhaltenen Rechnung und Anfrage nach einem Heizungswartungs"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [{\"key\": \"ai.service\", \"label\": \"Gewünschte Leistung\", \"value\": \"Heizungswartung\", \"evidence\": \"Heizungswartung\", \"confidence\": 1}, {\"key\": \"ai.deadline\", \"label\": \"Gewünschter Zeitraum\", \"value\": \"bis Freitag\", \"evidence\": \"bis Freitag\", \"confidence\": 1}], \"summary\": \"Die Kundschaft möchte wissen, ob bis Freitag ein Termin für eine Heizungswartung frei ist.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Einsatzort\", \"reason\": \"ist aus vorhandenen Quellen beschaffbar: die Kundschaft wird nicht gefragt\"}], \"siteVisit\": {\"reason\": \"\", \"recommended\": false}, \"inquiryK"
+                },
+                {
+                    "nr": 11,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"ae0db15e-6b59-42f0-8ea3-2d5cd4ee11b8\"], \"requirementKey\": \"ai.service\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 12,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"bcc5734a-c571-4669-a6d0-c44fb51e5a7b\"], \"requirementKey\": \"ai.deadline\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"NOT_FOUND\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [], \"requirementKey\": \"ai.heating_type\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": [\"EXTERNAL_CLARIFICATION\", \"HUMAN_REVIEW\"]}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"extract\", \"askdraft\", \"ask\", \"notify\", \"wait\", \"manual\"], \"changed\": [\"context\", \"requirements\"], \"removed\": [\"reassess\"]}, \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"source\": \"LLM_PLANNER\", \"status\": \"AWAITING_APPROVAL\", \"revision\": 2}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_APPROVAL\", \"from\": \"IN_PROGRESS\", \"revision\": 12, \"attentionReasons\": [\"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.\"]}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"75c71737-ef79-4d20-91bf-9d454c737c26\", \"revision\": 1}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"revision\": 2}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"WAITING_FOR_APPROVAL\", \"revision\": 13, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "plan.scope_approved",
+                    "nutzlast": "{\"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"effects\": [\"email.send/CLARIFICATION>to=fact:contact.email\"], \"approvedByUserId\": \"6aa840e9-213b-4978-9d87-4c3a5363744d\"}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"manual\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 27,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"manual\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 28,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 14, \"attentionReasons\": [\"Anliegen übernehmen: Erfahren, ob bis Freitag noch ein Termin für eine Heizungswartung frei ist: Bitte manuell bearbeiten.\"]}"
+                },
+                {
+                    "nr": 29,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"MANUAL_REVIEW\", \"revision\": 15, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 30,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 31,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"extract\", \"purpose\": null, \"intentId\": \"4d76b299-82a2-4530-8b39-403c2e81cd82\", \"capability\": \"facts.extract_from_message\"}"
+                },
+                {
+                    "nr": 32,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 33,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"FAILED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": \"AI_NOT_CONNECTED\", \"executionMode\": null}"
+                },
+                {
+                    "nr": 34,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 16, \"attentionReasons\": [\"Neue Nachricht zum Heizungswartungstermin auswerten: Kein KI-Provider verbunden: die Extraktion wurde nicht simuliert.\"]}"
+                },
+                {
+                    "nr": 35,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"PLANNED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 36,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"MANUAL_REVIEW\", \"revision\": 17, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 37,
+                    "typ": "live.upgrade",
+                    "nutzlast": "{\"kind\": \"RESUMED\", \"reason\": \"Die benötigte Verbindung bzw. der KI-Dienst ist wieder verfügbar.\", \"nodeKeys\": [\"extract\"]}"
+                },
+                {
+                    "nr": 38,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 39,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"extract\", \"purpose\": null, \"intentId\": \"4d76b299-82a2-4530-8b39-403c2e81cd82\", \"capability\": \"facts.extract_from_message\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 40,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"extract\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 41,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 42,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 43,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"askdraft\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 44,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"askdraft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"ec4838bb-2030-4d05-89eb-a4347b94feac\", \"capability\": \"communication.draft\"}"
+                },
+                {
+                    "nr": 45,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"askdraft\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"ec4838bb-2030-4d05-89eb-a4347b94feac\", \"capability\": \"communication.draft\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 46,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"askdraft\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 47,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"ask\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 48,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"ask\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"cc6e964e-c6e0-4729-85ef-9ee39e0f4899\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 49,
+                    "typ": "family.part_held",
+                    "nutzlast": "{\"core\": [\"Damit wir Ihre Anfrage gut vorbereiten können, benötigen wir noch folgende Angaben:\", \"\", \"1. Handelt es sich um eine Gas- oder Ölheizung?\"], \"draftId\": \"ebaa368e-1ae1-4e99-b43a-db6a35a4950f\", \"purpose\": \"CLARIFICATION\", \"parentCaseId\": \"077f684a-cd1b-46cf-a8f1-2017a4aa864d\"}"
+                },
+                {
+                    "nr": 50,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"ask\", \"purpose\": \"CLARIFICATION\", \"intentId\": \"cc6e964e-c6e0-4729-85ef-9ee39e0f4899\", \"capability\": \"email.send\", \"providerRef\": \"family-reply:077f684a-cd1b-46cf-a8f1-2017a4aa864d:ebaa368e-1ae1-4e99-b43a-db6a35a4950f\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 51,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"ask\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 52,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 53,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"bce9d7af-14c5-4cc1-b5d8-dfd28d93d8b2\", \"capability\": \"staff.notify\"}"
+                },
+                {
+                    "nr": 54,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"notify\", \"purpose\": null, \"intentId\": \"bce9d7af-14c5-4cc1-b5d8-dfd28d93d8b2\", \"capability\": \"staff.notify\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 55,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"notify\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 56,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 57,
+                    "typ": "wait.started",
+                    "nutzlast": "{\"nodeKey\": \"wait\", \"eventType\": \"communication.received\", \"deadlineHours\": 72}"
+                },
+                {
+                    "nr": 58,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"f5d1e7d3-6425-4c57-b5c9-b2d0823e44e4\", \"nodeKey\": \"wait\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 59,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_INFORMATION\", \"from\": \"IN_PROGRESS\", \"revision\": 18, \"attentionReasons\": [\"Auf Antwort zur Heizungsart warten: Wartet auf eine Antwort.\"]}"
+                },
+                {
+                    "nr": 60,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"WAITING_FOR_INFORMATION\", \"revision\": 19, \"attentionReasons\": [\"Auf Antwort zur Heizungsart warten: Wartet auf eine Antwort.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "077f684a-cd1b-46cf-a8f1-2017a4aa864d"
+        }
+    ],
+    "erstelltAm": "2026-10-26T13:06:09.216953+00:00",
+    "hauptvorgang": "077f684a-cd1b-46cf-a8f1-2017a4aa864d"
+}

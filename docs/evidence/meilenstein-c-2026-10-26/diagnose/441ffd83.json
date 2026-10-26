@@ -1,0 +1,737 @@
+{
+    "vorgaenge": [
+        {
+            "id": "441ffd83-7190-47d8-b9a2-34bb7063a0cd",
+            "titel": "Mehrere Anliegen: Schlüsselbund Ihres Monteurs",
+            "plaene": [
+            ],
+            "status": "IN_PROGRESS",
+            "angaben": [
+                {
+                    "wert": true,
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "schluesselbund_liegen_gelassen"
+                },
+                {
+                    "wert": true,
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "abholung_schluesselbund_moeglich"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": "STATUS_UPDATE",
+                    "status": "CONFIRMED",
+                    "schritt": "family-reply:1",
+                    "freigabe": null,
+                    "faehigkeit": "email.send"
+                }
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T08:07:19.736",
+            "hinweise": [
+                "Teilvorgang „Schlüsselbund des Monteurs abholen lassen: Schlüsselbund Ihres Monteurs“ braucht Prüfung.",
+                "Teilvorgang „Einsatzgebiet Frechen erfragen: Schlüsselbund Ihres Monteurs“ braucht Prüfung."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 3, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.split",
+                    "nutzlast": "{\"reason\": \"3 getrennte Anliegen in der Nachricht erkannt.\", \"children\": [{\"goal\": \"Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann.\", \"caseId\": \"b2a7aca3-ffd2-4f61-a469-a163f4a9397d\", \"intentKey\": \"COMPLAINT_OR_SERVICE\"}, {\"goal\": \"Den Erhalt der Nachricht kurz bestätigen.\", \"caseId\": \"dbeb8e77-b9ac-4c0b-9c6b-e6bb98c15f31\", \"intentKey\": \"GENERAL_INQUIRY\"}, {\"goal\": \"Erfahren, ob der Betrieb auch nach Frechen kommt.\", \"caseId\": \"637d4251-b302-4f63-8060-407a30d0fae2\", \"intentKey\": \"GENERAL_INQUIRY\"}], \"coverage\": {\"ungrounded\": [], \"meaningRisk\": [], \"sub"
+                },
+                {
+                    "nr": 3,
+                    "typ": "family.reply_claimed",
+                    "nutzlast": "{\"draftIds\": [], \"messageId\": \"3aa0e883-61df-4949-a9a5-f8d4bbded80b\"}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"8db38722-0f9d-4d47-877d-1099ffa074db\", \"capability\": \"email.send\"}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"family-reply:1\", \"purpose\": \"STATUS_UPDATE\", \"intentId\": \"8db38722-0f9d-4d47-877d-1099ffa074db\", \"capability\": \"email.send\", \"providerRef\": \"1a1775cec903c83f\", \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "family.reply_sent",
+                    "nutzlast": "{\"states\": {\"b2a7aca3-ffd2-4f61-a469-a163f4a9397d\": \"HANDOVER\", \"dbeb8e77-b9ac-4c0b-9c6b-e6bb98c15f31\": \"IN_REVIEW\"}, \"draftIds\": [], \"intentId\": \"8db38722-0f9d-4d47-877d-1099ffa074db\", \"messageId\": \"3aa0e883-61df-4949-a9a5-f8d4bbded80b\", \"providerRef\": \"1a1775cec903c83f\"}"
+                }
+            ],
+            "nachrichten": [
+                {
+                    "an": [
+                        "handwerkernull@gmail.com"
+                    ],
+                    "von": "tomorbit777@gmail.com",
+                    "text": "Guten Tag,\r\n\r\nIhr Monteur hat gestern bei uns seinen Schlüsselbund liegen lassen.\r\nBitte sagen Sie ihm Bescheid, dass er ihn bei uns abholen kann, und\r\nbestätigen Sie mir kurz, dass diese Nachricht angekommen ist.\r\nAußerdem: Kommen Sie auch nach Frechen?\r\n\r\nViele Grüße\r\nTom Orbit\r\n\r\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage\r\n(customer-simulator).\r\n",
+                    "zeit": "2026-10-26T08:07:01.848",
+                    "betreff": "Schlüsselbund Ihres Monteurs",
+                    "richtung": "INBOUND"
+                },
+                {
+                    "an": [
+                        "tomorbit777@gmail.com"
+                    ],
+                    "von": "handwerkernull@gmail.com",
+                    "text": "Guten Tag,\n\nvielen Dank für Ihre Nachricht „Schlüsselbund Ihres Monteurs“. Sie ist bei uns eingegangen; wir bearbeiten Ihre 3 Anliegen getrennt. Hier der Stand zu jedem:\n\nZu „Schlüsselbund des Monteurs abholen lassen“:\nDieses Anliegen können wir nicht automatisch erledigen. Wir haben es an eine zuständige Person bei uns übergeben; sie kümmert sich darum und meldet sich bei Ihnen.\n\nZu „Eingang der Nachricht bestätigen“:\nDieses Anliegen prüfen wir noch intern; wir melden uns dazu gesondert bei Ihnen.\n\nSie können einfach auf diese E-Mail antworten.\n\nMit freundlichen Grüßen\nMusterwerk GmbH",
+                    "zeit": "2026-10-26T08:39:01.549",
+                    "betreff": "Re: Schlüsselbund Ihres Monteurs",
+                    "richtung": "OUTBOUND"
+                }
+            ],
+            "elternvorgang": null
+        },
+        {
+            "id": "b2a7aca3-ffd2-4f61-a469-a163f4a9397d",
+            "titel": "Schlüsselbund des Monteurs abholen lassen: Schlüsselbund Ihres Monteurs",
+            "plaene": [
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "SUPERSEDED",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit den ermittelten Anforderungen weiterplanen",
+                            "fehler": null,
+                            "zustand": "SUPERSEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben für die Mitteilung ermitteln",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Vorhandene Kontakt- und Vorgangsinformationen prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "MANUAL_TASK",
+                            "titel": "Anliegen übernehmen: Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann",
+                            "fehler": null,
+                            "zustand": "WAITING",
+                            "schluessel": "handover"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Zuständige Person um Information des Monteurs bitten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "notify_staff"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Anforderungen für die Übergabe prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": null,
+                    "status": "CONFIRMED",
+                    "schritt": "notify_staff",
+                    "freigabe": null,
+                    "faehigkeit": "staff.notify"
+                }
+            ],
+            "aufgaben": [
+                {
+                    "titel": "Anliegen übernehmen: Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann",
+                    "status": "OPEN",
+                    "beschreibung": "Ihr Monteur hat gestern bei uns seinen Schlüsselbund liegen lassen. Bitte sagen Sie ihm Bescheid, dass er ihn bei uns abholen kann, und bestätigen Sie mir kurz, dass diese Nachricht angekommen ist."
+                }
+            ],
+            "erstellt": "2026-10-26T08:07:19.81",
+            "hinweise": [
+                "Anliegen übernehmen: Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann: Bitte manuell bearbeiten."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann.\", \"triage\": {\"intents\": [{\"key\": \"COMPLAINT_OR_SERVICE\", \"confidence\": 0.98, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"COMPLAINT_OR_SERVICE\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.98, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E-Mail: Betreff „Schlüsselbund Ihres Monteurs“\", \"E-Mail: Bitte um Benachrichtigung des Monteurs und kurze Eingangsbestätigung\", \"E-Mail: Frage nach Einsätzen in Frechen\", \"Betriebsprofil: Einsatzgebiet umfasst Frechen\"], \"conciseReason\": "
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 3, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [], \"summary\": \"Der Kunde teilt mit, dass ein Monteur gestern seinen Schlüsselbund bei ihm liegen gelassen hat, bittet darum, den Monteur über die Abholung zu informieren, und wünscht eine kurze Eingangsbestätigung.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Liegen gelassener Gegenstand\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Zeitpunkt\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Gewünschte Maßnahme\", \"reason\": \"Beleg steht nicht wörtlich in der Nachricht\"}, {\"what\": \"Eingangsbestätigung gewünscht\", \"reason"
+                },
+                {
+                    "nr": 11,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 12,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"notify_staff\", \"handover\"], \"changed\": [\"context\", \"requirements\"], \"removed\": [\"reassess\"]}, \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 2}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "plan.superseded",
+                    "nutzlast": "{\"by\": 2, \"planId\": \"831667e4-a6be-400b-9690-f9f57f78901b\", \"revision\": 1}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"revision\": 2}"
+                },
+                {
+                    "nr": 17,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 7, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"notify_staff\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 23,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"notify_staff\", \"purpose\": null, \"intentId\": \"dccf907c-cbb8-4565-be93-d5379bd716b5\", \"capability\": \"staff.notify\"}"
+                },
+                {
+                    "nr": 24,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"notify_staff\", \"purpose\": null, \"intentId\": \"dccf907c-cbb8-4565-be93-d5379bd716b5\", \"capability\": \"staff.notify\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 25,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"notify_staff\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 26,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"handover\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 27,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"233a7a3b-7313-4d70-a89c-7117effec691\", \"nodeKey\": \"handover\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 28,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 8, \"attentionReasons\": [\"Anliegen übernehmen: Dem Monteur Bescheid geben, dass er seinen liegen gelassenen Schlüsselbund abholen kann: Bitte manuell bearbeiten.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "441ffd83-7190-47d8-b9a2-34bb7063a0cd"
+        },
+        {
+            "id": "dbeb8e77-b9ac-4c0b-9c6b-e6bb98c15f31",
+            "titel": "Eingang der Nachricht bestätigen: Schlüsselbund Ihres Monteurs",
+            "plaene": [
+                {
+                    "ziele": [
+                        "receipt.acknowledged",
+                        "human.review"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "AWAITING_APPROVAL",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "PREPARE",
+                            "titel": "Eingangsbestätigung vorbereiten",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "ack_draft"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Eingangsbestätigung senden",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "ack_send"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "COMPLETE",
+                            "titel": "Eingangsbestätigung nachgewiesen und Weitergabe übergeben",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "done"
+                        },
+                        {
+                            "art": "MANUAL_TASK",
+                            "titel": "Anliegen übernehmen: Den Erhalt der Nachricht kurz bestätigen",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "manual_dispatch"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Schlüsselbund-Abholung zur Bearbeitung übergeben",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "notify_staff"
+                        }
+                    ]
+                }
+            ],
+            "status": "WAITING_FOR_APPROVAL",
+            "angaben": [
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                }
+            ],
+            "aktionen": [
+                {
+                    "zweck": "ACKNOWLEDGEMENT",
+                    "status": "CONFIRMED",
+                    "schritt": "ack_draft",
+                    "freigabe": null,
+                    "faehigkeit": "communication.draft"
+                }
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T08:07:19.895",
+            "hinweise": [
+                "Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Den Erhalt der Nachricht kurz bestätigen.\", \"triage\": {\"intents\": [{\"key\": \"GENERAL_INQUIRY\", \"confidence\": 0.98, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"GENERAL_INQUIRY\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.98, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E-Mail: Betreff „Schlüsselbund Ihres Monteurs“\", \"E-Mail: Bitte um Benachrichtigung des Monteurs und kurze Eingangsbestätigung\", \"E-Mail: Frage nach Einsätzen in Frechen\", \"Betriebsprofil: Einsatzgebiet umfasst Frechen\"], \"conciseReason\": \"Die Nachricht enthält eine geschäftliche Mitteilung zu e"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 3, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"7e4c7171-b4b9-4384-bb38-bf3f528bf800\", \"source\": \"LLM_PLANNER\", \"status\": \"AWAITING_APPROVAL\", \"revision\": 1}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_APPROVAL\", \"from\": \"IN_PROGRESS\", \"revision\": 4, \"attentionReasons\": [\"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.\"]}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"7e4c7171-b4b9-4384-bb38-bf3f528bf800\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"7e4c7171-b4b9-4384-bb38-bf3f528bf800\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"7e4c7171-b4b9-4384-bb38-bf3f528bf800\", \"nodeKey\": \"ack_draft\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "action.prepared",
+                    "nutzlast": "{\"nodeKey\": \"ack_draft\", \"purpose\": \"ACKNOWLEDGEMENT\", \"intentId\": \"719ad0bc-2080-46a0-9558-cefccfc5a87f\", \"capability\": \"communication.draft\"}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "action.confirmed",
+                    "nutzlast": "{\"nodeKey\": \"ack_draft\", \"purpose\": \"ACKNOWLEDGEMENT\", \"intentId\": \"719ad0bc-2080-46a0-9558-cefccfc5a87f\", \"capability\": \"communication.draft\", \"providerRef\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 11,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"7e4c7171-b4b9-4384-bb38-bf3f528bf800\", \"nodeKey\": \"ack_draft\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "441ffd83-7190-47d8-b9a2-34bb7063a0cd"
+        },
+        {
+            "id": "637d4251-b302-4f63-8060-407a30d0fae2",
+            "titel": "Einsatzgebiet Frechen erfragen: Schlüsselbund Ihres Monteurs",
+            "plaene": [
+                {
+                    "ziele": [
+                        "inquiry.answered"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "ACTIVE",
+                    "revision": 1,
+                    "schritte": [
+                        {
+                            "art": "COMPLETE",
+                            "titel": "Abschluss prüfen",
+                            "fehler": "Der Ablauf ist durchgelaufen, aber „Anfrage beantwortet“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.",
+                            "zustand": "BLOCKED",
+                            "schluessel": "abschluss"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Absender- und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Mit dem Ergebnis der Anforderungsprüfung weiterplanen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Erforderliche Angaben für die Frage zum Einsatzgebiet prüfen",
+                            "fehler": null,
+                            "zustand": "SUCCEEDED",
+                            "schluessel": "requirements"
+                        }
+                    ]
+                },
+                {
+                    "ziele": [
+                        "inquiry.answered"
+                    ],
+                    "quelle": "LLM_PLANNER",
+                    "status": "AWAITING_APPROVAL",
+                    "revision": 2,
+                    "schritte": [
+                        {
+                            "art": "PREPARE",
+                            "titel": "Freigegebene Betriebsinformation zum Einsatzgebiet abrufen",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "answer"
+                        },
+                        {
+                            "art": "COMPLETE",
+                            "titel": "Anfrage zum Einsatzgebiet beantwortet",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "complete"
+                        },
+                        {
+                            "art": "RESOLVE_CONTEXT",
+                            "titel": "Vorhandenen Kunden- und Vorgangskontext prüfen",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "context"
+                        },
+                        {
+                            "art": "PREPARE",
+                            "titel": "Antwort an die Kundschaft vorbereiten",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "draft"
+                        },
+                        {
+                            "art": "REASSESS",
+                            "titel": "Geschäftsziel anhand der neuen Informationen neu bewerten",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "reassess"
+                        },
+                        {
+                            "art": "EVALUATE_REQUIREMENTS",
+                            "titel": "Anforderungen für die Frage zum Einsatzgebiet ermitteln",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "requirements"
+                        },
+                        {
+                            "art": "ACTION",
+                            "titel": "Antwort zustellen",
+                            "fehler": null,
+                            "zustand": "PLANNED",
+                            "schluessel": "send"
+                        }
+                    ]
+                }
+            ],
+            "status": "MANUAL_REVIEW",
+            "angaben": [
+                {
+                    "wert": "Frechen",
+                    "quelle": "EMAIL",
+                    "status": "CANDIDATE",
+                    "schluessel": "angefragter_ort"
+                },
+                {
+                    "wert": "Der Kunde fragt, ob der Betrieb auch nach Frechen kommt.",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "ai.service_area_question"
+                },
+                {
+                    "wert": "tomorbit777@gmail.com",
+                    "quelle": "EMAIL",
+                    "status": "CONFIRMED",
+                    "schluessel": "contact.email"
+                }
+            ],
+            "aktionen": [
+            ],
+            "aufgaben": [
+            ],
+            "erstellt": "2026-10-26T08:07:19.972",
+            "hinweise": [
+                "Der Ablauf ist durchgelaufen, aber „Anfrage beantwortet“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen."
+            ],
+            "ereignisse": [
+                {
+                    "nr": 1,
+                    "typ": "case.split_from",
+                    "nutzlast": "{\"goal\": \"Erfahren, ob der Betrieb auch nach Frechen kommt.\", \"triage\": {\"intents\": [{\"key\": \"GENERAL_INQUIRY\", \"confidence\": 0.98, \"evidenceRefs\": []}], \"urgency\": \"NORMAL\", \"category\": \"GENERAL_INQUIRY\", \"riskFlags\": [], \"confidence\": {\"intent\": 0.98, \"relevance\": 0.99, \"extraction\": 0.99}, \"evidenceRefs\": [\"E-Mail: Betreff „Schlüsselbund Ihres Monteurs“\", \"E-Mail: Bitte um Benachrichtigung des Monteurs und kurze Eingangsbestätigung\", \"E-Mail: Frage nach Einsätzen in Frechen\", \"Betriebsprofil: Einsatzgebiet umfasst Frechen\"], \"conciseReason\": \"Die Nachricht enthält eine geschäftliche Mitteil"
+                },
+                {
+                    "nr": 2,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"RECEIVED\", \"revision\": 4, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 3,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": null, \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"source\": \"LLM_PLANNER\", \"status\": \"VALIDATED\", \"revision\": 1}"
+                },
+                {
+                    "nr": 4,
+                    "typ": "plan.activated",
+                    "nutzlast": "{\"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"revision\": 1}"
+                },
+                {
+                    "nr": 5,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"IN_PROGRESS\", \"revision\": 5, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 6,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 7,
+                    "typ": "customer.record_checked",
+                    "nutzlast": "{\"checks\": 1, \"origin\": \"EXISTING\", \"status\": \"FOUND\", \"system\": \"ORBIT_CONTACTS\"}"
+                },
+                {
+                    "nr": 8,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"context\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 9,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 10,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"WAITING\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 11,
+                    "typ": "plan.created",
+                    "nutzlast": "{\"diff\": {\"kept\": [], \"added\": [\"answer\", \"draft\", \"send\", \"complete\"], \"changed\": [\"context\", \"requirements\", \"reassess\"], \"removed\": [\"abschluss\"]}, \"planId\": \"4bac2f30-94af-4d78-8476-a644926f64ea\", \"source\": \"LLM_PLANNER\", \"status\": \"AWAITING_APPROVAL\", \"revision\": 2}"
+                },
+                {
+                    "nr": 12,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"WAITING_FOR_APPROVAL\", \"from\": \"IN_PROGRESS\", \"revision\": 8, \"attentionReasons\": [\"Ein Ad-hoc-Plan wartet auf Ihre Bestätigung, bevor etwas ausgeführt wird.\"]}"
+                },
+                {
+                    "nr": 13,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"reassess\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 14,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"IN_PROGRESS\", \"from\": \"WAITING_FOR_APPROVAL\", \"revision\": 9, \"attentionReasons\": []}"
+                },
+                {
+                    "nr": 15,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 16,
+                    "typ": "requirements.analyzed",
+                    "nutzlast": "{\"analysis\": {\"known\": [{\"key\": \"ai.service_area_question\", \"label\": \"Frage zum Einsatzgebiet\", \"value\": \"Der Kunde fragt, ob der Betrieb auch nach Frechen kommt.\", \"evidence\": \"Außerdem: Kommen Sie auch nach Frechen?\", \"confidence\": 1}], \"summary\": \"Der Kunde meldet einen vergessenen Schlüsselbund und möchte wissen, ob der Betrieb auch nach Frechen kommt. Laut Betriebsprofil liegt Frechen im Einsatzgebiet; die Schlüsselabholung und Eingangsbestätigung sind organisatorische Anliegen.\", \"nextStep\": \"ASK_CUSTOMER\", \"rejected\": [{\"what\": \"Der Monteur ließ einen Schlüsselbund liegen.\", \"reason\": \""
+                },
+                {
+                    "nr": 17,
+                    "typ": "context.resolution_attempted",
+                    "nutzlast": "{\"result\": \"SATISFIED\", \"strategy\": \"COMMUNICATION\", \"evidenceRefs\": [\"ab76557c-ecb1-4b53-bb84-21b18f583c9c\"], \"requirementKey\": \"ai.service_area_question\", \"triedStrategies\": [\"CASE_FACT\", \"COMMUNICATION\"], \"nextAllowedStrategies\": []}"
+                },
+                {
+                    "nr": 18,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"SUCCEEDED\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"requirements\", \"errorCode\": null, \"executionMode\": \"LIVE\"}"
+                },
+                {
+                    "nr": 19,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"RUNNING\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"abschluss\", \"errorCode\": null, \"executionMode\": null}"
+                },
+                {
+                    "nr": 20,
+                    "typ": "completion.evaluated",
+                    "nutzlast": "{\"met\": false, \"goals\": [{\"goal\": \"Anfrage beantwortet\", \"basis\": \"GOAL_CRITERIA\", \"status\": \"NOT_ACHIEVED\"}], \"reason\": \"GOAL_NOT_ACHIEVED\", \"criteriaMet\": false, \"evidenceRefs\": []}"
+                },
+                {
+                    "nr": 21,
+                    "typ": "node.state_changed",
+                    "nutzlast": "{\"state\": \"BLOCKED\", \"planId\": \"76ce3f90-55fa-42c7-865e-13eab3cd52ba\", \"nodeKey\": \"abschluss\", \"errorCode\": \"COMPLETION_CRITERIA_NOT_MET\", \"executionMode\": null}"
+                },
+                {
+                    "nr": 22,
+                    "typ": "case.status_changed",
+                    "nutzlast": "{\"to\": \"MANUAL_REVIEW\", \"from\": \"IN_PROGRESS\", \"revision\": 12, \"attentionReasons\": [\"Der Ablauf ist durchgelaufen, aber „Anfrage beantwortet“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.\"]}"
+                }
+            ],
+            "nachrichten": [
+            ],
+            "elternvorgang": "441ffd83-7190-47d8-b9a2-34bb7063a0cd"
+        }
+    ],
+    "erstelltAm": "2026-10-26T13:06:10.487788+00:00",
+    "hauptvorgang": "441ffd83-7190-47d8-b9a2-34bb7063a0cd"
+}
