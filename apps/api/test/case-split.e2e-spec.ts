@@ -352,6 +352,13 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     });
     expect(reply.case!.id).toBe(result.case!.id); // zugeordnet über den Mailfaden der gemeinsamen Antwort: sie hängt am Hauptvorgang
     const after = await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } });
+    if (after.some((k) => k.orchestrationStatus !== 'COMPLETED')) {
+      for (const k of after) {
+        const nodes = await prisma.forTenantId(tenantId).processPlanNode.findMany({ where: { plan: { caseId: k.id } }, select: { nodeKey: true, state: true, errorMessage: true, plan: { select: { revision: true, status: true } } } });
+        const ev = await prisma.forTenantId(tenantId).caseEvent.findMany({ where: { caseId: k.id }, select: { type: true, payload: true }, orderBy: { sequence: 'asc' } });
+        console.log('DIAG', k.id, k.orchestrationStatus, k.attentionReasons, JSON.stringify(nodes), JSON.stringify(ev.map((e) => e.type)));
+      }
+    }
     expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']); // beide Teilvorgänge haben die Antwort erhalten und wurden fortgesetzt
     const secondWait = await prisma.forTenantId(tenantId).waitSubscription.findFirstOrThrow({ where: { caseId: kids[1]!.id } });
     expect(secondWait.status).toBe('SATISFIED');

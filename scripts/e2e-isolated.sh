@@ -50,4 +50,5 @@ fi
 echo "[e2e] ${E2E_DB} migriert; Test-Redis Port ${E2E_REDIS_PORT:-16379}, DB ${E2E_REDIS_DB:-0}; Jest startet."
 
 cd "$ROOT/apps/api"
-exec node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand "$@"
+# Alle Suiten laufen in einem Prozess (--runInBand): der Speicher wächst mit der Zahl der Suiten (bei 71 Suiten Absturz am Standardlimit von ~4 GB).
+exec node --max-old-space-size="${E2E_HEAP_MB:-6144}" --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand "$@"
