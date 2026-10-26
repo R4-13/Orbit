@@ -124,3 +124,15 @@ Danke, Tom Orbit`;
     expect(withRequest.concerns.find((c) => c.supplemented)?.excerpt).toContain('Rechnung vom letzten Einsatz');
   });
 });
+
+describe('umgebrochene Sätze (Meilenstein C)', () => {
+  it('ein Zeilenumbruch mitten im Satz ist keine Satzgrenze, auch vor einem Hauptwort', () => {
+    expect(splitSentences('Und haben Sie bis Freitag noch einen Termin für eine\nHeizungswartung frei?')).toEqual(['Und haben Sie bis Freitag noch einen Termin für eine Heizungswartung frei?']);
+    expect(splitSentences('Die Rechnung Nr. 4711 habe ich zweimal bekommen, bitte klären Sie das.\nUnd haben Sie einen Termin frei?')).toHaveLength(2);
+  });
+
+  it('Leerzeilen und Listenzeichen bleiben Grenzen', () => {
+    expect(splitSentences('Guten Tag\n\nbitte rufen Sie zurück')).toEqual(['Guten Tag', 'bitte rufen Sie zurück']);
+    expect(splitSentences('Wir brauchen\n- eine Kopie\n- einen Termin')).toEqual(['Wir brauchen', 'eine Kopie', 'einen Termin']);
+  });
+});

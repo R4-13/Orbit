@@ -71,9 +71,11 @@ export interface VerifiedConcerns {
 /** Zerlegt Text in Sätze/Zeilen; Aufzählungszeichen und Nummerierung werden entfernt. */
 export function splitSentences(text: string): string[] {
   // Ein Zeilenumbruch mitten im Satz (E-Mails brechen Zeilen nach etwa 72 Zeichen um) ist keine Satzgrenze: folgt auf den Umbruch ein Kleinbuchstabe, geht der Satz weiter (Funktionsnachweis 23.10.: „…auf den 4.11.⏎verschieben“ wurde in zwei Sätze zerlegt und ein Anliegen blieb unbelegt).
-  const unwrapped = text.replace(/[ \t]*\r?\n[ \t]*(?=[a-zäöüß])/g, ' ');
+  // Auch vor einem Großbuchstaben (deutsche Hauptwörter: „…für eine⏎Heizungswartung frei?“): ein Umbruch hinter einer Zeile ohne Satzzeichen am Ende, vor einer Zeile ohne Listenzeichen und ohne Leerzeile, setzt den Satz fort
+  // (Meilenstein C: ein umgebrochener Satz wurde zerlegt, die zweite Hälfte als „weiteres Anliegen“ ergänzt).
+  const unwrapped = text.replace(/([^.!?…:;\s])[ \t]*\r?\n[ \t]*(?!(?:[-*•–]|\d+[.)])\s)(?=[^\s])/g, '$1 ').replace(/[ \t]*\r?\n[ \t]*(?=[a-zäöüß])/g, ' ');
   return unwrapped
-    .split(/(?<=[.!?…])(?<!\d\.)\s+|(?<=\d\.)\s+(?=[A-ZÄÖÜ0-9„"(])|\r?\n+/)
+    .split(/(?<=[.!?…])(?<!\d\.)(?<!\b(?:[Nn]r|[Hh]r|[Ff]r|[Dd]r|ca|bzw|usw|etc|ggf|inkl|evtl|vgl|[Ss]tr|[Tt]el)\.)\s+|(?<=\d\.)\s+(?=[A-ZÄÖÜ0-9„"(])|\r?\n+/)
     .map((s) => s.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '').trim())
     .filter((s) => s.length > 0);
 }
