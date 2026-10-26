@@ -81,6 +81,16 @@ export class PlanStoreService {
         },
       });
 
+      // Ein neuer Vorschlag, der auf Freigabe wartet, löst die älteren unfreigegebenen Vorschläge desselben Vorgangs ab (Neuplanung während der Wartezeit): es steht immer nur ein Plan zur Freigabe.
+      if (input.status === 'AWAITING_APPROVAL') {
+        const stale = await tx.processPlan.findMany({ where: { tenantId, caseId, status: 'AWAITING_APPROVAL', NOT: { id: plan.id } } });
+        for (const old of stale) {
+          await tx.processPlan.update({ where: { id: old.id }, data: { status: 'SUPERSEDED' } });
+          await tx.processPlanNode.updateMany({ where: { tenantId, planId: old.id, state: { notIn: [...TERMINAL_STATES] } }, data: { state: 'SUPERSEDED' } });
+          await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.PLAN_SUPERSEDED, payload: { planId: old.id, revision: old.revision, by: plan.revision } });
+        }
+      }
+
       // Knoten und Kanten in je einer Abfrage statt einer je Element (ein Plan hat leicht 15+ Knoten).
       await tx.processPlanNode.createMany({
         data: input.proposal.nodes.map((node) => {

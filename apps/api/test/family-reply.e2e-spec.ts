@@ -253,4 +253,24 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(await scoped.task.count({ where: { caseId: child.id } })).toBe(0);
     expect((await scoped.case.findUniqueOrThrow({ where: { id: child.id } })).orchestrationStatus).not.toBe('MANUAL_REVIEW');
   });
+
+  it('ein neuer Vorschlag, der auf Freigabe wartet, löst den älteren unfreigegebenen Vorschlag desselben Vorgangs ab (es steht nur ein Plan zur Freigabe)', async () => {
+    const tenantId = await newTenant();
+    const scoped = prisma.forTenantId(tenantId);
+    const child = await scoped.case.create({ data: { tenantId, type: 'GENERAL', title: 'Teil: y' } });
+    const store = app.get(PlanStoreService);
+    const proposal = (id: string): PlanProposal => ({
+      goalKeys: ['human.review'],
+      nodes: [{ id: 'w', type: 'WAIT_EVENT', title: 'Warten', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: { eventType: 'communication.received' }, timeout: { hours: 1 }, evidenceRefs: [] } as never],
+      edges: [],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: id,
+    });
+    const input = (id: string) => ({ proposal: proposal(id), source: 'LLM_PLANNER' as const, status: 'AWAITING_APPROVAL' as const, basedOnCaseRevision: 0, validation: { valid: true, issues: [], stats: null } });
+    const first = await store.createRevision(tenantId, child.id, input('erster'));
+    const second = await store.createRevision(tenantId, child.id, input('zweiter'));
+    const plans = await scoped.processPlan.findMany({ where: { caseId: child.id }, orderBy: { revision: 'asc' } });
+    expect(plans.map((p) => [p.id, p.status])).toEqual([[first.plan.id, 'SUPERSEDED'], [second.plan.id, 'AWAITING_APPROVAL']]);
+  });
 });
