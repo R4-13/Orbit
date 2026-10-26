@@ -268,7 +268,9 @@ export class ReferenceProcessTools implements OnModuleInit {
     if (options.only) for (const key of [...allowed.keys()]) if (!options.only.includes(key)) allowed.delete(key);
     // Teilvorgang einer aufgeteilten Nachricht: keine freien Zusatzangaben – ob eine Angabe zu diesem oder zu einem anderen Anliegen gehört, wäre geraten (Meilenstein C, K1); nur die erfragten Angaben dieses Anliegens.
     const isSplitChild = (await this.prisma.forTenantId(ctx.tenantId).case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } }))?.parentCaseId != null;
-    const freeKeys = !options.only && !isSplitChild;
+    // Angaben einer Antwort, die diesem Anliegen zugeordnet wurde (nur dessen Sätze liegen vor), gehören zu ihm – freie Zusatzangaben sind dann zulässig, bei der ursprünglichen Nachricht eines Teilvorgangs nicht.
+    const routed = isSplitChild && message.direction === 'INBOUND' ? await this.routedReplyOf(ctx.tenantId, caseId, message.id) : undefined;
+    const freeKeys = !options.only && (!isSplitChild || routed !== undefined);
 
     const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
       if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
@@ -278,7 +280,6 @@ export class ReferenceProcessTools implements OnModuleInit {
     const attachmentBlock = await this.attachmentTexts.blockForMessage(ctx.tenantId, message.id).catch(() => '');
     // Antwort der Kundschaft auf die gemeinsame Antwort einer aufgeteilten Nachricht: dieser Teilvorgang liest nur die ihm zugeordneten Sätze (Zuordnung aus Gegenstand und Gesprächszusammenhang) und kennt die
     // Rückfragen, auf die sich eine Kurzantwort („Bitte beides“) bezieht. Der Beleg bleibt das wörtliche Zitat aus der Antwort.
-    const routed = isSplitChild && message.direction === 'INBOUND' ? await this.routedReplyOf(ctx.tenantId, caseId, message.id) : undefined;
     const body = routed ? routed.sentences.join(' ') : (message.bodyText ?? message.bodyPreview ?? '').slice(0, MAX_BODY_CHARS);
     const text = `Betreff: ${message.subject ?? ''}\n\n${body}${attachmentBlock ? `\n\n${attachmentBlock}` : ''}`;
     const askedBlock =
@@ -383,7 +384,7 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
       recorded.push({ key: item.key, value: item.value, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
     }
     // Eine genannte Anschrift (Straße mit Hausnummer) geht nie verloren, auch wenn die Auslese sie nicht meldet: sie wird im Wortlaut als Angabe festgehalten, sofern nicht schon eine Angabe sie enthält.
-    const street = !options.only && !isSplitChild && message.direction === 'INBOUND' ? findStreetAddress(message.bodyText ?? message.bodyPreview) : undefined;
+    const street = !options.only && (!isSplitChild || routed !== undefined) && message.direction === 'INBOUND' ? findStreetAddress(routed ? routed.sentences.join(' ') : (message.bodyText ?? message.bodyPreview)) : undefined;
     if (street) {
       const known = (await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => ['CANDIDATE', 'CONFIRMED'].includes(f.status) && typeof f.value === 'string');
       if (!known.some((f) => normalize(String(f.value)).includes(normalize(street)))) {

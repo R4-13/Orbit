@@ -283,7 +283,8 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(sent).toHaveLength(1); // eine Eingangsbestätigung für fünf Anliegen
   });
 
-  it('eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren', async () => {
+  /** Zwei Teilvorgänge, beide haben ihre Rückfrage gestellt (in EINER gemeinsamen Antwort) und warten. */
+  async function twoWaitingChildren() {
     const tenantId = await newTenant(true);
     seedTriage(['ANLIEGEN_STANDORT', 'ANLIEGEN_ZUGANG']);
     const askPlan = () => ({
@@ -339,6 +340,11 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(sent[0]!.bodyText).toContain('ins Objekt');
     expect((await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } })).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_INFORMATION']);
 
+    return { tenantId, result, kids, afterReply };
+  }
+
+  it('eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren', async () => {
+    const { tenantId, result, kids, afterReply } = await twoWaitingChildren();
     // Eine einzige Antwort – im Mailfaden der ersten Rückfrage – beantwortet beide Fragen. Jeder Teilvorgang plant danach selbst neu.
     seedPlan(afterReply('Standort geklärt.'));
     seedPlan(afterReply('Zugang geklärt.'));
@@ -370,6 +376,28 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
   });
+  it('eine Antwort ohne Bezug zu einer der beiden offenen Rückfragen („Ja, bitte.“): die Teilvorgänge setzen nicht auf Verdacht fort, die Kundschaft wird gezielt zurückgefragt, die Nachricht bleibt nicht nur am Hauptvorgang liegen', async () => {
+    const { tenantId, result, kids } = await twoWaitingChildren();
+    const mailsBefore = sent.length;
+    const reply = await intake.handleIntakeEvent(tenantId, undefined, {
+      ...mail(tenantId),
+      subject: 'Re: Zwei Fragen',
+      content: 'Ja, bitte.',
+      rfcMessageId: '<antwort-kurz@kunde.example>',
+      inReplyTo: '<sent-1@mail.example>',
+      references: ['<split@kunde.example>', '<sent-1@mail.example>'],
+    });
+    expect(reply.case!.id).toBe(result.case!.id);
+    const after = await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } });
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_INFORMATION']); // unverändert: die Antwort gehört (noch) zu keiner Frage
+    for (const k of kids) expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: k.id, type: 'communication.received' } })).toBe(0);
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: result.case!.id, type: 'family.assignment_question' } })).toBe(1);
+    expect(sent).toHaveLength(mailsBefore + 1); // genau eine Rückfrage zur Zuordnung, gemeinsam für beide Anliegen
+    expect(sent[sent.length - 1]!.bodyText).toContain('Ihre Antwort „Ja, bitte.“ können wir nicht eindeutig zuordnen');
+    expect(sent[sent.length - 1]!.bodyText).toContain('Adresse');
+    expect(sent[sent.length - 1]!.bodyText).toContain('ins Objekt');
+  });
+
   it('eine Antwort erreicht auch einen Teilvorgang, der gerade nicht wartet (z. B. auf eine Freigabe): er startet nicht neu, aber die Antwort ist ihm nachvollziehbar zugeordnet und für die nächste Bearbeitung lesbar', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['ANLIEGEN_STANDORT', 'ANLIEGEN_ZUGANG']);
