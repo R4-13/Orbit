@@ -1,4 +1,4 @@
-import { belongsToOtherConcern, overlap, type ConcernScope } from './concern-scope';
+import { belongsToOtherConcern, mentionsOtherConcern, overlap, type ConcernScope } from './concern-scope';
 
 const scope: ConcernScope = {
   own: 'Kopie der letzten Rechnung für die Steuer erhalten. Erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer.',
@@ -21,5 +21,14 @@ describe('Zuordnung zu einem Anliegen', () => {
   it('ohne Geschwister gehört nichts zu einem anderen Anliegen; Überschneidung zählt Stämme (Zusammensetzungen)', () => {
     expect(belongsToOtherConcern('Heizungsregler', { own: 'Rechnung', siblings: [] })).toBe(false);
     expect(overlap('Heizungsregler', 'Angebot für einen neuen Heizungsregler')).toBeGreaterThan(0);
+  });
+});
+
+describe('Vermischte Aussagen', () => {
+  const own: ConcernScope = { own: 'Kopie der letzten Rechnung für die Steuer erhalten', siblings: ['Wartungstermin vom 28.10. auf den 4.11. verschieben', 'Ein Angebot für einen neuen Heizungsregler erhalten'] };
+  it('eine Aufgabe, die Gegenstände eines Geschwisters nennt, vermischt die Anliegen', () => {
+    expect(mentionsOtherConcern('Rechnungskopie bereitstellen und Terminverschiebung bearbeiten', own)).toBe(true);
+    expect(mentionsOtherConcern('Letzte Rechnung ermitteln und Kopie bereitstellen', own)).toBe(false);
+    expect(mentionsOtherConcern('Angebot für den Regler prüfen', own)).toBe(true);
   });
 });

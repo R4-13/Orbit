@@ -187,6 +187,26 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(await family.settle(tenantId, two.parentId)).toBe('NOTHING');
   });
 
+  it('eine gemeinsame Antwort der Kundschaft: jede Aufgabe erhält nur die Sätze, die zu ihrem Anliegen gehören (im Wortlaut), nicht zweimal für dieselbe Nachricht', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Kopie der letzten Rechnung für die Steuer erhalten', 'Wartungstermin vom 28.10. auf den 4.11. verschieben']);
+    const scoped = prisma.forTenantId(tenantId);
+    for (const id of childIds) {
+      await scoped.task.create({ data: { tenantId, caseId: id, title: 'Anliegen übernehmen', description: 'Start.', source: 'AGENT' } });
+      await scoped.case.update({ where: { id }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    }
+    const reply = await scoped.emailMessage.create({ data: { tenantId, caseId: parentId, direction: 'INBOUND', fromAddress: TOM, toAddresses: ['info@betrieb.example'], subject: 'Re: Drei Dinge', bodyText: 'Zur Rechnung: es ist die vom September. Zum Termin: der Wartungstermin war bei Herrn Weber.\n\n[Simulation] Testwerkzeug', threadId: 'thr-1', rfcMessageId: '<antwort@kunde.example>', receivedAt: new Date() } });
+    await family.assignReply(tenantId, childIds[0]!, reply.id);
+    await family.assignReply(tenantId, childIds[1]!, reply.id);
+    await family.assignReply(tenantId, childIds[1]!, reply.id); // Wiederholung: keine zweite Ergänzung
+    const tasks = await Promise.all(childIds.map((id) => scoped.task.findFirstOrThrow({ where: { caseId: id } })));
+    expect(tasks[0]!.description).toContain('es ist die vom September');
+    expect(tasks[0]!.description).not.toContain('Herrn Weber');
+    expect(tasks[1]!.description).toContain('Herrn Weber');
+    expect(tasks[1]!.description).not.toContain('September');
+    expect(tasks[1]!.description!.match(/Antwort der Kundschaft/g)).toHaveLength(1);
+  });
+
   it('Entwürfe außerhalb einer aufgeteilten Nachricht oder mit Anhang werden nicht bereitgehalten (sie gehen wie bisher selbst hinaus)', async () => {
     const tenantId = await newTenant();
     const single = await prisma.forTenantId(tenantId).case.create({ data: { tenantId, type: 'GENERAL', title: 'Einzelvorgang' } });

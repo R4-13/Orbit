@@ -782,6 +782,7 @@ export class IntakeService {
     try {
       for (const child of children.filter((c) => !terminal.has(c.orchestrationStatus))) {
         await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
+        await this.familyReply.assignReply(tenantId, child.id, inboundEmailId).catch(() => undefined);
         if (child.waitSubscriptions.length > 0) {
           await this.orchestrator.receiveInbound(tenantId, child.id, {
             type: 'communication.received',

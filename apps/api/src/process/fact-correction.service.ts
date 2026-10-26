@@ -72,7 +72,7 @@ const hasNumber = (value: string): boolean => /\d/.test(value) || WORD_RE.test(v
 const UNIT_ALIASES: Record<string, string> = { 'm²': 'm2', qm: 'm2', quadratmeter: 'm2', kilowatt: 'kw', euro: '€' };
 const normalizeUnit = (unit: string | undefined): string | undefined => (unit ? (UNIT_ALIASES[unit.toLowerCase()] ?? unit.toLowerCase()) : undefined);
 const STOPWORDS = new Set(
-  'der die das den dem des ein eine einer einen einem und oder aber doch nicht sondern auch noch nur mit für von zu im in am an auf ist sind hat haben wird werden wir sie ich es bei als wie dass sich mehr nun jetzt dann so etwa circa ungefähr korrektur korrigieren muss müssen weil'.split(' '),
+  'der die das den dem des ein eine einer einen einem und oder aber doch nicht sondern auch noch nur mit für von zu im in am an auf ist sind hat haben wird werden wir sie ich es bei als wie dass sich mehr nun jetzt dann so etwa circa ungefähr korrektur korrigieren muss müssen weil vom zum zur beim über nach vor aus'.split(' '),
 );
 
 /**

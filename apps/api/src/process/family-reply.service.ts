@@ -10,6 +10,7 @@ import { ActionLedgerService } from './action-ledger.service';
 import { CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { familyReplyBody, draftCore, type FamilyReplySection, type FamilyStateKind } from './family-reply-body';
+import { belongsToOwnConcern, concernScope } from './concern-scope';
 import { replyLanguage } from './reference/reply-language';
 import { ReferenceProcessService } from './reference/reference-process.service';
 import { replySubject } from './reference/communication-templates';
@@ -196,7 +197,9 @@ export class FamilyReplyService {
     const profile = await scoped.tenantProfile.findUnique({ where: { tenantId }, select: { languages: true } });
     const lang = replyLanguage(`${inbound.subject ?? ''}\n${inbound.bodyText ?? inbound.bodyPreview ?? ''}`, profile?.languages);
     const watch = await scoped.customerRecordWatch.findFirst({ where: { caseId: { in: family } }, select: { displayName: true } });
-    const first = !state.repliedTo.has(inbound.id);
+    // Die Eingangsbestätigung gehört der ursprünglichen Nachricht; die Antwort der Kundschaft auf eine Rückfrage bekommt den Stand, keine zweite Bestätigung des Eingangs.
+    const earliest = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { id: true } });
+    const first = inbound.id === earliest?.id && !state.repliedTo.has(inbound.id);
     const sections: FamilyReplySection[] = [];
     for (const child of children) {
       const mine = contentParts.filter((p) => p.childId === child.id);
@@ -244,10 +247,11 @@ export class FamilyReplyService {
 
   private async labelOf(tenantId: string, child: Case): Promise<string> {
     const split = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId: child.id, type: 'case.split_from' }, orderBy: { sequence: 'asc' }, select: { payload: true } });
-    const goal = (split?.payload as { goal?: string } | null | undefined)?.goal?.trim();
-    const fallback = child.title.replace(/:.*$/, '').trim();
-    const pick = goal && goal.length >= 3 && goal.length <= 120 && isSafeCustomerText(goal).safe ? goal : fallback;
-    return pick.replace(/[„“"]/g, '').slice(0, 120);
+    const goal = (split?.payload as { goal?: string } | null | undefined)?.goal?.trim().replace(/[.\s]+$/, '');
+    const title = child.title.replace(/:.*$/, '').trim();
+    const safe = (t: string | undefined): t is string => Boolean(t) && (t as string).length >= 3 && (t as string).length <= 100 && isSafeCustomerText(t as string).safe;
+    const pick = safe(title) ? title : safe(goal) ? goal : title;
+    return pick.replace(/[„“"]/g, '').slice(0, 100);
   }
 
   private async dispatch(tenantId: string, parent: Case, intent: ActionIntent, draft: CommunicationDraft): Promise<SettleOutcome> {
@@ -306,6 +310,25 @@ export class FamilyReplyService {
     await this.events.append(tenantId, intent.caseId, { type: FAMILY_EVENT_TYPES.REPLY_DISCARDED, payload: { intentId, draftIds: family?.draftIds ?? [], reason: 'abgelehnt' } });
     const parent = await this.prisma.forTenantId(tenantId).case.findUnique({ where: { id: intent.caseId } });
     if (parent) await this.markAttention(tenantId, parent, 'Die gemeinsame Antwort an die Kundschaft wurde abgelehnt; bitte selbst antworten.');
+  }
+
+  /**
+   * Eine gemeinsame Antwort der Kundschaft (Meilenstein C, K1): die Sätze, die erkennbar zu einem Anliegen gehören, stehen im Wortlaut an der offenen Aufgabe dieses Anliegens – wer es übernimmt, findet dort,
+   * was die Kundschaft dazu geantwortet hat. Zuordnung nur nach dem Gegenstand des Satzes (nicht geraten); je Nachricht und Anliegen einmal.
+   */
+  async assignReply(tenantId: string, childCaseId: string, messageId: string): Promise<void> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const scope = await concernScope(this.prisma, tenantId, childCaseId);
+    const message = await scoped.emailMessage.findFirst({ where: { id: messageId, direction: 'INBOUND' }, select: { bodyText: true, bodyPreview: true, createdAt: true } });
+    if (!scope || !message) return;
+    const text = (message.bodyText ?? message.bodyPreview ?? '').split(/\n\s*\[Simulation\]/)[0] ?? '';
+    const mine = text.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ])|\n+/).map((s) => s.trim()).filter((s) => s.length > 3 && belongsToOwnConcern(s, scope));
+    if (mine.length === 0) return;
+    const task = await scoped.task.findFirst({ where: { caseId: childCaseId, status: { notIn: ['DONE', 'CANCELLED'] } }, orderBy: { createdAt: 'desc' } });
+    if (!task) return;
+    const noted = await this.events.append(tenantId, childCaseId, { type: 'family.reply_assigned', payload: { messageId, taskId: task.id, sentences: mine }, dedupeKey: `family.assigned:${messageId}:${childCaseId}` });
+    if (noted.duplicate) return;
+    await scoped.task.update({ where: { id: task.id }, data: { description: `${task.description ?? ''}\n\nAntwort der Kundschaft zu diesem Anliegen (${message.createdAt.toLocaleDateString('de-DE')}): ${mine.join(' ')}`.trim().slice(0, 4000) } });
   }
 
   isFamilyIntent(intent: Pick<ActionIntent, 'nodeKey'>): boolean {
