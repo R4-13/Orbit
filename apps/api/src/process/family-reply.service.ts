@@ -34,6 +34,8 @@ const FAMILY_NODE_PREFIX = 'family-reply:';
 const BUSY_WINDOW_MS = 10 * 60_000;
 /** Ein Teilvorgang, der gerade erst auf eine Freigabe (Plan oder Auskunft) wartet, hält die gemeinsame Antwort kurz zurück: meist kommt die Freigabe in Minuten, und die Kundschaft soll eine Antwort bekommen, nicht zwei. Danach geht der Stand hinaus. */
 const APPROVAL_GRACE_MS = 30 * 60_000;
+/** Ziele eines Plans, die eine Aufnahme und Übergabe an eine Person bedeuten (nicht ein erreichtes Ergebnis). */
+const HANDOVER_GOALS: ReadonlySet<string> = new Set(['request.handed_over', 'human.review', 'staff.informed', 'task.created']);
 const NO_REPLY_SENDER = /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmaster|bounces?)([+._-]|@)/i;
 
 export type SettleOutcome = 'SENT' | 'AWAITING_APPROVAL' | 'NOTHING' | 'BUSY' | 'HELD_BACK' | 'FAILED';
@@ -125,7 +127,7 @@ export class FamilyReplyService {
   }
 
   /** Was sich über den Stand eines ruhigen Teilvorgangs wahrheitsgemäß sagen lässt – oder nichts. */
-  private async stateOf(tenantId: string, child: Case, hasHeldPart: boolean): Promise<FamilyStateKind | undefined> {
+  private async stateOf(tenantId: string, child: Case, answeredByContent: boolean): Promise<FamilyStateKind | undefined> {
     const scoped = this.prisma.forTenantId(tenantId);
     switch (child.orchestrationStatus) {
       case 'MANUAL_REVIEW':
@@ -134,8 +136,17 @@ export class FamilyReplyService {
         return (await scoped.task.count({ where: { caseId: child.id, status: { notIn: ['DONE', 'CANCELLED'] } } })) > 0 ? 'HANDOVER' : undefined;
       case 'WAITING_FOR_APPROVAL':
         return 'IN_REVIEW';
-      case 'COMPLETED':
-        return hasHeldPart ? undefined : 'DONE';
+      case 'COMPLETED': {
+        // Eine Auskunft hat ihre Aussage schon in einem eigenen Teil gemacht; sonst gilt der Gegenstand des Plans: nur die Eingangsbestätigung (die Einleitung sagt es), Aufnahme und Übergabe an eine Person
+        // (wahr: „an eine zuständige Person übergeben“, nie „erledigt“) oder ein tatsächlich erreichtes Ziel.
+        if (answeredByContent) return undefined;
+        const plan = await scoped.processPlan.findFirst({ where: { caseId: child.id, status: { in: ['ACTIVE', 'SUPERSEDED'] } }, orderBy: { revision: 'desc' }, select: { goalKeys: true } });
+        const goals = plan?.goalKeys ?? [];
+        const openTasks = await scoped.task.count({ where: { caseId: child.id, status: { notIn: ['DONE', 'CANCELLED'] } } });
+        if (goals.includes('request.handed_over') || (openTasks > 0 && goals.some((g) => HANDOVER_GOALS.has(g)))) return 'HANDOVER';
+        if (goals.length > 0 && goals.every((g) => g === 'receipt.acknowledged' || g === 'human.review')) return undefined;
+        return 'DONE';
+      }
       default:
         return undefined;
     }
@@ -168,7 +179,7 @@ export class FamilyReplyService {
     const pending: HeldPart[] = heldRows
       .map((r) => ({ childId: r.caseId, ...(r.payload as { draftId: string; purpose: string; core: string[] }) }))
       .filter((p) => !state.covered.has(p.draftId));
-    const everHeld = new Set(heldRows.map((r) => r.caseId));
+    const answeredByContent = new Set(heldRows.filter((r) => !['ACKNOWLEDGEMENT', 'CLARIFICATION'].includes((r.payload as { purpose?: string }).purpose ?? '')).map((r) => r.caseId));
 
     // Die letzte Nachricht der Kundschaft in der Familie: Empfänger und Bezug der Antwort, und worauf sich zugeordnete Angaben beziehen.
     const family = [parentId, ...children.map((c) => c.id)];
@@ -180,7 +191,7 @@ export class FamilyReplyService {
     const states = new Map<string, FamilyStateKind>();
     for (const child of children) {
       if (pending.some((p) => p.childId === child.id && p.purpose !== 'ACKNOWLEDGEMENT')) continue;
-      let kind = await this.stateOf(tenantId, child, everHeld.has(child.id));
+      let kind = await this.stateOf(tenantId, child, answeredByContent.has(child.id));
       if (kind === 'HANDOVER' && withNewInfo.has(child.id) && inbound && !state.repliedTo.has(inbound.id)) kind = 'INFO_PASSED';
       const reported = state.states.get(child.id);
       if (kind && reported !== kind && !(kind === 'HANDOVER' && reported === 'INFO_PASSED')) states.set(child.id, kind);

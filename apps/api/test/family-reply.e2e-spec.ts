@@ -299,6 +299,36 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(await family.settle(tenantId, parentId)).toBe('NOTHING');
   });
 
+  it('ein abgeschlossenes Anliegen, dessen Ablauf die Anfrage aufnimmt und übergibt, steht mit dem wahren Stand in der Antwort („übergeben“, nicht „erledigt“); ein reiner Eingangsbestätigungs-Teilvorgang erscheint nicht als eigener Abschnitt', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Angebot für einen neuen Heizungsregler', 'Eingangsbestätigung', 'Kopie der letzten Rechnung']);
+    const store = app.get(PlanStoreService);
+    const scoped = prisma.forTenantId(tenantId);
+    const plan = (goalKeys: string[]): PlanProposal => ({
+      goalKeys,
+      nodes: [{ id: 'c', type: 'COMPLETE', title: 'Abschluss', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [] } as never],
+      edges: [],
+      unresolvedRequirements: [],
+      assumptions: [],
+      conciseExplanation: 'x',
+    });
+    for (const [index, goals] of [['request.handed_over'], ['receipt.acknowledged', 'human.review']].entries()) {
+      const created = await store.createRevision(tenantId, childIds[index]!, { proposal: plan(goals!), source: 'LLM_PLANNER', status: 'VALIDATED', basedOnCaseRevision: 0, validation: { valid: true, issues: [], stats: null } });
+      await store.activate(tenantId, created.plan.id);
+      await scoped.case.update({ where: { id: childIds[index]! }, data: { orchestrationStatus: 'COMPLETED' } });
+      await hold(tenantId, childIds[index]!, 'ACKNOWLEDGEMENT', 'Guten Tag,\n\nvielen Dank für Ihre Nachricht. Sie ist bei uns eingegangen.\n\nMit freundlichen Grüßen\nBetrieb');
+    }
+    await scoped.task.create({ data: { tenantId, caseId: childIds[2]!, title: 'Rechnung prüfen', description: 'x', source: 'AGENT' } });
+    await scoped.case.update({ where: { id: childIds[2]! }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    const body = sent[0]!.bodyText;
+    expect(body).toContain('Zu „Angebot für einen neuen Heizungsregler“:\nDieses Anliegen können wir nicht automatisch erledigen');
+    expect(body).toContain('Zu „Kopie der letzten Rechnung“:');
+    expect(body).not.toContain('Zu „Eingangsbestätigung“'); // die Einleitung bestätigt den Eingang
+    expect(body).not.toMatch(/Dieses Anliegen ist erledigt/);
+    expect(body.match(/eingegangen/g)).toHaveLength(1);
+  });
+
   it('Entwürfe außerhalb einer aufgeteilten Nachricht oder mit Anhang werden nicht bereitgehalten (sie gehen wie bisher selbst hinaus)', async () => {
     const tenantId = await newTenant();
     const single = await prisma.forTenantId(tenantId).case.create({ data: { tenantId, type: 'GENERAL', title: 'Einzelvorgang' } });
