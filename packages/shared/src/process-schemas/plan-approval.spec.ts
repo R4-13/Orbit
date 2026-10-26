@@ -157,3 +157,13 @@ describe('closeDeadEnds (Meilenstein C)', () => {
     expect(closeDeadEnds(executed, new Set(['a']))).toBeUndefined();
   });
 });
+
+describe('closeDeadEnds: Fortsetzungspunkt vor Abschluss (Meilenstein C)', () => {
+  const node = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [], ...extra }) as never;
+  it('führt die Sackgasse zum vorgesehenen Weiterplanen, wenn der Plan eines hat', () => {
+    const proposal = { goalKeys: [], nodes: [node('ctx', 'RESOLVE_CONTEXT'), node('reqs', 'EVALUATE_REQUIREMENTS'), node('reassess', 'REASSESS', { config: { replan: true } })], edges: [{ id: 'e1', source: 'ctx', target: 'reqs' }], unresolvedRequirements: [], assumptions: [], conciseExplanation: '' } as never;
+    const closed = closeDeadEnds(proposal);
+    expect(closed?.edges.map((e) => `${e.source}>${e.target}`)).toEqual(['ctx>reqs', 'reqs>reassess']);
+    expect(closed?.nodes.some((n) => n.type === 'COMPLETE')).toBe(false);
+  });
+});

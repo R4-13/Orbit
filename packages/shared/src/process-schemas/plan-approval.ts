@@ -154,6 +154,9 @@ export function closeDeadEnds(proposal: PlanProposal, executedNodeIds: ReadonlyS
   const isReplanPoint = (n: PlanNode): boolean => n.type === 'REASSESS' && n.config?.replan === true;
   const deadEnds = proposal.nodes.filter((n) => !TERMINAL_OR_PAUSE.has(n.type) && !isReplanPoint(n) && !executedNodeIds.has(n.id) && !proposal.edges.some((e) => e.source === n.id));
   if (deadEnds.length === 0) return undefined;
+  // Ein vorgesehener Fortsetzungspunkt (Weiterplanen ohne eingehende Kante) ist das gemeinte Ende der Sackgasse – nicht der Abschluss: dahinter plant ORBIT mit dem Ergebnis weiter.
+  const entry = proposal.nodes.find((n) => isReplanPoint(n) && !proposal.edges.some((e) => e.target === n.id) && !deadEnds.some((d) => d.id === n.id));
+  if (entry) return { ...proposal, edges: [...proposal.edges, ...deadEnds.map((n) => ({ id: `e_close_${n.id}`.slice(0, 64), source: n.id, target: entry.id }))] };
   let complete = proposal.nodes.find((n) => n.type === 'COMPLETE');
   const nodes = [...proposal.nodes];
   if (!complete) {

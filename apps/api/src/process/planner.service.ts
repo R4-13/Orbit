@@ -446,8 +446,8 @@ export class PlannerService {
   }
 
   /**
-   * Aufgaben und Meldungen eines Teilvorgangs gelten seinem Anliegen. Nennt ihr Text Gegenstände eines Geschwister-Anliegens („Rechnungskopie bereitstellen und Terminverschiebung bearbeiten“), wird er durch das eigene Anliegen
-   * im Wortlaut der Aufteilung ersetzt – die Übergabe sagt dann genau, was bei diesem Anliegen zu tun ist; mehrere dadurch gleiche Aufgaben werden zu einer (Meilenstein C, K1).
+   * Aufgaben und Meldungen eines Teilvorgangs gelten seinem Anliegen. Gehört ihr Text erkennbar einem Geschwister-Anliegen, entfällt sie (dieses hat seine eigene); nennt er Gegenstände mehrerer Anliegen
+   * („Rechnungskopie bereitstellen und Terminverschiebung bearbeiten“), wird er durch das eigene Anliegen im Wortlaut der Aufteilung ersetzt; gleiche Aufgaben werden zu einer (Meilenstein C, K1).
    */
   private scopeNodes(output: unknown, scope: ConcernScope | null): unknown {
     const proposal = output as { nodes?: Array<{ id?: string; type?: string; title?: string; purpose?: string; capability?: { key?: string }; inputs?: Record<string, { literal?: unknown }> }>; edges?: Array<{ id?: string; source?: string; target?: string }> } | null;
@@ -458,7 +458,12 @@ export class PlannerService {
     for (const node of proposal.nodes) {
       if (node.type === 'MANUAL_TASK') {
         const text = `${node.title ?? ''} ${node.purpose ?? ''}`;
-        if (belongsToOtherConcern(text, scope) || mentionsOtherConcern(text, scope)) {
+        // Gehört die Aufgabe erkennbar einem Geschwister-Anliegen, übernimmt dieses sie (es hat seine eigene): hier entfällt sie. Vermischt sie mehrere Anliegen, wird sie auf das eigene Anliegen gesetzt.
+        if (belongsToOtherConcern(text, scope)) {
+          drop.add(String(node.id));
+          continue;
+        }
+        if (mentionsOtherConcern(text, scope)) {
           node.title = `Anliegen übernehmen: ${own}`.slice(0, 160);
           node.purpose = (scope.segment ?? scope.goal).slice(0, 600);
         }
@@ -467,11 +472,14 @@ export class PlannerService {
         seenTasks.add(key);
       } else if (node.capability?.key === 'staff.notify') {
         const message = node.inputs?.message;
-        if (message && typeof message.literal === 'string' && (belongsToOtherConcern(message.literal, scope) || mentionsOtherConcern(message.literal, scope))) message.literal = `Neues Anliegen: ${own}`.slice(0, 400);
+        if (message && typeof message.literal === 'string') {
+          if (belongsToOtherConcern(message.literal, scope)) drop.add(String(node.id));
+          else if (mentionsOtherConcern(message.literal, scope)) message.literal = `Neues Anliegen: ${own}`.slice(0, 400);
+        }
       }
     }
     if (drop.size > 0) {
-      // Doppelte Aufgaben fallen weg; ihre Vorgänger werden mit ihren Nachfolgern verbunden.
+      // Fremde und doppelte Aufgaben/Meldungen fallen weg; ihre Vorgänger werden mit ihren Nachfolgern verbunden.
       for (const id of drop) {
         const before = proposal.edges.filter((e) => e.target === id).map((e) => String(e.source));
         const after = proposal.edges.filter((e) => e.source === id).map((e) => String(e.target));
