@@ -345,7 +345,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     const reply = await intake.handleIntakeEvent(tenantId, undefined, {
       ...mail(tenantId),
       subject: 'Re: Zwei Fragen',
-      content: 'Das Objekt ist in der Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      content: 'Die Adresse des Objekts ist Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
       rfcMessageId: '<antwort@kunde.example>',
       inReplyTo: '<sent-1@mail.example>',
       references: ['<split@kunde.example>', '<sent-1@mail.example>'],
@@ -413,7 +413,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     const reply = await intake.handleIntakeEvent(tenantId, undefined, {
       ...mail(tenantId),
       subject: 'Re: Zwei Fragen',
-      content: 'Das Objekt ist in der Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      content: 'Die Adresse des Objekts ist Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
       rfcMessageId: '<antwort2@kunde.example>',
       inReplyTo: '<sent-1@mail.example>',
       references: ['<split@kunde.example>', '<sent-1@mail.example>'],

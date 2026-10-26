@@ -709,7 +709,7 @@ export class IntakeService {
     // pre-existing behaviour. A case has exactly one processing path (Konzept Flexible Autonomie §9.1): once it has a plan, replies belong to the engine.
     if (!matched) return null;
     // Antwort auf die gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C): sie hängt am Hauptvorgang und geht an alle Teilvorgänge, die noch bearbeitet werden – jeder liest daraus nur seine Angaben.
-    const familyChildren = await scoped.case.findMany({ where: { parentCaseId: matched.id }, select: { id: true, orchestrationStatus: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } } });
+    const familyChildren = await scoped.case.findMany({ where: { parentCaseId: matched.id }, select: { id: true, title: true, orchestrationStatus: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } } });
     if (familyChildren.length > 0) return this.continueFamily(tenantId, event, persisted, matched, familyChildren, result.rule);
     if (!matched.blueprintKey && (await scoped.processPlan.count({ where: { caseId: matched.id } })) === 0) return null;
 
@@ -768,7 +768,7 @@ export class IntakeService {
     event: NormalizedIntakeEvent,
     persisted: PersistedIntake,
     parent: Case,
-    children: Array<{ id: string; orchestrationStatus: string; waitSubscriptions: Array<{ id: string }> }>,
+    children: Array<{ id: string; title: string; orchestrationStatus: string; waitSubscriptions: Array<{ id: string }> }>,
     rule: string | undefined,
   ): Promise<IntakeResult> {
     const scoped = this.prisma.forTenantId(tenantId);
@@ -782,12 +782,11 @@ export class IntakeService {
     try {
       const open = children.filter((c) => !terminal.has(c.orchestrationStatus));
       // Erst allen Teilvorgängen ihre Angaben zuordnen, dann fortsetzen: ein fortgesetzter Teilvorgang kann die gemeinsame Antwort schon auslösen, und sie soll alle Zuordnungen kennen (Meilenstein C).
+      for (const child of open) await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
+      // Zuordnung aus Gegenstand, gestellten Rückfragen und Gesprächszusammenhang; nur wer Sätze der Antwort erhält, setzt fort. Mehrdeutiges wird der Kundschaft gezielt zurückgefragt (in der nächsten gemeinsamen Antwort).
+      const routed = await this.familyReply.routeReply(tenantId, parent.id, inboundEmailId, open.map((c) => ({ id: c.id, title: c.title, waitingForReply: c.waitSubscriptions.length > 0 })));
       for (const child of open) {
-        await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
-        await this.familyReply.assignReply(tenantId, child.id, inboundEmailId).catch(() => undefined);
-      }
-      for (const child of open) {
-        if (child.waitSubscriptions.length > 0) {
+        if (routed.assignedChildIds.has(child.id) && child.waitSubscriptions.length > 0) {
           await this.orchestrator.receiveInbound(tenantId, child.id, {
             type: 'communication.received',
             payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: 'FAMILY_FAN_OUT', familyCaseId: parent.id },

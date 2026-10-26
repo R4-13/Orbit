@@ -16,6 +16,8 @@ export interface FamilyReplySection {
   lines: string[];
   /** Stand-Satz, wenn für das Anliegen nichts zu fragen oder zu beantworten ist. */
   state?: FamilyStateKind;
+  /** Abschnitt ohne Anliegen-Überschrift (z. B. die Rückfrage zur Zuordnung einer Antwort). */
+  plain?: boolean;
 }
 
 export interface FamilyReplyInput {
@@ -63,6 +65,10 @@ export function familyReplyBody(input: FamilyReplyInput): string {
     out.push(en ? 'thank you for your reply. Here is the current status of your requests:' : 'vielen Dank für Ihre Antwort. Hier der aktuelle Stand zu Ihren Anliegen:');
   }
   for (const section of input.sections) {
+    if (section.plain) {
+      out.push('', ...section.lines);
+      continue;
+    }
     out.push('', en ? `Regarding "${section.label}":` : `Zu „${section.label}“:`);
     if (section.lines.length > 0) out.push(...section.lines);
     else if (section.state) out.push(familyStateSentence(section.state, input.lang));
@@ -105,4 +111,24 @@ export function draftCore(bodyText: string): string[] {
   }
   while (trimmed.length > 0 && trimmed[trimmed.length - 1] === '') trimmed.pop();
   return trimmed;
+}
+
+export interface AssignmentQuestion {
+  statement: string;
+  options: Array<{ label: string; questions: string[] }>;
+}
+
+/** Die Rückfrage, wenn eine Antwort der Kundschaft nicht eindeutig zu einem Anliegen gehört: die Aussage im Wortlaut und die Fragen, zwischen denen sie steht. */
+export function assignmentQuestionLines(items: readonly AssignmentQuestion[], lang: ReplyLanguage): string[] {
+  const en = lang === 'en';
+  const out: string[] = [];
+  items.forEach((item, index) => {
+    if (index > 0) out.push('');
+    out.push(en ? `We cannot tell for certain which of our questions your answer "${item.statement}" belongs to. Which one did you mean?` : `Ihre Antwort „${item.statement}“ können wir nicht eindeutig zuordnen. Zu welcher unserer Fragen gehört sie?`);
+    for (const option of item.options) {
+      const questions = option.questions.filter((q) => q.length > 0).join(' / ');
+      out.push(en ? `- Regarding "${option.label}"${questions ? `: ${questions}` : ''}` : `- Zu „${option.label}“${questions ? `: ${questions}` : ''}`);
+    }
+  });
+  return out;
 }

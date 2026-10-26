@@ -1,7 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { ActionIntent, Case, CommunicationDraft } from '@orbit/domain';
-import { splitSentences } from '@orbit/shared';
-import { isSafeCustomerText } from './reference/request-analysis';
 import { ApprovalsService } from '../approvals/approvals.service';
 import { GmailSendOutcomeUnknownError } from '../integrations/gmail-connector.service';
 import { OUTBOUND_MAIL, type OutboundMailPort } from '../integrations/outbound-mail.port';
@@ -10,8 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ActionLedgerService } from './action-ledger.service';
 import { CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
-import { familyReplyBody, draftCore, type FamilyReplySection, type FamilyStateKind } from './family-reply-body';
-import { belongsToOwnConcern, concernScope } from './concern-scope';
+import { assignmentQuestionLines, familyReplyBody, draftCore, type FamilyReplySection, type FamilyStateKind } from './family-reply-body';
+import { ASSIGNMENT_QUESTION_EVENT, ReplyRoutingService, type OpenChild, type RoutingOutcome } from './reply-routing.service';
+import { familyLabel } from './family-label';
 import { replyLanguage } from './reference/reply-language';
 import { ReferenceProcessService } from './reference/reference-process.service';
 import { replySubject } from './reference/communication-templates';
@@ -53,6 +52,8 @@ interface Reported {
   states: Map<string, string>;
   /** Auf welche Nachrichten schon geantwortet wurde (die erste Antwort bestätigt den Eingang). */
   repliedTo: Set<string>;
+  /** Welche Zuordnungs-Rückfragen (Ereignisse) schon in einer Antwort (oder deren Freigabe) aufgegangen sind. */
+  questions: Set<string>;
   claims: number;
 }
 
@@ -75,6 +76,7 @@ export class FamilyReplyService {
     private readonly approvals: ApprovalsService,
     private readonly reference: ReferenceProcessService,
     private readonly facts: CaseFactsService,
+    private readonly routing: ReplyRoutingService,
     @Inject(OUTBOUND_MAIL) private readonly mail: OutboundMailPort,
   ) {}
 
@@ -105,14 +107,15 @@ export class FamilyReplyService {
       orderBy: { sequence: 'asc' },
       select: { type: true, payload: true },
     });
-    const result: Reported = { covered: new Set(), states: new Map(), repliedTo: new Set(), claims: 0 };
+    const result: Reported = { covered: new Set(), states: new Map(), repliedTo: new Set(), questions: new Set(), claims: 0 };
     for (const row of rows) {
       if (row.type === FAMILY_EVENT_TYPES.REPLY_CLAIMED) {
         result.claims += 1;
         continue;
       }
-      const p = row.payload as { draftIds?: string[]; states?: Record<string, string>; messageId?: string } | null;
+      const p = row.payload as { draftIds?: string[]; questionIds?: string[]; states?: Record<string, string>; messageId?: string } | null;
       for (const id of p?.draftIds ?? []) result.covered.add(id);
+      if (row.type !== FAMILY_EVENT_TYPES.REPLY_DISCARDED) for (const id of p?.questionIds ?? []) result.questions.add(id);
       if (row.type !== FAMILY_EVENT_TYPES.REPLY_DISCARDED) {
         for (const [child, kind] of Object.entries(p?.states ?? {})) result.states.set(child, kind);
         if (p?.messageId) result.repliedTo.add(p.messageId);
@@ -184,7 +187,10 @@ export class FamilyReplyService {
     }
     const contentParts = pending.filter((p) => p.purpose !== 'ACKNOWLEDGEMENT' && p.core.length > 0);
     const wantsReceipt = pending.some((p) => p.purpose === 'ACKNOWLEDGEMENT');
-    if (contentParts.length === 0 && states.size === 0 && !wantsReceipt) return 'NOTHING';
+    // Offene Rückfragen zur Zuordnung einer Antwort der Kundschaft (Aussagen, die nicht eindeutig zu einem Anliegen gehören).
+    const questionRows = await scoped.caseEvent.findMany({ where: { caseId: parentId, type: ASSIGNMENT_QUESTION_EVENT }, orderBy: { createdAt: 'asc' }, select: { id: true, payload: true } });
+    const pendingQuestions = questionRows.filter((q) => !state.questions.has(q.id));
+    if (contentParts.length === 0 && states.size === 0 && !wantsReceipt && pendingQuestions.length === 0) return 'NOTHING';
 
     // Empfänger: die Antwortadresse ist die bestätigte des Vorgangs.
     const confirmed = (await this.facts.getCurrent(tenantId, parentId)).find((f) => f.key === 'contact.email' && f.status === 'CONFIRMED')?.value;
@@ -208,6 +214,10 @@ export class FamilyReplyService {
     const earliest = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { id: true } });
     const first = inbound.id === earliest?.id && !state.repliedTo.has(inbound.id);
     const sections: FamilyReplySection[] = [];
+    if (pendingQuestions.length > 0) {
+      const items = pendingQuestions.map((q) => q.payload as { statement: string; options: Array<{ label: string; questions: string[] }> });
+      sections.push({ label: '', lines: assignmentQuestionLines(items, lang), plain: true });
+    }
     for (const child of children) {
       const mine = contentParts.filter((p) => p.childId === child.id);
       const kind = states.get(child.id);
@@ -216,9 +226,10 @@ export class FamilyReplyService {
     }
     const bodyText = familyReplyBody({ name: watch?.displayName ?? undefined, companyName: tenantRow?.name ?? 'Ihr Ansprechpartner', lang, originalSubject: inbound.subject, confirmsReceipt: first, concerns: children.length, sections });
     const draftIds = pending.map((p) => p.draftId);
+    const questionIds = pendingQuestions.map((q) => q.id);
 
     // Beanspruchen: höchstens eine gemeinsame Antwort gleichzeitig.
-    const claim = await this.events.append(tenantId, parentId, { type: FAMILY_EVENT_TYPES.REPLY_CLAIMED, payload: { draftIds, messageId: inbound.id }, dedupeKey: `family.claim:${parentId}:${state.claims + 1}` });
+    const claim = await this.events.append(tenantId, parentId, { type: FAMILY_EVENT_TYPES.REPLY_CLAIMED, payload: { draftIds, questionIds, messageId: inbound.id }, dedupeKey: `family.claim:${parentId}:${state.claims + 1}` });
     if (claim.duplicate) return 'BUSY';
 
     const { draft } = await this.reference.saveDraftVersion(tenantId, {
@@ -239,33 +250,28 @@ export class FamilyReplyService {
       nodeKey: `${FAMILY_NODE_PREFIX}${state.claims + 1}`,
       capabilityKey: 'email.send',
       purpose: 'STATUS_UPDATE',
-      payload: { capability: 'email.send', purpose: 'STATUS_UPDATE', input: { draftId: draft.id }, family: { draftIds, messageId: inbound.id, states: Object.fromEntries(states) } },
+      payload: { capability: 'email.send', purpose: 'STATUS_UPDATE', input: { draftId: draft.id }, family: { draftIds, questionIds, messageId: inbound.id, states: Object.fromEntries(states) } },
     });
     if (mode === 'REQUIRE_APPROVAL') {
       if (!intent.approvalId) {
         const approval = await this.approvals.create(tenantId, { entityType: 'PROCESS_ACTION', entityId: intent.id, policyAction: 'email.send.acknowledgement', reason: 'Gemeinsame Antwort an die Kundschaft (mehrere Anliegen) wartet auf Freigabe.' });
         await this.ledger.awaitApproval(tenantId, intent.id, approval.id);
       }
-      await this.events.append(tenantId, parentId, { type: FAMILY_EVENT_TYPES.REPLY_AWAITING_APPROVAL, payload: { intentId: intent.id, draftIds, messageId: inbound.id, states: Object.fromEntries(states) } });
+      await this.events.append(tenantId, parentId, { type: FAMILY_EVENT_TYPES.REPLY_AWAITING_APPROVAL, payload: { intentId: intent.id, draftIds, questionIds, messageId: inbound.id, states: Object.fromEntries(states) } });
       return 'AWAITING_APPROVAL';
     }
     return this.dispatch(tenantId, parent, intent, draft);
   }
 
-  private async labelOf(tenantId: string, child: Case): Promise<string> {
-    const split = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId: child.id, type: 'case.split_from' }, orderBy: { sequence: 'asc' }, select: { payload: true } });
-    const goal = (split?.payload as { goal?: string } | null | undefined)?.goal?.trim().replace(/[.\s]+$/, '');
-    const title = child.title.replace(/:.*$/, '').trim();
-    const safe = (t: string | undefined): t is string => Boolean(t) && (t as string).length >= 3 && (t as string).length <= 100 && isSafeCustomerText(t as string).safe;
-    const pick = safe(title) ? title : safe(goal) ? goal : title;
-    return pick.replace(/[„“"]/g, '').slice(0, 100);
+  private labelOf(tenantId: string, child: Case): Promise<string> {
+    return familyLabel(this.prisma, tenantId, child);
   }
 
   private async dispatch(tenantId: string, parent: Case, intent: ActionIntent, draft: CommunicationDraft): Promise<SettleOutcome> {
     const scoped = this.prisma.forTenantId(tenantId);
     if (intent.status === 'CONFIRMED') return 'SENT';
     if (!(await this.ledger.beginDispatch(tenantId, intent.id))) return 'BUSY';
-    const family = (intent.payload as { family?: { draftIds?: string[]; messageId?: string; states?: Record<string, string> } }).family ?? {};
+    const family = (intent.payload as { family?: { draftIds?: string[]; questionIds?: string[]; messageId?: string; states?: Record<string, string> } }).family ?? {};
     let sent;
     try {
       sent = await this.mail.send(tenantId, { to: draft.toAddress, subject: draft.subject, bodyText: draft.bodyText, threadId: draft.threadId ?? undefined, inReplyTo: draft.inReplyTo ?? undefined, references: draft.inReplyTo ? [draft.inReplyTo] : undefined, attachments: [] });
@@ -293,7 +299,7 @@ export class FamilyReplyService {
       return 'FAILED';
     }
     await this.ledger.confirm(tenantId, intent.id, { providerRef: sent.providerMessageId, executionMode: sent.executionMode, evidence: { recipient: draft.toAddress, sentAt: sentAt.toISOString(), nodeKey: intent.nodeKey } });
-    await this.events.append(tenantId, parent.id, { type: FAMILY_EVENT_TYPES.REPLY_SENT, payload: { intentId: intent.id, draftIds: family.draftIds ?? [], messageId: family.messageId ?? null, states: family.states ?? {}, providerRef: sent.providerMessageId } });
+    await this.events.append(tenantId, parent.id, { type: FAMILY_EVENT_TYPES.REPLY_SENT, payload: { intentId: intent.id, draftIds: family.draftIds ?? [], questionIds: family.questionIds ?? [], messageId: family.messageId ?? null, states: family.states ?? {}, providerRef: sent.providerMessageId } });
     return 'SENT';
   }
 
@@ -320,22 +326,11 @@ export class FamilyReplyService {
   }
 
   /**
-   * Eine gemeinsame Antwort der Kundschaft (Meilenstein C, K1): die Sätze, die erkennbar zu einem Anliegen gehören, stehen im Wortlaut an der offenen Aufgabe dieses Anliegens – wer es übernimmt, findet dort,
-   * was die Kundschaft dazu geantwortet hat. Zuordnung nur nach dem Gegenstand des Satzes (nicht geraten); je Nachricht und Anliegen einmal.
+   * Eine Antwort der Kundschaft auf eine gemeinsame Nachricht den Anliegen zuordnen (Meilenstein C): aus Gegenstand, gestellten Rückfragen und Gesprächszusammenhang; Mehrdeutiges wird gezielt
+   * zurückgefragt (die nächste gemeinsame Antwort nimmt die Rückfrage auf). Nur Teilvorgänge mit zugeordneten Sätzen setzen fort.
    */
-  async assignReply(tenantId: string, childCaseId: string, messageId: string): Promise<void> {
-    const scoped = this.prisma.forTenantId(tenantId);
-    const scope = await concernScope(this.prisma, tenantId, childCaseId);
-    const message = await scoped.emailMessage.findFirst({ where: { id: messageId, direction: 'INBOUND' }, select: { bodyText: true, bodyPreview: true, createdAt: true } });
-    if (!scope || !message) return;
-    const text = (message.bodyText ?? message.bodyPreview ?? '').split(/\n\s*\[Simulation\]/)[0] ?? '';
-    const mine = splitSentences(text).filter((s) => s.length > 3 && belongsToOwnConcern(s, scope));
-    if (mine.length === 0) return;
-    const task = await scoped.task.findFirst({ where: { caseId: childCaseId, status: { notIn: ['DONE', 'CANCELLED'] } }, orderBy: { createdAt: 'desc' } });
-    if (!task) return;
-    const noted = await this.events.append(tenantId, childCaseId, { type: 'family.reply_assigned', payload: { messageId, taskId: task.id, sentences: mine }, dedupeKey: `family.assigned:${messageId}:${childCaseId}` });
-    if (noted.duplicate) return;
-    await scoped.task.update({ where: { id: task.id }, data: { description: `${task.description ?? ''}\n\nAntwort der Kundschaft zu diesem Anliegen (${message.createdAt.toLocaleDateString('de-DE')}): ${mine.join(' ')}`.trim().slice(0, 4000) } });
+  routeReply(tenantId: string, parentId: string, messageId: string, children: OpenChild[]): Promise<RoutingOutcome> {
+    return this.routing.routeAndAssign(tenantId, parentId, messageId, children);
   }
 
   isFamilyIntent(intent: Pick<ActionIntent, 'nodeKey'>): boolean {

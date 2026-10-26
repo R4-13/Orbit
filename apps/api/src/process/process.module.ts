@@ -48,6 +48,7 @@ import { HandoffComposerService } from './reference/handoff-composer.service';
 import { LeadSyncService } from './lead-sync.service';
 import { SupplementService } from './supplement.service';
 import { FamilyReplyService } from './family-reply.service';
+import { ReplyRoutingService } from './reply-routing.service';
 
 /**
  * Business Process Framework (Amendment 02). Everything here builds on the
@@ -94,6 +95,7 @@ import { FamilyReplyService } from './family-reply.service';
     HandoffComposerService,
     LeadSyncService,
     SupplementService,
+    ReplyRoutingService,
     FamilyReplyService,
     OrbitContactsDirectory,
     // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.

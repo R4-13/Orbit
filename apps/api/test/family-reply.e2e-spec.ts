@@ -196,9 +196,10 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
       await scoped.case.update({ where: { id }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
     }
     const reply = await scoped.emailMessage.create({ data: { tenantId, caseId: parentId, direction: 'INBOUND', fromAddress: TOM, toAddresses: ['info@betrieb.example'], subject: 'Re: Drei Dinge', bodyText: 'Zur Rechnung: es ist die vom September. Zum Termin: der Wartungstermin war bei Herrn Weber.\n\n[Simulation] Testwerkzeug', threadId: 'thr-1', rfcMessageId: '<antwort@kunde.example>', receivedAt: new Date() } });
-    await family.assignReply(tenantId, childIds[0]!, reply.id);
-    await family.assignReply(tenantId, childIds[1]!, reply.id);
-    await family.assignReply(tenantId, childIds[1]!, reply.id); // Wiederholung: keine zweite Ergänzung
+    const open = childIds.map((id, i) => ({ id, title: i === 0 ? 'Rechnung' : 'Termin', waitingForReply: false }));
+    const routed = await family.routeReply(tenantId, parentId, reply.id, open);
+    expect([...routed.assignedChildIds].sort()).toEqual([...childIds].sort());
+    await family.routeReply(tenantId, parentId, reply.id, open); // Wiederholung: keine zweite Ergänzung
     const tasks = await Promise.all(childIds.map((id) => scoped.task.findFirstOrThrow({ where: { caseId: id } })));
     expect(tasks[0]!.description).toContain('es ist die vom September');
     expect(tasks[0]!.description).not.toContain('Herrn Weber');
@@ -210,6 +211,92 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(sent).toHaveLength(1);
     expect(sent[0]!.bodyText.match(/Ihre Angaben dazu haben wir an die zuständige Person weitergegeben/g)).toHaveLength(2);
     expect(sent[0]!.bodyText).not.toMatch(/Dieses Anliegen ist erledigt/);
+  });
+
+  /** Familie mit einer gesendeten Rückfrage an den dritten Teilvorgang; die ersten beiden sind übergeben. */
+  async function familyWithOpenQuestion(tenantId: string, ask: string[]): Promise<{ parentId: string; childIds: string[]; open: Array<{ id: string; title: string; waitingForReply: boolean }> }> {
+    const { parentId, childIds } = await newFamily(tenantId, ['Kopie der letzten Rechnung für die Steuer erhalten', 'Wartungstermin vom 28.10. auf den 4.11. verschieben', 'Angebot für einen neuen Heizungsregler erhalten']);
+    const scoped = prisma.forTenantId(tenantId);
+    for (const id of childIds.slice(0, 2)) {
+      await scoped.task.create({ data: { tenantId, caseId: id, title: 'Anliegen übernehmen', description: 'Start.', source: 'AGENT' } });
+      await scoped.case.update({ where: { id }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    }
+    await hold(tenantId, childIds[2]!, 'CLARIFICATION', questions(...ask));
+    expect(await family.settle(tenantId, parentId)).toBe('SENT'); // die Rückfrage ist hinausgegangen
+    return { parentId, childIds, open: childIds.map((id, i) => ({ id, title: ['Rechnung', 'Termin', 'Angebot'][i]!, waitingForReply: i === 2 })) };
+  }
+
+  const inbound = (tenantId: string, parentId: string, text: string) =>
+    prisma.forTenantId(tenantId).emailMessage.create({
+      data: { tenantId, caseId: parentId, direction: 'INBOUND', fromAddress: TOM, toAddresses: ['info@betrieb.example'], subject: 'Re: Drei Dinge', bodyText: text, threadId: 'thr-1', rfcMessageId: `<antwort-${randomUUID()}@kunde.example>`, receivedAt: new Date() },
+    });
+
+  it('eine Kurzantwort ohne Anliegenüberschrift („Bitte beides.“) gehört zur einzigen offenen Rückfrage: nur dieser Teilvorgang erhält sie, im Wortlaut', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds, open } = await familyWithOpenQuestion(tenantId, ['Geht es nur um die Lieferung des Reglers oder auch um dessen Einbau?']);
+    const reply = await inbound(tenantId, parentId, 'Bitte beides.\n\n[Simulation] Testwerkzeug');
+    const routed = await family.routeReply(tenantId, parentId, reply.id, open);
+    expect([...routed.assignedChildIds]).toEqual([childIds[2]]);
+    expect(routed.askedBack).toBe(0);
+    const event = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: childIds[2]!, type: 'family.reply_assigned' } });
+    expect(event.payload).toMatchObject({ messageId: reply.id, sentences: ['Bitte beides.'], basis: ['ONLY_OPEN_QUESTION'] });
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: { in: [childIds[0]!, childIds[1]!] }, type: 'family.reply_assigned' } })).toBe(0);
+  });
+
+  it('eine Antwort, die zu mehreren offenen Rückfragen passen könnte, wird nicht geraten: die Kundschaft wird gezielt zurückgefragt (in der nächsten gemeinsamen Antwort), nichts bleibt nur am Hauptvorgang', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Angebot für einen neuen Heizungsregler erhalten', 'Wartung der Heizungsanlage planen']);
+    await hold(tenantId, childIds[0]!, 'CLARIFICATION', questions('Geht es nur um die Lieferung des Reglers oder auch um dessen Einbau?'));
+    await hold(tenantId, childIds[1]!, 'CLARIFICATION', questions('Soll die Wartung vormittags oder nachmittags stattfinden?'));
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    const open = childIds.map((id, i) => ({ id, title: ['Angebot', 'Wartung'][i]!, waitingForReply: true }));
+    const reply = await inbound(tenantId, parentId, 'Ja, bitte.');
+    const routed = await family.routeReply(tenantId, parentId, reply.id, open);
+    expect(routed.assignedChildIds.size).toBe(0);
+    expect(routed.askedBack).toBe(1);
+    await family.routeReply(tenantId, parentId, reply.id, open); // dieselbe Nachricht: keine zweite Rückfrage
+    expect(await prisma.forTenantId(tenantId).caseEvent.count({ where: { caseId: parentId, type: 'family.assignment_question' } })).toBe(1);
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    const mail = sent[sent.length - 1]!.bodyText;
+    expect(mail).toContain('Ihre Antwort „Ja, bitte.“ können wir nicht eindeutig zuordnen');
+    expect(mail).toContain('Zu „Angebot“: Geht es nur um die Lieferung');
+    expect(mail).toContain('Lieferung des Reglers oder auch um dessen Einbau');
+    expect(mail).toContain('vormittags oder nachmittags');
+    expect(mail).not.toContain('eingegangen'); // keine zweite Eingangsbestätigung
+    expect(await family.settle(tenantId, parentId)).toBe('NOTHING'); // die Rückfrage geht genau einmal hinaus
+    // Die klärende Antwort nennt den Gegenstand und wird zugeordnet.
+    const clarified = await inbound(tenantId, parentId, 'Das gehört zum Einbau des Reglers: ja, mit Einbau.');
+    const second = await family.routeReply(tenantId, parentId, clarified.id, open);
+    expect([...second.assignedChildIds]).toEqual([childIds[0]]);
+  });
+
+  it('die Wartezeit auf die Freigabe eines Anliegens ist begrenzt: bereits Ausführbares geht ohne weiteres Ereignis über den Sweep hinaus; die später freigegebene Auskunft folgt als Ergänzung, ohne Bereits-Gesendetes zu wiederholen', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Rechnung 4711 klären', 'Termin für die Wartung', 'Frage nach Frechen']);
+    const scoped = prisma.forTenantId(tenantId);
+    await hold(tenantId, childIds[0]!, 'CLARIFICATION', questions('Welche Rechnung brauchen Sie (Nummer oder Monat)?'));
+    await hold(tenantId, childIds[0]!, 'ACKNOWLEDGEMENT', 'Guten Tag,\n\nvielen Dank für Ihre Nachricht. Sie ist bei uns eingegangen.\n\nMit freundlichen Grüßen\nBetrieb');
+    await scoped.case.update({ where: { id: childIds[2]! }, data: { orchestrationStatus: 'WAITING_FOR_APPROVAL' } }); // die Auskunft wartet auf ihre Freigabe
+    expect(await family.settle(tenantId, parentId)).toBe('BUSY'); // kurz zurückgehalten …
+    expect(sent).toHaveLength(0);
+    // … aber nicht unbegrenzt: nach der Karenzzeit setzt der Sweep die Antwort zusammen (kein neues Ereignis nötig).
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() - interval '2 hours' WHERE id = ${childIds[2]!}`);
+    const parents = (await family.activeParents()).filter((p) => p.tenantId === tenantId);
+    expect(parents.map((p) => p.parentCaseId)).toEqual([parentId]);
+    for (const p of parents) await family.settle(p.tenantId, p.parentCaseId);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.bodyText).toContain('Welche Rechnung brauchen Sie');
+    expect(sent[0]!.bodyText).toContain('Dieses Anliegen prüfen wir noch intern'); // die Auskunft: wird geprüft
+    expect(sent[0]!.bodyText.match(/eingegangen/g)).toHaveLength(1);
+    // Die Auskunft wird freigegeben: sie folgt gesondert, ohne die Rückfrage oder die Eingangsbestätigung zu wiederholen.
+    await scoped.case.update({ where: { id: childIds[2]! }, data: { orchestrationStatus: 'COMPLETED' } });
+    await hold(tenantId, childIds[2]!, 'INFORMATION', informationBody({ answer: 'Ja, wir kommen auch nach Frechen.', companyName: 'Betrieb' }));
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent).toHaveLength(2);
+    expect(sent[1]!.bodyText).toContain('Ja, wir kommen auch nach Frechen.');
+    expect(sent[1]!.bodyText).not.toContain('eingegangen');
+    expect(sent[1]!.bodyText).not.toContain('Welche Rechnung brauchen Sie');
+    expect(await family.settle(tenantId, parentId)).toBe('NOTHING');
   });
 
   it('Entwürfe außerhalb einer aufgeteilten Nachricht oder mit Anhang werden nicht bereitgehalten (sie gehen wie bisher selbst hinaus)', async () => {

@@ -29,6 +29,12 @@ export function overlap(text: string, reference: string): number {
   return contentWords(text).filter((w) => ref.some((r) => stem(w, r))).length;
 }
 
+/** Die Inhaltswörter des Textes (ohne Wiederholung), die in der Beschreibung vorkommen (gleichen Stamms). */
+export function overlapWords(text: string, reference: string): string[] {
+  const ref = contentWords(reference);
+  return [...new Set(contentWords(text).filter((w) => ref.some((r) => stem(w, r))))];
+}
+
 /** Kommt in der Aussage ein Inhaltswort vor, das nur zu einem Geschwister-Anliegen passt (nicht zum eigenen)? Dann vermischt die Aussage mehrere Anliegen. */
 export function mentionsOtherConcern(text: string, scope: ConcernScope): boolean {
   const own = contentWords(scope.own);
