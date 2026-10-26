@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CAPABILITIES } from './capability';
-import { isEffectCapability, isReplanPoint, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, reduceToUnderstanding, runsBeforePlanApproval, stripBehindWait } from './plan-approval';
+import { closeDeadEnds, isEffectCapability, isReplanPoint, planEffectKeys, planNeedsNewApproval, planNeedsWriteApproval, reduceToUnderstanding, runsBeforePlanApproval, stripBehindWait } from './plan-approval';
 import type { PlanNode, PlanProposal } from './plan';
 
 const catalogue = new Map(DEFAULT_CAPABILITIES.map((c) => [c.key, c]));
@@ -129,5 +129,31 @@ describe('stripBehindWait mit erfülltem Warten', () => {
     } as unknown as Parameters<typeof stripBehindWait>[0];
     expect(stripBehindWait(proposal, new Set())?.nodes.map((n) => n.id)).toEqual(['wait']);
     expect(stripBehindWait(proposal, new Set(), new Set(['wait']))).toBeUndefined();
+  });
+});
+
+describe('closeDeadEnds (Meilenstein C)', () => {
+  const node = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [], ...extra }) as never;
+  const edge = (source: string, target: string) => ({ id: `e_${source}_${target}`, source, target });
+
+  it('verbindet eine Sackgasse mit dem vorhandenen Abschlussknoten', () => {
+    const proposal = { goalKeys: [], nodes: [node('a', 'INTERPRET'), node('notify', 'ACTION'), node('done', 'COMPLETE')], edges: [edge('a', 'notify')], unresolvedRequirements: [], assumptions: [], conciseExplanation: '' } as never;
+    const closed = closeDeadEnds(proposal);
+    expect(closed?.edges.map((e) => `${e.source}>${e.target}`)).toEqual(['a>notify', 'notify>done']);
+  });
+
+  it('legt bei Bedarf einen Abschlussknoten an; Wartestellen, Aufgaben und Weiterplanen bleiben unberührt', () => {
+    const proposal = { goalKeys: [], nodes: [node('a', 'ACTION'), node('w', 'WAIT_EVENT'), node('m', 'MANUAL_TASK'), node('r', 'REASSESS', { config: { replan: true } })], edges: [edge('a', 'w')], unresolvedRequirements: [], assumptions: [], conciseExplanation: '' } as never;
+    expect(closeDeadEnds(proposal)).toBeUndefined(); // Warten, Aufgabe und Weiterplanen sind gewollte Enden
+    const withDead = closeDeadEnds({ ...(proposal as object), edges: [edge('a', 'w')], nodes: [node('a', 'ACTION'), node('n', 'ACTION'), node('w', 'WAIT_EVENT')] } as never);
+    expect(withDead?.nodes.some((n) => n.type === 'COMPLETE')).toBe(true);
+    expect(withDead?.edges.filter((e) => e.target === 'abschluss').map((e) => e.source)).toEqual(['n']);
+  });
+
+  it('ohne Sackgasse oder bei bereits ausgeführtem Schritt: nichts zu tun', () => {
+    const proposal = { goalKeys: [], nodes: [node('a', 'ACTION'), node('done', 'COMPLETE')], edges: [edge('a', 'done')], unresolvedRequirements: [], assumptions: [], conciseExplanation: '' } as never;
+    expect(closeDeadEnds(proposal)).toBeUndefined();
+    const executed = { goalKeys: [], nodes: [node('a', 'ACTION'), node('done', 'COMPLETE')], edges: [], unresolvedRequirements: [], assumptions: [], conciseExplanation: '' } as never;
+    expect(closeDeadEnds(executed, new Set(['a']))).toBeUndefined();
   });
 });

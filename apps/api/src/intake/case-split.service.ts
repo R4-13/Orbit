@@ -5,6 +5,7 @@ import { CasesService } from '../cases/cases.service';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChildCaseStarterService } from '../process/child-case-starter.service';
+import { FamilyReplyService } from '../process/family-reply.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../process/case-events.service';
 import { CaseFactsService, type FactInput } from '../process/case-facts.service';
 import { CaseLifecycleService } from '../process/case-lifecycle.service';
@@ -45,6 +46,7 @@ export class CaseSplitService {
     private readonly events: CaseEventsService,
     private readonly starter: ChildCaseStarterService,
     private readonly segmenter: ConcernSegmentationService,
+    private readonly familyReply: FamilyReplyService,
   ) {}
 
   /**
@@ -151,6 +153,8 @@ export class CaseSplitService {
       const outcome = await this.starter.start(tenantId, actorUserId, childCase, childTriage, subject);
       result.children.push({ caseId: childCase.id, intentKey: child.intentKey, goal: child.goal, outcome });
     }
+    // Teilvorgänge, die sofort an eine Person gehen (oder alle nur warten), bewegen den Hauptvorgang nicht weiter: die gemeinsame Antwort wird hier angestoßen (sie wartet selbst auf arbeitende Teilvorgänge).
+    await this.familyReply.settle(tenantId, parent.id);
     return result;
   }
 }

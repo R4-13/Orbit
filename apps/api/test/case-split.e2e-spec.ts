@@ -11,6 +11,7 @@ import { PlatformControlService } from '../src/platform-control/platform-control
 import { PrismaService } from '../src/prisma/prisma.service';
 import { messageCaseIds } from '../src/process/case-scope';
 import { OrchestratorService } from '../src/process/orchestrator.service';
+import { FamilyReplyService } from '../src/process/family-reply.service';
 import { TenantsService } from '../src/tenants/tenants.service';
 import { bootstrapE2eApp } from './utils/bootstrap-e2e-app';
 
@@ -228,7 +229,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).case.count({ where: { parentCaseId: { not: null } } })).toBe(0);
   });
 
-  it('Wirkungsschlüssel (FX-07): wollen beide Teilvorgänge den Eingang bestätigen, geht genau eine Bestätigung hinaus – der zweite ist abgedeckt', async () => {
+  it('Wollen beide Teilvorgänge den Eingang bestätigen, geht genau eine Bestätigung hinaus – in der gemeinsamen Antwort (Meilenstein C; zuvor Wirkungsschlüssel FX-07)', async () => {
     const tenantId = await newTenant(true);
     seedTriage(['ANLIEGEN_A', 'ANLIEGEN_B']);
     seedPlan(ackPlan());
@@ -239,13 +240,16 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(sent).toEqual([]); // D4: erst die Planbestätigung
 
     await confirmPlan(tenantId, kids[0]!.id);
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(0); // der zweite Teilvorgang wartet gerade erst auf seine Planfreigabe: die gemeinsame Antwort wartet kurz
     await confirmPlan(tenantId, kids[1]!.id);
-    expect(sent).toHaveLength(1); // keine zweite Bestätigung
+    expect(sent).toHaveLength(1); // beide Bestätigungen gehen in EINER Nachricht hinaus
+    expect(sent[0]!.bodyText.match(/eingegangen/g)).toHaveLength(1);
 
-    const second = await prisma.forTenantId(tenantId).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'send', plan: { caseId: kids[1]!.id } } });
-    expect(second.state).toBe('SUCCEEDED');
-    expect(second.output).toMatchObject({ skipped: 'ALREADY_ACKNOWLEDGED', coveredByCaseId: kids[0]!.id });
+    for (const kid of kids) {
+      const node = await prisma.forTenantId(tenantId).processPlanNode.findFirstOrThrow({ where: { nodeKey: 'send', plan: { caseId: kid.id } } });
+      expect(node.state).toBe('SUCCEEDED');
+      expect(node.output).toMatchObject({ heldForFamilyReply: true, familyCaseId: result.case!.id }); // ehrlich: an die gemeinsame Antwort übergeben, nicht selbst gesendet
+    }
   });
 
   it('fünf Anliegen: vier werden bearbeitet, das fünfte bleibt ausdrücklich offen und wird gestartet, sobald ein Platz frei ist – der Hauptvorgang schließt erst, wenn alle fünf berücksichtigt sind', async () => {
@@ -330,7 +334,9 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(kids).toHaveLength(2);
     await confirmPlan(tenantId, kids[0]!.id);
     await confirmPlan(tenantId, kids[1]!.id);
-    expect(sent.map((m) => m.bodyText.includes('Adresse') || m.bodyText.includes('ins Objekt'))).toEqual([true, true]);
+    expect(sent).toHaveLength(1); // beide Rückfragen in EINER gemeinsamen Antwort
+    expect(sent[0]!.bodyText).toContain('Adresse');
+    expect(sent[0]!.bodyText).toContain('ins Objekt');
     expect((await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } })).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_INFORMATION']);
 
     // Eine einzige Antwort – im Mailfaden der ersten Rückfrage – beantwortet beide Fragen. Jeder Teilvorgang plant danach selbst neu.
@@ -344,13 +350,13 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
       inReplyTo: '<sent-1@mail.example>',
       references: ['<split@kunde.example>', '<sent-1@mail.example>'],
     });
-    expect(reply.case!.id).toBe(kids[0]!.id); // zugeordnet über den Mailfaden der ersten Rückfrage
+    expect(reply.case!.id).toBe(result.case!.id); // zugeordnet über den Mailfaden der gemeinsamen Antwort: sie hängt am Hauptvorgang
     const after = await prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: result.case!.id }, orderBy: { createdAt: 'asc' } });
-    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']); // auch der zweite Teilvorgang hat die Antwort erhalten und wurde fortgesetzt
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']); // beide Teilvorgänge haben die Antwort erhalten und wurden fortgesetzt
     const secondWait = await prisma.forTenantId(tenantId).waitSubscription.findFirstOrThrow({ where: { caseId: kids[1]!.id } });
     expect(secondWait.status).toBe('SATISFIED');
     const fanOut = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[1]!.id, type: 'communication.received' } });
-    expect(fanOut.payload).toMatchObject({ rule: 'SIBLING_FAN_OUT', fanOutFromCaseId: kids[0]!.id });
+    expect(fanOut.payload).toMatchObject({ rule: 'FAMILY_FAN_OUT', familyCaseId: result.case!.id });
     // Die Antwort ist für beide Teilvorgänge lesbar (Familie), nicht nur für den, an dem sie hängt.
     const familyIds = await messageCaseIds(prisma, tenantId, kids[1]!.id);
     expect(familyIds).toEqual(expect.arrayContaining([kids[0]!.id, result.case!.id]));
@@ -385,6 +391,11 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(kids).toHaveLength(2);
     await confirmPlan(tenantId, kids[0]!.id); // nur der erste Teilvorgang läuft und wartet auf die Antwort; der zweite wartet auf die Freigabe seines Plans
     expect((await children(tenantId, result.case!.id)).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_APPROVAL']);
+    // Wer gerade erst auf eine Freigabe wartet, hält die gemeinsame Antwort kurz zurück; nach der Karenzzeit geht der Stand (Rückfrage + „wird geprüft“) hinaus.
+    expect(sent).toHaveLength(0);
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() - interval '2 hours' WHERE id = ${kids[1]!.id}`);
+    await app.get(FamilyReplyService).settle(tenantId, result.case!.id);
+    expect(sent).toHaveLength(1);
 
     const base = askPlan();
     seedPlan({
@@ -400,11 +411,11 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
       inReplyTo: '<sent-1@mail.example>',
       references: ['<split@kunde.example>', '<sent-1@mail.example>'],
     });
-    expect(reply.case!.id).toBe(kids[0]!.id);
+    expect(reply.case!.id).toBe(result.case!.id);
     const after = await children(tenantId, result.case!.id);
     expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'WAITING_FOR_APPROVAL']); // der zweite startet nicht neu und behält seinen Status
     const trace = await prisma.forTenantId(tenantId).caseEvent.findFirstOrThrow({ where: { caseId: kids[1]!.id, type: 'communication.sibling_info' } });
-    expect(trace.payload).toMatchObject({ fromCaseId: kids[0]!.id });
+    expect(trace.payload).toMatchObject({ fromCaseId: result.case!.id });
     const familyIds = await messageCaseIds(prisma, tenantId, kids[1]!.id);
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
   });

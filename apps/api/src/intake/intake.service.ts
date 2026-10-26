@@ -19,6 +19,7 @@ import { AdHocIntakeService } from '../process/ad-hoc-intake.service';
 import { BlueprintFitService, LEGACY_SALES_GUIDE, type BlueprintFitResult } from '../process/blueprint-fit.service';
 import { FactCorrectionService } from '../process/fact-correction.service';
 import { SupplementService } from '../process/supplement.service';
+import { FamilyReplyService } from '../process/family-reply.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from '../process/case-events.service';
 import { CaseSplitService } from './case-split.service';
 import { ShadowPlanService } from '../process/shadow-plan.service';
@@ -138,6 +139,7 @@ export class IntakeService {
     private readonly caseEvents: CaseEventsService,
     private readonly corrections: FactCorrectionService,
     private readonly supplements: SupplementService,
+    private readonly familyReply: FamilyReplyService,
     @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
@@ -706,6 +708,9 @@ export class IntakeService {
     // Only cases that run on the process engine are continued here – on a blueprint or on a freely planned (ad-hoc) plan; legacy cases keep their
     // pre-existing behaviour. A case has exactly one processing path (Konzept Flexible Autonomie §9.1): once it has a plan, replies belong to the engine.
     if (!matched) return null;
+    // Antwort auf die gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C): sie hängt am Hauptvorgang und geht an alle Teilvorgänge, die noch bearbeitet werden – jeder liest daraus nur seine Angaben.
+    const familyChildren = await scoped.case.findMany({ where: { parentCaseId: matched.id }, select: { id: true, orchestrationStatus: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } } });
+    if (familyChildren.length > 0) return this.continueFamily(tenantId, event, persisted, matched, familyChildren, result.rule);
     if (!matched.blueprintKey && (await scoped.processPlan.count({ where: { caseId: matched.id } })) === 0) return null;
 
     await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: matched.id } });
@@ -755,6 +760,48 @@ export class IntakeService {
     await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: failure ? { status: 'FAILED', errorMessage: failure.slice(0, 300) } : { status: 'COMPLETED' } });
     const fresh = (await scoped.case.findUnique({ where: { id: matched.id } })) ?? matched;
     return { case: fresh, category: matched.type === 'FINANCE' ? 'FINANCE' : 'SALES', agentRunIds: [], intakeEventId };
+  }
+
+  /** Eine Nachricht der Kundschaft an die aufgeteilte Familie: Korrekturen früherer Angaben je Teilvorgang prüfen, wartende Teilvorgänge setzen fort, die übrigen vermerken den Eingang; danach die gemeinsame Antwort. */
+  private async continueFamily(
+    tenantId: string,
+    event: NormalizedIntakeEvent,
+    persisted: PersistedIntake,
+    parent: Case,
+    children: Array<{ id: string; orchestrationStatus: string; waitSubscriptions: Array<{ id: string }> }>,
+    rule: string | undefined,
+  ): Promise<IntakeResult> {
+    const scoped = this.prisma.forTenantId(tenantId);
+    const { intakeEventId, inboundEmailId } = persisted;
+    await scoped.emailMessage.update({ where: { id: inboundEmailId }, data: { caseId: parent.id } });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { caseId: parent.id, status: 'PROCESSING' } });
+    await this.saveDecision(tenantId, intakeEventId, { status: 'DECIDED', appliedRelevance: 'BUSINESS_ACTIONABLE', hints: { correlation: rule, caseId: parent.id, family: true } });
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: { relevance: 'BUSINESS_ACTIONABLE' } });
+    let failure: string | undefined;
+    const terminal = new Set(['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED']);
+    try {
+      for (const child of children.filter((c) => !terminal.has(c.orchestrationStatus))) {
+        await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
+        if (child.waitSubscriptions.length > 0) {
+          await this.orchestrator.receiveInbound(tenantId, child.id, {
+            type: 'communication.received',
+            payload: { emailMessageId: inboundEmailId, threadId: event.threadId ?? null, from: event.sender?.address ?? null, rule: 'FAMILY_FAN_OUT', familyCaseId: parent.id },
+            dedupeKey: `inbound:${inboundEmailId}:${child.id}`,
+          });
+          await this.orchestrator.advance(tenantId, child.id);
+        } else {
+          await this.caseEvents
+            .append(tenantId, child.id, { type: CASE_EVENT_TYPES.SIBLING_INFO_RECEIVED, payload: { emailMessageId: inboundEmailId, from: event.sender?.address ?? null, fromCaseId: parent.id }, dedupeKey: `sibling-info:${inboundEmailId}:${child.id}` })
+            .catch(() => undefined);
+        }
+      }
+      await this.familyReply.settle(tenantId, parent.id);
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    await scoped.intakeEvent.update({ where: { id: intakeEventId }, data: failure ? { status: 'FAILED', errorMessage: failure.slice(0, 300) } : { status: 'COMPLETED' } });
+    const fresh = (await scoped.case.findUnique({ where: { id: parent.id } })) ?? parent;
+    return { case: fresh, category: parent.type === 'FINANCE' ? 'FINANCE' : 'SALES', agentRunIds: [], intakeEventId };
   }
 
   private async handlePendingTriage(

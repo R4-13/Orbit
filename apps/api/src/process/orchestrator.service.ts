@@ -44,6 +44,7 @@ import { LiveReconciliationService } from './live-reconciliation.service';
 import { CaseRollupService } from './case-rollup.service';
 import { assertProcessingPath } from './processing-path';
 import { LeadSyncService } from './lead-sync.service';
+import { FamilyReplyService } from './family-reply.service';
 
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
@@ -120,6 +121,7 @@ export class OrchestratorService {
     private readonly rollup: CaseRollupService,
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
     private readonly leadSync: LeadSyncService,
+    private readonly family: FamilyReplyService,
   ) {}
 
   // ── Starting a case ─────────────────────────────────────────────────────────
@@ -176,7 +178,17 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
   }
 
   private async planAndActivate(tenantId: string, caseId: string, request: Parameters<PlannerService['plan']>[2]): Promise<StartCaseResult> {
+    // FN-09: Eine Neuplanung läuft nebenher; wird währenddessen ein anderer Plan aktiv (Planfreigabe, andere Neuplanung), ist ihr Ergebnis überholt. Scheitert sie dann, ist das kein Grund, den Vorgang
+    // zu „Planung nicht möglich“ zu erklären und eine Aufgabe anzulegen – der aktive Plan trägt den Vorgang.
+    const activeBefore = request.trigger === 'REPLAN' ? (await this.store.getActive(tenantId, caseId))?.plan.id : undefined;
     const outcome = await this.planner.plan(tenantId, caseId, request);
+    if (outcome.status === 'REVIEW_REQUIRED' && request.trigger === 'REPLAN') {
+      const activeNow = (await this.store.getActive(tenantId, caseId))?.plan.id;
+      if (activeNow && activeNow !== activeBefore) {
+        await this.events.append(tenantId, caseId, { type: CASE_EVENT_TYPES.REPLAN_UNAVAILABLE, payload: { superseded: true, reason: outcome.reason, activePlanId: activeNow } }).catch(() => undefined);
+        return { outcome: 'RUNNING', planId: activeNow, blueprint: request.blueprint ? { key: request.blueprint.key, version: request.blueprint.version } : undefined, reasons: [] };
+      }
+    }
     const blueprintRef = request.blueprint ? { key: request.blueprint.key, version: request.blueprint.version } : undefined;
     if (outcome.status === 'REVIEW_REQUIRED' && outcome.transient && !request.procedure) {
       const retry = await this.schedulePlanRetry(tenantId, caseId, request, outcome.reason);
@@ -1000,6 +1012,11 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
     if (!result.applied) return result;
     await this.approvals.markDecided(tenantId, 'PROCESS_ACTION', intentId, userId, decision, decision === 'REJECTED' ? reason : undefined);
     await this.audit.record({ tenantId, eventType: 'CASE_COMMAND_EXECUTED', actorType: 'USER', actorUserId: userId, entityType: 'ActionIntent', entityId: intentId, payload: { decision, reason: reason ?? null, payloadHash: intent.payloadHash } });
+    // Die gemeinsame Antwort einer aufgeteilten Nachricht hat keinen Planknoten: nach der Entscheidung geht sie hinaus bzw. wird verworfen.
+    if (this.family.isFamilyIntent(intent)) {
+      if (decision === 'APPROVED') await this.family.dispatchApproved(tenantId, intentId);
+      else await this.family.discardRejected(tenantId, intentId);
+    }
     return { applied: true };
   }
 

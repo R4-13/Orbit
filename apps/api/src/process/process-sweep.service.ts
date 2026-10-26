@@ -6,6 +6,7 @@ import { InternalOrderService } from './internal-order.service';
 import { OrchestratorService } from './orchestrator.service';
 import { LeadSyncService } from './lead-sync.service';
 import { SupplementService } from './supplement.service';
+import { FamilyReplyService } from './family-reply.service';
 
 const BATCH = 50;
 /** A case that is IN_PROGRESS but untouched for this long, with no live lease, was most likely abandoned by a crashed worker. */
@@ -34,6 +35,7 @@ export class ProcessSweepService {
     private readonly orders: InternalOrderService,
     private readonly leadSync: LeadSyncService,
     private readonly supplements: SupplementService,
+    private readonly family: FamilyReplyService,
   ) {}
 
   async sweep(now = new Date()): Promise<SweepResult> {
@@ -81,6 +83,13 @@ export class ProcessSweepService {
       for (const c of retried.cases) await this.supplements.resumeAfterSync(c.tenantId, c.caseId);
     } catch (error) {
       this.logger.warn(`sweep: lead sync retry failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Bereitgehaltene Teile der gemeinsamen Antwort (Meilenstein C), die noch nicht hinausgegangen sind: der Hauptvorgang setzt sie jetzt zusammen (Sicherheitsnetz für Neustart, Ausfall des Postfachs).
+    try {
+      for (const p of await this.family.activeParents()) await this.family.settle(p.tenantId, p.parentCaseId);
+    } catch (error) {
+      this.logger.warn(`sweep: family reply failed: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     let advanced = 0;

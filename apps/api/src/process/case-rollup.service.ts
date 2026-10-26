@@ -4,6 +4,7 @@ import { rollUpChildren } from '@orbit/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { CaseLifecycleService } from './case-lifecycle.service';
 import { CHILD_CASE_STARTER, type ChildCaseStarterPort } from './child-case-starter.token';
+import { FamilyReplyService } from './family-reply.service';
 
 const TERMINAL = new Set(['COMPLETED', 'REJECTED', 'CANCELLED', 'FAILED']);
 
@@ -28,6 +29,8 @@ export class CaseRollupService {
       const scoped = this.prisma.forTenantId(tenantId);
       const parent = await scoped.case.findFirst({ where: { id: parentCaseId }, select: { id: true, orchestrationStatus: true, attentionReasons: true } });
       if (!parent || TERMINAL.has(parent.orchestrationStatus)) return;
+      // Zuerst die gemeinsame Antwort (Meilenstein C): sind alle Teilvorgänge ruhig, geht eine Nachricht an die Kundschaft – bevor der Hauptvorgang schließt.
+      await this.moduleRef.get(FamilyReplyService, { strict: false }).settle(tenantId, parentCaseId);
       const load = () => scoped.case.findMany({ where: { parentCaseId }, select: { title: true, orchestrationStatus: true }, orderBy: { createdAt: 'asc' } });
       let children = await load();
       let rollUp = rollUpChildren(children.map((c) => ({ title: c.title, status: c.orchestrationStatus })));

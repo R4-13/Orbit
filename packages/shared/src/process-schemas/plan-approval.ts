@@ -143,3 +143,25 @@ export function runsBeforePlanApproval(node: PlanNode, capabilities: ReadonlyMap
   if (!node.capability) return true;
   return !isEffectCapability(capabilities.get(node.capability.key));
 }
+
+/**
+ * Schließt Sackgassen: ein noch offener Schritt, der nirgendwohin führt, wird mit dem Abschlussknoten verbunden (vorhanden oder neu). Das ist kein Freibrief für den Abschluss – ob das Ziel erreicht ist,
+ * prüft der Abschluss deterministisch mit festen Kriterien; fehlt der Nachweis, geht der Vorgang mit Begründung an eine Person. Gemeint ist der häufige Formfehler, dass die Planung am letzten
+ * Schritt (z. B. einer Meldung an die zuständige Person) den Abschlussknoten vergisst (Meilenstein C: „Knoten notify führt nirgendwohin“). `undefined`, wenn es keine Sackgasse gibt.
+ */
+export function closeDeadEnds(proposal: PlanProposal, executedNodeIds: ReadonlySet<string> = new Set()): PlanProposal | undefined {
+  const TERMINAL_OR_PAUSE = new Set(['COMPLETE', 'WAIT_EVENT', 'MANUAL_TASK']);
+  const isReplanPoint = (n: PlanNode): boolean => n.type === 'REASSESS' && n.config?.replan === true;
+  const deadEnds = proposal.nodes.filter((n) => !TERMINAL_OR_PAUSE.has(n.type) && !isReplanPoint(n) && !executedNodeIds.has(n.id) && !proposal.edges.some((e) => e.source === n.id));
+  if (deadEnds.length === 0) return undefined;
+  let complete = proposal.nodes.find((n) => n.type === 'COMPLETE');
+  const nodes = [...proposal.nodes];
+  if (!complete) {
+    let id = 'abschluss';
+    for (let i = 2; nodes.some((n) => n.id === id); i += 1) id = `abschluss_${i}`;
+    complete = { id, type: 'COMPLETE', title: 'Abschluss prüfen', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [] } as PlanNode;
+    nodes.push(complete);
+  }
+  const target = complete.id;
+  return { ...proposal, nodes, edges: [...proposal.edges, ...deadEnds.map((n) => ({ id: `e_close_${n.id}`.slice(0, 64), source: n.id, target }))] };
+}

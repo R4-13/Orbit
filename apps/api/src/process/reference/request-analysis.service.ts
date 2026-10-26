@@ -12,6 +12,7 @@ import { AppointmentPolicySchema, REQUEST_ANALYSIS_TOOL, RequestAnalysisSchema, 
 import { ReferenceProcessService } from './reference-process.service';
 import { ProfileContextService } from '../../organization/profile-context.service';
 import { focusedMessageText, messageCaseIds, splitFocus } from '../case-scope';
+import { belongsToOtherConcern, concernScope } from '../concern-scope';
 
 const MAX_BODY_CHARS = 12_000;
 
@@ -110,6 +111,16 @@ export class RequestAnalysisService {
     const policyRow = await scoped.tenantProfile.findUnique({ where: { tenantId: ctx.tenantId }, select: { appointmentPolicy: true } });
     const policy = AppointmentPolicySchema.safeParse(policyRow?.appointmentPolicy ?? {});
     const result = evaluateAnalysis(RequestAnalysisSchema.parse(submitted.output), evidenceText, reserved.keys, [], policy.success ? policy.data : undefined);
+    // Teilvorgang: Fragen, die erkennbar ein anderes Anliegen der Nachricht betreffen, stellt dieser Teilvorgang nicht (Meilenstein C, K1); sie bleiben mit Grund in der Analyse vermerkt.
+    const scope = await concernScope(this.prisma, ctx.tenantId, ctx.caseId);
+    if (scope) {
+      const knownKeys = new Set(result.known.map((k) => k.key));
+      const foreign = result.requirements.filter((r) => !knownKeys.has(r.key) && belongsToOtherConcern(`${r.label} ${r.question}`, scope));
+      if (foreign.length > 0) {
+        result.requirements = result.requirements.filter((r) => !foreign.includes(r));
+        result.rejected.push(...foreign.map((r) => ({ what: r.label, reason: 'betrifft ein anderes Anliegen der Nachricht' })));
+      }
+    }
 
     // Entnommene Angaben: nur mit wörtlichem Beleg (bereits in evaluateAnalysis geprüft) und gültigem Typ als bestätigter Fakt.
     for (const item of result.known) {

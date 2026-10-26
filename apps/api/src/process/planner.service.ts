@@ -8,6 +8,7 @@ import {
   effectiveLimits,
   validatePlan,
   PLAN_SCOPE_VALIDITY_DAYS,
+  closeDeadEnds,
   reduceToUnderstanding,
   stripBehindWait,
   planNeedsNewApproval,
@@ -37,6 +38,7 @@ import { CapabilityRegistryService } from './capability-registry.service';
 import { CaseFactsService } from './case-facts.service';
 import { PlanStoreService, type PlanGraph } from './plan-store.service';
 import { focusedMessageText, messageCaseIds, splitFocus } from './case-scope';
+import { belongsToOtherConcern, concernScope, type ConcernScope } from './concern-scope';
 import { isAppointmentSchedulingRequirement } from './reference/request-analysis';
 
 export const SUBMIT_PLAN_TOOL = 'submit_process_plan';
@@ -287,6 +289,8 @@ export class PlannerService {
 
     // Bestätigte Schritte früherer Revisionen übernimmt ORBIT selbst, das Modell muss sie nicht fehlerfrei wiederholen (Funktionsnachweis 23.10.: Neuplanungen scheiterten wiederholt an REPLAN_DROPS_CONFIRMED_EFFECT).
     const confirmedOriginals = request.trigger === 'INITIAL' && !parent ? [] : await this.confirmedOriginals(tenantId, caseRow.id, context);
+    // Teilvorgang einer aufgeteilten Nachricht: Anliegen, die erkennbar zu einem Geschwister gehören, stehen nicht in seiner Anliegenliste (Meilenstein C, K1).
+    const scope = await concernScope(this.prisma, tenantId, caseRow.id);
     let lastIssue = `Kein Aufruf von ${SUBMIT_PLAN_TOOL}.`;
     let lastValidation: PlanValidationResult | undefined;
     let lastProposal: PlanProposal | undefined;
@@ -300,7 +304,7 @@ export class PlannerService {
         if (!submitted) {
           if (llm.providerName.toLowerCase().includes('mock')) return { status: 'UNAVAILABLE', reason: 'Kein KI-Provider verbunden: der simulierte Provider hat keinen Plan hinterlegt.' };
         } else if (submitted.result?.status === 'SUCCEEDED') {
-          const validation = validatePlan(this.repairBindings(this.carryForwardConfirmed(this.normalizeProposal(submitted.output), confirmedOriginals), context), context);
+          const validation = validatePlan(this.repairBindings(this.carryForwardConfirmed(this.scopeOutcomes(this.normalizeProposal(submitted.output), scope), confirmedOriginals), context), context);
           lastValidation = validation;
           lastProposal = validation.proposal as PlanProposal | undefined;
           if (validation.valid) return { status: 'PROPOSED', proposal: validation.proposal as PlanProposal, validation };
@@ -441,6 +445,14 @@ export class PlannerService {
     return proposal;
   }
 
+  /** Entfernt aus der Anliegenliste, was erkennbar zu einem anderen Anliegen der Nachricht gehört (nur bei Teilvorgängen). */
+  private scopeOutcomes(output: unknown, scope: ConcernScope | null): unknown {
+    const proposal = output as { requestedOutcomes?: Array<{ text?: string } | null> } | null;
+    if (!scope || !proposal || !Array.isArray(proposal.requestedOutcomes)) return output;
+    proposal.requestedOutcomes = proposal.requestedOutcomes.filter((o) => !(o && typeof o.text === 'string' && belongsToOtherConcern(o.text, scope)));
+    return output;
+  }
+
   private normalizeProposal(output: unknown): unknown {
     const proposal = output as { nodes?: Array<{ capability?: { key?: string }; inputs?: Record<string, unknown> }>; requestedOutcomes?: Array<{ goalKey?: string; handover?: boolean } | null>; goalKeys?: string[] } | null;
     if (!proposal || !Array.isArray(proposal.nodes)) return output;
@@ -475,7 +487,7 @@ export class PlannerService {
   private repairDeterministically(proposal: PlanProposal, validation: PlanValidationResult, context: PlanValidationContext, parent: PlanGraph | undefined): PlanValidationResult | undefined {
     const repairable = new Set(['REPLAN_DROPS_CONFIRMED_EFFECT', 'REPLAN_AFTER_UNDERSTANDING', 'PLAN_BEHIND_WAIT', 'DEAD_END', 'NO_TERMINAL']);
     const errors = validation.issues.filter((i) => i.severity === 'ERROR');
-    if (errors.length === 0 || !errors.some((i) => i.code === 'REPLAN_DROPS_CONFIRMED_EFFECT' || i.code === 'REPLAN_AFTER_UNDERSTANDING' || i.code === 'PLAN_BEHIND_WAIT') || errors.some((i) => !repairable.has(i.code))) return undefined;
+    if (errors.length === 0 || !errors.some((i) => i.code === 'REPLAN_DROPS_CONFIRMED_EFFECT' || i.code === 'REPLAN_AFTER_UNDERSTANDING' || i.code === 'PLAN_BEHIND_WAIT' || i.code === 'DEAD_END' || i.code === 'NO_TERMINAL') || errors.some((i) => !repairable.has(i.code))) return undefined;
     let candidate: PlanProposal = proposal;
     // Jeder ausgeführte Schritt kehrt unverändert aus der letzten Revision zurück: fehlt er, wird er ergänzt; weicht das Modell von ihm ab (andere Fähigkeit oder anderer Zweck unter derselben Kennung), wird er ersetzt.
     const originals = (context.confirmedEffects ?? [])
@@ -486,6 +498,8 @@ export class PlannerService {
       candidate = { ...candidate, nodes: [...candidate.nodes.map((n) => byId.get(n.id) ?? n), ...originals.filter((def) => !candidate.nodes.some((n) => n.id === def.id))] };
     }
     if (errors.some((i) => i.code === 'PLAN_BEHIND_WAIT')) candidate = stripBehindWait(candidate, new Set((context.confirmedEffects ?? []).map((c) => c.nodeId)), new Set(context.satisfiedWaitNodes ?? [])) ?? candidate;
+    // Sackgassen (der Plan endet an einem Schritt ohne Abschluss) werden mit dem Abschluss verbunden; ob das Ziel erreicht ist, prüft der Abschluss danach fest und deterministisch (Meilenstein C, K2).
+    if (errors.some((i) => i.code === 'DEAD_END' || i.code === 'NO_TERMINAL')) candidate = closeDeadEnds(candidate, new Set((context.confirmedEffects ?? []).map((c) => c.nodeId))) ?? candidate;
     let result = validatePlan(candidate, context);
     if (result.valid) return result;
     const remaining = result.issues.filter((i) => i.severity === 'ERROR');

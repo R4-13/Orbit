@@ -33,6 +33,7 @@ import { CustomerRecordService } from '../customer/customer-record.service';
 import { messageCaseIds } from '../case-scope';
 import { FactCorrectionService } from '../fact-correction.service';
 import { ActionLedgerService } from '../action-ledger.service';
+import { FamilyReplyService } from '../family-reply.service';
 
 const SUBMIT_FACTS_TOOL = 'submit_extracted_facts';
 /** Zwecke einer vorbereiteten Mitteilung; der Zweck bestimmt die Regel (Policy), die vor dem Senden gilt (siehe `email.send` im Fähigkeitenverzeichnis). */
@@ -93,6 +94,7 @@ export class ReferenceProcessTools implements OnModuleInit {
     private readonly attachmentTexts: AttachmentTextService,
     private readonly ledger: ActionLedgerService,
     private readonly corrections: FactCorrectionService,
+    private readonly family: FamilyReplyService,
   ) {}
 
   onModuleInit(): void {
@@ -263,7 +265,9 @@ export class ReferenceProcessTools implements OnModuleInit {
 
     // Gezielte Auslese: nur diese Angaben, keine freien Zusatzangaben.
     if (options.only) for (const key of [...allowed.keys()]) if (!options.only.includes(key)) allowed.delete(key);
-    const freeKeys = !options.only;
+    // Teilvorgang einer aufgeteilten Nachricht: keine freien Zusatzangaben – ob eine Angabe zu diesem oder zu einem anderen Anliegen gehört, wäre geraten (Meilenstein C, K1); nur die erfragten Angaben dieses Anliegens.
+    const isSplitChild = (await this.prisma.forTenantId(ctx.tenantId).case.findFirst({ where: { id: caseId }, select: { parentCaseId: true } }))?.parentCaseId != null;
+    const freeKeys = !options.only && !isSplitChild;
 
     const llm = await this.aiProviders.resolveForTenant(ctx.tenantId, 'DOCUMENT_EXTRACTION').catch((error: unknown) => {
       if (error instanceof AiProviderUnavailableError) throw new ToolFailedError('Der KI-Dienst ist für die Extraktion nicht verfügbar.', { errorCode: 'AI_UNAVAILABLE', retryable: true });
@@ -370,7 +374,7 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
       recorded.push({ key: item.key, value: item.value, status: created[0]?.status === 'CONFLICTED' ? 'CONFLICTED' : 'CONFIRMED' });
     }
     // Eine genannte Anschrift (Straße mit Hausnummer) geht nie verloren, auch wenn die Auslese sie nicht meldet: sie wird im Wortlaut als Angabe festgehalten, sofern nicht schon eine Angabe sie enthält.
-    const street = !options.only && message.direction === 'INBOUND' ? findStreetAddress(message.bodyText ?? message.bodyPreview) : undefined;
+    const street = !options.only && !isSplitChild && message.direction === 'INBOUND' ? findStreetAddress(message.bodyText ?? message.bodyPreview) : undefined;
     if (street) {
       const known = (await this.facts.getCurrent(ctx.tenantId, caseId)).filter((f) => ['CANDIDATE', 'CONFIRMED'].includes(f.status) && typeof f.value === 'string');
       if (!known.some((f) => normalize(String(f.value)).includes(normalize(street)))) {
@@ -698,6 +702,11 @@ Nur Angaben, die zu KEINER erlaubten Angabe passen und die die Person zu ihrer A
         if (typeof replyTarget !== 'string' || replyTarget.toLowerCase() !== draft.toAddress.toLowerCase()) {
           throw new ToolFailedError('Der Empfänger stimmt nicht mehr mit der bestätigten Antwortadresse überein.', { errorCode: 'RECIPIENT_NOT_VERIFIED' });
         }
+
+        // Teilvorgang einer aufgeteilten Nachricht (Meilenstein C): die Kundschaft bekommt eine gemeinsame Antwort, nicht eine Nachricht je Anliegen. Der – nach der Regel dieses Schritts bereits zulässige –
+        // Entwurf wird für die gemeinsame Antwort bereitgehalten; der Teilvorgang quittiert ehrlich „an die gemeinsame Antwort übergeben“, nicht „gesendet“.
+        const held = await this.family.hold(ctx.tenantId, caseId, draft);
+        if (held) return { providerRef: held.providerRef, heldForFamilyReply: true, familyCaseId: held.parentCaseId, recipient: draft.toAddress, executionMode: 'LIVE' };
 
         // Wirkungsschlüssel (FA-10): Teilvorgänge einer aufgeteilten Nachricht bestätigen den Eingang nur einmal – der erste Teilvorgang tut es, die übrigen sind damit abgedeckt.
         if (input.purpose === 'ACKNOWLEDGEMENT') {
