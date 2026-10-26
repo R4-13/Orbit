@@ -13,7 +13,12 @@ export interface RuntimeNode {
   key: string;
   state: NodeState;
   definition: PlanNode;
+  /** Der Schritt wurde übersprungen, weil kein Pfad zu ihm führte (nicht gewählter Zweig): er gibt die Steuerung nicht weiter. */
+  deadPath?: boolean;
 }
+
+/** Grund, mit dem ein Schritt eines nicht gewählten Zweigs übersprungen wird (auch Merkmal für `deadPath`). */
+export const DEAD_PATH_REASON = 'Kein Pfad führt zu diesem Schritt.';
 
 export interface RuntimeEdge {
   key: string;
@@ -55,10 +60,11 @@ export function nextActions(nodes: readonly RuntimeNode[], edges: readonly Runti
       try {
         const taken = incoming.filter((e) => {
           const source = byKey.get(e.source);
-          return source !== undefined && PASSES_CONTROL.has(source.state) && (!e.condition || evaluateExpr(e.condition, ctx));
+          // Ein Schritt eines nicht gewählten Zweigs (Sackgasse der Wahl) reicht die Steuerung nicht weiter: seine Nachfolger gehören zum selben Zweig.
+          return source !== undefined && PASSES_CONTROL.has(source.state) && !source.deadPath && (!e.condition || evaluateExpr(e.condition, ctx));
         });
         if (taken.length === 0) {
-          actions.push({ nodeKey: node.key, action: 'SKIP', reason: 'Kein Pfad führt zu diesem Schritt.' });
+          actions.push({ nodeKey: node.key, action: 'SKIP', reason: DEAD_PATH_REASON });
           continue;
         }
       } catch (error) {

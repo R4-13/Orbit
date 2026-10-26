@@ -34,6 +34,13 @@ describe('nextActions', () => {
     expect(actions([node('a', 'SKIPPED'), node('b', 'PLANNED')], [edge('e', 'a', 'b')])).toEqual(['b:EXECUTE']);
   });
 
+  it('a step skipped because no path led to it (unchosen branch) does not pass control: its successors are dead too', () => {
+    const dead = { ...node('a', 'SKIPPED'), deadPath: true };
+    expect(actions([dead, node('b', 'PLANNED')], [edge('e', 'a', 'b')])).toEqual(['b:SKIP']);
+    // Eine zweite, genommene Kante rettet den Nachfolger.
+    expect(actions([dead, node('c', 'SUCCEEDED'), node('b', 'PLANNED')], [edge('e', 'a', 'b'), edge('f', 'c', 'b')])).toEqual(['b:EXECUTE']);
+  });
+
   it('keeps the successors of a failed predecessor open (no dead-branch skip) so a later retry can still reach them', () => {
     expect(actions([node('a', 'FAILED'), node('b', 'PLANNED')], [edge('e', 'a', 'b')])).toEqual([]);
     expect(actions([node('a', 'CANCELLED'), node('b', 'PLANNED')], [edge('e', 'a', 'b')])).toEqual(['b:SKIP']);

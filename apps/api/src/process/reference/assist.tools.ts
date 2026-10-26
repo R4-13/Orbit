@@ -19,7 +19,7 @@ import { APPOINTMENT_LABELS, type AppointmentKind } from './appointment-slots';
 import { buildCalendarPool, pickCalendar, type PoolCalendar } from './calendar-pool';
 import { HandoffComposerService } from './handoff-composer.service';
 import { isSafeCustomerText } from './request-analysis';
-import { messageCaseIds } from '../case-scope';
+import { messageCaseIds, splitFocus } from '../case-scope';
 
 const SUBMIT_KNOWLEDGE_TOOL = 'submit_knowledge_answer';
 const SUBMIT_SLOT_TOOL = 'submit_slot_choice';
@@ -110,7 +110,13 @@ export class AssistProcessTools implements OnModuleInit {
       execute: async (input: z.infer<typeof schema>, ctx) => {
         const caseId = await this.caseIdOfRun(ctx.tenantId, ctx.agentRunId);
         let question = input.question?.trim();
-        if (question && question.length < 400) {
+        // Teilvorgang einer zerlegten Nachricht: beantwortet wird nur das eigene Anliegen (sein Auszug und der gemeinsame Kontext), nicht die ganze Nachricht – sonst beantwortet er auch, was ein anderer Teilvorgang bearbeitet (Meilenstein C, K1).
+        const focus = await splitFocus(this.prisma, ctx.tenantId, caseId);
+        if (focus) {
+          const own = [focus.segment, focus.sharedContext].filter(Boolean).join('\n');
+          const ask = question && question.length < 400 ? `Frage: ${question}\n\n` : '';
+          question = `${ask}Anliegen der Kundschaft (nur dieses beantworten; alles andere gehört zu anderen Anliegen):\n${own}`.slice(0, MAX_TEXT_CHARS);
+        } else if (question && question.length < 400) {
           // Eine kurze Einzelfrage (z. B. der Satz mit der Preisfrage) steht im Zusammenhang der Anfrage: erste Nachricht der Kundschaft als Kontext, damit die Frage richtig verstanden wird.
           const first = await this.prisma.forTenantId(ctx.tenantId).emailMessage.findFirst({ where: { caseId: { in: await messageCaseIds(this.prisma, ctx.tenantId, caseId) }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' } });
           if (first) question = `Frage: ${question}\n\nAnfrage der Kundschaft (Betreff und Text):\nBetreff: ${first.subject ?? ''}\n\n${(first.bodyText ?? first.bodyPreview ?? '').slice(0, 2000)}`;

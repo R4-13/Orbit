@@ -9,6 +9,7 @@ import {
   type TenantLimitsInput,
   evaluateAdHocCompletion,
   evaluateCompletion,
+  DEAD_PATH_REASON,
   nextActions,
   outageLimitReached,
   outageRetryDelayMs,
@@ -1152,7 +1153,7 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
   }
 
   private runtimeNodes(graph: PlanGraph): RuntimeNode[] {
-    return graph.nodes.map((n) => ({ key: n.nodeKey, state: n.state, definition: n.definition as unknown as PlanNode }));
+    return graph.nodes.map((n) => ({ key: n.nodeKey, state: n.state, definition: n.definition as unknown as PlanNode, deadPath: n.state === 'SKIPPED' && n.errorMessage === DEAD_PATH_REASON }));
   }
 
   private runtimeEdges(graph: PlanGraph): RuntimeEdge[] {
