@@ -780,9 +780,13 @@ export class IntakeService {
     let failure: string | undefined;
     const terminal = new Set(['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED']);
     try {
-      for (const child of children.filter((c) => !terminal.has(c.orchestrationStatus))) {
+      const open = children.filter((c) => !terminal.has(c.orchestrationStatus));
+      // Erst allen Teilvorgängen ihre Angaben zuordnen, dann fortsetzen: ein fortgesetzter Teilvorgang kann die gemeinsame Antwort schon auslösen, und sie soll alle Zuordnungen kennen (Meilenstein C).
+      for (const child of open) {
         await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
         await this.familyReply.assignReply(tenantId, child.id, inboundEmailId).catch(() => undefined);
+      }
+      for (const child of open) {
         if (child.waitSubscriptions.length > 0) {
           await this.orchestrator.receiveInbound(tenantId, child.id, {
             type: 'communication.received',

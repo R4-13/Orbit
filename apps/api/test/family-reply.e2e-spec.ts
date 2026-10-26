@@ -205,6 +205,11 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(tasks[1]!.description).toContain('Herrn Weber');
     expect(tasks[1]!.description).not.toContain('September');
     expect(tasks[1]!.description!.match(/Antwort der Kundschaft/g)).toHaveLength(1);
+    // Die gemeinsame Antwort nennt zu jedem Anliegen, dessen Angaben bei der zuständigen Person liegen, genau das – und nichts als „erledigt“.
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.bodyText.match(/Ihre Angaben dazu haben wir an die zuständige Person weitergegeben/g)).toHaveLength(2);
+    expect(sent[0]!.bodyText).not.toMatch(/Dieses Anliegen ist erledigt/);
   });
 
   it('Entwürfe außerhalb einer aufgeteilten Nachricht oder mit Anhang werden nicht bereitgehalten (sie gehen wie bisher selbst hinaus)', async () => {
