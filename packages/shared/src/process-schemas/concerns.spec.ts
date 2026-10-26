@@ -136,3 +136,37 @@ describe('umgebrochene Sätze (Meilenstein C)', () => {
     expect(splitSentences('Wir brauchen\n- eine Kopie\n- einen Termin')).toEqual(['Wir brauchen', 'eine Kopie', 'einen Termin']);
   });
 });
+
+describe('Aufzählung in einem Satz (Meilenstein C)', () => {
+  const message = 'Guten Tag, ich habe drei Anliegen: erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.';
+
+  it('trennt den Satz vor jedem Aufzählungswort und entfernt Bindewörter am Ende des Vorstücks', () => {
+    expect(splitSentences(message)).toEqual([
+      'Guten Tag, ich habe drei Anliegen:',
+      'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer',
+      'zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben',
+      'drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.',
+    ]);
+  });
+
+  it('ein einzelnes Aufzählungswort trennt nichts', () => {
+    expect(splitSentences('Erstens bitte ich um Rückruf.')).toEqual(['Erstens bitte ich um Rückruf.']);
+  });
+
+  it('belegt jedes Anliegen nur mit seinem Teil des Satzes', () => {
+    const verified = verifyConcerns(message, {
+      concerns: [
+        { title: 'Rechnungskopie', category: 'UNKNOWN', goal: 'Kopie der Rechnung', excerpt: 'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer' },
+        { title: 'Termin verschieben', category: 'UNKNOWN', goal: 'Termin verschieben', excerpt: 'zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben' },
+        { title: 'Angebot', category: 'UNKNOWN', goal: 'Angebot', excerpt: 'drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.' },
+      ],
+      sharedContext: '',
+    });
+    expect(verified.concerns.map((c) => c.excerpt)).toEqual([
+      'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer',
+      'zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben',
+      'drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.',
+    ]);
+    expect(verified.concerns.some((c) => c.supplemented)).toBe(false);
+  });
+});

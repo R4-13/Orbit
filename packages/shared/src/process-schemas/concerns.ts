@@ -77,7 +77,22 @@ export function splitSentences(text: string): string[] {
   return unwrapped
     .split(/(?<=[.!?…])(?<!\d\.)(?<!\b(?:[Nn]r|[Hh]r|[Ff]r|[Dd]r|ca|bzw|usw|etc|ggf|inkl|evtl|vgl|[Ss]tr|[Tt]el)\.)\s+|(?<=\d\.)\s+(?=[A-ZÄÖÜ0-9„"(])|\r?\n+/)
     .map((s) => s.replace(/^\s*(?:[-*•–]|\d+[.)])\s+/, '').trim())
-    .filter((s) => s.length > 0);
+    .filter((s) => s.length > 0)
+    .flatMap(splitEnumeration);
+}
+
+const ENUMERATION_MARKER = /(?<![\p{L}])(?:erstens|zweitens|drittens|viertens|fünftens|firstly|secondly|thirdly|zum einen|zum anderen)(?![\p{L}])/giu;
+
+/**
+ * „Erstens …, zweitens … und drittens …“ in einem Satz sind mehrere Aussagen: ordnet die KI sie verschiedenen Anliegen zu, darf der Beleg nicht den ganzen Satz jedem Anliegen geben (Meilenstein C:
+ * drei Teilvorgänge trugen denselben Satz und fragten nach den Gegenständen der anderen). Mit mindestens zwei Aufzählungswörtern wird vor jedem getrennt; Bindewörter am Ende des Vorstücks entfallen.
+ */
+function splitEnumeration(sentence: string): string[] {
+  const starts = [...sentence.matchAll(ENUMERATION_MARKER)].map((m) => m.index ?? 0);
+  if (starts.length < 2) return [sentence];
+  const cuts = starts[0] === 0 ? starts : [0, ...starts];
+  const parts = cuts.map((from, i) => sentence.slice(from, cuts[i + 1] ?? sentence.length).replace(/[\s,;]+(?:(?:und|sowie|oder|and)[\s,;]*)?$/i, '').trim());
+  return parts.filter((p) => p.length > 0);
 }
 
 export function normalizeForMatch(text: string): string {

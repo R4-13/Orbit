@@ -97,10 +97,12 @@ describe('Sinnerhalt der Anliegen: Ähnlichkeit ist nur eine Hilfe', () => {
 describe('Weich umbrochene Zeilen sind keine Satzgrenzen (Funktionsnachweis 23.10.)', () => {
   const wrapped = 'Guten Tag,\r\n\r\nerstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11.\r\nverschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler\r\ninteressieren.\r\n\r\nDanke, Tom Orbit';
 
-  it('ein Umbruch vor einem Kleinbuchstaben verbindet die Zeilen; Absätze und Satzenden bleiben Grenzen', () => {
+  it('ein Umbruch vor einem Kleinbuchstaben verbindet die Zeilen; Absätze, Satzenden und Aufzählungswörter bleiben Grenzen', () => {
     expect(splitSentences(wrapped)).toEqual([
       'Guten Tag,',
-      'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer, zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben und drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.',
+      'erstens brauche ich eine Kopie meiner letzten Rechnung für die Steuer',
+      'zweitens möchte ich den Wartungstermin vom 28.10. auf den 4.11. verschieben',
+      'drittens würde mich ein Angebot für einen neuen Heizungsregler interessieren.',
       'Danke, Tom Orbit',
     ]);
   });
