@@ -16,6 +16,18 @@ if [ "${LIVE_AI:-}" = "1" ] && [ -f "$ROOT/.env.llm.local" ]; then set -a; sourc
 if [ -n "${OVERRIDE_MODEL:-}" ]; then export OPENAI_MODEL="$OVERRIDE_MODEL"; fi
 if [ -n "${OVERRIDE_REASONING_EFFORT:-}" ]; then export OPENAI_REASONING_EFFORT="$OVERRIDE_REASONING_EFFORT"; fi
 
+# Keine parallelen oder liegengebliebenen E2E-Läufe: Ein nach „Jest did not exit“ hängender Prozess hielt ~5 GB Speicher und Datenbankverbindungen zur Test-DB
+# (Messung 2026-10-29: Zeitüberschreitungen im Gesamtlauf nahmen mit der Zahl solcher Prozesse zu).
+if command -v powershell.exe >/dev/null 2>&1; then
+  OTHER_RUNS="$(powershell.exe -NoProfile -File "$(cygpath -w "$ROOT/scripts/e2e-guard.ps1")" | tr -d '\r')"
+else
+  OTHER_RUNS="$(pgrep -fc 'jest-e2e.json' || true)"
+fi
+if [ "${OTHER_RUNS:-0}" != "0" ]; then
+  echo "[e2e] ABBRUCH: ${OTHER_RUNS} weitere E2E-Jest-Prozesse laufen noch (Speicher, Test-DB-Verbindungen). Erst beenden, dann neu starten." >&2
+  exit 3
+fi
+
 E2E_DB="${E2E_DB_NAME:-orbit_e2e}"
 BASE_URL="${DATABASE_URL%%\?*}"          # postgresql://orbit:pw@localhost:5432/orbit
 BASE_URL="${BASE_URL%/*}"                # ohne Datenbankname
@@ -51,4 +63,4 @@ echo "[e2e] ${E2E_DB} migriert; Test-Redis Port ${E2E_REDIS_PORT:-16379}, DB ${E
 
 cd "$ROOT/apps/api"
 # Alle Suiten laufen in einem Prozess (--runInBand): der Speicher wächst mit der Zahl der Suiten (bei 71 Suiten Absturz am Standardlimit von ~4 GB).
-exec node --max-old-space-size="${E2E_HEAP_MB:-6144}" --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand "$@"
+exec node --max-old-space-size="${E2E_HEAP_MB:-6144}" --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --runInBand --forceExit "$@"  # --forceExit: Der Prozess endet nach dem Lauf sicher (Ursache der offenen Handles ist nicht geklärt; ohne das blieb er mit ~5 GB liegen).
