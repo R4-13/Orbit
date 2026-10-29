@@ -376,6 +376,29 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
   });
+  it('die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort, auch wenn die Datenbank die Zeilen in anderer Reihenfolge liefert (Ursache des einmaligen Fehlers im Gesamtlauf: ohne Sortierung bekam jeder Teilvorgang die Neuplanung des anderen und die „fremde“ Meldung entfiel)', async () => {
+    const { tenantId, result, kids, afterReply } = await twoWaitingChildren();
+    const scoped = prisma.forTenantId(tenantId);
+    // Die zuletzt geänderte Zeile steht physisch hinten: die erste Zeile zuletzt ändern, damit eine Abfrage ohne Sortierung [zweiter, erster] liefert.
+    await scoped.case.update({ where: { id: kids[1]!.id }, data: { updatedAt: new Date() } });
+    await scoped.case.update({ where: { id: kids[0]!.id }, data: { updatedAt: new Date() } });
+    seedPlan(afterReply('Standort geklärt.'));
+    seedPlan(afterReply('Zugang geklärt.'));
+    await intake.handleIntakeEvent(tenantId, undefined, {
+      ...mail(tenantId),
+      subject: 'Re: Zwei Fragen',
+      content: 'Die Adresse des Objekts ist Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      rfcMessageId: '<antwort-reihenfolge@kunde.example>',
+      inReplyTo: '<sent-1@mail.example>',
+      references: ['<split@kunde.example>', '<sent-1@mail.example>'],
+    });
+    const after = await children(tenantId, result.case!.id);
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']);
+    const notes = await Promise.all(after.map((k) => scoped.processPlanNode.findMany({ where: { plan: { caseId: k.id, status: 'ACTIVE' }, nodeKey: 'notify' }, select: { definition: true } })));
+    expect(JSON.stringify(notes[0])).toContain('Standort geklärt.'); // der erste Teilvorgang (Standort) erhielt die erste Neuplanung
+    expect(JSON.stringify(notes[1])).toContain('Zugang geklärt.');
+  });
+
   it('eine Antwort ohne Bezug zu einer der beiden offenen Rückfragen („Ja, bitte.“): die Teilvorgänge setzen nicht auf Verdacht fort, die Kundschaft wird gezielt zurückgefragt, die Nachricht bleibt nicht nur am Hauptvorgang liegen', async () => {
     const { tenantId, result, kids } = await twoWaitingChildren();
     const mailsBefore = sent.length;

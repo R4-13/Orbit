@@ -709,7 +709,7 @@ export class IntakeService {
     // pre-existing behaviour. A case has exactly one processing path (Konzept Flexible Autonomie §9.1): once it has a plan, replies belong to the engine.
     if (!matched) return null;
     // Antwort auf die gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C): sie hängt am Hauptvorgang und geht an alle Teilvorgänge, die noch bearbeitet werden – jeder liest daraus nur seine Angaben.
-    const familyChildren = await scoped.case.findMany({ where: { parentCaseId: matched.id }, select: { id: true, title: true, orchestrationStatus: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } } });
+    const familyChildren = await scoped.case.findMany({ where: { parentCaseId: matched.id }, select: { id: true, title: true, orchestrationStatus: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
     if (familyChildren.length > 0) return this.continueFamily(tenantId, event, persisted, matched, familyChildren, result.rule);
     if (!matched.blueprintKey && (await scoped.processPlan.count({ where: { caseId: matched.id } })) === 0) return null;
 
@@ -738,6 +738,7 @@ export class IntakeService {
       const others = await scoped.case.findMany({
         where: { parentCaseId: familyRoot, id: { not: matched.id }, orchestrationStatus: { notIn: ['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED'] } },
         select: { id: true, waitSubscriptions: { where: { status: 'WAITING', eventType: 'communication.received' }, select: { id: true } } },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], // feste Reihenfolge der Fortsetzung (ohne Sortierung liefert die Datenbank die Zeilen in wechselnder Reihenfolge)
       });
       for (const sibling of others) {
         await this.corrections.processInboundSafely(tenantId, sibling.id, inboundEmailId);
@@ -780,6 +781,7 @@ export class IntakeService {
     let failure: string | undefined;
     const terminal = new Set(['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED']);
     try {
+      // Die Teilvorgänge setzen in fester Reihenfolge (Anlage) fort; die Abfrage sortiert danach.
       const open = children.filter((c) => !terminal.has(c.orchestrationStatus));
       // Erst allen Teilvorgängen ihre Angaben zuordnen, dann fortsetzen: ein fortgesetzter Teilvorgang kann die gemeinsame Antwort schon auslösen, und sie soll alle Zuordnungen kennen (Meilenstein C).
       for (const child of open) await this.corrections.processInboundSafely(tenantId, child.id, inboundEmailId);
