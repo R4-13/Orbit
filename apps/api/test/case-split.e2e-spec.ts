@@ -273,7 +273,10 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(kids.map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_APPROVAL', 'RECEIVED']);
     let parent = await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: parentId } });
     expect(parent.orchestrationStatus).toBe('IN_PROGRESS');
-    expect(parent.attentionReasons).toEqual(['1 Anliegen wartet auf die Bearbeitung.']);
+    // Der Hauptvorgang nennt jeden Freigabebedarf der vier wartenden Teilvorgänge (FN-14) und das nicht begonnene Anliegen.
+    expect(parent.attentionReasons.filter((r) => r.endsWith('wartet auf Ihre Freigabe.'))).toHaveLength(4);
+    expect(parent.attentionReasons.at(-1)).toBe('1 Anliegen wartet auf die Bearbeitung.');
+    expect(parent.attentionReasons).toHaveLength(5);
     expect(await prisma.forTenantId(tenantId).processPlan.count({ where: { caseId: kids[4]!.id } })).toBe(0); // nicht begonnen, aber nicht verloren
 
     // Der erste Teilvorgang wird erledigt → ein Platz wird frei → das fünfte Anliegen wird gestartet (und erledigt).
