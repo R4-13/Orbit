@@ -1,0 +1,14 @@
+Gesamt-CPU Mittel: 65%  Max: 100%  (30 Proben a 10 s)
+Mittel je Prozess (in % eines Kerns; 400 = alle vier Kerne):
+chrome (PID 26016)                              46,8
+vmmemWSL (PID 16440)                            38,1
+chrome (PID 18896)                              37,9
+WmiPrvSE (PID 2364)                             16,8
+node (PID 27056)                                13,5
+System (PID 4)                                  11,9
+Spotify (PID 21564)                             11,8
+Dashboard (PID 7300)                             9,4
+MsMpEng (PID 18516)                              9,1
+Docker Desktop (PID 15484)                       5,8
+python (PID 6584)                                5,5
+dwm (PID 1500)                                   5,0

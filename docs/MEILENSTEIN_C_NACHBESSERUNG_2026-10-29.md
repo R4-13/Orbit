@@ -54,7 +54,7 @@ Fester geprüfter Stand `f47bfb0` (gebaut und eingesetzt nach grünem Qualitäts
 4. **Einleitungssatz der zweiten Mail** begann mit „vielen Dank für Ihre Antwort“, obwohl die Kundschaft noch nicht geantwortet hatte (Textbaustein der Folgeantworten).
 5. Der Plan Revision 3 wartete auf Freigabe, während der Teilvorgang bereits `MANUAL_REVIEW` anzeigte (Freigabe ohne sichtbaren Hinweis im Teilvorgang möglich).
 
-Diese fünf Punkte sind in `OPEN_DEVELOPMENT_ITEMS.md` (FN-14) geführt. Keine davon ist ein Fehler der Zuordnung; der Auftrag („richtige Zuordnung → aktuelle Angaben → weiterer Schritt → zutreffende Kundenrückmeldung → korrekter Endstatus und Aufgabe mit verbleibendem Ziel“) ist mit Abweichung 1 bei „aktuelle Angaben“ erfüllt; ob das als bestanden gilt, entscheidet der Auftraggeber.
+Diese fünf Punkte sind in `OPEN_DEVELOPMENT_ITEMS.md` (FN-14) geführt und in `MEILENSTEIN_C_FN14_2026-10-29.md` zusammenhängend behoben. Keine davon ist ein Fehler der Zuordnung; der Auftrag („richtige Zuordnung → aktuelle Angaben → weiterer Schritt → zutreffende Kundenrückmeldung → korrekter Endstatus und Aufgabe mit verbleibendem Ziel“) ist mit Abweichung 1 bei „aktuelle Angaben“ erfüllt; ob das als bestanden gilt, entscheidet der Auftraggeber.
 
 ## 4. Bündelung und Freigabewarten (Punkt 3)
 
@@ -67,7 +67,7 @@ Gelesen aus `FamilyReplyService` (`settle`, `BUSY_WINDOW_MS` = 10 Minuten, `APPR
 
 **Nachweis:** `family-reply.e2e-spec.ts`, Test „die Wartezeit auf die Freigabe eines Anliegens ist begrenzt …“ (BUSY → Alterung der Änderungszeit → Sweep sendet genau eine Antwort mit Rückfrage und „wird intern geprüft“, genau einmal „eingegangen“ → Freigabe → zweite Mail nur mit der Auskunft → `NOTHING`). Keine weitere Live-Serie.
 
-**Grenze:** Die 30 Minuten rechnen ab der letzten Änderung des wartenden Teilvorgangs. Ob andere Dienste (Erinnerungen/Eskalationen) diese Zeit zurücksetzen, wurde nicht untersucht.
+**Grenze (überholt durch `MEILENSTEIN_C_FN14_2026-10-29.md`, Abschnitt 3.2):** Die 30 Minuten rechneten ab der letzten Änderung des Vorgangs; Erinnerungen und andere Änderungen setzten sie zurück — behoben (Frist ab Eintritt in den Stand, Obergrenze 60 Minuten).
 
 ## 5. Qualitätstor und Zeitüberschreitungen
 
@@ -101,7 +101,7 @@ Der Test „eine Antwort mit Angaben für mehrere Teilvorgänge …“ scheitert
 
 * **Nachgestellt:** Der neue Test (`case-split.e2e-spec.ts`, „die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort …“) ändert die Zeilen so, dass eine Abfrage ohne Sortierung die umgekehrte Reihenfolge liefert. **Ohne** Sortierung: rot mit dem Fehlerbild aus dem Gesamtlauf (`MANUAL_REVIEW`/`MANUAL_REVIEW`); **mit** Sortierung: grün (`reihenfolge-test-ohne-sortierung.log`, `…-mit-sortierung.log`).
 * **Behebung:** Sortierung nach Anlage und ID an beiden Stellen im Fan-out (`intake.service.ts`).
-* **Grenze der Aussage:** Dass das Fehlerbild am 26.10. dieselbe Ursache hatte, folgt aus dem identischen Bild, nicht aus einer Diagnoseausgabe jenes Laufs. In der Produktion spielt die Reihenfolge fachlich keine Rolle (das Modell plant je Teilvorgang aus dessen Anliegen); die Reihenfolge ist jetzt dennoch festgelegt.
+* **Grenze der Aussage:** Dass das Fehlerbild am 26.10. dieselbe Ursache hatte, folgt aus dem identischen Bild, nicht aus einer Diagnoseausgabe jenes Laufs. In der Produktion spielt die Reihenfolge fachlich keine Rolle (das Modell plant je Teilvorgang aus dessen Anliegen); die Reihenfolge ist jetzt dennoch festgelegt. **Präzisierung (Nachbesserung 2, Abschnitt 3.1):** die vertauschten Neuplanungen stammten aus dem Warteschlangen-Double der Tests (Antworten nach Aufrufreihenfolge), nicht aus der produktiven Zuordnung; die Sortierung muss keine falsche Zuordnung verhindern.
 
 ## 7. Bereinigung und Rückbau
 

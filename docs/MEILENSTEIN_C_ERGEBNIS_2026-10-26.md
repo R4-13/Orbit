@@ -14,6 +14,7 @@ Auftrag: Nachrichten mit mehreren Anliegen — alle Anliegen erhalten und getren
 | **K5 ehrliche Zielerreichung** | bestanden mit Abweichung zu C1 (Abschnitt 4) – kein Teilvorgang wurde als „erledigt“ gemeldet, dessen Ziel eine fehlende Fähigkeit braucht |
 | **Meilenstein C insgesamt** | **bestanden auf dem geprüften Stand `ae423fb` im dokumentierten Umfang**, mit den Einschränkungen in Abschnitt 6. Keine Freigabe für unbeaufsichtigten Betrieb, kein Pilot. |
 | **Nachbesserung 29.10.2026** | Auf Auftrag des Auftraggebers („C weitgehend umgesetzt“) wurden die **Zuordnungslücke** (Kundenantwort aus dem Gesprächszusammenhang) und der **fehlende C1-Endnachweis** als abnahmerelevante Punkte nachgeholt, die Regeln der Bündelung beschrieben und die Ursache des einmaligen Testfehlers gefunden: siehe `MEILENSTEIN_C_NACHBESSERUNG_2026-10-29.md`. Aussagen in Abschnitt 6 dieses Berichts zu „Endstand nicht abgewartet“, „Wortlautmaßstab“ und „einmaliger Testfehler ohne Ursache“ sind dort überholt. |
+| Nachbesserung 2 / FN-14 (29.10.2026) | Konsistenzmängel des C1-Endnachweises behoben, Tor grün, C1-Live-Lauf einmal durchgeführt – siehe `MEILENSTEIN_C_FN14_2026-10-29.md` |
 
 Bewertet wird der **letzte Durchlauf auf dem geprüften und eingesetzten Stand** (Nachweise `abnahme-c1/c2/c3-*.json`). Davor gab es drei Durchläufe und mehrere Diagnoseläufe, die Mängel aufdeckten (Abschnitt 5); sie zählen nicht als Bestehen und sind unter `docs/evidence/meilenstein-c-2026-10-26/diagnose/` gesichert.
 

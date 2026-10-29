@@ -2,3 +2,5 @@
 2026-10-26T13:10:05Z process.split entfernt (Testfenster beendet, Meilenstein C)
 2026-10-26T18:51:27Z process.split ON (Meilenstein C Nachbesserung, Testfenster)
 2026-10-29T09:20:10Z process.split entfernt (Testfenster beendet, Meilenstein C Nachbesserung: C1-Endnachweis auf f47bfb0)
+2026-10-29T15:37:51Z process.split ON (Meilenstein C FN-14, C1-Live-Lauf auf 765355d, Testfenster)
+2026-10-29T20:16:45Z process.split entfernt (Testfenster beendet, Meilenstein C FN-14: C1-Live-Lauf auf 765355d)
