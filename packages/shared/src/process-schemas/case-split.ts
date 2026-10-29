@@ -74,7 +74,11 @@ export interface ChildRollUp {
  */
 export function rollUpChildren(children: ReadonlyArray<ChildSummary>, maxActive = MAX_ACTIVE_SPLIT_CHILDREN): ChildRollUp {
   if (children.length === 0) return { outcome: 'OPEN', attention: [], startable: 0 };
-  const attention = children.filter((c) => NEEDS_ATTENTION.has(c.status)).map((c) => `Teilvorgang „${c.title}“ braucht Prüfung.`);
+  const attention = [
+    ...children.filter((c) => NEEDS_ATTENTION.has(c.status)).map((c) => `Teilvorgang „${c.title}“ braucht Prüfung.`),
+    // Ein offener Freigabebedarf eines Teilvorgangs steht auch am Hauptvorgang (nicht erst beim Öffnen des Teilvorgangs).
+    ...children.filter((c) => c.status === 'WAITING_FOR_APPROVAL').map((c) => `Teilvorgang „${c.title}“ wartet auf Ihre Freigabe.`),
+  ];
   const waiting = children.filter((c) => c.status === NOT_STARTED).length;
   if (waiting > 0) attention.push(`${waiting} ${waiting === 1 ? 'Anliegen wartet' : 'Anliegen warten'} auf die Bearbeitung.`);
   const allSettled = children.every((c) => SETTLED.has(c.status));

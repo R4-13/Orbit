@@ -4,6 +4,7 @@ import { NotFoundError, isReplanPoint, type PlanNode, type PlanProposal, type Re
 import { PrismaService } from '../prisma/prisma.service';
 import { hashOf } from './canonical';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
+import { REDO_SAFE_CAPABILITIES } from './live-upgrade';
 
 export interface PlanGraph {
   plan: ProcessPlan;
@@ -31,6 +32,13 @@ export interface CreateRevisionInput {
 
 /** Node states whose work is done and must survive a replan untouched (§11.5: no silent rewriting of history). */
 const CARRIED_STATES: ReadonlySet<ProcessNodeState> = new Set<ProcessNodeState>(['SUCCEEDED', 'SKIPPED']);
+/**
+ * Liest der Schritt die jeweils jüngste Nachricht (`inbound.latestMessageId` / `inbound.latestThreadId`) und ist er gefahrlos wiederholbar (Auslese, Prüfung, Entwurf – keine Wirkung nach außen)?
+ * Wirkungen (Versand, Meldung, Termin) werden nie durch diese Regel erneut ausgeführt.
+ */
+function readsLatestInbound(node: PlanNode): boolean {
+  return REDO_SAFE_CAPABILITIES.has(node.capability?.key ?? '') && JSON.stringify(node.inputs ?? {}).includes('"inbound.latest');
+}
 /** States that no longer take part in the execution once the plan is replaced. */
 const TERMINAL_STATES: ReadonlySet<ProcessNodeState> = new Set<ProcessNodeState>(['SUCCEEDED', 'SKIPPED', 'FAILED', 'CANCELLED', 'SUPERSEDED']);
 
@@ -56,6 +64,7 @@ export class PlanStoreService {
       if (input.parentPlanId && !parent) throw new NotFoundError('Parent plan not found.', { parentPlanId: input.parentPlanId });
 
       const parentNodes = new Map((parent?.nodes ?? []).map((n) => [n.nodeKey, n]));
+      const latestInboundAt = parent ? await this.latestInboundAt(tx, tenantId, caseId) : undefined;
       const diff = this.diff(parent?.nodes ?? [], input.proposal.nodes);
 
       const plan = await tx.processPlan.create({
@@ -95,7 +104,10 @@ export class PlanStoreService {
       await tx.processPlanNode.createMany({
         data: input.proposal.nodes.map((node) => {
           const previous = parentNodes.get(node.id);
-          const carry = previous && CARRIED_STATES.has(previous.state) && hashOf(previous.definition) === hashOf(node);
+          // Ein Schritt, der die jeweils jüngste Nachricht der Kundschaft liest (z. B. die Auslese ihrer Angaben), ist nach einer neueren Nachricht nicht erledigt: er läuft für die neue Nachricht erneut. Sonst bliebe
+          // eine Antwort der Kundschaft ungelesen, weil derselbe Schritt der Vorrevision „schon fertig“ war (Fund C1-Endnachweis 29.10.: „Gas“ als Antwort auf die Frage nach der Heizungsart ging nicht in die Angaben ein).
+          const staleRead = previous !== undefined && latestInboundAt !== undefined && readsLatestInbound(node) && (previous.completedAt === null || previous.completedAt.getTime() < latestInboundAt.getTime());
+          const carry = previous && !staleRead && CARRIED_STATES.has(previous.state) && hashOf(previous.definition) === hashOf(node);
           return {
             tenantId,
             planId: plan.id,
@@ -135,6 +147,18 @@ export class PlanStoreService {
       });
       return this.loadInTx(tx, tenantId, plan.id);
     });
+  }
+
+  /** Eingang der jüngsten Nachricht der Kundschaft im Vorgang (bei einem Teilvorgang: in der ganzen Familie, die Nachricht liegt am Hauptvorgang bzw. an den Geschwistern). */
+  private async latestInboundAt(tx: Prisma.TransactionClient, tenantId: string, caseId: string): Promise<Date | undefined> {
+    const own = await tx.case.findFirst({ where: { id: caseId, tenantId }, select: { parentCaseId: true } });
+    const ids = [caseId];
+    if (own?.parentCaseId) {
+      const siblings = await tx.case.findMany({ where: { tenantId, parentCaseId: own.parentCaseId }, select: { id: true } });
+      ids.push(own.parentCaseId, ...siblings.map((c) => c.id));
+    }
+    const latest = await tx.emailMessage.findFirst({ where: { tenantId, caseId: { in: ids }, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } });
+    return latest?.createdAt;
   }
 
   /** Makes a plan the executing one; the previous active plan and its unfinished nodes become SUPERSEDED. */

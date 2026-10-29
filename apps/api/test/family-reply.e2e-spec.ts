@@ -4,6 +4,7 @@ import type { PlanProposal } from '@orbit/shared';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CaseEventsService } from '../src/process/case-events.service';
+import { CaseLifecycleService } from '../src/process/case-lifecycle.service';
 import { FamilyReplyService } from '../src/process/family-reply.service';
 import { OrchestratorService } from '../src/process/orchestrator.service';
 import { PlanStoreService } from '../src/process/plan-store.service';
@@ -50,6 +51,16 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
       childIds.push(child.id);
     }
     return { parentId: parent.id, childIds };
+  }
+
+
+  /** Der Teilvorgang steht seit zwei Stunden in seinem jetzigen Stand (sein Statusereignis rückt zurück; fehlt es, weil der Test den Stand direkt setzte, wird es angelegt). Danach verändert „eine Erinnerung“ die Zeile des Vorgangs erneut: die Frist darf dadurch nicht neu beginnen. */
+  async function ageStatus(caseId: string): Promise<void> {
+    const row = await prisma.withRlsBypass((tx) => tx.case.findUniqueOrThrow({ where: { id: caseId } }));
+    const present = await prisma.withRlsBypass((tx) => tx.caseEvent.count({ where: { caseId, type: 'case.status_changed' } }));
+    if (present === 0) await app.get(CaseEventsService).append(row.tenantId, caseId, { type: 'case.status_changed', payload: { from: 'RECEIVED', to: row.orchestrationStatus, attentionReasons: [], revision: row.revision } });
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE case_events SET created_at = now() - interval '2 hours' WHERE case_id = ${caseId} AND type IN ('case.status_changed', 'case.completed')`);
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() WHERE id = ${caseId}`);
   }
 
   async function hold(tenantId: string, caseId: string, purpose: string, bodyText: string) {
@@ -148,7 +159,7 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     // Wer gerade erst auf eine Freigabe wartet, hält die Antwort kurz zurück (meist kommt die Freigabe in Minuten) …
     expect(await family.settle(tenantId, parentId)).toBe('BUSY');
     // … nach der Karenzzeit geht der Stand hinaus.
-    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() - interval '2 hours' WHERE id = ${childIds[1]!}`);
+    await ageStatus(childIds[1]!);
     expect(await family.settle(tenantId, parentId)).toBe('SENT');
     expect(sent).toHaveLength(1);
     expect(sent[0]!.bodyText).toContain('Dieses Anliegen prüfen wir noch intern');
@@ -280,7 +291,7 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     expect(await family.settle(tenantId, parentId)).toBe('BUSY'); // kurz zurückgehalten …
     expect(sent).toHaveLength(0);
     // … aber nicht unbegrenzt: nach der Karenzzeit setzt der Sweep die Antwort zusammen (kein neues Ereignis nötig).
-    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() - interval '2 hours' WHERE id = ${childIds[2]!}`);
+    await ageStatus(childIds[2]!);
     const parents = (await family.activeParents()).filter((p) => p.tenantId === tenantId);
     expect(parents.map((p) => p.parentCaseId)).toEqual([parentId]);
     for (const p of parents) await family.settle(p.tenantId, p.parentCaseId);
@@ -389,5 +400,91 @@ describe('Gemeinsame Antwort einer aufgeteilten Nachricht (Meilenstein C, e2e)',
     const second = await store.createRevision(tenantId, child.id, input('zweiter'));
     const plans = await scoped.processPlan.findMany({ where: { caseId: child.id }, orderBy: { revision: 'asc' } });
     expect(plans.map((p) => [p.id, p.status])).toEqual([[first.plan.id, 'SUPERSEDED'], [second.plan.id, 'AWAITING_APPROVAL']]);
+  });
+  it('FN-14: die Obergrenze für eine zurückgehaltene Antwort hängt am Zeitpunkt des wartenden Inhalts – ein Teilvorgang, dessen Stand sich ständig ändert, hält sie nicht dauerhaft auf; Erinnerungen setzen die Frist nicht zurück', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Rechnung 4711 klären', 'Termin für die Wartung']);
+    const scoped = prisma.forTenantId(tenantId);
+    await hold(tenantId, childIds[0]!, 'CLARIFICATION', questions('Welche Rechnung brauchen Sie (Nummer oder Monat)?'));
+    // Der zweite Teilvorgang arbeitet und wechselt immer wieder den Stand (jeder Wechsel ist ein frisches Ereignis).
+    const lifecycle = app.get(CaseLifecycleService);
+    await scoped.case.update({ where: { id: childIds[1]! }, data: { orchestrationStatus: 'WAITING_FOR_INFORMATION' } });
+    await lifecycle.transition(tenantId, childIds[1]!, { to: 'IN_PROGRESS' });
+    expect(await family.settle(tenantId, parentId)).toBe('BUSY');
+    // Eine Erinnerung verändert die Zeile des Vorgangs, nicht seinen Stand: die Frist läuft von dem Zeitpunkt, an dem er in „in Bearbeitung“ geriet.
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE case_events SET created_at = now() - interval '11 minutes' WHERE case_id = ${childIds[1]!} AND type = 'case.status_changed'`);
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() WHERE id = ${childIds[1]!}`);
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent).toHaveLength(1);
+    // Gerade erst gewechselt, aber der wartende Inhalt ist älter als die Obergrenze: auch dann geht die Antwort hinaus.
+    const second = await newFamily(tenantId, ['Rechnung 4712 klären', 'Termin für die Wartung']);
+    await hold(tenantId, second.childIds[0]!, 'CLARIFICATION', questions('Welche Rechnung brauchen Sie?'));
+    await scoped.case.update({ where: { id: second.childIds[1]! }, data: { orchestrationStatus: 'WAITING_FOR_INFORMATION' } });
+    await lifecycle.transition(tenantId, second.childIds[1]!, { to: 'IN_PROGRESS' });
+    expect(await family.settle(tenantId, second.parentId)).toBe('BUSY');
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE case_events SET created_at = now() - interval '61 minutes' WHERE case_id = ${second.childIds[0]!} AND type = 'family.part_held'`);
+    await lifecycle.transition(tenantId, second.childIds[1]!, { to: 'WAITING_FOR_INFORMATION' }); // und noch ein Wechsel
+    await lifecycle.transition(tenantId, second.childIds[1]!, { to: 'IN_PROGRESS' });
+    expect(await family.settle(tenantId, second.parentId)).toBe('SENT');
+    expect(sent).toHaveLength(2);
+  });
+
+  it('FN-14: „Danke für Ihre Antwort“ steht nur nach einer tatsächlichen Antwort der Kundschaft; eine Rückmeldung ohne neuen Eingang beginnt neutral', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Rechnung 4711 klären', 'Termin für die Wartung']);
+    const scoped = prisma.forTenantId(tenantId);
+    await hold(tenantId, childIds[0]!, 'CLARIFICATION', questions('Welche Rechnung brauchen Sie?'));
+    await hold(tenantId, childIds[0]!, 'ACKNOWLEDGEMENT', 'Guten Tag,\n\nvielen Dank für Ihre Nachricht. Sie ist bei uns eingegangen.\n\nMit freundlichen Grüßen\nBetrieb');
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent[0]!.bodyText).toContain('Sie ist bei uns eingegangen');
+    // Ohne neuen Eingang der Kundschaft: eine neue Rückfrage des zweiten Anliegens. Keine Antwort der Kundschaft, kein Dank dafür.
+    await hold(tenantId, childIds[1]!, 'CLARIFICATION', questions('Welcher Termin ist gemeint?'));
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent[1]!.bodyText).toContain('hier eine Rückmeldung zu Ihren Anliegen');
+    expect(sent[1]!.bodyText).not.toMatch(/Dank für Ihre Antwort|eingegangen/);
+    // Die Kundschaft antwortet: erst die Rückmeldung auf diese Antwort dankt dafür.
+    await scoped.emailMessage.create({ data: { tenantId, caseId: parentId, direction: 'INBOUND', fromAddress: TOM, toAddresses: ['info@betrieb.example'], subject: 'Re: Drei Dinge', bodyText: 'Rechnung 4711.', threadId: 'thr-1', rfcMessageId: `<antwort-${parentId}@kunde.example>`, receivedAt: new Date(Date.now() + 1000), createdAt: new Date(Date.now() + 1000) } });
+    await scoped.case.update({ where: { id: childIds[0]! }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    await scoped.task.create({ data: { tenantId, caseId: childIds[0]!, title: 'Rechnung prüfen', description: 'x', source: 'AGENT' } });
+    const answer = await scoped.emailMessage.findFirstOrThrow({ where: { caseId: parentId, direction: 'INBOUND' }, orderBy: { createdAt: 'desc' } });
+    await app.get(CaseEventsService).append(tenantId, childIds[0]!, { type: 'family.reply_assigned', payload: { messageId: answer.id, sentences: ['Rechnung 4711.'], basis: ['TOPIC'] }, dedupeKey: `family.assigned:${answer.id}:${childIds[0]!}` });
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent[2]!.bodyText).toContain('vielen Dank für Ihre Antwort');
+    expect(sent[2]!.bodyText).toContain('Ihre Angaben dazu haben wir an die zuständige Person weitergegeben');
+  });
+
+  it('FN-14: wurde ein Anliegen als übergeben gemeldet und fragt der Teilvorgang später doch nach, benennt die Rückmeldung den Wechsel; wartet ein Plan auf Freigabe, gilt das Anliegen als „in Prüfung“, nicht als übergeben', async () => {
+    const tenantId = await newTenant();
+    const { parentId, childIds } = await newFamily(tenantId, ['Kopie der letzten Rechnung', 'Angebot für einen Heizungsregler']);
+    const scoped = prisma.forTenantId(tenantId);
+    await hold(tenantId, childIds[0]!, 'ACKNOWLEDGEMENT', 'Guten Tag,\n\nvielen Dank für Ihre Nachricht. Sie ist bei uns eingegangen.\n\nMit freundlichen Grüßen\nBetrieb');
+    await hold(tenantId, childIds[1]!, 'CLARIFICATION', questions('Welche Rechnung?'));
+    await scoped.case.update({ where: { id: childIds[0]! }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    await scoped.task.create({ data: { tenantId, caseId: childIds[0]!, title: 'Rechnung heraussuchen', description: 'x', source: 'AGENT' } });
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent[0]!.bodyText).toContain('Zu „Kopie der letzten Rechnung“:\nDieses Anliegen können wir nicht automatisch erledigen');
+    // Nach weiterer Prüfung fragt das Anliegen doch nach.
+    await scoped.case.update({ where: { id: childIds[0]! }, data: { orchestrationStatus: 'WAITING_FOR_INFORMATION' } });
+    await hold(tenantId, childIds[0]!, 'CLARIFICATION', questions('Für welchen Zeitraum brauchen Sie die Kopie?'));
+    expect(await family.settle(tenantId, parentId)).toBe('SENT');
+    expect(sent[1]!.bodyText).toContain('Nach unserer ersten Rückmeldung zu diesem Anliegen haben wir bei der weiteren Prüfung doch noch Rückfragen:');
+    expect(sent[1]!.bodyText).toContain('Für welchen Zeitraum');
+    expect(sent[1]!.bodyText).not.toMatch(/Dank für Ihre Antwort|eingegangen/);
+    // Wartet für ein Anliegen ein Plan auf Freigabe, ist es noch in Prüfung – auch wenn eine alte Aufgabe offen ist.
+    const third = await newFamily(tenantId, ['Wartungstermin verschieben', 'Kopie der Rechnung']);
+    await hold(tenantId, third.childIds[1]!, 'CLARIFICATION', questions('Welche Rechnung?'));
+    await scoped.case.update({ where: { id: third.childIds[0]! }, data: { orchestrationStatus: 'MANUAL_REVIEW' } });
+    await scoped.task.create({ data: { tenantId, caseId: third.childIds[0]!, title: 'Termin prüfen', description: 'x', source: 'AGENT' } });
+    await app.get(PlanStoreService).createRevision(tenantId, third.childIds[0]!, {
+      proposal: { goalKeys: ['human.review'], nodes: [{ id: 'w', type: 'WAIT_EVENT', title: 'Warten', inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: { eventType: 'communication.received' }, timeout: { hours: 1 }, evidenceRefs: [] } as never], edges: [], unresolvedRequirements: [], assumptions: [], conciseExplanation: 'x' },
+      source: 'LLM_PLANNER',
+      status: 'AWAITING_APPROVAL',
+      basedOnCaseRevision: 0,
+      validation: { valid: true, issues: [], stats: null },
+    });
+    expect(await family.settle(tenantId, third.parentId)).toBe('SENT');
+    const body = sent[2]!.bodyText;
+    expect(body).toContain('Zu „Wartungstermin verschieben“:\nDieses Anliegen prüfen wir noch intern');
+    expect(body).not.toContain('können wir nicht automatisch erledigen');
   });
 });

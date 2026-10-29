@@ -102,6 +102,8 @@ export interface CaseGraphView {
   overallStatus: CaseOrchestrationStatusValue;
   currentNodeIds: string[];
   attentionReasons: string[];
+  /** Offener Freigabebedarf des Vorgangs (nur vorhanden, wenn etwas auf eine Freigabe wartet): ein geänderter Plan und/oder Wirkungen. Aus dem tatsächlichen Stand, gleich in welchem Vorgangsstatus. */
+  pendingApprovals?: { plan?: { revision: number }; actions: number };
   nodes: CaseGraphNode[];
   edges: CaseGraphEdge[];
   availableActions: ActionDescriptor[];

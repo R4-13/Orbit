@@ -1,0 +1,11 @@
+Mutationsnachweis (30.10.2026): Reihenfolge der Fortsetzung in IntakeService.continueFamily
+Die zwei orderBy-Klauseln (familyChildren, others) wurden vorübergehend entfernt; der Rest des Standes unverändert. Befehl:
+  bash scripts/e2e-isolated.sh test/case-split.e2e-spec.ts -t "Reihenfolge ihrer Anlage|Neuplanungen gehören"
+Ergebnis OHNE Sortierung:
+  x  die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort ... (Warteschlangen-Double: Pläne in Reihenfolge der Aufrufe)   -> ROT
+  ok Neuplanungen gehören dem Vorgang, für den geplant wurde ... (Modell-Double antwortet nach Anliegen im Auftrag)             -> GRÜN
+  Tests: 1 failed, 1 passed
+Deutung: Die vertauschten Neuplanungen stammten aus dem Warteschlangen-Double der Tests (es ordnet nach Aufrufreihenfolge), nicht aus der
+produktiven Zuordnung. Produktiv wird je Aufruf `planner.plan(tenantId, caseId, …)` aus den Daten dieses Vorgangs gebildet und unter dieser
+caseId gespeichert; der Planer streicht fremde Meldungen (`scopeNodes`). Die Sortierung bleibt als feste Reihenfolge, muss aber keine
+falsche Zuordnung verhindern. Quelle wiederhergestellt (git diff intake.service.ts leer).

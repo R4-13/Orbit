@@ -46,6 +46,7 @@ import { CaseRollupService } from './case-rollup.service';
 import { assertProcessingPath } from './processing-path';
 import { LeadSyncService } from './lead-sync.service';
 import { FamilyReplyService } from './family-reply.service';
+import { ManualTaskService } from './manual-task.service';
 
 const LEASE_MS = 60_000;
 const MAX_ITERATIONS = 60;
@@ -69,6 +70,8 @@ export interface StartCaseOptions {
 /** Wartezeiten vor den Wiederholungen der Planung bei einem vorübergehenden KI-Ausfall (Minuten). Danach geht der Vorgang mit Begründung an eine Person. */
 export const PLAN_RETRY_DELAYS_MINUTES: readonly number[] = [1, 5, 15, 30, 60, 120];
 const PLAN_RETRY_EVENT = 'plan.retry';
+/** Hinweis am Vorgang, solange eine neuere Planrevision auf ihre Bestätigung wartet und der bisherige Plan angehalten ist. */
+const PENDING_PLAN_REASON = 'Ein geänderter Plan wartet auf Ihre Bestätigung; bis dahin führt der bisherige Plan nichts weiter aus.';
 
 export interface StartCaseResult {
   /** `RETRY_SCHEDULED`: die KI war vorübergehend nicht erreichbar; die Planung wird persistent und zeitversetzt wiederholt. */
@@ -123,6 +126,7 @@ export class OrchestratorService {
     @Inject(TOOL_REGISTRY) private readonly tools: ToolRegistry,
     private readonly leadSync: LeadSyncService,
     private readonly family: FamilyReplyService,
+    private readonly manualTasks: ManualTaskService,
   ) {}
 
   // ── Starting a case ─────────────────────────────────────────────────────────
@@ -239,8 +243,12 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
   /** Activates a validated plan: replaced work is cancelled (open approvals void, nothing already confirmed is touched). */
   private async activatePlan(tenantId: string, caseId: string, planId: string, userId?: string): Promise<void> {
     const before = await this.store.getActive(tenantId, caseId);
-    await this.store.activate(tenantId, planId);
-    if (before && before.plan.id !== planId) await this.voidOpenApprovals(tenantId, caseId, 'Der Plan wurde geändert; die Freigabe gilt nicht mehr.');
+    const activated = await this.store.activate(tenantId, planId);
+    if (before && before.plan.id !== planId) {
+      await this.voidOpenApprovals(tenantId, caseId, 'Der Plan wurde geändert; die Freigabe gilt nicht mehr.');
+      // Aufgaben der abgelösten Revision, deren Arbeit der neue Plan nicht mehr vorsieht, werden geschlossen (nachvollziehbar); gleiche Arbeit übernimmt der neue Schritt später (`ManualTaskService.open`).
+      await this.manualTasks.reconcile(tenantId, caseId, activated);
+    }
     await this.lifecycle.transition(tenantId, caseId, { to: 'IN_PROGRESS' }, { type: userId ? 'USER' : 'SYSTEM', userId });
     await this.audit.record({ tenantId, eventType: 'PROCESS_PLAN_ACTIVATED', actorType: userId ? 'USER' : 'SYSTEM', actorUserId: userId, entityType: 'ProcessPlan', entityId: planId, payload: { caseId } });
   }
@@ -315,10 +323,17 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
           const definition = graph!.nodes.find((n) => n.nodeKey === nodeKey)?.definition as unknown as PlanNode | undefined;
           return definition !== undefined && runsBeforePlanApproval(definition, capabilityCatalogue);
         };
-        const actions = preApproval
+        // Wartet eine neuere Revision auf ihre Freigabe, ersetzt sie diesen Plan, sobald sie bestätigt ist: bis dahin führt der bisherige Plan nur noch verstehende und vorbereitende Schritte aus – keine Übergabe, keine
+        // Aufgabe, keine Wirkung. Sonst übergäbe er den Vorgang an eine Person, während der Ersatz (z. B. eine Rückfrage an die Kundschaft) noch auf Freigabe wartet (Fund C1-Endnachweis 29.10.).
+        const successorPending = !preApproval && ((await this.store.getAwaitingApproval(tenantId, caseId))?.plan.revision ?? 0) > graph.plan.revision;
+        const actions = preApproval || successorPending
           ? allActions.filter((a) => a.action === 'EXECUTE' && retryAtOf(a.nodeKey) <= now && understandingNode(a.nodeKey))
           : allActions.filter((a) => a.action !== 'EXECUTE' || retryAtOf(a.nodeKey) <= now);
         if (preApproval && actions.length === 0) return { status: 'IDLE', executed };
+        if (successorPending && actions.length === 0) {
+          if (caseRow.orchestrationStatus !== 'WAITING_FOR_APPROVAL') await this.lifecycle.transition(tenantId, caseId, { to: 'WAITING_FOR_APPROVAL', attentionReasons: [PENDING_PLAN_REASON] });
+          return { status: 'IDLE', executed };
+        }
         if (actions.length === 0 && allActions.length > 0) {
           const waiting = graph.nodes.filter((n) => n.state === 'PLANNED' && n.retryAt && n.retryAt.getTime() > now);
           const reasons = waiting.map((n) => `${(n.definition as unknown as PlanNode).title}: ${n.errorMessage ?? 'Ein Schritt'} ORBIT versucht es automatisch erneut (nächster Versuch ${n.retryAt!.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr).`);
@@ -346,7 +361,7 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
           } else if (action.action === 'BLOCK') {
             await this.store.transitionNode(tenantId, caseId, graph.plan.id, node.nodeKey, 'PLANNED', { state: 'BLOCKED', errorCode: 'EXPRESSION_INVALID', errorMessage: action.reason });
           } else {
-            if (!preApproval) await this.ensureInProgress(tenantId, caseId);
+            if (!preApproval && !successorPending) await this.ensureInProgress(tenantId, caseId);
             await this.executeNode(tenantId, await this.loadCase(tenantId, caseId), graph, node, ctx);
             executed.push(node.nodeKey);
           }
@@ -724,9 +739,7 @@ Nachricht der Kundschaft (${message?.fromAddress ?? 'unbekannt'}): ${excerpt}`, 
     const order = await this.prisma.forTenantId(tenantId).caseEvent.findFirst({ where: { caseId: caseRow.id, type: CASE_EVENT_TYPES.ORDER_CREATED }, orderBy: { sequence: 'asc' }, select: { payload: true } });
     const dueIso = (order?.payload as { dueAt?: string | null } | null | undefined)?.dueAt;
     const dueDate = dueIso ? new Date(dueIso) : undefined;
-    await this.prisma.forTenantId(tenantId).task.create({
-      data: { tenantId, caseId: caseRow.id, title: def.title, description: def.purpose ?? 'Manueller Schritt im Prozess.', source: 'AGENT', ...(dueDate && !Number.isNaN(dueDate.getTime()) ? { dueDate } : {}) },
-    });
+    await this.manualTasks.open(tenantId, caseRow.id, { planId: graph.plan.id, nodeKey: node.nodeKey, title: def.title, description: def.purpose ?? 'Manueller Schritt im Prozess.', ...(dueDate && !Number.isNaN(dueDate.getTime()) ? { dueDate } : {}) });
     await this.store.transitionNode(tenantId, caseRow.id, graph.plan.id, node.nodeKey, ['RUNNING'], { state: 'WAITING' });
     await this.lifecycle.transition(tenantId, caseRow.id, { to: 'MANUAL_REVIEW', attentionReasons: [`${def.title}: Bitte manuell bearbeiten.`] });
   }

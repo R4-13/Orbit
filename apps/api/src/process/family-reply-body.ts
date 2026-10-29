@@ -18,6 +18,8 @@ export interface FamilyReplySection {
   state?: FamilyStateKind;
   /** Abschnitt ohne Anliegen-Überschrift (z. B. die Rückfrage zur Zuordnung einer Antwort). */
   plain?: boolean;
+  /** Was für dieses Anliegen bereits mitgeteilt wurde und jetzt überholt ist (z. B. „übergeben“, und nun doch eine Rückfrage): der Wechsel wird benannt statt verschwiegen. */
+  supersedes?: 'HANDOVER' | 'DONE';
 }
 
 export interface FamilyReplyInput {
@@ -26,8 +28,13 @@ export interface FamilyReplyInput {
   lang: ReplyLanguage;
   /** Betreff der Nachricht, auf die geantwortet wird (für die Eingangsbestätigung). */
   originalSubject?: string | null;
-  /** Erste Antwort auf diese Nachricht: sie bestätigt zugleich den Eingang (die einzige Eingangsbestätigung). */
-  confirmsReceipt: boolean;
+  /**
+   * Wie die Antwort beginnt – aus tatsächlichen Ereignissen, nie aus Gewohnheit:
+   *  - `RECEIPT`: erste Antwort auf die ursprüngliche Nachricht; sie bestätigt zugleich den Eingang (die einzige Eingangsbestätigung),
+   *  - `REPLY`: die Kundschaft hat geantwortet, und diese Antwort wird jetzt zum ersten Mal beantwortet (nur dann „Danke für Ihre Antwort“),
+   *  - `UPDATE`: kein neuer Eingang der Kundschaft; es geht um neue Rückfragen, einen geänderten Stand oder eine später freigegebene Auskunft.
+   */
+  opening: 'RECEIPT' | 'REPLY' | 'UPDATE';
   /** Anzahl der Anliegen der Nachricht (für die Einleitung). */
   concerns: number;
   sections: FamilyReplySection[];
@@ -48,6 +55,9 @@ const STATE_EN: Record<FamilyStateKind, string> = {
 
 export const familyStateSentence = (kind: FamilyStateKind, lang: ReplyLanguage): string => (lang === 'en' ? STATE_EN[kind] : STATE_DE[kind]);
 
+const SUPERSEDES_DE = 'Nach unserer ersten Rückmeldung zu diesem Anliegen haben wir bei der weiteren Prüfung doch noch Rückfragen:';
+const SUPERSEDES_EN = 'Following our earlier update on this request, our further review has raised some questions after all:';
+
 const quotable = (subject?: string | null): string => (subject ?? '').replace(/^\s*((re|aw|fw|fwd|wg)\s*:\s*)+/i, '').trim();
 
 export function familyReplyBody(input: FamilyReplyInput): string {
@@ -55,14 +65,16 @@ export function familyReplyBody(input: FamilyReplyInput): string {
   const en = input.lang === 'en';
   const subject = quotable(input.originalSubject);
   const out: string[] = [en ? (who ? `Hello ${who},` : 'Hello,') : who ? `Guten Tag ${who},` : 'Guten Tag,', ''];
-  if (input.confirmsReceipt) {
+  if (input.opening === 'RECEIPT') {
     out.push(
       en
         ? `thank you for your message${subject ? ` "${subject}"` : ''}. We have received it and are handling your ${input.concerns} requests separately. Here is where each one stands:`
         : `vielen Dank für Ihre Nachricht${subject ? ` „${subject}“` : ''}. Sie ist bei uns eingegangen; wir bearbeiten Ihre ${input.concerns} Anliegen getrennt. Hier der Stand zu jedem:`,
     );
-  } else {
+  } else if (input.opening === 'REPLY') {
     out.push(en ? 'thank you for your reply. Here is the current status of your requests:' : 'vielen Dank für Ihre Antwort. Hier der aktuelle Stand zu Ihren Anliegen:');
+  } else {
+    out.push(en ? 'here is an update on your requests:' : 'hier eine Rückmeldung zu Ihren Anliegen:');
   }
   for (const section of input.sections) {
     if (section.plain) {
@@ -70,7 +82,10 @@ export function familyReplyBody(input: FamilyReplyInput): string {
       continue;
     }
     out.push('', en ? `Regarding "${section.label}":` : `Zu „${section.label}“:`);
-    if (section.lines.length > 0) out.push(...section.lines);
+    if (section.lines.length > 0) {
+      if (section.supersedes) out.push(en ? SUPERSEDES_EN : SUPERSEDES_DE, '');
+      out.push(...section.lines);
+    }
     else if (section.state) out.push(familyStateSentence(section.state, input.lang));
   }
   out.push('', en ? 'You are welcome to simply reply to this email.' : 'Sie können einfach auf diese E-Mail antworten.');

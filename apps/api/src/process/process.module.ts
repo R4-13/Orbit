@@ -48,6 +48,7 @@ import { HandoffComposerService } from './reference/handoff-composer.service';
 import { LeadSyncService } from './lead-sync.service';
 import { SupplementService } from './supplement.service';
 import { FamilyReplyService } from './family-reply.service';
+import { ManualTaskService } from './manual-task.service';
 import { ReplyRoutingService } from './reply-routing.service';
 
 /**
@@ -97,6 +98,7 @@ import { ReplyRoutingService } from './reply-routing.service';
     SupplementService,
     ReplyRoutingService,
     FamilyReplyService,
+    ManualTaskService,
     OrbitContactsDirectory,
     // Angebundene Kundenverzeichnisse (Kundenstamm). Heute ORBITs eigene Kontakte; CRM-/ERP-Adapter (HubSpot, Lexware …) kommen mit ihren Zugangsdaten hinzu.
     { provide: CUSTOMER_DIRECTORIES, useFactory: (orbit: OrbitContactsDirectory, hubspot: HubSpotCustomerDirectory) => [orbit, hubspot], inject: [OrbitContactsDirectory, HubSpotCustomerDirectory] },

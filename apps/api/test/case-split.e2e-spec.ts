@@ -7,6 +7,7 @@ import { AiProviderResolverService } from '../src/ai-providers/ai-provider-resol
 import type { NormalizedIntakeEvent } from '../src/intake/channel-event.types';
 import { IntakeService } from '../src/intake/intake.service';
 import { OUTBOUND_MAIL, type OutboundMailPort, type OutboundMessage } from '../src/integrations/outbound-mail.port';
+import { CaseEventsService } from '../src/process/case-events.service';
 import { PlatformControlService } from '../src/platform-control/platform-control.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { messageCaseIds } from '../src/process/case-scope';
@@ -112,6 +113,15 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
 
   function mail(tenantId: string): NormalizedIntakeEvent {
     return { tenantId, channel: 'SIMULATED', provider: 'simulated', externalEventId: randomUUID(), occurredAt: new Date(), sender: { address: SENDER, displayName: 'Karl Kunde' }, recipients: [{ address: 'info@betrieb.example' }], direction: 'INBOUND', connectionId: connectionByTenant.get(tenantId), subject: 'Zwei Fragen', content: MESSAGE, threadId: 'thr-split', rfcMessageId: '<split@kunde.example>' };
+  }
+
+  /** Der Teilvorgang steht seit zwei Stunden in seinem jetzigen Stand (sein Statusereignis rückt zurück; fehlt es, weil der Test den Stand direkt setzte, wird es angelegt). Danach verändert „eine Erinnerung“ die Zeile des Vorgangs erneut: die Frist darf dadurch nicht neu beginnen. */
+  async function ageStatus(caseId: string): Promise<void> {
+    const row = await prisma.withRlsBypass((tx) => tx.case.findUniqueOrThrow({ where: { id: caseId } }));
+    const present = await prisma.withRlsBypass((tx) => tx.caseEvent.count({ where: { caseId, type: 'case.status_changed' } }));
+    if (present === 0) await app.get(CaseEventsService).append(row.tenantId, caseId, { type: 'case.status_changed', payload: { from: 'RECEIVED', to: row.orchestrationStatus, attentionReasons: [], revision: row.revision } });
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE case_events SET created_at = now() - interval '2 hours' WHERE case_id = ${caseId} AND type IN ('case.status_changed', 'case.completed')`);
+    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() WHERE id = ${caseId}`);
   }
   const children = (tenantId: string, parentId: string) => prisma.forTenantId(tenantId).case.findMany({ where: { parentCaseId: parentId }, orderBy: { createdAt: 'asc' } });
   async function confirmPlan(tenantId: string, caseId: string): Promise<void> {
@@ -376,7 +386,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(await prisma.forTenantId(tenantId).emailMessage.count({ where: { caseId: { in: familyIds }, direction: 'INBOUND', bodyText: { contains: 'Hausmeister' } } })).toBe(1);
     expect((await prisma.forTenantId(tenantId).case.findUniqueOrThrow({ where: { id: result.case!.id } })).orchestrationStatus).toBe('COMPLETED');
   });
-  it('die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort, auch wenn die Datenbank die Zeilen in anderer Reihenfolge liefert (Ursache des einmaligen Fehlers im Gesamtlauf: ohne Sortierung bekam jeder Teilvorgang die Neuplanung des anderen und die „fremde“ Meldung entfiel)', async () => {
+  it('die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort, auch wenn die Datenbank die Zeilen in anderer Reihenfolge liefert (das Warteschlangen-Double liefert seine Pläne in der Reihenfolge der Aufrufe: die feste Reihenfolge macht Test und Betrieb reproduzierbar; die Zuordnung an sich zeigt der Test darunter)', async () => {
     const { tenantId, result, kids, afterReply } = await twoWaitingChildren();
     const scoped = prisma.forTenantId(tenantId);
     // Die zuletzt geänderte Zeile steht physisch hinten: die erste Zeile zuletzt ändern, damit eine Abfrage ohne Sortierung [zweiter, erster] liefert.
@@ -396,6 +406,35 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']);
     const notes = await Promise.all(after.map((k) => scoped.processPlanNode.findMany({ where: { plan: { caseId: k.id, status: 'ACTIVE' }, nodeKey: 'notify' }, select: { definition: true } })));
     expect(JSON.stringify(notes[0])).toContain('Standort geklärt.'); // der erste Teilvorgang (Standort) erhielt die erste Neuplanung
+    expect(JSON.stringify(notes[1])).toContain('Zugang geklärt.');
+  });
+
+  it('Neuplanungen gehören dem Vorgang, für den geplant wurde – nicht der Reihenfolge der Aufrufe: ein Modell, das je Anliegen antwortet, liefert jedem Teilvorgang seinen Plan, auch bei vertauschter Zeilenreihenfolge (die Sortierung legt die Reihenfolge nur fest; sie muss keine falsche Zuordnung verhindern)', async () => {
+    const { tenantId, result, kids, afterReply } = await twoWaitingChildren();
+    const scoped = prisma.forTenantId(tenantId);
+    await scoped.case.update({ where: { id: kids[1]!.id }, data: { updatedAt: new Date() } });
+    await scoped.case.update({ where: { id: kids[0]!.id }, data: { updatedAt: new Date() } });
+    // Das Modell antwortet nach dem Anliegen, das im Auftrag steht („Dein Anliegen …: <Ziel>“) – nicht nach der Reihenfolge der Aufrufe. Zwei Pläne (je Anliegen) × Werkzeugaufruf und Abschluss.
+    const byConcern = (request: Parameters<MockLLMProvider['complete']>[0]) => {
+      const text = [request.systemPrompt ?? '', ...request.messages.map((m) => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)))].join('\n');
+      if (text.includes('[tool_result:submit_process_plan]')) return { text: 'ok', toolCalls: [], stopReason: 'end_turn' as const };
+      const concern = /Dein Anliegen \(nur dieses bearbeitest du\): "([^"]+)"/.exec(text)?.[1] ?? '';
+      const note = concern.includes('STANDORT') ? 'Standort geklärt.' : concern.includes('ZUGANG') ? 'Zugang geklärt.' : `unbekanntes Anliegen: ${concern}`;
+      return { toolCalls: [{ toolCallId: randomUUID(), toolName: 'submit_process_plan', input: afterReply(note) }], stopReason: 'tool_use' as const };
+    };
+    for (let i = 0; i < 4; i += 1) llm.seedResponse(byConcern);
+    await intake.handleIntakeEvent(tenantId, undefined, {
+      ...mail(tenantId),
+      subject: 'Re: Zwei Fragen',
+      content: 'Die Adresse des Objekts ist Kölner Str. 12 in Köln. Den Zugang erhalten Sie über den Hausmeister, Herrn Weber.',
+      rfcMessageId: '<antwort-identitaet@kunde.example>',
+      inReplyTo: '<sent-1@mail.example>',
+      references: ['<split@kunde.example>', '<sent-1@mail.example>'],
+    });
+    const after = await children(tenantId, result.case!.id);
+    expect(after.map((k) => k.orchestrationStatus)).toEqual(['COMPLETED', 'COMPLETED']);
+    const notes = await Promise.all(after.map((k) => scoped.processPlanNode.findMany({ where: { plan: { caseId: k.id, status: 'ACTIVE' }, nodeKey: 'notify' }, select: { definition: true } })));
+    expect(JSON.stringify(notes[0])).toContain('Standort geklärt.');
     expect(JSON.stringify(notes[1])).toContain('Zugang geklärt.');
   });
 
@@ -451,7 +490,7 @@ describe('Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)', () => {
     expect((await children(tenantId, result.case!.id)).map((k) => k.orchestrationStatus)).toEqual(['WAITING_FOR_INFORMATION', 'WAITING_FOR_APPROVAL']);
     // Wer gerade erst auf eine Freigabe wartet, hält die gemeinsame Antwort kurz zurück; nach der Karenzzeit geht der Stand (Rückfrage + „wird geprüft“) hinaus.
     expect(sent).toHaveLength(0);
-    await prisma.withRlsBypass((tx) => tx.$executeRaw`UPDATE cases SET updated_at = now() - interval '2 hours' WHERE id = ${kids[1]!.id}`);
+    await ageStatus(kids[1]!.id);
     await app.get(FamilyReplyService).settle(tenantId, result.case!.id);
     expect(sent).toHaveLength(1);
 

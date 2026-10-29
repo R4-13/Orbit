@@ -13,6 +13,9 @@ export interface CaseTransition {
   outcome?: { code: string; evidenceRefs: string[] };
 }
 
+/** Beginn der Hinweise, die einen offenen Freigabebedarf melden. */
+export const PENDING_APPROVAL_PREFIX = 'Freigabe offen:';
+
 /**
  * The single place that changes a case's process state. It keeps the
  * fine-grained `orchestrationStatus` and the pre-existing simple `status`
@@ -35,19 +38,20 @@ export class CaseLifecycleService {
     const { updated, previous } = await this.prisma.inTenantTransaction(tenantId, async (tx) => {
       const existing = await tx.case.findFirst({ where: { id: caseId, tenantId } });
       if (!existing) throw new NotFoundError('Case not found.', { caseId });
+      const attentionReasons = await this.withPendingApprovals(tx, tenantId, caseId, transition.to, transition.attentionReasons ?? []);
       const changed = await tx.case.update({
         where: { id: caseId },
         data: {
           orchestrationStatus: transition.to,
           status: caseStatusFor(transition.to),
           revision: { increment: 1 },
-          attentionReasons: transition.attentionReasons ?? [],
+          attentionReasons,
           ...(completing ? { completedAt: new Date(), outcome: transition.outcome as unknown as Prisma.InputJsonValue } : {}),
         },
       });
       await this.events.appendInTx(tx, tenantId, caseId, {
         type: completing ? CASE_EVENT_TYPES.COMPLETED : CASE_EVENT_TYPES.STATUS_CHANGED,
-        payload: { from: existing.orchestrationStatus, to: transition.to, attentionReasons: transition.attentionReasons ?? [], revision: changed.revision },
+        payload: { from: existing.orchestrationStatus, to: transition.to, attentionReasons, revision: changed.revision },
       });
       return { updated: changed, previous: existing.orchestrationStatus };
     });
@@ -68,6 +72,20 @@ export class CaseLifecycleService {
       });
     }
     return updated;
+  }
+
+  /**
+   * Ein offener Freigabebedarf (Plan oder Wirkung) bleibt am Vorgang sichtbar, gleich in welchem Stand der Vorgang sonst steht: wartet ein Plan oder eine Wirkung auf eine Freigabe, steht das unter den Hinweisen –
+   * auch wenn der Vorgang gerade „zur Prüfung“ oder „in Bearbeitung“ zeigt. Der Hinweis wird bei jedem Wechsel aus dem tatsächlichen Stand abgeleitet, nie fortgeschrieben.
+   */
+  private async withPendingApprovals(tx: Prisma.TransactionClient, tenantId: string, caseId: string, to: CaseOrchestrationStatusValue, reasons: string[]): Promise<string[]> {
+    if (['COMPLETED', 'CANCELLED', 'REJECTED', 'FAILED', 'WAITING_FOR_APPROVAL'].includes(to) || reasons.some((r) => r.startsWith(PENDING_APPROVAL_PREFIX))) return reasons;
+    const plan = await tx.processPlan.findFirst({ where: { tenantId, caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' }, select: { revision: true } });
+    const actions = await tx.actionIntent.count({ where: { tenantId, caseId, status: 'AWAITING_APPROVAL' } });
+    const open: string[] = [];
+    if (plan) open.push(`${PENDING_APPROVAL_PREFIX} Ein geänderter Plan (Revision ${plan.revision}) wartet auf Ihre Bestätigung.`);
+    if (actions > 0) open.push(`${PENDING_APPROVAL_PREFIX} ${actions === 1 ? 'Eine Aktion wartet' : `${actions} Aktionen warten`} auf Ihre Freigabe.`);
+    return open.length === 0 ? reasons : [...open, ...reasons.filter((r) => !open.includes(r))].slice(0, 5);
   }
 
   private async mirrorToIntakeEvents(tenantId: string, caseId: string, transition: CaseTransition): Promise<void> {

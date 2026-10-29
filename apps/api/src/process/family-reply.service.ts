@@ -6,7 +6,7 @@ import { OUTBOUND_MAIL, type OutboundMailPort } from '../integrations/outbound-m
 import { PolicyEnforcementService } from '../policy/policy-enforcement.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionLedgerService } from './action-ledger.service';
-import { CaseEventsService } from './case-events.service';
+import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { CaseFactsService } from './case-facts.service';
 import { assignmentQuestionLines, familyReplyBody, draftCore, type FamilyReplySection, type FamilyStateKind } from './family-reply-body';
 import { ASSIGNMENT_QUESTION_EVENT, ReplyRoutingService, type OpenChild, type RoutingOutcome } from './reply-routing.service';
@@ -34,6 +34,11 @@ const FAMILY_NODE_PREFIX = 'family-reply:';
 const BUSY_WINDOW_MS = 10 * 60_000;
 /** Ein Teilvorgang, der gerade erst auf eine Freigabe (Plan oder Auskunft) wartet, hält die gemeinsame Antwort kurz zurück: meist kommt die Freigabe in Minuten, und die Kundschaft soll eine Antwort bekommen, nicht zwei. Danach geht der Stand hinaus. */
 const APPROVAL_GRACE_MS = 30 * 60_000;
+/**
+ * Absolute Obergrenze für eine zurückgehaltene Antwort, festgemacht am Zeitpunkt, zu dem der älteste noch nicht gesendete Inhalt (Entwurf, Zuordnungs-Rückfrage) bereitgestellt wurde. Danach hält kein
+ * Teilvorgang sie mehr auf, gleich wie oft sich sein Stand seither geändert hat (Neuplanung, Wiederaufnahme): bereits Ausführbares wartet nicht dauerhaft.
+ */
+const HOLD_CAP_MS = 60 * 60_000;
 /** Ziele eines Plans, die eine Aufnahme und Übergabe an eine Person bedeuten (nicht ein erreichtes Ergebnis). */
 const HANDOVER_GOALS: ReadonlySet<string> = new Set(['request.handed_over', 'human.review', 'staff.informed', 'task.created']);
 const NO_REPLY_SENDER = /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|mailer-daemon|postmaster|bounces?)([+._-]|@)/i;
@@ -126,9 +131,29 @@ export class FamilyReplyService {
     return result;
   }
 
+  /**
+   * Seit wann steht der Teilvorgang in seinem jetzigen Stand? Aus den Statusereignissen (der letzte echte Wechsel in diesen Stand), nicht aus `updatedAt`: jedes Ereignis, jede Erinnerung und jede Verlängerung
+   * der Bearbeitungsfreigabe verändert die Zeile des Vorgangs. Ohne Statusereignis gilt die Anlage des Vorgangs.
+   */
+  private async statusSince(tenantId: string, child: Case): Promise<Date> {
+    const rows = await this.prisma.forTenantId(tenantId).caseEvent.findMany({
+      where: { caseId: child.id, type: { in: [CASE_EVENT_TYPES.STATUS_CHANGED, CASE_EVENT_TYPES.COMPLETED] } },
+      orderBy: { sequence: 'desc' },
+      take: 30,
+      select: { payload: true, createdAt: true },
+    });
+    for (const row of rows) {
+      const p = row.payload as { from?: string; to?: string } | null;
+      if (p?.to === child.orchestrationStatus && p.from !== p.to) return row.createdAt;
+    }
+    return child.createdAt;
+  }
+
   /** Was sich über den Stand eines ruhigen Teilvorgangs wahrheitsgemäß sagen lässt – oder nichts. */
   private async stateOf(tenantId: string, child: Case, answeredByContent: boolean): Promise<FamilyStateKind | undefined> {
     const scoped = this.prisma.forTenantId(tenantId);
+    // Wartet ein Plan oder eine Wirkung dieses Anliegens auf eine Freigabe, ist das Anliegen noch in interner Prüfung – gleich, was sonst am Vorgang offen ist.
+    if (!['COMPLETED', 'CANCELLED', 'REJECTED'].includes(child.orchestrationStatus) && (await scoped.processPlan.count({ where: { caseId: child.id, status: 'AWAITING_APPROVAL' } })) > 0) return 'IN_REVIEW';
     switch (child.orchestrationStatus) {
       case 'MANUAL_REVIEW':
       case 'FAILED':
@@ -172,13 +197,24 @@ export class FamilyReplyService {
     const children = await scoped.case.findMany({ where: { parentCaseId: parentId }, orderBy: { createdAt: 'asc' } });
     if (children.length === 0) return 'NOTHING';
     const now = Date.now();
-    if (!options.force && children.some((c) => (['RECEIVED', 'READY', 'IN_PROGRESS'].includes(c.orchestrationStatus) && now - c.updatedAt.getTime() < BUSY_WINDOW_MS) || (c.orchestrationStatus === 'WAITING_FOR_APPROVAL' && now - c.updatedAt.getTime() < APPROVAL_GRACE_MS))) return 'BUSY';
 
     const state = await this.reported(tenantId, parentId);
-    const heldRows = await scoped.caseEvent.findMany({ where: { caseId: { in: children.map((c) => c.id) }, type: FAMILY_EVENT_TYPES.PART_HELD }, orderBy: { createdAt: 'asc' }, select: { caseId: true, payload: true } });
-    const pending: HeldPart[] = heldRows
-      .map((r) => ({ childId: r.caseId, ...(r.payload as { draftId: string; purpose: string; core: string[] }) }))
-      .filter((p) => !state.covered.has(p.draftId));
+    const heldRows = await scoped.caseEvent.findMany({ where: { caseId: { in: children.map((c) => c.id) }, type: FAMILY_EVENT_TYPES.PART_HELD }, orderBy: { createdAt: 'asc' }, select: { caseId: true, payload: true, createdAt: true } });
+    const pendingRows = heldRows.filter((r) => !state.covered.has((r.payload as { draftId: string }).draftId));
+    const pending: HeldPart[] = pendingRows.map((r) => ({ childId: r.caseId, ...(r.payload as { draftId: string; purpose: string; core: string[] }) }));
+    // Ob ein Teilvorgang die Antwort noch aufhält, richtet sich nach dem Zeitpunkt, an dem er seinen jetzigen Stand erreicht hat – nicht nach seiner letzten Änderung (jedes Ereignis, jede Erinnerung und jede
+    // Verlängerung der Bearbeitungsfreigabe verändert die Zeile des Vorgangs und würde die Frist sonst neu beginnen lassen). Dazu die absolute Obergrenze ab dem ältesten wartenden Inhalt.
+    const questionRows = await scoped.caseEvent.findMany({ where: { caseId: parentId, type: ASSIGNMENT_QUESTION_EVENT }, orderBy: { createdAt: 'asc' }, select: { id: true, payload: true, createdAt: true } });
+    const pendingQuestions = questionRows.filter((q) => !state.questions.has(q.id));
+    const waitingSince = [...pendingRows.map((r) => r.createdAt), ...pendingQuestions.map((q) => q.createdAt)].sort((a, b) => a.getTime() - b.getTime())[0];
+    const capped = waitingSince !== undefined && now - waitingSince.getTime() >= HOLD_CAP_MS;
+    if (!options.force && !capped) {
+      for (const c of children) {
+        const window = ['RECEIVED', 'READY', 'IN_PROGRESS'].includes(c.orchestrationStatus) ? BUSY_WINDOW_MS : c.orchestrationStatus === 'WAITING_FOR_APPROVAL' ? APPROVAL_GRACE_MS : 0;
+        if (window > 0 && now - (await this.statusSince(tenantId, c)).getTime() < window) return 'BUSY';
+      }
+    }
+
     const answeredByContent = new Set(heldRows.filter((r) => !['ACKNOWLEDGEMENT', 'CLARIFICATION'].includes((r.payload as { purpose?: string }).purpose ?? '')).map((r) => r.caseId));
 
     // Die letzte Nachricht der Kundschaft in der Familie: Empfänger und Bezug der Antwort, und worauf sich zugeordnete Angaben beziehen.
@@ -199,8 +235,6 @@ export class FamilyReplyService {
     const contentParts = pending.filter((p) => p.purpose !== 'ACKNOWLEDGEMENT' && p.core.length > 0);
     const wantsReceipt = pending.some((p) => p.purpose === 'ACKNOWLEDGEMENT');
     // Offene Rückfragen zur Zuordnung einer Antwort der Kundschaft (Aussagen, die nicht eindeutig zu einem Anliegen gehören).
-    const questionRows = await scoped.caseEvent.findMany({ where: { caseId: parentId, type: ASSIGNMENT_QUESTION_EVENT }, orderBy: { createdAt: 'asc' }, select: { id: true, payload: true } });
-    const pendingQuestions = questionRows.filter((q) => !state.questions.has(q.id));
     if (contentParts.length === 0 && states.size === 0 && !wantsReceipt && pendingQuestions.length === 0) return 'NOTHING';
 
     // Empfänger: die Antwortadresse ist die bestätigte des Vorgangs.
@@ -224,6 +258,8 @@ export class FamilyReplyService {
     // Die Eingangsbestätigung gehört der ursprünglichen Nachricht; die Antwort der Kundschaft auf eine Rückfrage bekommt den Stand, keine zweite Bestätigung des Eingangs.
     const earliest = await scoped.emailMessage.findFirst({ where: { caseId: { in: family }, direction: 'INBOUND' }, orderBy: { createdAt: 'asc' }, select: { id: true } });
     const first = inbound.id === earliest?.id && !state.repliedTo.has(inbound.id);
+    // „Danke für Ihre Antwort“ steht nur, wenn die Kundschaft tatsächlich geantwortet hat und diese Antwort noch unbeantwortet ist; sonst ist es eine Rückmeldung ohne neuen Eingang.
+    const opening = first ? 'RECEIPT' : inbound.id !== earliest?.id && !state.repliedTo.has(inbound.id) ? 'REPLY' : 'UPDATE';
     const sections: FamilyReplySection[] = [];
     if (pendingQuestions.length > 0) {
       const items = pendingQuestions.map((q) => q.payload as { statement: string; options: Array<{ label: string; questions: string[] }> });
@@ -233,9 +269,12 @@ export class FamilyReplyService {
       const mine = contentParts.filter((p) => p.childId === child.id);
       const kind = states.get(child.id);
       if (mine.length === 0 && !kind) continue;
-      sections.push({ label: await this.labelOf(tenantId, child), lines: mine.flatMap((p, i) => (i > 0 ? ['', ...p.core] : p.core)), ...(mine.length === 0 && kind ? { state: kind } : {}) });
+      // Wurde dieses Anliegen der Kundschaft zuletzt als „übergeben“ (oder „erledigt“) gemeldet und fragt der Teilvorgang jetzt doch nach, benennt die Antwort den Wechsel.
+      const earlier = state.states.get(child.id);
+      const supersedes = mine.some((p) => p.purpose === 'CLARIFICATION') && (earlier === 'HANDOVER' || earlier === 'INFO_PASSED') ? 'HANDOVER' : mine.some((p) => p.purpose === 'CLARIFICATION') && earlier === 'DONE' ? 'DONE' : undefined;
+      sections.push({ label: await this.labelOf(tenantId, child), lines: mine.flatMap((p, i) => (i > 0 ? ['', ...p.core] : p.core)), ...(supersedes ? { supersedes } : {}), ...(mine.length === 0 && kind ? { state: kind } : {}) });
     }
-    const bodyText = familyReplyBody({ name: watch?.displayName ?? undefined, companyName: tenantRow?.name ?? 'Ihr Ansprechpartner', lang, originalSubject: inbound.subject, confirmsReceipt: first, concerns: children.length, sections });
+    const bodyText = familyReplyBody({ name: watch?.displayName ?? undefined, companyName: tenantRow?.name ?? 'Ihr Ansprechpartner', lang, originalSubject: inbound.subject, opening, concerns: children.length, sections });
     const draftIds = pending.map((p) => p.draftId);
     const questionIds = pendingQuestions.map((q) => q.id);
 

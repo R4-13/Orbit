@@ -36,6 +36,12 @@ describe('Aufteilung mehrerer Anliegen (ADD-3.1, FX-02/FX-06)', () => {
     expect(failed.attention).toEqual(['Teilvorgang „b“ braucht Prüfung.']);
   });
 
+  it('ein Teilvorgang, der auf eine Freigabe wartet, steht mit diesem Bedarf am Hauptvorgang', () => {
+    const waiting = rollUpChildren([child('a', 'COMPLETED'), child('b', 'WAITING_FOR_APPROVAL')]);
+    expect(waiting.outcome).toBe('OPEN');
+    expect(waiting.attention).toEqual(['Teilvorgang „b“ wartet auf Ihre Freigabe.']);
+  });
+
   it('ein noch nicht begonnenes Anliegen hält den Hauptvorgang offen und wird gestartet, sobald ein Platz frei ist', () => {
     const open = rollUpChildren([child('a', 'COMPLETED'), child('b', 'COMPLETED'), child('c', 'RECEIVED')]);
     expect(open.outcome).toBe('OPEN');

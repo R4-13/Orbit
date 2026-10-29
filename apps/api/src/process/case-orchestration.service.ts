@@ -102,6 +102,8 @@ export class CaseOrchestrationService {
     ]);
     const relations = parentRow || childRows.length > 0 ? { ...(parentRow ? { parent: { id: parentRow.id, title: parentRow.title, status: parentRow.orchestrationStatus } } : {}), children: childRows.map((c) => ({ id: c.id, title: c.title, status: c.orchestrationStatus })) } : undefined;
 
+    const awaitingPlan = await scoped.processPlan.findFirst({ where: { caseId, status: 'AWAITING_APPROVAL' }, orderBy: { revision: 'desc' }, select: { revision: true } });
+    const awaitingActions = await scoped.actionIntent.count({ where: { caseId, status: 'AWAITING_APPROVAL' } });
     const base = {
       caseId,
       caseRevision: caseRow.revision,
@@ -113,6 +115,7 @@ export class CaseOrchestrationService {
       mode,
       overallStatus: caseRow.orchestrationStatus,
       attentionReasons: caseRow.attentionReasons,
+      ...(awaitingPlan || awaitingActions > 0 ? { pendingApprovals: { ...(awaitingPlan ? { plan: { revision: awaitingPlan.revision } } : {}), actions: awaitingActions } } : {}),
       revisions: revisions.map((r) => ({
         revision: r.revision,
         status: r.status,

@@ -27,7 +27,7 @@ describe('Gemeinsame Antwort', () => {
   it('erste Antwort: eine Einleitung mit Eingangsbestätigung, je Anliegen ein Abschnitt, ein Gruß', () => {
     const body = familyReplyBody({
       ...base,
-      confirmsReceipt: true,
+      opening: 'RECEIPT' as const,
       sections: [
         { label: 'Kopie der letzten Rechnung', lines: [], state: 'HANDOVER' },
         { label: 'Wartungstermin verschieben', lines: ['Welcher Termin ist gemeint?'] },
@@ -43,7 +43,7 @@ describe('Gemeinsame Antwort', () => {
   });
 
   it('Folgeantwort bestätigt den Eingang nicht noch einmal; Stand-Sätze sind wahr formuliert (nie „erledigt“ für Übergaben)', () => {
-    const body = familyReplyBody({ ...base, confirmsReceipt: false, sections: [{ label: 'Rechnung', lines: [], state: 'HANDOVER' }] });
+    const body = familyReplyBody({ ...base, opening: 'REPLY' as const, sections: [{ label: 'Rechnung', lines: [], state: 'HANDOVER' }] });
     expect(body).toContain('vielen Dank für Ihre Antwort');
     expect(body).not.toContain('eingegangen');
     expect(familyStateSentence('HANDOVER', 'de')).not.toMatch(/erledigt/);
@@ -51,14 +51,30 @@ describe('Gemeinsame Antwort', () => {
   });
 
   it('Angaben der Kundschaft, die bei einer Person liegen, werden so gemeldet – ohne Erledigt-Zusage', () => {
-    const body = familyReplyBody({ ...base, confirmsReceipt: false, sections: [{ label: 'Rechnung', lines: [], state: 'INFO_PASSED' }] });
+    const body = familyReplyBody({ ...base, opening: 'REPLY' as const, sections: [{ label: 'Rechnung', lines: [], state: 'INFO_PASSED' }] });
     expect(body).toContain('Zu „Rechnung“:\nIhre Angaben dazu haben wir an die zuständige Person weitergegeben');
     expect(familyStateSentence('INFO_PASSED', 'de')).not.toMatch(/erledigt/);
     expect(familyStateSentence('INFO_PASSED', 'en')).toContain('passed your details on');
   });
 
+  it('„Danke für Ihre Antwort“ steht nur nach einer tatsächlichen Antwort der Kundschaft; ohne neuen Eingang beginnt die Rückmeldung neutral', () => {
+    const sections = [{ label: 'Rechnung', lines: [], state: 'IN_REVIEW' as const }];
+    expect(familyReplyBody({ ...base, opening: 'REPLY' as const, sections })).toContain('vielen Dank für Ihre Antwort');
+    const update = familyReplyBody({ ...base, opening: 'UPDATE' as const, sections });
+    expect(update).not.toMatch(/Dank für Ihre Antwort|eingegangen/);
+    expect(update).toContain('hier eine Rückmeldung zu Ihren Anliegen:');
+    expect(familyReplyBody({ ...base, lang: 'en', opening: 'UPDATE' as const, sections })).not.toMatch(/thank you/);
+  });
+
+  it('ein als übergeben gemeldetes Anliegen, zu dem später doch gefragt wird: der Wechsel wird benannt', () => {
+    const body = familyReplyBody({ ...base, opening: 'UPDATE' as const, sections: [{ label: 'Angebot Heizungsregler', lines: ['1. Welcher Regler?'], supersedes: 'HANDOVER' }] });
+    expect(body).toContain('Zu „Angebot Heizungsregler“:\nNach unserer ersten Rückmeldung zu diesem Anliegen haben wir bei der weiteren Prüfung doch noch Rückfragen:\n\n1. Welcher Regler?');
+    const plain = familyReplyBody({ ...base, opening: 'UPDATE' as const, sections: [{ label: 'Angebot Heizungsregler', lines: ['1. Welcher Regler?'] }] });
+    expect(plain).not.toContain('Nach unserer ersten Rückmeldung');
+  });
+
   it('englische Kundschaft bekommt eine englische Antwort', () => {
-    const body = familyReplyBody({ ...base, lang: 'en', confirmsReceipt: true, sections: [{ label: 'Invoice copy', lines: [], state: 'HANDOVER' }] });
+    const body = familyReplyBody({ ...base, lang: 'en', opening: 'RECEIPT' as const, sections: [{ label: 'Invoice copy', lines: [], state: 'HANDOVER' }] });
     expect(body).toContain('Hello Tom Orbit,');
     expect(body).toContain('Kind regards');
     expect(body).toContain('We cannot complete this request automatically.');
