@@ -1,0 +1,205 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/lead-sync.e2e-spec.ts (184.704 s)
+PASS test/request-handoff.e2e-spec.ts (191.545 s)
+FAIL test/case-split.e2e-spec.ts (191.739 s)
+  ● Console
+
+    console.log
+      DIAG d9c97c6a-c3c8-4699-9f30-151e2bd66ce6 MANUAL_REVIEW [
+        'Der Ablauf ist durchgelaufen, aber „Zuständige Person informiert“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.'
+      ] [{"nodeKey":"ask_send","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"wait","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ctx","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"reqs","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ask_draft","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ctx","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"reqs","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"ask_draft","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"ask_send","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"done","state":"BLOCKED","errorMessage":"Der Ablauf ist durchgelaufen, aber „Zuständige Person informiert“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.","plan":{"revision":2,"status":"ACTIVE"}}] ["case.split_from","case.status_changed","plan.created","case.status_changed","node.state_changed","customer.record_checked","node.state_changed","node.state_changed","requirements.analyzed","context.resolution_attempted","node.state_changed","node.state_changed","action.prepared","action.confirmed","node.state_changed","plan.activated","case.status_changed","plan.scope_approved","node.state_changed","action.prepared","family.part_held","action.confirmed","node.state_changed","node.state_changed","wait.started","node.state_changed","case.status_changed","family.reply_assigned","communication.received","wait.satisfied","node.state_changed","case.status_changed","plan.created","plan.superseded","plan.activated","case.status_changed","node.state_changed","completion.evaluated","node.state_changed","case.status_changed"]
+
+      at Object.<anonymous> (case-split.e2e-spec.ts:365:17)
+
+    console.log
+      DIAG 0a55d1d0-634d-4c57-94c9-45af2c80be42 MANUAL_REVIEW [
+        'Der Ablauf ist durchgelaufen, aber „Zuständige Person informiert“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.'
+      ] [{"nodeKey":"ask_draft","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ask_send","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ctx","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"wait","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"reqs","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":1,"status":"SUPERSEDED"}},{"nodeKey":"ctx","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"reqs","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"ask_draft","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"ask_send","state":"SUCCEEDED","errorMessage":null,"plan":{"revision":2,"status":"ACTIVE"}},{"nodeKey":"done","state":"BLOCKED","errorMessage":"Der Ablauf ist durchgelaufen, aber „Zuständige Person informiert“ ist nicht nachgewiesen. Bitte prüfen und selbst abschließen.","plan":{"revision":2,"status":"ACTIVE"}}] ["case.split_from","case.status_changed","plan.created","case.status_changed","node.state_changed","customer.record_checked","node.state_changed","node.state_changed","requirements.analyzed","context.resolution_attempted","node.state_changed","node.state_changed","action.prepared","action.confirmed","node.state_changed","plan.activated","case.status_changed","plan.scope_approved","node.state_changed","action.prepared","family.part_held","action.confirmed","node.state_changed","node.state_changed","wait.started","node.state_changed","case.status_changed","family.reply_assigned","communication.received","wait.satisfied","node.state_changed","case.status_changed","plan.created","plan.superseded","plan.activated","case.status_changed","node.state_changed","completion.evaluated","node.state_changed","case.status_changed"]
+
+      at Object.<anonymous> (case-split.e2e-spec.ts:365:17)
+
+  ● Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e) › eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+    -   "COMPLETED",
+    -   "COMPLETED",
+    +   "MANUAL_REVIEW",
+    +   "MANUAL_REVIEW",
+      ]
+
+    [0m [90m 366 |[39m       }
+     [90m 367 |[39m     }
+    [31m[1m>[22m[39m[90m 368 |[39m     expect(after[33m.[39mmap((k) [33m=>[39m k[33m.[39morchestrationStatus))[33m.[39mtoEqual([[32m'COMPLETED'[39m[33m,[39m [32m'COMPLETED'[39m])[33m;[39m [90m// beide Teilvorgänge haben die Antwort erhalten und wurden fortgesetzt[39m
+     [90m     |[39m                                                     [31m[1m^[22m[39m
+     [90m 369 |[39m     [36mconst[39m secondWait [33m=[39m [36mawait[39m prisma[33m.[39mforTenantId(tenantId)[33m.[39mwaitSubscription[33m.[39mfindFirstOrThrow({ where[33m:[39m { caseId[33m:[39m kids[[35m1[39m][33m![39m[33m.[39mid } })[33m;[39m
+     [90m 370 |[39m     expect(secondWait[33m.[39mstatus)[33m.[39mtoBe([32m'SATISFIED'[39m)[33m;[39m
+     [90m 371 |[39m     [36mconst[39m fanOut [33m=[39m [36mawait[39m prisma[33m.[39mforTenantId(tenantId)[33m.[39mcaseEvent[33m.[39mfindFirstOrThrow({ where[33m:[39m { caseId[33m:[39m kids[[35m1[39m][33m![39m[33m.[39mid[33m,[39m type[33m:[39m [32m'communication.received'[39m } })[33m;[39m[0m
+
+      at Object.<anonymous> (case-split.e2e-spec.ts:368:53)
+
+PASS test/autonomy-capabilities.e2e-spec.ts (142.574 s)
+PASS test/adaptive-orchestration.e2e-spec.ts (145.229 s)
+PASS test/goal-work.e2e-spec.ts (94.424 s)
+PASS test/autonomy-assist.e2e-spec.ts (61.396 s)
+PASS test/process-hardening.e2e-spec.ts (77.456 s)
+PASS test/live-reconciliation.e2e-spec.ts (83.577 s)
+PASS test/reference-process.e2e-spec.ts (59.587 s)
+PASS test/request-analysis.e2e-spec.ts (56.764 s)
+PASS test/process-orchestration.e2e-spec.ts (58.203 s)
+PASS test/blueprint-fit.e2e-spec.ts (42.437 s)
+PASS test/platform-control.e2e-spec.ts (25.226 s)
+PASS test/plan-retry.e2e-spec.ts (22.055 s)
+PASS test/case-orchestration-view.e2e-spec.ts (21.605 s)
+PASS test/platform-security-boundary.e2e-spec.ts (19.789 s)
+PASS test/rls-join-tables.e2e-spec.ts (5.378 s)
+PASS test/platform-support-sessions.e2e-spec.ts (20.03 s)
+PASS test/platform-mfa.e2e-spec.ts (14.253 s)
+PASS test/family-reply.e2e-spec.ts (22.267 s)
+PASS test/plan-outcomes.e2e-spec.ts (21.564 s)
+PASS test/attention.e2e-spec.ts (17.91 s)
+PASS test/setup-assistant.e2e-spec.ts (11.297 s)
+PASS test/adhoc-completion.e2e-spec.ts (13.515 s)
+PASS test/platform-provision.e2e-spec.ts (7.506 s)
+PASS test/fact-correction.e2e-spec.ts (17.928 s)
+PASS test/case-facts-and-correlation.e2e-spec.ts (17.166 s)
+PASS test/case-limits.e2e-spec.ts (19.945 s)
+(node:15744) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/triage-resilience.e2e-spec.ts (14.629 s)
+  ● Console
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at pdfManagerReady (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6281)
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at ../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6441
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/customer-record.e2e-spec.ts (9.84 s)
+PASS test/internal-order.e2e-spec.ts (15.465 s)
+PASS test/intake-decisions.e2e-spec.ts (12.803 s)
+PASS test/platform-cost-guardrails.e2e-spec.ts (19.729 s)
+PASS test/shadow-plan.e2e-spec.ts (26.133 s)
+PASS test/platform-ai-governance.e2e-spec.ts (15.41 s)
+PASS test/workflow-approval-resume.e2e-spec.ts (10.326 s)
+PASS test/failure-propagation.e2e-spec.ts (16.915 s)
+PASS test/api-keys.e2e-spec.ts (8.744 s)
+PASS test/tenant-admin.e2e-spec.ts (8.054 s)
+PASS test/lists-search-automation.e2e-spec.ts (7.969 s)
+PASS test/intake-workflow.e2e-spec.ts (11.108 s)
+  ● Console
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/hubspot.e2e-spec.ts (11.416 s)
+PASS test/organization.e2e-spec.ts (9.139 s)
+PASS test/password-change.e2e-spec.ts (11.873 s)
+PASS test/copilot.e2e-spec.ts (9.479 s)
+PASS test/finance-workflow.e2e-spec.ts (12.078 s)
+PASS test/workflow-orchestration.e2e-spec.ts (9.829 s)
+PASS test/workflow-retry.e2e-spec.ts (5.948 s)
+PASS test/intake-resilience.e2e-spec.ts (6.822 s)
+PASS test/ai-providers.e2e-spec.ts (6.989 s)
+PASS test/ui-projections.e2e-spec.ts (8.16 s)
+PASS test/attachment-text.e2e-spec.ts (9.938 s)
+PASS test/dashboard.e2e-spec.ts (6.32 s)
+PASS test/retention.e2e-spec.ts (7.534 s)
+PASS test/workflow-async-trigger.e2e-spec.ts (6.838 s)
+PASS test/idempotency-key.e2e-spec.ts (6.91 s)
+PASS test/branding.e2e-spec.ts (9.877 s)
+PASS test/policy.e2e-spec.ts (7.28 s)
+PASS test/auth-cookie.e2e-spec.ts (5.975 s)
+PASS test/integrations.e2e-spec.ts (9.514 s)
+PASS test/platform-runtime.e2e-spec.ts (9.14 s)
+PASS test/platform-work-backlog.e2e-spec.ts (12.632 s)
+PASS test/auth.e2e-spec.ts (8.6 s)
+PASS test/agent-evaluation.e2e-spec.ts (8.07 s)
+PASS test/mock-crm-durability.e2e-spec.ts (7.85 s)
+PASS test/reports-interventions.e2e-spec.ts (9.411 s)
+PASS test/document-verification.e2e-spec.ts (12.396 s)
+PASS test/false-success-repair.e2e-spec.ts (8.547 s)
+PASS test/webhook-idempotency.e2e-spec.ts (8.429 s)
+PASS test/platform-runtime-alerts.e2e-spec.ts (8.493 s)
+PASS test/profile-suggestion.e2e-spec.ts (9.615 s)
+PASS test/approval-reject-reason.e2e-spec.ts (12.288 s)
+PASS test/sales-workflow.e2e-spec.ts (8.38 s)
+PASS test/capability-contracts.e2e-spec.ts (6.983 s)
+PASS test/app.e2e-spec.ts (7.935 s)
+PASS test/tenant-concurrency.e2e-spec.ts
+PASS test/throttler-redis-storage.e2e-spec.ts
+
+Summary of all failing tests
+FAIL ./case-split.e2e-spec.ts (191.739 s)
+  ● Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e) › eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+    -   "COMPLETED",
+    -   "COMPLETED",
+    +   "MANUAL_REVIEW",
+    +   "MANUAL_REVIEW",
+      ]
+
+    [0m [90m 366 |[39m       }
+     [90m 367 |[39m     }
+    [31m[1m>[22m[39m[90m 368 |[39m     expect(after[33m.[39mmap((k) [33m=>[39m k[33m.[39morchestrationStatus))[33m.[39mtoEqual([[32m'COMPLETED'[39m[33m,[39m [32m'COMPLETED'[39m])[33m;[39m [90m// beide Teilvorgänge haben die Antwort erhalten und wurden fortgesetzt[39m
+     [90m     |[39m                                                     [31m[1m^[22m[39m
+     [90m 369 |[39m     [36mconst[39m secondWait [33m=[39m [36mawait[39m prisma[33m.[39mforTenantId(tenantId)[33m.[39mwaitSubscription[33m.[39mfindFirstOrThrow({ where[33m:[39m { caseId[33m:[39m kids[[35m1[39m][33m![39m[33m.[39mid } })[33m;[39m
+     [90m 370 |[39m     expect(secondWait[33m.[39mstatus)[33m.[39mtoBe([32m'SATISFIED'[39m)[33m;[39m
+     [90m 371 |[39m     [36mconst[39m fanOut [33m=[39m [36mawait[39m prisma[33m.[39mforTenantId(tenantId)[33m.[39mcaseEvent[33m.[39mfindFirstOrThrow({ where[33m:[39m { caseId[33m:[39m kids[[35m1[39m][33m![39m[33m.[39mid[33m,[39m type[33m:[39m [32m'communication.received'[39m } })[33m;[39m[0m
+
+      at Object.<anonymous> (case-split.e2e-spec.ts:368:53)
+
+
+Test Suites: 1 failed, 7 skipped, 77 passed, 78 of 85 total
+Tests:       1 failed, 58 skipped, 628 passed, 687 total
+Snapshots:   0 total
+Time:        2180.891 s, estimated 3289 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

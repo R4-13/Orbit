@@ -1,0 +1,36 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/process-orchestration.e2e-spec.ts (51.518 s)
+  Process orchestration engine (e2e)
+    blueprint registry (§8)
+      √ rejects an invalid blueprint with precise findings and never stores it (372 ms)
+      √ walks the lifecycle, makes a published version immutable and activates it per tenant (555 ms)
+      √ suspending a blueprint stops it from starting cases; another tenant never sees it (650 ms)
+    reference-style run on the generic engine
+      √ plans, waits for approval, executes once, waits for the reply, resumes and completes with evidence (5576 ms)
+      √ skips the clarification entirely when the information is already there, and still completes with evidence (2976 ms)
+      √ never completes when the completion criteria are not met (no hollow success) (1671 ms)
+      √ a rejected approval ends the step visibly instead of being retried silently (2809 ms)
+    uncertain outcomes (§15.2) — second tenant, second blueprint, same engine
+      √ stops on OUTCOME_UNKNOWN, never re-sends, and continues only after reconciliation (3944 ms)
+      √ a different tenant cannot read or command another tenant's case (373 ms)
+    ad-hoc plans (§11.4) and the deterministic gate
+      √ an unknown request gets a plan that a person must approve before anything runs (2588 ms)
+      √ rejects a plan with an invented recipient even after a repair attempt and routes to manual review (970 ms)
+      √ without a usable model the case goes to manual review instead of improvising (789 ms)
+    errors and statuses agree everywhere (BP-23 / BP-27)
+      √ a tool that RETURNS an error (no exception) fails the node, stops the case, and shows up in the graph, the intake status and the connector badge (3937 ms)
+    durability (BP-19): nothing lives only in memory
+      √ after a restart the sweep picks up an unprocessed inbound event and finishes the case (4815 ms)
+      √ a wait past its deadline fails visibly instead of waiting forever (3949 ms)
+      √ a case left IN_PROGRESS with an expired lease (crashed worker) is taken over, and a live lease is respected (4619 ms)
+    pause and cancel
+      √ a paused case does not advance; cancelling voids open approvals and leaves nothing running (2669 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        51.665 s, estimated 266 s
+Ran all test suites matching /process-orchestration/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

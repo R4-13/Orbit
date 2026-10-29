@@ -1,0 +1,36 @@
+[e2e] Datenbank orbit_e2e angelegt.
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.3 -> 8.0.0-rc.28                 │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/case-split.e2e-spec.ts (327.719 s)
+  Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)
+    √ zwei Anliegen → zwei verknüpfte Teilvorgänge mit eigenem Ziel; jedes erreicht sein Ziel, der Hauptvorgang schließt mit beiden (17592 ms)
+    √ ein Teilvorgang liest die Angaben aus der Nachricht des Hauptvorgangs (Fund Messlauf 21.10.: „Es fehlen Angaben: messageId“ blockierte die Auslese jedes Teilvorgangs) (22311 ms)
+    √ der Hauptvorgang bleibt offen, solange ein Teilvorgang nicht erledigt ist (19573 ms)
+    √ ohne das Betreiber-Flag wird nicht aufgeteilt – der Vorgang läuft wie bisher als ein Vorgang (4548 ms)
+    √ Wollen beide Teilvorgänge den Eingang bestätigen, geht genau eine Bestätigung hinaus – in der gemeinsamen Antwort (Meilenstein C; zuvor Wirkungsschlüssel FX-07) (21778 ms)
+    √ fünf Anliegen: vier werden bearbeitet, das fünfte bleibt ausdrücklich offen und wird gestartet, sobald ein Platz frei ist – der Hauptvorgang schließt erst, wenn alle fünf berücksichtigt sind (44161 ms)
+    √ eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren (28514 ms)
+    √ eine Antwort ohne Bezug zu einer der beiden offenen Rückfragen („Ja, bitte.“): die Teilvorgänge setzen nicht auf Verdacht fort, die Kundschaft wird gezielt zurückgefragt, die Nachricht bleibt nicht nur am Hauptvorgang liegen (21328 ms)
+    √ eine Antwort erreicht auch einen Teilvorgang, der gerade nicht wartet (z. B. auf eine Freigabe): er startet nicht neu, aber die Antwort ist ihm nachvollziehbar zugeordnet und für die nächste Bearbeitung lesbar (23916 ms)
+    Erkennung und Abgrenzung der Anliegen unabhängig vom Merkmal der Einstufung
+      √ die Einstufung nennt nur ein Anliegen (kein MULTIPLE_INTENTS): die Zerlegung erkennt drei – eines ergänzt, weil seine Frage sonst keinem Anliegen zugeordnet wäre (9217 ms)
+      √ Angaben werden nicht ungeprüft anderen Teilvorgängen zugeordnet: jede Angabe gehört zu ihrem Anliegen oder zum gemeinsamen Kontext, der Rest bleibt am Hauptvorgang (7014 ms)
+      √ der Teilvorgang plant mit seinem Auszug: sein Anliegen und der gemeinsame Kontext stehen vorn, die ganze Nachricht nur als Verständnishilfe (6954 ms)
+      √ erfundene Auszüge zählen nicht als Beleg (6472 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        329.75 s, estimated 349 s
+Ran all test suites matching /case-split/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,155 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/request-analysis.e2e-spec.ts (77.152 s)
+PASS test/process-hardening.e2e-spec.ts (89.344 s)
+PASS test/platform-control.e2e-spec.ts (27.075 s)
+PASS test/case-split.e2e-spec.ts (150.97 s)
+PASS test/lead-sync.e2e-spec.ts (136.628 s)
+PASS test/adaptive-orchestration.e2e-spec.ts (95.851 s)
+PASS test/request-handoff.e2e-spec.ts (108.81 s)
+PASS test/autonomy-capabilities.e2e-spec.ts (84.952 s)
+PASS test/autonomy-assist.e2e-spec.ts (49.875 s)
+PASS test/reference-process.e2e-spec.ts (59.554 s)
+PASS test/process-orchestration.e2e-spec.ts (46.917 s)
+PASS test/live-reconciliation.e2e-spec.ts (70.972 s)
+PASS test/goal-work.e2e-spec.ts (52.694 s)
+PASS test/blueprint-fit.e2e-spec.ts (30.017 s)
+PASS test/plan-outcomes.e2e-spec.ts (14.644 s)
+PASS test/platform-support-sessions.e2e-spec.ts (16.474 s)
+PASS test/platform-security-boundary.e2e-spec.ts (21.697 s)
+PASS test/case-orchestration-view.e2e-spec.ts (17.446 s)
+PASS test/shadow-plan.e2e-spec.ts (10.72 s)
+PASS test/plan-retry.e2e-spec.ts (21.441 s)
+PASS test/family-reply.e2e-spec.ts (14.034 s)
+PASS test/mock-crm-durability.e2e-spec.ts (5.413 s)
+PASS test/attention.e2e-spec.ts (12.85 s)
+PASS test/fact-correction.e2e-spec.ts (13.778 s)
+(node:6632) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/triage-resilience.e2e-spec.ts (13.089 s)
+  ● Console
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at pdfManagerReady (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6281)
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at ../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6441
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/case-limits.e2e-spec.ts (12.948 s)
+PASS test/webhook-idempotency.e2e-spec.ts
+PASS test/case-facts-and-correlation.e2e-spec.ts (11.852 s)
+PASS test/password-change.e2e-spec.ts (7.981 s)
+PASS test/setup-assistant.e2e-spec.ts (10.071 s)
+PASS test/platform-cost-guardrails.e2e-spec.ts (10.863 s)
+PASS test/platform-mfa.e2e-spec.ts (10.569 s)
+PASS test/internal-order.e2e-spec.ts (11.335 s)
+PASS test/adhoc-completion.e2e-spec.ts (11.073 s)
+PASS test/platform-ai-governance.e2e-spec.ts (11.918 s)
+PASS test/attachment-text.e2e-spec.ts (7.59 s)
+PASS test/hubspot.e2e-spec.ts (8.167 s)
+PASS test/customer-record.e2e-spec.ts (7.33 s)
+PASS test/intake-decisions.e2e-spec.ts (9.599 s)
+PASS test/failure-propagation.e2e-spec.ts (11.431 s)
+PASS test/intake-workflow.e2e-spec.ts (8.995 s)
+  ● Console
+
+    console.warn
+      Warning: Badly formatted number: minus sign in the middle
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at Lexer.getNumber (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:4:165713)
+      at Lexer.getObj (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:5:2210)
+      at Parser.shift (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:4:156402)
+      at Parser.getObj (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:4:156553)
+      at Function.create (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:5:3918)
+      at PDFDocument.get linearization [as linearization] (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59478)
+      at PDFDocument.get startXRef [as startXRef] (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59648)
+      at PDFDocument.parseStartXRef (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60357)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75349)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/approval-reject-reason.e2e-spec.ts (5.067 s)
+PASS test/finance-workflow.e2e-spec.ts (7.434 s)
+PASS test/auth.e2e-spec.ts (5.221 s)
+PASS test/ui-projections.e2e-spec.ts (8.629 s)
+PASS test/auth-cookie.e2e-spec.ts (5.584 s)
+PASS test/tenant-admin.e2e-spec.ts (6.698 s)
+PASS test/copilot.e2e-spec.ts (7.688 s)
+PASS test/organization.e2e-spec.ts (7.741 s)
+PASS test/retention.e2e-spec.ts (8.09 s)
+PASS test/platform-runtime-alerts.e2e-spec.ts (6.05 s)
+PASS test/api-keys.e2e-spec.ts (6.013 s)
+PASS test/document-verification.e2e-spec.ts (6.083 s)
+PASS test/platform-work-backlog.e2e-spec.ts (7.871 s)
+PASS test/workflow-approval-resume.e2e-spec.ts (8.409 s)
+PASS test/sales-workflow.e2e-spec.ts (6.06 s)
+PASS test/lists-search-automation.e2e-spec.ts (6.299 s)
+PASS test/platform-runtime.e2e-spec.ts (6.047 s)
+PASS test/false-success-repair.e2e-spec.ts (6.859 s)
+PASS test/branding.e2e-spec.ts (8.014 s)
+PASS test/platform-provision.e2e-spec.ts (7.7 s)
+PASS test/intake-resilience.e2e-spec.ts (7.083 s)
+PASS test/workflow-async-trigger.e2e-spec.ts (7.049 s)
+PASS test/integrations.e2e-spec.ts (7.974 s)
+PASS test/dashboard.e2e-spec.ts (11.583 s)
+PASS test/policy.e2e-spec.ts (5.668 s)
+PASS test/ai-providers.e2e-spec.ts (6.592 s)
+PASS test/idempotency-key.e2e-spec.ts (6.577 s)
+PASS test/workflow-orchestration.e2e-spec.ts (6.305 s)
+PASS test/capability-contracts.e2e-spec.ts (6.773 s)
+PASS test/rls-join-tables.e2e-spec.ts (5.869 s)
+PASS test/workflow-retry.e2e-spec.ts (6.125 s)
+PASS test/app.e2e-spec.ts (6.995 s)
+PASS test/reports-interventions.e2e-spec.ts (8.009 s)
+PASS test/agent-evaluation.e2e-spec.ts (9.249 s)
+PASS test/profile-suggestion.e2e-spec.ts (5.882 s)
+PASS test/tenant-concurrency.e2e-spec.ts
+PASS test/throttler-redis-storage.e2e-spec.ts
+
+Test Suites: 7 skipped, 78 passed, 78 of 85 total
+Tests:       58 skipped, 630 passed, 688 total
+Snapshots:   0 total
+Time:        1676.98 s, estimated 2977 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

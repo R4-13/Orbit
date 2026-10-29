@@ -1,0 +1,2 @@
+gate10: Proben 80 | CPU Mittel 76,8 | Anteil >=95%: 33% | frei MB min 225 Mittel 2.580 | Pagefile max 3745
+gate11: Proben 55 | CPU Mittel 66,5 | Anteil >=95%: 11% | frei MB min 353 Mittel 2.504 | Pagefile max 3657

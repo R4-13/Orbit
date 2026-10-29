@@ -1,0 +1,342 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/case-split.e2e-spec.ts (183.268 s)
+PASS test/request-handoff.e2e-spec.ts (111.081 s)
+PASS test/lead-sync.e2e-spec.ts (154.848 s)
+PASS test/adaptive-orchestration.e2e-spec.ts (118.098 s)
+PASS test/autonomy-capabilities.e2e-spec.ts (98.173 s)
+PASS test/goal-work.e2e-spec.ts (62.583 s)
+PASS test/live-reconciliation.e2e-spec.ts (77.886 s)
+FAIL test/process-hardening.e2e-spec.ts (119.321 s)
+  ● Process hardening (e2e) › mail is sent but the local confirmation fails → OUTCOME_UNKNOWN, never resent, reconciled by a person
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 250 |[39m   })[33m;[39m
+     [90m 251 |[39m
+    [31m[1m>[22m[39m[90m 252 |[39m   it([32m'mail is sent but the local confirmation fails → OUTCOME_UNKNOWN, never resent, reconciled by a person'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 253 |[39m     [36mconst[39m { tenantId } [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 254 |[39m     [36mconst[39m providerId [33m=[39m [32m`dup-${randomUUID()}`[39m[33m;[39m
+     [90m 255 |[39m     nextProviderId [33m=[39m () [33m=>[39m providerId[33m;[39m[0m
+
+      at process-hardening.e2e-spec.ts:252:3
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:32:1)
+
+  ● Process hardening (e2e) › a connection that loses the send permission before execution blocks the step; nothing is sent
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 279 |[39m   })[33m;[39m
+     [90m 280 |[39m
+    [31m[1m>[22m[39m[90m 281 |[39m   it([32m'a connection that loses the send permission before execution blocks the step; nothing is sent'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 282 |[39m     [36mconst[39m { tenantId[33m,[39m integrationId } [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 283 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m completeRequest(tenantId)[33m;[39m
+     [90m 284 |[39m     [36mconst[39m [intent] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m[0m
+
+      at process-hardening.e2e-spec.ts:281:3
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:32:1)
+
+  ● Process hardening (e2e) › a replan after a confirmed send keeps the receipt, repeats nothing and records what changed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"subject": "Ihr Angebot ANG-2026-0001", "to": "petra.lang@lang-metall.example"}, {"subject": "Re: Angebot Tür", "to": "petra.lang@lang-metall.example"}]
+
+    [0m [90m 337 |[39m     [36mconst[39m [clarification] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m
+     [90m 338 |[39m     [36mawait[39m commands[33m.[39mexecute(approver(tenantId)[33m,[39m caseId[33m,[39m command([32m'APPROVE_ACTION'[39m[33m,[39m ([36mawait[39m caseOf(tenantId[33m,[39m caseId))[33m.[39mrevision[33m,[39m { intentId[33m:[39m clarification[33m![39m[33m.[39mid }))[33m;[39m
+    [31m[1m>[22m[39m[90m 339 |[39m     expect(sent)[33m.[39mtoHaveLength([35m1[39m)[33m;[39m
+     [90m     |[39m                  [31m[1m^[22m[39m
+     [90m 340 |[39m
+     [90m 341 |[39m     [36mawait[39m commands[33m.[39mexecute(approver(tenantId)[33m,[39m caseId[33m,[39m command([32m'REPLAN'[39m[33m,[39m ([36mawait[39m caseOf(tenantId[33m,[39m caseId))[33m.[39mrevision[33m,[39m {}))[33m;[39m
+     [90m 342 |[39m[0m
+
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:339:18)
+
+PASS test/autonomy-assist.e2e-spec.ts (93.408 s)
+PASS test/reference-process.e2e-spec.ts (89.776 s)
+PASS test/process-orchestration.e2e-spec.ts (80.488 s)
+FAIL test/request-analysis.e2e-spec.ts (129.532 s)
+  ● Request analysis in the reference process (e2e) › Leistung nicht im Katalog (z. B. Küche streichen): die Kundschaft wird nicht nach dem Produkt gefragt, das sie längst genannt hat – Zuordnung und Preis sind Sache eines Mitarbeiters
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 201 |[39m   })[33m;[39m
+     [90m 202 |[39m
+    [31m[1m>[22m[39m[90m 203 |[39m   it([32m'Leistung nicht im Katalog (z. B. Küche streichen): die Kundschaft wird nicht nach dem Produkt gefragt, das sie längst genannt hat – Zuordnung und Preis sind Sache eines Mitarbeiters'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 204 |[39m     [36mconst[39m tenantId [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 205 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m submitRequest(
+     [90m 206 |[39m       tenantId[33m,[39m[0m
+
+      at request-analysis.e2e-spec.ts:203:3
+      at Object.<anonymous> (request-analysis.e2e-spec.ts:33:1)
+
+  ● Request analysis in the reference process (e2e) › Antwort der Kundschaft: Antworten auf die gezielten Fragen und die Terminwahl werden zugeordnet; ohne Ergebnis des Termins gibt es kein Angebot
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 245 |[39m   })[33m;[39m
+     [90m 246 |[39m
+    [31m[1m>[22m[39m[90m 247 |[39m   it([32m'Antwort der Kundschaft: Antworten auf die gezielten Fragen und die Terminwahl werden zugeordnet; ohne Ergebnis des Termins gibt es kein Angebot'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 248 |[39m     [36mconst[39m tenantId [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 249 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m submitRequest(tenantId)[33m;[39m
+     [90m 250 |[39m     [36mconst[39m [intent] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m[0m
+
+      at request-analysis.e2e-spec.ts:247:3
+      at Object.<anonymous> (request-analysis.e2e-spec.ts:33:1)
+
+[31m[Nest] 4852  - [39m29.10.2026, 09:04:06 [31m  ERROR[39m [38;5;3m[OrchestratorService] [39m[31mnode extract2 of case 5b72b4f5-af12-4124-aa36-72b6f7ae0412 failed unexpectedly: Error: {"is_panic":false,"message":"Engine is not yet connected.","backtrace":"Backtrace [{ fn: \"napi_register_module_v1\" }, { fn: \"napi_register_module_v1\" }, { fn: \"napi_register_module_v1\" }, { fn: \"napi_register_module_v1\" }, { fn: \"napi_register_module_v1\" }, { fn: \"napi_register_mod[39m
+PASS test/blueprint-fit.e2e-spec.ts (51.82 s)
+PASS test/shadow-plan.e2e-spec.ts (23.849 s)
+FAIL test/platform-control.e2e-spec.ts (41.052 s)
+  ● Platform control: connectors, features, kill switches, tenant lifecycle (e2e) › OCF-05/06 – Kill Switches und Konfigurationspräzedenz › OCF-06: Ein laufender Fall nach dem Kill Switch landet in einem sicheren, definierten Zustand – wartet auf Freigabe, nichts wird versendet, kein falscher Erfolg
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 241 |[39m     })[33m;[39m
+     [90m 242 |[39m
+    [31m[1m>[22m[39m[90m 243 |[39m     it([32m'OCF-06: Ein laufender Fall nach dem Kill Switch landet in einem sicheren, definierten Zustand – wartet auf Freigabe, nichts wird versendet, kein falscher Erfolg'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 244 |[39m       [36mconst[39m llm [33m=[39m app[33m.[39m[36mget[39m[33m<[39m[33mMockLLMProvider[39m[33m>[39m([33mLLM_PROVIDER[39m)[33m;[39m
+     [90m 245 |[39m       [36mconst[39m outbound [33m=[39m app[33m.[39m[36mget[39m[33m<[39m[33mOutboundMailPort[39m[33m>[39m([33mOUTBOUND_MAIL[39m)[33m;[39m
+     [90m 246 |[39m       [36mconst[39m send [33m=[39m jest[33m.[39mspyOn(outbound[33m,[39m [32m'send'[39m)[33m.[39mmockResolvedValue({ providerMessageId[33m:[39m [32m'gm-ctl-1'[39m[33m,[39m threadId[33m:[39m [32m'thr-ctl'[39m[33m,[39m rfcMessageId[33m:[39m [32m'<sent-ctl@mail.example>'[39m[33m,[39m [36mfrom[39m[33m:[39m [32m'firma@e2e.example'[39m[33m,[39m executionMode[33m:[39m [32m'SIMULATED'[39m } [36mas[39m never)[33m;[39m[0m
+
+      at platform-control.e2e-spec.ts:243:5
+      at platform-control.e2e-spec.ts:218:3
+      at Object.<anonymous> (platform-control.e2e-spec.ts:29:1)
+
+PASS test/family-reply.e2e-spec.ts (20.757 s)
+PASS test/plan-retry.e2e-spec.ts (22.628 s)
+PASS test/case-orchestration-view.e2e-spec.ts (25.365 s)
+PASS test/plan-outcomes.e2e-spec.ts (44.767 s)
+PASS test/platform-support-sessions.e2e-spec.ts (27.88 s)
+PASS test/case-limits.e2e-spec.ts (16.418 s)
+PASS test/platform-security-boundary.e2e-spec.ts (26.434 s)
+PASS test/platform-cost-guardrails.e2e-spec.ts (15.533 s)
+PASS test/fact-correction.e2e-spec.ts (17.872 s)
+PASS test/attention.e2e-spec.ts (18.242 s)
+PASS test/case-facts-and-correlation.e2e-spec.ts (16.312 s)
+PASS test/failure-propagation.e2e-spec.ts (12.176 s)
+PASS test/internal-order.e2e-spec.ts (14.487 s)
+PASS test/platform-ai-governance.e2e-spec.ts (14.118 s)
+(node:4852) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS test/triage-resilience.e2e-spec.ts (17.458 s)
+  ● Console
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at pdfManagerReady (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6281)
+
+    console.warn
+      Warning: Invalid PDF header version: test
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at PDFDocument.checkHeader (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:60269)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75313)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4233)
+      at ../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:6441
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/platform-mfa.e2e-spec.ts (14.801 s)
+PASS test/adhoc-completion.e2e-spec.ts (14.394 s)
+PASS test/intake-decisions.e2e-spec.ts (12.608 s)
+PASS test/platform-work-backlog.e2e-spec.ts (9.274 s)
+PASS test/document-verification.e2e-spec.ts (9.778 s)
+PASS test/approval-reject-reason.e2e-spec.ts (12.006 s)
+PASS test/finance-workflow.e2e-spec.ts (11.558 s)
+PASS test/password-change.e2e-spec.ts (16.198 s)
+PASS test/hubspot.e2e-spec.ts (13.215 s)
+PASS test/setup-assistant.e2e-spec.ts (15.725 s)
+PASS test/intake-workflow.e2e-spec.ts (12.042 s)
+  ● Console
+
+    console.warn
+      Warning: Indexing all PDF objects
+
+      at warn$1 (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:1:6373)
+      at XRef.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:37770)
+      at PDFDocument.parse (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:59371)
+      at LocalPdfManager.ensure (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:76353)
+      at LocalPdfManager.ensureDoc (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75183)
+      at LocalPdfManager.initDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:31:75388)
+      at loadDocument (../../../node_modules/.pnpm/unpdf@1.9.0/node_modules/unpdf/dist/pdfjs.mjs:47:4225)
+
+PASS test/workflow-approval-resume.e2e-spec.ts (8.937 s)
+PASS test/attachment-text.e2e-spec.ts (13.422 s)
+PASS test/branding.e2e-spec.ts (8.076 s)
+PASS test/customer-record.e2e-spec.ts (13.047 s)
+PASS test/workflow-orchestration.e2e-spec.ts (7.189 s)
+PASS test/profile-suggestion.e2e-spec.ts (5.791 s)
+PASS test/integrations.e2e-spec.ts (7.505 s)
+PASS test/copilot.e2e-spec.ts (10.188 s)
+PASS test/reports-interventions.e2e-spec.ts (6.119 s)
+PASS test/platform-runtime.e2e-spec.ts (8.543 s)
+PASS test/organization.e2e-spec.ts (10.124 s)
+PASS test/api-keys.e2e-spec.ts (9.78 s)
+PASS test/auth.e2e-spec.ts (11.511 s)
+PASS test/false-success-repair.e2e-spec.ts (8.485 s)
+PASS test/platform-runtime-alerts.e2e-spec.ts (10.009 s)
+PASS test/webhook-idempotency.e2e-spec.ts (16.417 s)
+PASS test/sales-workflow.e2e-spec.ts (8.89 s)
+PASS test/ui-projections.e2e-spec.ts (11.177 s)
+PASS test/agent-evaluation.e2e-spec.ts (6.069 s)
+PASS test/tenant-admin.e2e-spec.ts (10.417 s)
+PASS test/lists-search-automation.e2e-spec.ts (8.86 s)
+PASS test/app.e2e-spec.ts (6.949 s)
+PASS test/mock-crm-durability.e2e-spec.ts (18.277 s)
+PASS test/retention.e2e-spec.ts (10.017 s)
+PASS test/platform-provision.e2e-spec.ts (8.075 s)
+PASS test/policy.e2e-spec.ts (7.365 s)
+PASS test/ai-providers.e2e-spec.ts (7.352 s)
+PASS test/capability-contracts.e2e-spec.ts (7.055 s)
+PASS test/idempotency-key.e2e-spec.ts (7.265 s)
+PASS test/workflow-async-trigger.e2e-spec.ts (7.637 s)
+PASS test/intake-resilience.e2e-spec.ts (7.968 s)
+PASS test/dashboard.e2e-spec.ts (7.475 s)
+PASS test/auth-cookie.e2e-spec.ts (10.614 s)
+PASS test/workflow-retry.e2e-spec.ts (6.99 s)
+PASS test/rls-join-tables.e2e-spec.ts (7.006 s)
+PASS test/tenant-concurrency.e2e-spec.ts
+PASS test/throttler-redis-storage.e2e-spec.ts
+
+Summary of all failing tests
+FAIL ./process-hardening.e2e-spec.ts (119.321 s)
+  ● Process hardening (e2e) › mail is sent but the local confirmation fails → OUTCOME_UNKNOWN, never resent, reconciled by a person
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 250 |[39m   })[33m;[39m
+     [90m 251 |[39m
+    [31m[1m>[22m[39m[90m 252 |[39m   it([32m'mail is sent but the local confirmation fails → OUTCOME_UNKNOWN, never resent, reconciled by a person'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 253 |[39m     [36mconst[39m { tenantId } [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 254 |[39m     [36mconst[39m providerId [33m=[39m [32m`dup-${randomUUID()}`[39m[33m;[39m
+     [90m 255 |[39m     nextProviderId [33m=[39m () [33m=>[39m providerId[33m;[39m[0m
+
+      at process-hardening.e2e-spec.ts:252:3
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:32:1)
+
+  ● Process hardening (e2e) › a connection that loses the send permission before execution blocks the step; nothing is sent
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 279 |[39m   })[33m;[39m
+     [90m 280 |[39m
+    [31m[1m>[22m[39m[90m 281 |[39m   it([32m'a connection that loses the send permission before execution blocks the step; nothing is sent'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 282 |[39m     [36mconst[39m { tenantId[33m,[39m integrationId } [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 283 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m completeRequest(tenantId)[33m;[39m
+     [90m 284 |[39m     [36mconst[39m [intent] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m[0m
+
+      at process-hardening.e2e-spec.ts:281:3
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:32:1)
+
+  ● Process hardening (e2e) › a replan after a confirmed send keeps the receipt, repeats nothing and records what changed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"subject": "Ihr Angebot ANG-2026-0001", "to": "petra.lang@lang-metall.example"}, {"subject": "Re: Angebot Tür", "to": "petra.lang@lang-metall.example"}]
+
+    [0m [90m 337 |[39m     [36mconst[39m [clarification] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m
+     [90m 338 |[39m     [36mawait[39m commands[33m.[39mexecute(approver(tenantId)[33m,[39m caseId[33m,[39m command([32m'APPROVE_ACTION'[39m[33m,[39m ([36mawait[39m caseOf(tenantId[33m,[39m caseId))[33m.[39mrevision[33m,[39m { intentId[33m:[39m clarification[33m![39m[33m.[39mid }))[33m;[39m
+    [31m[1m>[22m[39m[90m 339 |[39m     expect(sent)[33m.[39mtoHaveLength([35m1[39m)[33m;[39m
+     [90m     |[39m                  [31m[1m^[22m[39m
+     [90m 340 |[39m
+     [90m 341 |[39m     [36mawait[39m commands[33m.[39mexecute(approver(tenantId)[33m,[39m caseId[33m,[39m command([32m'REPLAN'[39m[33m,[39m ([36mawait[39m caseOf(tenantId[33m,[39m caseId))[33m.[39mrevision[33m,[39m {}))[33m;[39m
+     [90m 342 |[39m[0m
+
+      at Object.<anonymous> (process-hardening.e2e-spec.ts:339:18)
+
+FAIL ./request-analysis.e2e-spec.ts (129.532 s)
+  ● Request analysis in the reference process (e2e) › Leistung nicht im Katalog (z. B. Küche streichen): die Kundschaft wird nicht nach dem Produkt gefragt, das sie längst genannt hat – Zuordnung und Preis sind Sache eines Mitarbeiters
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 201 |[39m   })[33m;[39m
+     [90m 202 |[39m
+    [31m[1m>[22m[39m[90m 203 |[39m   it([32m'Leistung nicht im Katalog (z. B. Küche streichen): die Kundschaft wird nicht nach dem Produkt gefragt, das sie längst genannt hat – Zuordnung und Preis sind Sache eines Mitarbeiters'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 204 |[39m     [36mconst[39m tenantId [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 205 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m submitRequest(
+     [90m 206 |[39m       tenantId[33m,[39m[0m
+
+      at request-analysis.e2e-spec.ts:203:3
+      at Object.<anonymous> (request-analysis.e2e-spec.ts:33:1)
+
+  ● Request analysis in the reference process (e2e) › Antwort der Kundschaft: Antworten auf die gezielten Fragen und die Terminwahl werden zugeordnet; ohne Ergebnis des Termins gibt es kein Angebot
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 245 |[39m   })[33m;[39m
+     [90m 246 |[39m
+    [31m[1m>[22m[39m[90m 247 |[39m   it([32m'Antwort der Kundschaft: Antworten auf die gezielten Fragen und die Terminwahl werden zugeordnet; ohne Ergebnis des Termins gibt es kein Angebot'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m   [31m[1m^[22m[39m
+     [90m 248 |[39m     [36mconst[39m tenantId [33m=[39m [36mawait[39m newTenant()[33m;[39m
+     [90m 249 |[39m     [36mconst[39m caseId [33m=[39m [36mawait[39m submitRequest(tenantId)[33m;[39m
+     [90m 250 |[39m     [36mconst[39m [intent] [33m=[39m [36mawait[39m ledger[33m.[39mopenIntents(tenantId[33m,[39m caseId)[33m;[39m[0m
+
+      at request-analysis.e2e-spec.ts:247:3
+      at Object.<anonymous> (request-analysis.e2e-spec.ts:33:1)
+
+FAIL ./platform-control.e2e-spec.ts (41.052 s)
+  ● Platform control: connectors, features, kill switches, tenant lifecycle (e2e) › OCF-05/06 – Kill Switches und Konfigurationspräzedenz › OCF-06: Ein laufender Fall nach dem Kill Switch landet in einem sicheren, definierten Zustand – wartet auf Freigabe, nichts wird versendet, kein falscher Erfolg
+
+    thrown: "Exceeded timeout of 20000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+    [0m [90m 241 |[39m     })[33m;[39m
+     [90m 242 |[39m
+    [31m[1m>[22m[39m[90m 243 |[39m     it([32m'OCF-06: Ein laufender Fall nach dem Kill Switch landet in einem sicheren, definierten Zustand – wartet auf Freigabe, nichts wird versendet, kein falscher Erfolg'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 244 |[39m       [36mconst[39m llm [33m=[39m app[33m.[39m[36mget[39m[33m<[39m[33mMockLLMProvider[39m[33m>[39m([33mLLM_PROVIDER[39m)[33m;[39m
+     [90m 245 |[39m       [36mconst[39m outbound [33m=[39m app[33m.[39m[36mget[39m[33m<[39m[33mOutboundMailPort[39m[33m>[39m([33mOUTBOUND_MAIL[39m)[33m;[39m
+     [90m 246 |[39m       [36mconst[39m send [33m=[39m jest[33m.[39mspyOn(outbound[33m,[39m [32m'send'[39m)[33m.[39mmockResolvedValue({ providerMessageId[33m:[39m [32m'gm-ctl-1'[39m[33m,[39m threadId[33m:[39m [32m'thr-ctl'[39m[33m,[39m rfcMessageId[33m:[39m [32m'<sent-ctl@mail.example>'[39m[33m,[39m [36mfrom[39m[33m:[39m [32m'firma@e2e.example'[39m[33m,[39m executionMode[33m:[39m [32m'SIMULATED'[39m } [36mas[39m never)[33m;[39m[0m
+
+      at platform-control.e2e-spec.ts:243:5
+      at platform-control.e2e-spec.ts:218:3
+      at Object.<anonymous> (platform-control.e2e-spec.ts:29:1)
+
+
+Test Suites: 3 failed, 7 skipped, 75 passed, 78 of 85 total
+Tests:       6 failed, 58 skipped, 624 passed, 688 total
+Snapshots:   0 total
+Time:        2237.698 s, estimated 2914 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

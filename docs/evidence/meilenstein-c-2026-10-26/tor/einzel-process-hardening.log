@@ -1,0 +1,21 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/process-hardening.e2e-spec.ts (76.442 s)
+  Process hardening (e2e)
+    √ a thrown exception (not a returned error) fails the node, the case and the intake status the same way (2638 ms)
+    √ the same approval delivered twice, and two approvals decided at the same moment, send exactly once (11297 ms)
+    √ an event that arrives after completion is recorded, consumed and changes nothing (10331 ms)
+    √ mail is sent but the local confirmation fails → OUTCOME_UNKNOWN, never resent, reconciled by a person (11031 ms)
+    √ a connection that loses the send permission before execution blocks the step; nothing is sent (10650 ms)
+    √ without a connected model the extraction fails visibly and nothing is guessed (3424 ms)
+    √ a price that changed after pricing is caught when the quote is created (no stale price slips through) (933 ms)
+    √ a replan after a confirmed send keeps the receipt, repeats nothing and records what changed (7783 ms)
+    √ the replan limit sends the case to review instead of looping (10306 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        76.582 s, estimated 126 s
+Ran all test suites matching /process-hardening/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

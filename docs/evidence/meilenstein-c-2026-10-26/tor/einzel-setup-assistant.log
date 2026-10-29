@@ -1,0 +1,17 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/setup-assistant.e2e-spec.ts (14.637 s)
+  Einrichtungsassistent (e2e)
+    √ ohne Anmeldung gibt es nichts; ein Betrieb sieht nur seinen eigenen Stand (93 ms)
+    √ ein neuer Betrieb: nichts eingerichtet, ORBIT nimmt noch keine Anfragen entgegen und sagt, warum (912 ms)
+    √ Schritt für Schritt: Profil, Mitarbeitende, Postfach, Regeln – danach startklar; der Kalender erweitert, was ORBIT übernimmt (1830 ms)
+    √ eine getrennte Verbindung zählt nicht als verbunden (591 ms)
+    √ Mandantentrennung: der Stand eines Betriebs ändert sich nicht durch die Einrichtung eines anderen (1010 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        14.779 s, estimated 18 s
+Ran all test suites matching /setup-assistant/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

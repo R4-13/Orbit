@@ -1,0 +1,13 @@
+PASS test/case-split.e2e-spec.ts                      08:40-08:43 183,268s | CPU Ç~   82 | Anteil>=95%:  25% | frei Ç~3.894 MB | ScribenioPG Ç~    9%
+PASS test/request-handoff.e2e-spec.ts                 08:43-08:45 111,081s | CPU Ç~   51 | Anteil>=95%:   0% | frei Ç~3.719 MB | ScribenioPG Ç~    9%
+PASS test/lead-sync.e2e-spec.ts                       08:45-08:48 154,848s | CPU Ç~   70 | Anteil>=95%:   0% | frei Ç~3.217 MB | ScribenioPG Ç~    7%
+PASS test/adaptive-orchestration.e2e-spec.ts          08:48-08:50 118,098s | CPU Ç~   77 | Anteil>=95%:   0% | frei Ç~3.206 MB | ScribenioPG Ç~   19%
+PASS test/autonomy-capabilities.e2e-spec.ts           08:50-08:51 98,173s | CPU Ç~   74 | Anteil>=95%:   0% | frei Ç~3.187 MB | ScribenioPG Ç~    9%
+PASS test/goal-work.e2e-spec.ts                       08:51-08:52 62,583s | CPU Ç~   72 | Anteil>=95%:   0% | frei Ç~3.149 MB | ScribenioPG Ç~   18%
+PASS test/live-reconciliation.e2e-spec.ts             08:52-08:54 77,886s | CPU Ç~   69 | Anteil>=95%:   0% | frei Ç~3.216 MB | ScribenioPG Ç~   12%
+FAIL test/process-hardening.e2e-spec.ts               08:54-08:56 119,321s | CPU Ç~   73 | Anteil>=95%:  25% | frei Ç~3.172 MB | ScribenioPG Ç~   18%
+PASS test/autonomy-assist.e2e-spec.ts                 08:56-08:57 93,408s | CPU Ç~   97 | Anteil>=95%:  67% | frei Ç~2.358 MB | ScribenioPG Ç~   15%
+PASS test/reference-process.e2e-spec.ts               08:57-08:59 89,776s | CPU Ç~   84 | Anteil>=95%:  33% | frei Ç~2.399 MB | ScribenioPG Ç~   20%
+PASS test/process-orchestration.e2e-spec.ts           08:59-09:00 80,488s | CPU Ç~   92 | Anteil>=95%:  50% | frei Ç~2.272 MB | ScribenioPG Ç~   22%
+FAIL test/request-analysis.e2e-spec.ts                09:00-09:02 129,532s | CPU Ç~   93 | Anteil>=95%:  75% | frei Ç~2.352 MB | ScribenioPG Ç~    8%
+PASS test/plan-outcomes.e2e-spec.ts                   09:05-09:06 44,767s | CPU Ç~   56 | Anteil>=95%:   0% | frei Ç~2.931 MB | ScribenioPG Ç~   20%

@@ -1,0 +1,26 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/customer-record.e2e-spec.ts (12.194 s)
+  Customer record: look up, create or ask, re-check (e2e)
+    Hilfsfunktionen
+      √ Namen werden nur aufgeteilt, wenn Vor- und Nachname erkennbar sind – nichts wird geraten (7 ms)
+      √ die Wiederholungsprüfung wird seltener und bleibt begrenzt (1 ms)
+    Kleiner Betrieb: ORBITs eigene Kontakte sind der Kundenstamm
+      √ ein unbekannter Absender mit vollständigem Namen wird von ORBIT angelegt – und beim nächsten Mal als bekannt gefunden (328 ms)
+      √ ohne erkennbaren Namen legt ORBIT nichts an: eine Aufgabe bittet einen Menschen – und ORBIT merkt selbst, wenn der Eintrag später da ist (352 ms)
+      √ verlangen die Regeln eine Freigabe für neue Kontakte, legt ORBIT nichts an und bittet einen Menschen (199 ms)
+    Größerer Betrieb: ein führendes System (CRM/ERP), in das ORBIT nicht schreibt
+      √ ist das System nicht erreichbar, ist das Ergebnis „nicht erreichbar“ – nicht „unbekannt“; nichts wird angelegt (66 ms)
+      √ sobald das System wieder antwortet, wird neu geprüft: kennt es den Kunden, ist der Fall erledigt (139 ms)
+      √ fehlt der Kunde im führenden System, bittet ORBIT einen Menschen, ihn dort anzulegen – es schreibt nicht daneben in die eigenen Kontakte (114 ms)
+      √ die Wiederholungsabstände wachsen: 10, 30, 60, dann alle 120 Minuten (381 ms)
+    Menschen informieren und eskalieren, wenn nichts passiert
+      √ ein fehlender Kundeneintrag meldet sich bei der zuständigen Person, erinnert und löst sich, sobald der Eintrag da ist (854 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        12.322 s
+Ran all test suites matching /customer-record/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -1,0 +1,51 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+FAIL test/case-split.e2e-spec.ts (30.294 s)
+  Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e)
+    × die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort, auch wenn die Datenbank die Zeilen in anderer Reihenfolge liefert (Ursache des einmaligen Fehlers im Gesamtlauf: ohne Sortierung bekam jeder Teilvorgang die Neuplanung des anderen und die „fremde“ Meldung entfiel) (19896 ms)
+    ○ skipped zwei Anliegen → zwei verknüpfte Teilvorgänge mit eigenem Ziel; jedes erreicht sein Ziel, der Hauptvorgang schließt mit beiden
+    ○ skipped ein Teilvorgang liest die Angaben aus der Nachricht des Hauptvorgangs (Fund Messlauf 21.10.: „Es fehlen Angaben: messageId“ blockierte die Auslese jedes Teilvorgangs)
+    ○ skipped der Hauptvorgang bleibt offen, solange ein Teilvorgang nicht erledigt ist
+    ○ skipped ohne das Betreiber-Flag wird nicht aufgeteilt – der Vorgang läuft wie bisher als ein Vorgang
+    ○ skipped Wollen beide Teilvorgänge den Eingang bestätigen, geht genau eine Bestätigung hinaus – in der gemeinsamen Antwort (Meilenstein C; zuvor Wirkungsschlüssel FX-07)
+    ○ skipped fünf Anliegen: vier werden bearbeitet, das fünfte bleibt ausdrücklich offen und wird gestartet, sobald ein Platz frei ist – der Hauptvorgang schließt erst, wenn alle fünf berücksichtigt sind
+    ○ skipped eine Antwort mit Angaben für mehrere Teilvorgänge: sie hängt am Mailfaden eines Teilvorgangs, geht aber nicht für die übrigen verloren
+    ○ skipped eine Antwort ohne Bezug zu einer der beiden offenen Rückfragen („Ja, bitte.“): die Teilvorgänge setzen nicht auf Verdacht fort, die Kundschaft wird gezielt zurückgefragt, die Nachricht bleibt nicht nur am Hauptvorgang liegen
+    ○ skipped eine Antwort erreicht auch einen Teilvorgang, der gerade nicht wartet (z. B. auf eine Freigabe): er startet nicht neu, aber die Antwort ist ihm nachvollziehbar zugeordnet und für die nächste Bearbeitung lesbar
+    Erkennung und Abgrenzung der Anliegen unabhängig vom Merkmal der Einstufung
+      ○ skipped die Einstufung nennt nur ein Anliegen (kein MULTIPLE_INTENTS): die Zerlegung erkennt drei – eines ergänzt, weil seine Frage sonst keinem Anliegen zugeordnet wäre
+      ○ skipped Angaben werden nicht ungeprüft anderen Teilvorgängen zugeordnet: jede Angabe gehört zu ihrem Anliegen oder zum gemeinsamen Kontext, der Rest bleibt am Hauptvorgang
+      ○ skipped der Teilvorgang plant mit seinem Auszug: sein Anliegen und der gemeinsame Kontext stehen vorn, die ganze Nachricht nur als Verständnishilfe
+      ○ skipped erfundene Auszüge zählen nicht als Beleg
+
+  ● Aufteilung mehrerer Anliegen (FX-02/FX-06, e2e) › die Teilvorgänge setzen in der Reihenfolge ihrer Anlage fort, auch wenn die Datenbank die Zeilen in anderer Reihenfolge liefert (Ursache des einmaligen Fehlers im Gesamtlauf: ohne Sortierung bekam jeder Teilvorgang die Neuplanung des anderen und die „fremde“ Meldung entfiel)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+    -   "COMPLETED",
+    -   "COMPLETED",
+    +   "MANUAL_REVIEW",
+    +   "MANUAL_REVIEW",
+      ]
+
+    [0m [90m 394 |[39m     })[33m;[39m
+     [90m 395 |[39m     [36mconst[39m after [33m=[39m [36mawait[39m children(tenantId[33m,[39m result[33m.[39m[36mcase[39m[33m![39m[33m.[39mid)[33m;[39m
+    [31m[1m>[22m[39m[90m 396 |[39m     expect(after[33m.[39mmap((k) [33m=>[39m k[33m.[39morchestrationStatus))[33m.[39mtoEqual([[32m'COMPLETED'[39m[33m,[39m [32m'COMPLETED'[39m])[33m;[39m
+     [90m     |[39m                                                     [31m[1m^[22m[39m
+     [90m 397 |[39m     [36mconst[39m notes [33m=[39m [36mawait[39m [33mPromise[39m[33m.[39mall(after[33m.[39mmap((k) [33m=>[39m scoped[33m.[39mprocessPlanNode[33m.[39mfindMany({ where[33m:[39m { plan[33m:[39m { caseId[33m:[39m k[33m.[39mid[33m,[39m status[33m:[39m [32m'ACTIVE'[39m }[33m,[39m nodeKey[33m:[39m [32m'notify'[39m }[33m,[39m select[33m:[39m { definition[33m:[39m [36mtrue[39m } })))[33m;[39m
+     [90m 398 |[39m     expect([33mJSON[39m[33m.[39mstringify(notes[[35m0[39m]))[33m.[39mtoContain([32m'Standort geklärt.'[39m)[33m;[39m [90m// der erste Teilvorgang (Standort) erhielt die erste Neuplanung[39m
+     [90m 399 |[39m     expect([33mJSON[39m[33m.[39mstringify(notes[[35m1[39m]))[33m.[39mtoContain([32m'Zugang geklärt.'[39m)[33m;[39m[0m
+
+      at Object.<anonymous> (case-split.e2e-spec.ts:396:53)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 13 skipped, 14 total
+Snapshots:   0 total
+Time:        30.474 s, estimated 40 s
+Ran all test suites matching /case-split/i with tests matching "Reihenfolge ihrer Anlage".
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

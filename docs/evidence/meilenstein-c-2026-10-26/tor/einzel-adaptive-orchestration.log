@@ -1,0 +1,22 @@
+[e2e] Datenbank orbit_e2e angelegt.
+[e2e] Demo-Daten in orbit_e2e angelegt.
+[e2e] orbit_e2e migriert; Test-Redis Port 16379, DB 0; Jest startet.
+PASS test/adaptive-orchestration.e2e-spec.ts (109.267 s)
+  Adaptive orchestration (Amendment 02 v1.2, e2e)
+    √ AD-03/AD-04 (BP-32/33/34): fehlende Angabe nur beim Kunden → ORBIT fragt autonom nach, wartet, setzt DENSELBEN Fall bei der Antwort ohne internen Benutzer fort – bis zum nächsten verifizierten fachlichen Zustand (14890 ms)
+    √ AD-05/AD-12 (BP-39): Teilantwort → nur die verbleibende Angabe bleibt offen; das Limit für automatische Rückfragen (1) ist erreicht → Prüfung statt Endlosschleife, kein Angebot (9466 ms)
+    √ BP-39: erreicht ein Vorgang das Aktionslimit des Blueprints (3: Extraktion, Entwurf und Versand der Rückfrage), wird keine weitere Aktion vorbereitet – Prüfung mit verständlichem Grund statt stiller Fortsetzung (7534 ms)
+    √ AD-13: die Preisquelle ist vorübergehend nicht erreichbar → der Schritt wird mit Wartezeit wiederholt, kein Mensch wird belästigt, nichts wird erfunden – danach geht derselbe Fall weiter (9713 ms)
+    √ §29.5 Notschalter KI-Planer und Neuplanung: die Neuplanung fällt auf den festen Referenzgraphen zurück, nichts wird erneut versendet, es gibt genau einen aktiven Plan – und der Fall setzt bei der Antwort fort (12923 ms)
+    √ §29.5 Connector-Sperre während einer offenen Freigabe: die Freigabe führt nichts aus, der Vorgang wartet mit verständlichem Grund; nach Aufhebung wird genau einmal gesendet (16004 ms)
+    √ AD-06: widersprüchliche Antwort → Konflikt sichtbar, keine automatische riskante Fortsetzung, kein Angebot (8310 ms)
+    √ FA-05 (Messlatte 18.10.): eine spätere Korrektur eines früher genannten, nicht erfragten Werts geht nicht verloren – sie wird als sichtbarer Widerspruch erfasst, nie still überschrieben (8413 ms)
+    √ AD-07: Policy REQUIRE_APPROVAL → die Vorbereitung läuft autonom, die Wirkung wartet auf die gebundene Freigabe (nichts versendet) (4962 ms)
+    √ BP-35: die menschliche Anfrage ist konkret – Grund, Frage und zulässige Wirkungen (HumanInteractionRequest als Projektion, keine zweite Tabelle) (5889 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        109.425 s, estimated 182 s
+Ran all test suites matching /adaptive-orchestration/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
