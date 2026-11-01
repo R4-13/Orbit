@@ -4,6 +4,8 @@ Auftrag des Auftraggebers nach Anerkennung des Qualitätstors auf `f47bfb0` und 
 
 > Stand: Code `765355d` (Tor grün, eingesetzt), C1-Live-Lauf einmal durchgeführt und bereinigt. Zusammenfassung in Abschnitt 1a; Einschränkungen des Live-Laufs in Abschnitt 6.
 
+> **Abschluss (01.11.2026):** Der Auftraggeber hat Meilenstein C und FN-14 auf `765355d` im vereinbarten Entwicklungsumfang als abgeschlossen anerkannt; Umfang und Nachweisgrenzen in `MEILENSTEIN_C_ABSCHLUSS_2026-11-01.md`. Die Einschränkungen in Abschnitt 6 bleiben bestehen: der freie Planwechsel wurde im Live-Lauf nicht ausgelöst und ist nicht live bestätigt.
+
 ## 1a. Ergebnis in Kürze
 
 | Punkt | Ergebnis |
@@ -84,7 +86,7 @@ Bereinigung ID-genau nach Sicherung (`backups/orbit-20261029-211157.dump`): 4 Vo
 
 ## 7. Offene Punkte nach dieser Nachbesserung
 
-* **FN-14: umgesetzt und getestet; im Live-Lauf teilweise belegt** (Abschnitt 6, Einschränkung 1).
+* **FN-14: umgesetzt, getestet und am 01.11.2026 vom Auftraggeber abgeschlossen**; im Live-Lauf teilweise belegt (Abschnitt 6, Einschränkung 1 bleibt).
 * **FN-15** (Zeitüberschreitungen bei hoher Rechnerlast) offen; „ruhiger Rechner“ als Startbedingung des Tors ergänzt.
 * **FN-16** (Verbesserungswunsch, getrennt geführt): erfragte kombinierte Angaben in einzelne Fakten zerlegen (z. B. Heizungsart); Hinweise des Hauptvorgangs für übergebene Anliegen differenzieren.
 * **Keine Freigabe für unbeaufsichtigten Betrieb, kein Pilot.**

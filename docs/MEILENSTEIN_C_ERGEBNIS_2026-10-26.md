@@ -1,5 +1,7 @@
 # Meilenstein C – Ergebnis (26.10.2026)
 
+> **Aktueller Stand (01.11.2026):** Meilenstein C ist auf `765355d` im vereinbarten Entwicklungsumfang **abgeschlossen** – siehe `MEILENSTEIN_C_ABSCHLUSS_2026-11-01.md`. Dieser Bericht bleibt als Stand auf `ae423fb` mit allen damaligen Einschränkungen erhalten; Aussagen zu offenen Punkten (C1-Endstand, Zuordnung, Wortlautmaßstab) sind durch die Nachbesserungen überholt.
+
 Auftrag: Nachrichten mit mehreren Anliegen — alle Anliegen erhalten und getrennt bearbeiten, Neuplanung der Teilvorgänge zuverlässig machen (einschließlich FN-09), zusammengehörige Rückfragen und Ergebnisse zu **einer** verständlichen Antwort bündeln; keine neuen Fähigkeiten für Rechnungsversand, Kalenderänderung oder Angebotserstellung. Die vor der Umsetzung festgelegten Kriterien und Erwartungen stehen in `docs/MEILENSTEIN_C_2026-10-26.md` (K1–K5, C1–C3); sie wurden nicht geändert. **Technische Prüfungen und fachliche Abnahme sind getrennt ausgewiesen.**
 
 ## 1. Ergebnis in Kürze

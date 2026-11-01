@@ -1,5 +1,7 @@
 # Meilenstein C – Nachbesserung: Ergebnis (29.10.2026)
 
+> **Aktueller Stand (01.11.2026):** Die hier als „nicht behoben“ geführten Abweichungen 1–5 (FN-14) sind in `MEILENSTEIN_C_FN14_2026-10-29.md` zusammenhängend behoben; Meilenstein C ist auf `765355d` im vereinbarten Umfang **abgeschlossen** (`MEILENSTEIN_C_ABSCHLUSS_2026-11-01.md`). Die Beschreibung der Läufe auf `f47bfb0` unten ist historisch und bleibt unverändert.
+
 Auftrag des Auftraggebers nach dem Ergebnisbericht vom 26.10.2026 (`MEILENSTEIN_C_ERGEBNIS_2026-10-26.md`): drei begrenzte Punkte, **keine** neue breite Abnahme, B nicht erneut abnehmen, Testgrenzen unverändert (nur Tom und Musterwerk, keine Kalenderbuchung, keine neuen Fachintegrationen, keine Lockerung der Autonomieregeln, keine zusätzlichen Schattenplanungen), Qualitätstor vollständig beibehalten, Zeitlimits nicht pauschal erhöhen.
 
 ## 1. Ergebnis in Kürze
@@ -113,4 +115,4 @@ Der Test „eine Antwort mit Angaben für mehrere Teilvorgänge …“ scheitert
 
 ## 8. Offene Punkte nach dieser Nachbesserung
 
-Siehe `OPEN_DEVELOPMENT_ITEMS.md`: FN-13 erledigt; **FN-14** Abweichungen 1–5 aus Abschnitt 3 (nicht behoben); **FN-15** ungeklärte Ursache der Zeitüberschreitungen im Gesamtlauf (ein sicheres Grün braucht derzeit reduzierte Last, d. h. gestoppte Live-Dienste). **Keine Freigabe für unbeaufsichtigten Betrieb, kein Pilot.**
+Siehe `OPEN_DEVELOPMENT_ITEMS.md`: FN-13 erledigt; **FN-14** Abweichungen 1–5 aus Abschnitt 3 (*Stand 29.10.: nicht behoben; seit 01.11.2026 abgeschlossen, siehe oben*); **FN-15** ungeklärte Ursache der Zeitüberschreitungen im Gesamtlauf (ein sicheres Grün braucht derzeit reduzierte Last, d. h. gestoppte Live-Dienste). **Keine Freigabe für unbeaufsichtigten Betrieb, kein Pilot.**
