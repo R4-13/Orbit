@@ -1,5 +1,7 @@
 # Offene Arbeiten nach Meilenstein C – priorisierte Übersicht (Planungsvorschlag, 01.11.2026)
 
+> **Verdichtet und teilweise überholt durch** [`PILOT_VORBEREITUNGSPAKET_2026-11-01.md`](PILOT_VORBEREITUNGSPAKET_2026-11-01.md) (konkreter Pilotumfang, angerechnete Nachweise, Aufteilung vor/während/nach, D9-Prüfplan). Diese Übersicht bleibt die allgemeine Backlog-Sicht; für die nächsten Schritte gilt das Paket.
+
 **Zweck:** kurze Entscheidungsgrundlage nach dem Abschluss von Meilenstein C (`MEILENSTEIN_C_ABSCHLUSS_2026-11-01.md`). Abgeleitet **ausschließlich aus dem vorhandenen Backlog** (`OPEN_DEVELOPMENT_ITEMS.md`, Punkt-IDs dort), dem Konzept `KONZEPT_FLEXIBLE_AUTONOMIE_2026-10-18.md` (§9 Einführungsstufen, §9.2 Messung D9, D4, D7) und den Abnahmeberichten. **Nichts davon ist begonnen; es ist keine Umsetzungsfreigabe.** Bereits abgenommene Punkte (u. a. Meilenstein B, C, FX-01/02/18/19/20, Lead-Abgleich) werden nicht erneut geöffnet.
 
 **Dieser Abschluss und diese Übersicht autorisieren keinen Pilot mit echten Kunden und keine Erweiterung der Autonomieregeln.**

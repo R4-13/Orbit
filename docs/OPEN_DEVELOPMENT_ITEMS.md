@@ -1,5 +1,7 @@
 # Offene Entwicklungspunkte
 
+> **Pilot-Vorbereitungspaket (01.11.2026, Entwurf zur Entscheidung):** [`PILOT_VORBEREITUNGSPAKET_2026-11-01.md`](PILOT_VORBEREITUNGSPAKET_2026-11-01.md) – konkreter, begrenzter nächster Schritt (vor Pilotstart / während / vor Ausweitung, D9-Prüfplan, Kontingent und Kostenrahmen, Betreiberentscheidungen E1–E6). Nichts begonnen.
+
 > **Planung nach Meilenstein C (01.11.2026):** [`BACKLOG_PILOT_UEBERSICHT_2026-11-01.md`](BACKLOG_PILOT_UEBERSICHT_2026-11-01.md) – was für einen begleiteten Pilot, für unbeaufsichtigten Betrieb und später fehlt.
 
 > **Aktueller Stand und Prioritäten:** [`CODE_ANALYSIS_2026-10-18.md`](CODE_ANALYSIS_2026-10-18.md) – unabhängige Prüfung des gesamten Codes mit Problemliste, abgeglichener Liste aller offenen Punkte und Prioritäten. Diese Datei bleibt als Herkunftsnachweis der Punkt-IDs.
