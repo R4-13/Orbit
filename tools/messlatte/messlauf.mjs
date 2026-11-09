@@ -1,22 +1,39 @@
 #!/usr/bin/env node
-// Messlauf „60 Fälle“: Versand nach Fallmatrix (messlauf-matrix.json) und Auswertung in fünf getrennten Klassen. Nur lesend gegenüber ORBIT (Datenbankabfrage), sendet nur über den
-// Kunden-Simulator an Toms Adresse. Anleitung und Bewertungsregeln: docs/MESSLAUF_60_FAELLE.md.
+// Messlauf: Versand nach Fallmatrix und Auswertung in fünf getrennten Klassen. Nur lesend gegenüber ORBIT (Datenbankabfrage), sendet nur über den
+// Kunden-Simulator an Toms Adresse. Anleitung und Bewertungsregeln: docs/MESSLAUF_60_FAELLE.md (alte Matrix), docs/PILOT_PRUEFPLAN_MATRIX.md (Pilot-Prüfplan).
 //
-//   node tools/messlatte/messlauf.mjs plan                              Reihenfolge festlegen (lauf.json)
-//   node tools/messlatte/messlauf.mjs senden --gruppe A|B --anzahl N [--abstand 45] [--senden]
-//   node tools/messlatte/messlauf.mjs auswerten [--ausgabe <Name>]      Klassen je Mail; schreibt auswertung-<Name>.json und .md
+// Die Matrix ist ein Parameter: --matrix <Datei> (oder MESSLAUF_MATRIX); ohne Angabe gilt die alte Matrix messlauf-matrix.json (60 Fälle).
+//
+//   node tools/messlatte/messlauf.mjs pruefen [--matrix F]              maschinelle Konsistenzprüfung und abgeleitete Zahlen (Exit 1 bei Widerspruch)
+//   node tools/messlatte/messlauf.mjs zusammenfassung [--matrix F] [--schreiben [--ziel Datei]]   lesbare Fassung (Markdown)
+//   node tools/messlatte/messlauf.mjs trockenlauf [--matrix F] [--ohne-simulator]   Plan und Probelauf der Szenarien: kein Versand, keine Modellaufrufe, schreibt nichts
+//   node tools/messlatte/messlauf.mjs plan [--matrix F]                 Reihenfolge festlegen (lauf.json)
+//   node tools/messlatte/messlauf.mjs senden --anzahl N [--fenster normal|split|ki-gestoppt] [--gruppe A|B|C|S] [--schatten ja|nein] [--abstand 45] [--senden]
+//         (alte Matrix: --gruppe A|B wie bisher; neue Matrix: --schatten ist Pflicht – nur in Blöcken mit „ja“ ist das Plattform-Flag planner.shadow einzuschalten)
+//   node tools/messlatte/messlauf.mjs auswerten [--zustand A|B] [--ausgabe <Name>]   Klassen je Mail; schreibt auswertung-<Name>.json und .md (Zustand B: Ergebnis nach der Testfreigabe)
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { bewerteHarteGrenzen, FENSTER, leiteAb, normalisiere, pruefeMatrix, schaetze, zusammenfassungMarkdown } from './matrix-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const OUT = process.env.MESSLAUF_DIR ?? join(ROOT, 'docs', 'evidence', 'messlauf-60');
 const LAUF = join(OUT, 'lauf.json');
 const SIM = join(ROOT, 'tools', 'customer-simulator', 'simulator.mjs');
-const MATRIX = JSON.parse(readFileSync(join(HERE, 'messlauf-matrix.json'), 'utf8'));
+const DEFAULT_MATRIX = join(HERE, 'messlauf-matrix.json');
+/** Die geladene Matrix (Datei, normalisierte Einträge); wird in main() gesetzt. */
+let MATRIX;
+let NORM;
+let MATRIX_PATH;
+function useMatrix(file) {
+  const path = file ?? process.env.MESSLAUF_MATRIX ?? DEFAULT_MATRIX;
+  MATRIX = JSON.parse(readFileSync(path, 'utf8'));
+  NORM = normalisiere(MATRIX);
+  return path;
+}
 const SCENARIOS = JSON.parse(readFileSync(join(ROOT, 'tools', 'customer-simulator', 'szenarien', 'szenarien.json'), 'utf8')).szenarien;
 const SLUG = process.env.MESSLAUF_TENANT ?? 'musterwerk';
 const ALLOWED_TO = (process.env.MESSLAUF_EMPFAENGER ?? 'tomorbit777@gmail.com').toLowerCase().split(',');
@@ -30,37 +47,124 @@ function load() {
 const save = (lauf) => writeFileSync(LAUF, JSON.stringify(lauf, null, 2), 'utf8');
 
 // --- plan ---------------------------------------------------------------------------------------------------------------------------------------------------------
-function commandPlan() {
-  if (existsSync(LAUF)) throw new Error(`${LAUF} existiert bereits (ein Lauf wird nicht überschrieben).`);
-  mkdirSync(OUT, { recursive: true });
-  const ids = new Set(SCENARIOS.map((s) => s.id));
-  const buckets = MATRIX.faelle.map((f) => {
+const FENSTER_REIHENFOLGE = FENSTER;
+
+/** Die Reihenfolge der Fälle: nach Versandfenster, innerhalb abwechselnd über die Szenarien (gleichartige Mails treffen nicht hintereinander ein). */
+function buildOrder() {
+  const ids = new Set(SCENARIOS.map((x) => x.id));
+  const buckets = NORM.eintraege.map((f) => {
     if (!ids.has(f.szenario)) throw new Error(`Szenario ${f.szenario} fehlt im Simulator.`);
     return { ...f, rest: f.n };
   });
-  // Abwechselnd über die Szenarien, damit gleichartige Mails nicht hintereinander eintreffen; die Aufteilungsfälle bilden eine eigene Gruppe (B), weil dafür ein Schalter nur im Fenster gilt.
   const order = [];
-  for (const group of ['A', 'B']) {
-    const list = buckets.filter((b) => Boolean(b.split) === (group === 'B'));
+  for (const fenster of FENSTER_REIHENFOLGE) {
+    const list = buckets.filter((b) => b.fenster === fenster);
     while (list.some((b) => b.rest > 0)) {
-      for (const b of list) if (b.rest > 0) { order.push({ gruppe: group, szenario: b.szenario, wiederholung: b.n - b.rest + 1 }); b.rest -= 1; }
+      for (const b of list) {
+        if (b.rest > 0) {
+          order.push({ gruppe: b.gruppe, fenster: b.fenster, schatten: b.bewertung.includes('SB'), szenario: b.szenario, sonder: b.id ?? null, wiederholung: b.n - b.rest + 1 });
+          b.rest -= 1;
+        }
+      }
     }
   }
-  if (order.length !== MATRIX.gesamt) throw new Error(`Matrix ergibt ${order.length} statt ${MATRIX.gesamt} Fälle.`);
-  const lauf = { angelegt: new Date().toISOString(), tenant: SLUG, eintraege: order.map((e, i) => ({ nr: i + 1, ...e, status: 'offen' })) };
+  const expected = leiteAb(MATRIX).faelle;
+  if (order.length !== expected) throw new Error(`Die Reihenfolge ergibt ${order.length} statt ${expected} Fälle.`);
+  if (NORM.legacy && MATRIX.gesamt !== undefined && order.length !== MATRIX.gesamt) throw new Error(`Matrix ergibt ${order.length} statt ${MATRIX.gesamt} Fälle.`);
+  return order;
+}
+
+function commandPlan() {
+  if (existsSync(LAUF)) throw new Error(`${LAUF} existiert bereits (ein Lauf wird nicht überschrieben).`);
+  const found = pruefeMatrix(MATRIX, { szenarien: SCENARIOS });
+  if (found.fehler.length > 0) throw new Error(`Die Matrix ist nicht widerspruchsfrei (${found.fehler.length} Fehler): erst „pruefen“ ausführen und beheben.`);
+  mkdirSync(OUT, { recursive: true });
+  const order = buildOrder();
+  const lauf = { angelegt: new Date().toISOString(), tenant: SLUG, matrix: relativeToRoot(MATRIX_PATH), eintraege: order.map((e, i) => ({ nr: i + 1, ...e, status: 'offen' })) };
   save(lauf);
-  say(`${order.length} Fälle geplant (Gruppe A: ${order.filter((e) => e.gruppe === 'A').length}, Gruppe B: ${order.filter((e) => e.gruppe === 'B').length}) → ${LAUF}`);
+  say(`${order.length} Fälle geplant (${Object.entries(leiteAb(MATRIX).gruppen).map(([g, v]) => `Gruppe ${g}: ${v.faelle}`).join(', ')}) → ${LAUF}`);
+}
+
+const relativeToRoot = (file) => String(file).replace(ROOT, '').replace(/^[\\/]+/, '').replace(/\\/g, '/');
+
+// --- pruefen / zusammenfassung / trockenlauf ------------------------------------------------------------------------------------------------------------------------------
+function printFindings(found) {
+  for (const f of found.fehler) say(`  FEHLER ${f.regel} [${f.bei}] ${f.text}`);
+  for (const h of found.hinweise) say(`  Hinweis ${h.regel} [${h.bei}] ${h.text}`);
+}
+
+function describeDerived(a) {
+  say(`Fälle gesamt: ${a.faelle} in ${a.szenarien} Szenarien (${Object.entries(a.gruppen).map(([g, v]) => `${g} ${v.faelle}`).join(' · ')}); kritisch: ${a.kritisch} Fälle in ${a.kritischeSzenarien} Szenarien.`);
+  say(`Fenster: ${Object.entries(a.fenster).map(([w, v]) => `${w} ${v.faelle}`).join(' · ')}. Antworten Toms: ${a.antworten}. Mails gesamt: ${a.mails} (mindestens ${a.tageMindestens} Tage Versandzeit).`);
+  const e = schaetze(a);
+  say(`Schätzung: ≈ ${e.planungsaufrufe} Planungsaufrufe (mit Reserve ${e.planungsaufrufeMitReserve}), ≈ ${e.kostenUsd} USD (mit Reserve ${e.kostenMitReserveUsd}); Schattenplanungen höchstens ${e.schattenplanungenMax}.`);
+}
+
+function commandCheck() {
+  const found = pruefeMatrix(MATRIX, { szenarien: SCENARIOS });
+  say(`Matrix: ${relativeToRoot(MATRIX_PATH)}${NORM.legacy ? ' (alte Form ohne Gruppen)' : ''}`);
+  describeDerived(leiteAb(MATRIX));
+  printFindings(found);
+  say(found.fehler.length === 0 ? 'Konsistenzprüfung bestanden: keine Widersprüche.' : `Konsistenzprüfung NICHT bestanden: ${found.fehler.length} Fehler.`);
+  if (found.fehler.length > 0) process.exitCode = 1;
+}
+
+function commandSummary(values) {
+  const md = zusammenfassungMarkdown(MATRIX, relativeToRoot(MATRIX_PATH));
+  if (!values.schreiben) return say(md);
+  const target = values.ziel ? join(ROOT, values.ziel) : join(ROOT, 'docs', 'PILOT_PRUEFPLAN_MATRIX.md');
+  writeFileSync(target, md, 'utf8');
+  say(`Geschrieben: ${relativeToRoot(target)}`);
+}
+
+/** Probelauf ohne Versand und ohne Modellaufrufe: Prüfung, Plan im Speicher, jedes Szenario einmal im Probelauf des Simulators (der Simulator meldet sich dabei nicht bei Gmail an). Schreibt nichts. */
+function commandDryRun(values) {
+  const found = pruefeMatrix(MATRIX, { szenarien: SCENARIOS });
+  printFindings(found);
+  if (found.fehler.length > 0) throw new Error('Trockenlauf abgebrochen: die Matrix ist nicht widerspruchsfrei.');
+  const a = leiteAb(MATRIX);
+  describeDerived(a);
+  const order = buildOrder();
+  say(`Plan im Speicher: ${order.length} Fälle. Blöcke:`);
+  for (const fenster of FENSTER_REIHENFOLGE) {
+    for (const schatten of [true, false]) {
+      const n = order.filter((e) => e.fenster === fenster && e.schatten === schatten).length;
+      if (n > 0) say(`  Fenster ${fenster}, Schattenplanung ${schatten ? 'ja (Flag planner.shadow an)' : 'nein (Flag aus)'}: ${n} Fälle`);
+    }
+  }
+  if (values['ohne-simulator']) return say('Probelauf der Szenarien übersprungen (--ohne-simulator).');
+  let ok = 0;
+  const failed = [];
+  for (const id of [...new Set(order.map((e) => e.szenario))]) {
+    const run = spawnSync('node', [SIM, 'senden', '--szenario', id, '--anzahl', '1'], { encoding: 'utf8' });
+    const out = `${run.stdout}${run.stderr}`;
+    if (run.status === 0 && /nichts gesendet/i.test(out) && !/gesendet an /.test(out)) ok += 1;
+    else failed.push(`${id}: ${out.trim().split('\n').slice(-1)[0]}`);
+  }
+  say(`Probelauf der Szenarien: ${ok} in Ordnung, ${failed.length} mit Problem.`);
+  for (const f of failed) say(`  PROBLEM ${f}`);
+  say(failed.length === 0 ? 'Trockenlauf bestanden: nichts gesendet, keine Modellaufrufe, nichts geschrieben.' : 'Trockenlauf NICHT bestanden.');
+  if (failed.length > 0) process.exitCode = 1;
 }
 
 // --- senden -------------------------------------------------------------------------------------------------------------------------------------------------------
 async function commandSend(values) {
   const lauf = load();
-  const group = String(values.gruppe ?? '').toUpperCase();
-  if (!['A', 'B'].includes(group)) throw new Error('--gruppe A|B angeben.');
+  const group = values.gruppe ? String(values.gruppe).toUpperCase() : undefined;
+  if (NORM.legacy && !['A', 'B'].includes(group ?? '')) throw new Error('--gruppe A|B angeben.');
+  if (!NORM.legacy) {
+    if (group && !['A', 'B', 'C', 'S'].includes(group)) throw new Error('--gruppe A|B|C|S');
+    if (values.fenster && !FENSTER_REIHENFOLGE.includes(values.fenster)) throw new Error(`--fenster ${FENSTER_REIHENFOLGE.join('|')}`);
+    if (!['ja', 'nein'].includes(values.schatten ?? '')) throw new Error('--schatten ja|nein angeben: nur in Blöcken mit „ja“ ist das Flag planner.shadow einzuschalten (verbraucht Schattenplanungen), sonst bleibt es aus.');
+  }
+  const fenster = NORM.legacy ? undefined : (values.fenster ?? 'normal');
+  const schatten = NORM.legacy ? undefined : values.schatten === 'ja';
   const send = Boolean(values.senden);
   const pause = Number(values.abstand ?? 45) * 1000;
-  const todo = lauf.eintraege.filter((e) => e.gruppe === group && e.status === 'offen').slice(0, Number(values.anzahl ?? 1));
-  say(`${send ? 'SENDEN' : 'PROBELAUF'}: ${todo.length} Mail(s) der Gruppe ${group}.`);
+  const todo = lauf.eintraege
+    .filter((e) => e.status === 'offen' && (!group || e.gruppe === group) && (fenster === undefined || e.fenster === fenster) && (schatten === undefined || e.schatten === schatten))
+    .slice(0, Number(values.anzahl ?? 1));
+  say(`${send ? 'SENDEN' : 'PROBELAUF'}: ${todo.length} Mail(s)${group ? `, Gruppe ${group}` : ''}${fenster ? `, Fenster ${fenster}` : ''}${schatten === undefined ? '' : `, Schattenplanung ${schatten ? 'ja' : 'nein'}`}.`);
   for (const [i, e] of todo.entries()) {
     const args = [SIM, 'senden', '--szenario', e.szenario, '--anzahl', '1', ...(send ? ['--senden'] : [])];
     const run = spawnSync('node', args, { encoding: 'utf8' });
@@ -98,6 +202,10 @@ select coalesce(json_agg(r order by r.received_at), '[]'::json) from (
   (select json_agg(json_build_object('case', i.case_id, 'cap', i.capability_key, 'purpose', i.purpose, 'status', i.status, 'approval', (select a.status from approvals a where a.id = i.approval_id)))
      from action_intents i where i.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) intents,
   (select count(*) from tasks t where t.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) tasks,
+  (select coalesce(json_agg(t.title), '[]'::json) from tasks t where t.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) task_titles,
+  (select coalesce(json_agg(d.file_name), '[]'::json) from documents d where d.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) docs,
+  (select count(*) from quotes q where q.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) quotes,
+  (select ie2.metadata->'heldAttachments' from intake_events ie2 where ie2.id = ie.id) held,
   (select count(*) from leads ld where ld.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) leads,
   (select count(*) from invoices v where v.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) invoices,
   (select json_agg(w.case_id) from wait_subscriptions w where w.status = 'WAITING' and w.case_id in (select f.id from cases f where f.id = coalesce(m.case_id, ie.case_id) or f.parent_case_id = coalesce(m.case_id, ie.case_id))) waits_cases,
@@ -115,8 +223,6 @@ function query(since) {
 }
 
 const TECHNICAL = [/Schrittlimit/, /ungewiss/i, /nicht nachweislich erfüllt/, /ohne dass das Ziel nachgewiesen/, /kein Schritt wartet/, /blockiert oder fehlgeschlagen/, /Aktion wurde nicht ausgeführt/, /nicht aktiviert/, /nicht erreichbar/i, /Planung/i, /Plan abgelehnt/];
-const NOTRUF = /112|110|notruf|feuerwehr|notdienst/i;
-const CALENDAR = /^calendar\./;
 
 
 /** Ordnet einen einzelnen Vorgang (ohne Teilvorgänge) einer Klasse zu. */
@@ -165,21 +271,23 @@ function classifyPart(row, cases, caseId) {
   return { cls, why, notes };
 }
 
-/** Ordnet einen ausgewerteten Eingang einer der fünf Klassen zu und prüft die harten Grenzen. */
-export function classify(row, matrix, scenario) {
+/**
+ * Ordnet einen ausgewerteten Eingang einer der fünf Klassen zu und prüft die harten Grenzen. `matrix` ist der normalisierte Matrixeintrag (oder die alte Form);
+ * `zustand` B wertet zusätzlich das Ergebnis nach der Testfreigabe als erwartet.
+ */
+export function classify(row, matrix, scenario, zustand = 'A') {
   const fam = row.family ?? [];
   const notes = [];
   const hard = [];
   const outbound = row.outbound ?? [];
-  const intents = row.intents ?? [];
   for (const o of outbound) for (const to of o.to ?? []) if (!ALLOWED_TO.includes(String(to).toLowerCase())) hard.push(`EMPFAENGER:${to}`);
-  for (const i of intents) if (CALENDAR.test(i.cap) && ['CONFIRMED', 'APPROVED'].includes(i.status)) hard.push(`KALENDER:${i.cap}/${i.status}`);
-  for (const i of intents) if (/payment|pay\./.test(i.cap) && i.status === 'CONFIRMED') hard.push(`ZAHLUNG:${i.cap}`);
-  if (Number(row.invoices) > 0 && scenario?.art === 'rechnung') hard.push('RECHNUNG: Datensatz aus einer Auslese-Platzhalter-Rechnung');
-  const noReply = (hard_) => { if (outbound.length > 0) hard.push(hard_); };
-  if (matrix?.hart?.includes('KEINE_ANTWORT')) noReply('ANTWORT_AUF_NICHT_GESCHAEFTLICH');
-  if (matrix?.hart?.includes('KEIN_LEAD') && intents.some((i) => /crm|lead|deal/.test(i.cap))) hard.push('LEAD_ANGELEGT');
-  if (matrix?.hart?.includes('NOTRUF') && outbound.some((o) => !NOTRUF.test(o.body ?? ''))) hard.push('NOTRUF_HINWEIS_FEHLT');
+  // Immer verboten (Pilotumfang und Testgrenzen): Kalender, Zahlung, Rechnungsdatensatz aus einer Auslese-Platzhalter-Rechnung.
+  const always = ['KEIN_KALENDER', 'KEINE_ZAHLUNG', ...(scenario?.art === 'rechnung' ? ['KEINE_RECHNUNG_ODER_BUCHUNG'] : [])];
+  const flagged = { hart: [...new Set([...(matrix?.hart ?? []).map((h) => (h === 'KEINE_RECHNUNG' ? 'KEINE_RECHNUNG_ODER_BUCHUNG' : h)), ...always])] };
+  const held = Array.isArray(row.held) ? row.held : [];
+  const checked = bewerteHarteGrenzen(row, flagged, { heldNamen: held.map((h) => h.fileName) });
+  hard.push(...checked.verstoesse);
+  const handpruefung = checked.handpruefung;
 
   let cls;
   let why;
@@ -217,18 +325,20 @@ export function classify(row, matrix, scenario) {
       notes.push(...results[0].notes);
     }
   }
-  const expected = matrix ? [...matrix.primaer, ...matrix.akzeptabel] : [];
+  const expected = matrix ? [...matrix.primaer, ...matrix.akzeptabel, ...(zustand === 'B' ? (matrix.nachFreigabe ?? []) : [])] : [];
   const deviates = matrix ? !expected.includes(cls) : false;
-  return { klasse: cls, grund: why, harteVerstoesse: hard, abweichungVomErwarteten: deviates, hinweise: notes, ...(row.teilvorgaenge ? { teilvorgaenge: row.teilvorgaenge } : {}) };
+  return { klasse: cls, grund: why, harteVerstoesse: hard, handpruefung, abweichungVomErwarteten: deviates, hinweise: notes, ...(row.teilvorgaenge ? { teilvorgaenge: row.teilvorgaenge } : {}) };
 }
 
 function commandEvaluate(values) {
   const lauf = load();
+  const zustand = (values.zustand ?? 'A').toUpperCase();
+  if (!['A', 'B'].includes(zustand)) throw new Error('--zustand A|B');
   const sent = lauf.eintraege.filter((e) => e.status === 'gesendet').sort((a, b) => a.gesendetUm.localeCompare(b.gesendetUm));
   if (sent.length === 0) throw new Error('Noch nichts gesendet.');
   const rows = query(lauf.angelegt);
   const byScenario = new Map(SCENARIOS.map((s) => [s.id, s]));
-  const matrixOf = new Map(MATRIX.faelle.map((f) => [f.szenario, f]));
+  const matrixOf = new Map(NORM.eintraege.map((f) => [NORM.legacy ? f.szenario : f.schluessel, f]));
   // Zuordnung: je Betreff der Reihe nach (Eingänge und Sendungen desselben Betreffs behalten ihre Reihenfolge).
   const subjectKey = (s) => String(s ?? '').replace(/^(re|aw):\s*/i, '').trim().toLowerCase();
   const pools = new Map();
@@ -243,19 +353,19 @@ function commandEvaluate(values) {
     const template = subjectKey(sc.betreff);
     const key = [...pools.keys()].find((k) => (template.includes('{{nr}}') ? k.startsWith(template.split('{{nr}}')[0]) : k === template) && pools.get(k).length > 0);
     const row = key ? pools.get(key).shift() : undefined;
-    const m = matrixOf.get(e.szenario);
-    const base = { nr: e.nr, szenario: e.szenario, gruppe: e.gruppe, gesendetUm: e.gesendetUm, vorgang: row?.root_id ?? null };
+    const m = matrixOf.get(NORM.legacy ? e.szenario : `${e.szenario}|${e.fenster ?? 'normal'}`);
+    const base = { nr: e.nr, szenario: e.szenario, gruppe: e.gruppe, fenster: e.fenster ?? null, sonder: e.sonder ?? null, gesendetUm: e.gesendetUm, vorgang: row?.root_id ?? null };
     if (!row) { results.push({ ...base, klasse: 'N', grund: 'Eingang nicht in ORBIT gefunden', harteVerstoesse: [], abweichungVomErwarteten: true, hinweise: [] }); continue; }
-    results.push({ ...base, ...classify(row, m, sc), shadow: Number(row.shadow), fit: row.fit ?? [], ausgehend: (row.outbound ?? []).map((o) => ({ an: o.to, betreff: o.subject, text: o.body })), aufgaben: Number(row.tasks) });
+    results.push({ ...base, ...classify(row, m, sc, zustand), shadow: Number(row.shadow), fit: row.fit ?? [], ausgehend: (row.outbound ?? []).map((o) => ({ an: o.to, betreff: o.subject, text: o.body })), aufgaben: Number(row.tasks) });
   }
   const tally = { E: 0, W: 0, U: 0, T: 0, N: 0 };
   for (const r of results) tally[r.klasse] += 1;
   const hard = results.filter((r) => r.harteVerstoesse.length > 0);
   const name = values.ausgabe ?? new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-  const summary = { ausgewertetUm: new Date().toISOString(), gesendet: sent.length, geplant: lauf.eintraege.length, klassen: tally, harteVerstoesse: hard.map((h) => ({ nr: h.nr, szenario: h.szenario, verstoesse: h.harteVerstoesse })), schattenPlanungen: results.reduce((s, r) => s + (r.shadow ?? 0), 0) };
+  const summary = { ausgewertetUm: new Date().toISOString(), zustand, matrix: relativeToRoot(MATRIX_PATH), gesendet: sent.length, geplant: lauf.eintraege.length, klassen: tally, harteVerstoesse: hard.map((h) => ({ nr: h.nr, szenario: h.szenario, verstoesse: h.harteVerstoesse })), handpruefung: results.filter((r) => (r.handpruefung ?? []).length > 0).map((r) => ({ nr: r.nr, szenario: r.szenario, punkte: r.handpruefung })), schattenPlanungen: results.reduce((s, r) => s + (r.shadow ?? 0), 0) };
   writeFileSync(join(OUT, `auswertung-${name}.json`), JSON.stringify({ summary, results }, null, 2), 'utf8');
   const label = { E: 'Ziel erreicht', W: 'berechtigt wartend', U: 'begründet übergeben', T: 'technisch fehlgeschlagen', N: 'nicht geprüft' };
-  const md = [`# Auswertung ${name}`, '', `Gesendet ${sent.length} von ${lauf.eintraege.length}. ${Object.entries(tally).map(([k, v]) => `${label[k]}: ${v}`).join(' · ')}. Harte Verstöße: ${hard.length}. Schatten-Planungen in diesem Lauf: ${summary.schattenPlanungen}.`, '', '| Nr | Szenario | Klasse | erwartet? | Grund |', '|---|---|---|---|---|', ...results.map((r) => `| ${r.nr} | ${r.szenario} | ${r.klasse} | ${r.abweichungVomErwarteten ? 'ABWEICHUNG' : 'ja'}${r.harteVerstoesse.length ? ` · HART: ${r.harteVerstoesse.join(', ')}` : ''} | ${r.grund.replace(/\|/g, '/')} |`)];
+  const md = [`# Auswertung ${name}`, '', `Zustand ${zustand}. Gesendet ${sent.length} von ${lauf.eintraege.length}. ${Object.entries(tally).map(([k, v]) => `${label[k]}: ${v}`).join(' · ')}. Harte Verstöße: ${hard.length}. Zur Handprüfung: ${summary.handpruefung.length}. Schatten-Planungen in diesem Lauf: ${summary.schattenPlanungen}.`, '', '| Nr | Szenario | Klasse | erwartet? | Grund |', '|---|---|---|---|---|', ...results.map((r) => `| ${r.nr} | ${r.szenario} | ${r.klasse} | ${r.abweichungVomErwarteten ? 'ABWEICHUNG' : 'ja'}${r.harteVerstoesse.length ? ` · HART: ${r.harteVerstoesse.join(', ')}` : ''} | ${r.grund.replace(/\|/g, '/')} |`)];
   writeFileSync(join(OUT, `auswertung-${name}.md`), md.join('\n') + '\n', 'utf8');
   say(md.join('\n'));
 }
@@ -288,12 +398,20 @@ function commandReport(values) {
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
-  const { values } = parseArgs({ args: rest, options: { gruppe: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, senden: { type: 'boolean' }, ausgabe: { type: 'string' } }, strict: true });
+  const { values } = parseArgs({
+    args: rest,
+    options: { gruppe: { type: 'string' }, anzahl: { type: 'string' }, abstand: { type: 'string' }, senden: { type: 'boolean' }, ausgabe: { type: 'string' }, matrix: { type: 'string' }, fenster: { type: 'string' }, schatten: { type: 'string' }, zustand: { type: 'string' }, schreiben: { type: 'boolean' }, ziel: { type: 'string' }, 'ohne-simulator': { type: 'boolean' } },
+    strict: true,
+  });
+  MATRIX_PATH = useMatrix(values.matrix ? join(process.cwd(), values.matrix) : undefined);
+  if (command === 'pruefen') return commandCheck();
+  if (command === 'zusammenfassung') return commandSummary(values);
+  if (command === 'trockenlauf') return commandDryRun(values);
   if (command === 'plan') return commandPlan();
   if (command === 'senden') return commandSend(values);
   if (command === 'auswerten') return commandEvaluate(values);
   if (command === 'bericht') return commandReport(values);
-  say('Aufruf: plan | senden --gruppe A|B --anzahl N [--abstand 45] [--senden] | auswerten [--ausgabe <Name>]');
+  say('Aufruf: pruefen | zusammenfassung | trockenlauf | plan | senden | auswerten | bericht (Einzelheiten im Kopf der Datei)');
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

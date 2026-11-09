@@ -344,6 +344,46 @@
       "betreff": "Zwei Dinge",
       "text": "Hallo,\n\nzwei Dinge: Die Rechnung Nr. 4711 habe ich zweimal bekommen, bitte klären Sie das. Und haben Sie bis Freitag noch einen Termin für eine Heizungswartung frei?\n\nViele Grüße\nTom Orbit",
       "erwartung": "Beide Anliegen erkannt; Rechnungsklärung an die zuständige Person; Terminanfrage ohne Buchung (Vorschlag/Übergabe); eine gemeinsame Antwort."
+    },
+    {
+      "id": "anhang-unzulaessig",
+      "art": "anhang",
+      "titel": "Angebotswunsch mit unzulässigem Anhang (Programm in PDF-Verkleidung)",
+      "absender": "Tom Orbit",
+      "betreff": "Heizungstausch – Unterlagen im Anhang",
+      "text": "Guten Tag,\n\nwir möchten unsere alte Gasheizung (Baujahr 2004) in einem Einfamilienhaus in Köln erneuern lassen. Die Aufmaß-Unterlagen finden Sie im Anhang. Können Sie uns dazu ein Angebot machen?\n\nViele Grüße\nTom Orbit",
+      "anhang": {
+        "dateiname": "Aufmass-Unterlagen.pdf.exe",
+        "art": "ausfuehrbar"
+      },
+      "erwartung": "Der Anhang wird weder gespeichert noch gelesen; der Vorgang bekommt die Aufgabe „Anhang prüfen“; die Angebotsanfrage selbst wird nach dem normalen Ablauf aufgenommen (Rückfragen), ohne Angaben aus dem Anhang."
+    },
+    {
+      "id": "anhang-zu-gross",
+      "art": "anhang",
+      "titel": "Angebotswunsch mit zu großem Anhang (6 MB)",
+      "absender": "Tom Orbit",
+      "betreff": "Badsanierung – Scan der Bestandsunterlagen",
+      "text": "Guten Tag,\n\nwir planen die Sanierung unseres Badezimmers (Köln, Einfamilienhaus). Den Scan der Bestandsunterlagen schicke ich im Anhang mit. Bitte um ein Angebot.\n\nViele Grüße\nTom Orbit",
+      "anhang": {
+        "dateiname": "Bestandsunterlagen-Scan.pdf",
+        "art": "gross",
+        "megabyte": 6
+      },
+      "erwartung": "Der Anhang (über 5 MB) wird weder abgerufen noch gespeichert noch gelesen; der Vorgang bekommt die Aufgabe „Anhang prüfen“; die Anfrage wird normal aufgenommen."
+    },
+    {
+      "id": "anhang-ohne-text",
+      "art": "anhang",
+      "titel": "Angebotswunsch mit PDF ohne Textebene (Scan)",
+      "absender": "Tom Orbit",
+      "betreff": "Neue Heizung – Foto des Heizraums als PDF",
+      "text": "Guten Tag,\n\nich hätte gern ein Angebot für eine neue Heizung. Ein Foto des Heizraums habe ich als PDF angehängt.\n\nViele Grüße\nTom Orbit",
+      "anhang": {
+        "dateiname": "Heizraum.pdf",
+        "art": "ohne-text"
+      },
+      "erwartung": "Der Anhang ist freigegeben, enthält aber keinen lesbaren Text: es werden keine Angaben aus ihm übernommen oder erfunden; fehlende Angaben werden erfragt."
     }
   ]
 }

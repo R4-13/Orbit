@@ -99,11 +99,19 @@ test('Szenarien: alle gültig, Platzhalter ersetzt, Anhang ist ein PDF, der Hinw
     assert.doesNotMatch(`${mail.subject}\n${mail.text}`, /\{\{/, scenario.id);
     assert.match(mail.text, /\[Simulation\]/);
     assert.doesNotMatch(render(scenario, { notice: false }).text, /\[Simulation\]/);
-    if (scenario.anhang) {
+    if (scenario.anhang && !scenario.anhang.art) {
       assert.ok(mail.attachment?.data.toString('latin1').startsWith('%PDF-'), scenario.id);
       assert.match(mail.attachment.filename, /\.pdf$/);
     }
   }
+  // Sonderprüfungen der Anhangsfreigabe: ein Programm in PDF-Verkleidung, ein zu großer Anhang, ein PDF ohne Text.
+  const attachmentOf = (id) => render(scenarios.find((s) => s.id === id), { now: new Date('2026-10-17T10:00:00Z') }).attachment;
+  const disguised = attachmentOf('anhang-unzulaessig');
+  assert.deepEqual([...disguised.data.subarray(0, 2)], [0x4d, 0x5a]);
+  assert.match(disguised.filename, /\.pdf\.exe$/);
+  assert.ok(attachmentOf('anhang-zu-gross').data.length > 5 * 1024 * 1024);
+  const noText = attachmentOf('anhang-ohne-text').data.toString('latin1');
+  assert.ok(noText.startsWith('%PDF-') && !/\) Tj/.test(noText));
   const invoice = render(scenarios.find((s) => s.id === 'rechnung-lieferant'), { now: new Date('2026-10-17T10:00:00Z'), random: () => 0 });
   assert.equal(invoice.subject, 'Rechnung Nr. 10000');
   assert.match(invoice.text, /17\.10\.2026/);

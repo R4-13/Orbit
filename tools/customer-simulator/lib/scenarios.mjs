@@ -21,6 +21,24 @@ export function select(scenarios, { id, art } = {}) {
   return chosen;
 }
 
+/**
+ * Anhangsarten: `pdf` (Standard, mit Textebene), `ohne-text` (gültiges PDF ohne Text, wie ein Scan), `gross` (PDF, aufgefüllt auf `megabyte` MB), `ausfuehrbar` (ein Programm, das sich als PDF ausgibt – nur Anfangsbytes,
+ * nichts Ausführbares). Die drei letzten dienen den Sonderprüfungen der Anhangsfreigabe.
+ */
+function buildAttachment(spec, fill) {
+  const filename = fill(spec.dateiname);
+  switch (spec.art ?? 'pdf') {
+    case 'ohne-text':
+      return { filename, mimeType: 'application/pdf', data: buildPdf([]) };
+    case 'gross':
+      return { filename, mimeType: 'application/pdf', data: Buffer.concat([buildPdf(['Scan']), Buffer.alloc(Math.round((spec.megabyte ?? 6) * 1024 * 1024), 0x20)]) };
+    case 'ausfuehrbar':
+      return { filename, mimeType: 'application/pdf', data: Buffer.concat([Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]), Buffer.alloc(2048)]) };
+    default:
+      return { filename, mimeType: 'application/pdf', data: buildPdf(spec.zeilen.map(fill)) };
+  }
+}
+
 const germanDate = (date) => new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
 
 /**
@@ -33,6 +51,6 @@ export function render(scenario, { now = new Date(), random = Math.random, notic
   let text = fill(scenario.text);
   // Der Hinweis macht für jeden, der die Mail später findet, erkennbar, dass sie nicht von einem echten Kunden stammt.
   if (notice) text += '\n\n[Simulation] Diese Nachricht ist eine automatisch erzeugte Testanfrage (customer-simulator).';
-  const attachment = scenario.anhang ? { filename: fill(scenario.anhang.dateiname), mimeType: 'application/pdf', data: buildPdf(scenario.anhang.zeilen.map(fill)) } : undefined;
+  const attachment = scenario.anhang ? buildAttachment(scenario.anhang, fill) : undefined;
   return { subject: fill(scenario.betreff), text, fromName: scenario.absender ?? 'Tom Orbit', attachment };
 }
