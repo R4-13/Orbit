@@ -4,6 +4,8 @@ Verdichtung von `BACKLOG_PILOT_UEBERSICHT_2026-11-01.md` auf einen **konkreten, 
 
 **Grenzen dieses Pakets:** Es ist ein Plan und eine Entscheidungsvorlage. Es wurde **nichts gestartet**: keine neue Funktionsentwicklung, keine Schattenplanung (Zähler bleibt **61 von 60**, wird weder zurückgesetzt noch erhöht), keine externe Konfigurationsänderung, keine fachliche Freigabe, keine kostenpflichtige Infrastruktur, **kein Pilot mit echten Kunden**. Zugangsdaten stehen nicht im Bericht. Alles mit „Vorschlag“ ist vom Betreiber zu entscheiden oder fachlich zu prüfen.
 
+**Stand 09.11.2026:** Die technische Vorbereitung ist begonnen; maßgebliche Zahlen und den Stand der Arbeiten nennt **Abschnitt 9** (er ersetzt die Zahlen der Abschnitte 5.3 und 6, wo sie abweichen).
+
 ## 1. Vorgeschlagener Pilotumfang
 
 | Bereich | Vorschlag |
@@ -218,3 +220,49 @@ Pilot-Postfach (eigene Adresse), Betriebszeiten und Erreichbarkeit der Oberfläc
 * **Nicht verlangt:** Ereignisse ohne Nachricht, Monteurverzeichnis, zweiter KI-Anbieter, MFA für Mandantenkonten, Virenscan, FN-10, FN-15-Ursache, FN-16.
 * **Aufwand:** ORBIT etwa 9–12 Arbeitstage (davon etwa 3 Tage reine Laufzeit), Betreiber etwa 1 Tag.
 * **Abschlussbedingung des Pakets:** W1–W10 erfüllt und der D9-Prüflauf nach Abschnitt 5.5 bestanden; danach ausdrückliche Pilotentscheidung des Auftraggebers (W11). Bis dahin: **kein Pilot mit echten Kunden.**
+
+## 9. Stand der technischen Vorbereitung (09.11.2026) und endgültiger Kontingent-/Kostenvorschlag
+
+*Dieser Abschnitt ersetzt die Zahlen der Abschnitte 5.3 und 6, wo sie abweichen: Die Fallmatrix wurde berichtigt und maschinell abgeleitet (siehe `PILOT_PRUEFPLAN_MATRIX.md`), die Kostenkontrolle wirkt jetzt im tatsächlich verwendeten Weg.* Alles steht auf dem Arbeitsbranch `wip/pilot-technik-2026-11`; **nichts ist gemerged, eingesetzt oder aktiviert.**
+
+### 9.1 Stand der Arbeiten
+
+| Nr | Arbeit | Stand |
+|---|---|---|
+| W1 | Umfang, Verantwortliche | wartet auf E1 (Namen) |
+| W2 | Gas-Hinweis | **nicht begonnen**: braucht den fachlich freigegebenen Text (E3) |
+| W3 | Dauerhafte Mail-Zustimmung | Anleitung berichtigt (`GOOGLE_INTEGRATION.md`); wartet auf E2/E6 (Projektwahl, Pilot-Postfach) |
+| W4 | Sicherung/Wiederherstellung | Werkzeuge fertig und lokal erprobt (Tagessicherung, Dokumentensicherung, Wiederherstellungsprüfung, Zeitplan nur mit `-Execute`); **wartet auf den externen Ort (E6)**; Zeitplan nicht angelegt |
+| W5 | Stopp-/Meldeweg-Probe | Runbook und Beweissicherung fertig; **Probe nicht ausgeführt**; Namen/Vertretung fehlen (E1) |
+| W6 | Zugänge und Anhänge | **Anhänge technisch erzwungen** (Annahme #641); Zugangs- und Postfachregeln im Runbook, Bestätigung durch den Betreiber offen |
+| W7 | Preis/Kostenkontrolle | **fertig** (Annahme #639): Preis mit Quelle/Datum, Messung und durchsetzbares Budget im Umgebungsweg; kein Limit aktiv; Preis/Währung bestätigt der Betreiber (E4) |
+| W8 | Prüfwerkzeug und Kontingent | **fertig** (Annahmen #640, #642): Matrix als Parameter, Konsistenzprüfung, Trockenlauf, Zusatzkontingent inaktiv |
+| W9 | Qualitätstor | siehe 9.4 |
+| W10 | D9-Prüflauf | **nicht gestartet** (Freigabe, E5) |
+| W11 | Pilotentscheidung | offen |
+
+### 9.2 Die Fallmatrix (berichtigt, abgeleitet)
+
+Vorher (Entwurf 01.11.): 66 Fälle, Sonderprüfungen außerhalb der Zählung, zwei Pflichtfreigabe-Szenarien als „kritisch“ mit nur zwei Wiederholungen, „nur Hallo“ mit Antwortverbot und Verwerfen als zulässigem Ergebnis. **Jetzt:** **79 Fälle** (A 18 · B 25 · C 25 · Sonderprüfungen S 11), davon **39 kritische Fälle** in 13 Szenarien (je mindestens 3 Wiederholungen), **113 Mails** (79 Eingänge + 34 Antworten Toms), mindestens 2 Tage Versandzeit. Pflichtfreigabe: ohne Testfreigabe wartet der Vorgang (Zustand A), erst nach der Freigabe an Tom ist die Auskunft gesendet (Zustand B). „Nur Hallo“: Rückfrage oder Prüfung, nie still verworfen. Sonderprüfungen: Modell nicht verfügbar (3, kritisch), Anhang unzulässig (3, kritisch), Anhang zu groß (3, kritisch), Anhang ohne Text (2).
+
+### 9.3 Endgültiger Vorschlag für Kontingent und Kostenbudget (nichts aktiviert)
+
+| Größe | Kernlauf | mit Wiederholungsreserve (+50 %) |
+|---|---|---|
+| **Fälle** (Eingänge) | 79 | ≈ 119 |
+| Mails inkl. Antworten Toms | 113 | ≈ 170 |
+| **Planungsaufrufe** (Modell) | ≈ 1.215 | ≈ 1.830 |
+| **Schattenplanungen** | **31** (nur Gruppen B/C mit Schattenprüfung; das Flag `planner.shadow` ist nur in diesen Blöcken an) | **45 beantragt** (31 + 14 Wiederholungen nach Behebung eines Fundes) |
+| Kosten bei 0,10 / 0,50 USD je Mio. Token | ≈ 0,60 USD | ≈ 0,90 USD |
+
+* **Zusatzkontingent: 45 Schattenplanungen** (statt 60; das Flag wird gezielt nur in den Schattenblöcken eingeschaltet, `senden --schatten ja`). Der alte Zähler 61/60 bleibt unberührt. Anlegen (inaktiv) und Aktivieren sind getrennte, protokollierte Schritte.
+* **Kostenbudget: hart 5 USD** (weich 3, Warnung 2), USD, durchgesetzt, Mandant Musterwerk, Kalendermonat (UTC). Das ist rund das Fünffache der Schätzung mit Reserve; die Schätzung stammt aus einem gemischten Lauf (Messlauf 21.10.: 688 Aufrufe für 64 Mails), gemessen wird im Lauf. Das Budget wird **vor** jedem Aufruf durchgesetzt (laufende Aufrufe und der schlimmste Fall des nächsten Aufrufs eingerechnet), nicht erst nachträglich ausgewertet. Läuft der Lauf über einen Monatswechsel, beginnt das Budget des neuen Monats bei 0.
+* **Preis:** jetzt aus der offiziellen Preisseite des Anbieters (gelesen am 02.11.2026): 0,10 / 0,50 USD je Mio. Eingabe/Ausgabe, darüber 0,20 / 0,75 USD (die Seite nennt „$“ ohne Währungskennung). Keine Aussage der Seite zu Denk-Token; ORBIT nutzt Denkaufwand `none`. Der Betreiber bestätigt Preis und Währung (E4).
+* **Aktivierung** (erst nach ausdrücklicher Freigabe, in dieser Reihenfolge; jeweils zuerst ohne `--execute` prüfen):
+  1. `cost-budget.ts setzen musterwerk --hart 5 --weich 3 --warn 2 --durchsetzen --begruendung "…" --execute`
+  2. `shadow-quota.ts anlegen musterwerk --anzahl 45 --zweck "Prüflauf D9, Gruppen B und C" --beschlossen "<Name, Datum>" --execute`, danach `aktivieren`
+  3. Migration einspielen und das geprüfte Abbild einsetzen (derzeit **nicht** geschehen)
+
+### 9.4 Prüfung dieses Stands
+
+Siehe `PILOT_TECHNIK_UEBERGABE_2026-11-02.md` (Ergebnis des Qualitätstors und welcher Stand geprüft bzw. tatsächlich eingesetzt ist).
