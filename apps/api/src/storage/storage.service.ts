@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { OrbitEnv } from '@orbit/config';
 import { ORBIT_ENV } from '../config/env.token';
@@ -125,6 +125,18 @@ export class StorageService {
     const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: storageKey }));
     const bytes = await response.Body?.transformToByteArray();
     return Buffer.from(bytes ?? []);
+  }
+
+  /** Alle Objekte unter dem Präfix (Schlüssel und Größe) – für die Sicherung des Buckets; liest nur Metadaten. */
+  async listObjects(prefix: string): Promise<Array<{ key: string; sizeBytes: number }>> {
+    const objects: Array<{ key: string; sizeBytes: number }> = [];
+    let token: string | undefined;
+    do {
+      const page = await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ContinuationToken: token }));
+      for (const item of page.Contents ?? []) if (item.Key) objects.push({ key: item.Key, sizeBytes: item.Size ?? 0 });
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
+    return objects;
   }
 
   /**
