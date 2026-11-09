@@ -74,10 +74,10 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
    * `platform_*`-Tabellen und der Plattform-Audit-Zeilen verlangen. Ausschließlich vom Plattform-Zugriffspfad (apps/api/src/platform) aufzurufen –
    * Mandantencode verwendet `forTenantId()`/`inTenantTransaction()` und sieht diese Zeilen dadurch nie.
    */
-  async withPlatformScope<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  async withPlatformScope<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>, options?: { maxWait?: number; timeout?: number }): Promise<T> {
     return this.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.platform_scope', 'on', true)`;
       return fn(tx);
-    });
+    }, options);
   }
 }

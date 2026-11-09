@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
-import { ExternalSystemError } from '@orbit/shared';
+import { DEFAULT_MAX_OUTPUT_TOKENS, ExternalSystemError } from '@orbit/shared';
 import type {
   LLMCompletionRequest,
   LLMCompletionResult,
@@ -98,7 +98,7 @@ export class OpenAILLMProvider implements LLMProvider {
       response = await this.client.chat.completions.create({
         model: this.model,
         // `max_tokens` is rejected by current OpenAI models; `max_completion_tokens` is the supported parameter.
-        max_completion_tokens: request.maxTokens ?? 4096,
+        max_completion_tokens: request.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
         ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
         ...this.reasoningParams(),
         messages,

@@ -58,17 +58,22 @@ export class ShadowPlanService {
    * Atomar: vorhandene Planung → `ALREADY_DONE`; Grundgrenze erreicht → die Einheit kommt aus dem aktiven Zusatzkontingent (Hauptbuch), sonst Ablehnung ohne Verbrauch; sonst Reservierung samt Audit-Eintrag.
    * Eine ausdrückliche Wiederholung (`repeat`) braucht immer ein aktives Kontingent und berührt die Grundzählung nie.
    */
-  private async reserve(tenantId: string, caseId: string, repeat: boolean): Promise<'ALREADY_DONE' | 'LIMIT_REACHED' | 'NO_PREVIOUS_PLAN' | Reserved> {
+  private async reserve(tenantId: string, caseId: string, repeatKey: string | null): Promise<'ALREADY_DONE' | 'LIMIT_REACHED' | 'NO_PREVIOUS_PLAN' | Reserved> {
     return this.prisma.inTenantTransaction(tenantId, async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shadow:${tenantId}`}))`;
+      const repeat = repeatKey !== null;
       const first = await tx.caseEvent.findFirst({ where: { caseId, dedupeKey: `shadow:${caseId}` }, select: { id: true } });
-      if (repeat ? !first : first) return repeat ? ('NO_PREVIOUS_PLAN' as const) : ('ALREADY_DONE' as const);
+      if (repeat) {
+        if (!first) return 'NO_PREVIOUS_PLAN' as const;
+        // Dieselbe Wiederholungsanfrage (doppelt zugestellt): bereits gezählt, nicht noch einmal.
+        if (await tx.shadowQuotaLedger.findFirst({ where: { tenantId, caseId, requestKey: repeatKey }, select: { id: true } })) return 'ALREADY_DONE' as const;
+      } else if (first) return 'ALREADY_DONE' as const;
 
       const used = await this.quota.baseUsedInTx(tx, tenantId);
       let unit: QuotaUnit | null = null;
       let refusal: string | null = null;
       if (repeat || used >= SHADOW_PLAN_LIMIT_PER_TENANT) {
-        const taken = await this.quota.takeInTx(tx, tenantId, caseId, repeat ? 'REPEAT' : 'FIRST');
+        const taken = await this.quota.takeInTx(tx, tenantId, caseId, repeat ? 'REPEAT' : 'FIRST', repeatKey);
         if (taken.unit) unit = taken.unit;
         else refusal = taken.reason === 'EXHAUSTED' ? 'Das Zusatzkontingent ist aufgebraucht.' : 'Es ist kein Zusatzkontingent aktiv.';
       }
@@ -76,11 +81,11 @@ export class ShadowPlanService {
         await this.events.appendInTx(tx, tenantId, caseId, {
           type: CASE_EVENT_TYPES.SHADOW_PLAN_REFUSED,
           payload: { stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht. ${refusal ?? ''}`.trim(), limit: SHADOW_PLAN_LIMIT_PER_TENANT, used },
-          dedupeKey: `shadow-refused:${caseId}${repeat ? ':repeat' : ''}`,
+          dedupeKey: `shadow-refused:${caseId}${repeat ? `:repeat:${repeatKey}` : ''}`,
         });
         return 'LIMIT_REACHED' as const;
       }
-      const dedupeKey = unit && unit.attempt > 1 ? `shadow:${caseId}:${unit.attempt}` : `shadow:${caseId}`;
+      const dedupeKey = unit?.requestKey ? `shadow:${caseId}:r:${unit.requestKey}` : `shadow:${caseId}`;
       const reserved = await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED, payload: { stage: 'RESERVED', available: null, ...(unit ? { quota: { grantId: unit.grantId, kind: unit.kind, attempt: unit.attempt } } : {}) }, dedupeKey });
       if (unit) await this.quota.attachInTx(tx, unit.ledgerId, reserved.event.id);
       else await tx.auditLog.create({ data: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: reserved.event.id } } });
@@ -89,22 +94,26 @@ export class ShadowPlanService {
   }
 
   async record(tenantId: string, caseId: string, intentSummary?: string): Promise<ShadowOutcome> {
-    return this.plan(tenantId, caseId, intentSummary, false);
+    return this.plan(tenantId, caseId, intentSummary, null);
   }
 
-  /** Ausdrückliche Wiederholung der Planung für einen Vorgang (nur aus einem aktiven Zusatzkontingent, einzeln gezählt). */
-  async recordRepeat(tenantId: string, caseId: string, intentSummary?: string): Promise<ShadowOutcome> {
-    return this.plan(tenantId, caseId, intentSummary, true);
+  /**
+   * Ausdrückliche Wiederholung der Planung für einen Vorgang (nur aus einem aktiven Zusatzkontingent, einzeln gezählt). `requestKey` kennzeichnet die Wiederholungsanfrage: dieselbe Anfrage (doppelt zugestellt,
+   * erneut ausgeführt) zählt und plant nur einmal (`ALREADY_DONE`); eine neue Anfrage ist ein neuer, kostenpflichtiger Versuch und steht als eigene Einheit im Hauptbuch.
+   */
+  async recordRepeat(tenantId: string, caseId: string, requestKey: string, intentSummary?: string): Promise<ShadowOutcome> {
+    if (requestKey.trim().length === 0) throw new Error('Eine Wiederholung braucht einen Anfrageschlüssel.');
+    return this.plan(tenantId, caseId, intentSummary, requestKey.trim());
   }
 
-  private async plan(tenantId: string, caseId: string, intentSummary: string | undefined, repeat: boolean): Promise<ShadowOutcome> {
+  private async plan(tenantId: string, caseId: string, intentSummary: string | undefined, repeatKey: string | null): Promise<ShadowOutcome> {
     if (!(await this.platformControl.flagEnabled(FEATURE_FLAGS.PLANNER_SHADOW, tenantId))) return 'DISABLED';
 
     // 1. Zählen und Reservieren in EINEM Schritt unter einer Sperre je Mandant: wer an der Grenze scheitert, verbraucht nichts (früher schrieb auch der abgelehnte Versuch einen Verbrauchs-Eintrag – der
     //    Zähler stand dann bei 61 von 60, obwohl genau 60 Planungen liefen), und zwei gleichzeitige Aufrufe können die Grenze nicht gemeinsam überschreiten.
     //    Die Zählung ist **dauerhaft**: jede verbrauchte Planung hinterlässt zusätzlich einen Audit-Eintrag, der das Löschen des Vorgangs überlebt – wer Testvorgänge löscht, setzt den Zähler nicht zurück.
     //    Maßgeblich ist der größere der beiden Werte. Ein zweiter Aufruf für denselben Vorgang findet das Ereignis (dedupeKey) und plant nicht noch einmal.
-    const reservation = await this.reserve(tenantId, caseId, repeat);
+    const reservation = await this.reserve(tenantId, caseId, repeatKey);
     if (reservation === 'ALREADY_DONE' || reservation === 'LIMIT_REACHED' || reservation === 'NO_PREVIOUS_PLAN') return reservation;
     const { eventId, unit } = reservation;
     const quotaInfo = unit ? { quota: { grantId: unit.grantId, kind: unit.kind, attempt: unit.attempt } } : {};

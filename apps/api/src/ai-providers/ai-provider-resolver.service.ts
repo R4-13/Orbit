@@ -208,7 +208,7 @@ export class AiProviderResolverService {
     return async (request) => {
       const estimate = cost ? { amount: worstCaseCost(cost, request), currency: cost.currency } : null;
       const ticket = await this.costGuard.reserveCall(tenantId, profileKey, estimate);
-      return ticket ? { release: () => ticket.release(), amount: estimate?.amount ?? 0 } : undefined;
+      return ticket ? { id: ticket.id, release: () => ticket.release(), amount: estimate?.amount ?? 0 } : undefined;
     };
   }
 }

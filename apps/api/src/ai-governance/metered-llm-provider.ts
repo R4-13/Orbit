@@ -4,6 +4,8 @@ import type { AiMeterService, MeterContext } from './ai-meter.service';
 
 /** Eine offene Kostenreservierung für einen laufenden Aufruf. */
 export interface BudgetTicket {
+  /** Kennung der Reservierung. */
+  readonly id: string;
   release(): Promise<void>;
   /** Reservierter schlimmster Fall (Obergrenze der Kosten dieses Aufrufs). */
   readonly amount: number;
@@ -14,6 +16,8 @@ export type BudgetGate = (request: LLMCompletionRequest) => Promise<BudgetTicket
 
 /** Fehlerklassen, bei denen ein anderer – ausdrücklich freigegebener – Kandidat die Anfrage sinnvoll übernehmen kann. */
 const FAILOVER_CLASSES = new Set(['RATE_LIMITED', 'AUTH', 'TIMEOUT', 'PROVIDER_ERROR']);
+/** Fehlerklassen, bei denen der Anbieter den Aufruf vor jeder Verarbeitung abgewiesen hat – es ist nichts berechnet worden. */
+const NOT_BILLED_CLASSES = new Set(['RATE_LIMITED', 'AUTH']);
 
 /**
  * Misst einen Aufruf (Nutzung, Latenz, Gesundheit), ohne Prompt- oder Antwortinhalt zu sehen oder zu verändern. Der echte Fehler wird unverändert
@@ -43,16 +47,18 @@ export class MeteredLLMProvider implements LLMProvider {
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     const ticket = await this.budget?.(request);
     const startedAt = Date.now();
+    const reservation = ticket ? { worstCase: ticket.amount, reservationId: ticket.id } : {};
     try {
       const result = await this.inner.complete(request);
-      await this.meter.record(this.context, { ok: true, latencyMs: Date.now() - startedAt, usage: result.usage, worstCase: ticket?.amount });
+      await this.meter.record(this.context, { ok: true, latencyMs: Date.now() - startedAt, usage: result.usage, ...reservation });
       return result;
     } catch (error) {
-      await this.meter.record(this.context, { ok: false, latencyMs: Date.now() - startedAt, error });
+      // Nur ein Fehler, der nachweislich vor jeder Verarbeitung entstand (Rate-Limit, Anmeldung), gibt die Reservierung ohne Verbrauch frei. Bei allem anderen – Zeitüberschreitung, Verbindungsabbruch,
+      // Serverfehler, unbrauchbare Antwort – kann die Ausgabe bereits entstanden sein: dann zählt der reservierte schlimmste Fall als Verbrauch (nie vorschnell „kostenlos“).
+      const notBilled = NOT_BILLED_CLASSES.has(classifyLlmError(error));
+      await this.meter.record(this.context, { ok: false, latencyMs: Date.now() - startedAt, error, possiblyBilled: !notBilled, ...(notBilled ? {} : reservation) });
+      if (ticket && notBilled) await ticket.release().catch(() => undefined);
       throw error;
-    } finally {
-      // Erst NACH der Messung freigeben: der Verbrauch ist dann schon gezählt, es gibt kein Fenster, in dem der Aufruf unberücksichtigt bliebe.
-      await ticket?.release().catch(() => undefined);
     }
   }
 }

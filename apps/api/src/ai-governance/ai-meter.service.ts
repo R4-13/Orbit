@@ -23,8 +23,12 @@ export interface MeterOutcome {
   latencyMs: number;
   usage?: { inputTokens?: number; outputTokens?: number };
   error?: unknown;
-  /** Reservierter schlimmster Fall: gilt als obere Schranke, wenn ein erfolgreicher Aufruf keinen Verbrauch meldet (nie als 0 unterstellt). */
+  /** Reservierter schlimmster Fall: gilt als obere Schranke, wenn ein Aufruf keinen Verbrauch meldet oder sein Ausgang ungewiss ist (nie als 0 unterstellt). */
   worstCase?: number;
+  /** Kennung der Kostenreservierung: Verbrauchszeile und Abrechnung der Reservierung geschehen in EINER Transaktion. */
+  reservationId?: string;
+  /** Der Aufruf ist gescheitert, kann aber trotzdem berechnet worden sein (Zeitüberschreitung, Verbindungsabbruch, Antwort ohne verwertbaren Inhalt): dann zählt der reservierte schlimmste Fall als Verbrauch. */
+  possiblyBilled?: boolean;
 }
 
 /**
@@ -44,8 +48,12 @@ export class AiMeterService {
     const errorClass: LlmErrorClass | undefined = outcome.ok ? undefined : classifyLlmError(outcome.error);
     try {
       const measured = context.cost ? actualCost(outcome.usage, context.cost) : null;
-      const cost = measured ?? (outcome.ok && context.cost && outcome.worstCase !== undefined ? outcome.worstCase : null);
-      await this.prisma.forTenantId(context.tenantId).aIUsageRecord.create({
+      const cost = measured ?? ((outcome.ok || outcome.possiblyBilled) && context.cost && outcome.worstCase !== undefined ? outcome.worstCase : null);
+      // Verbrauch und Abrechnung der Reservierung gemeinsam: der Aufruf zählt nie zugleich als Messwert und als offene Reservierung – und nie als keines von beiden.
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.tenant_id', ${context.tenantId}, true)`;
+        await tx.$executeRaw`SELECT set_config('app.platform_scope', 'on', true)`;
+        await tx.aIUsageRecord.create({
         data: {
           tenantId: context.tenantId,
           profileKey: context.profileKey,
@@ -63,6 +71,8 @@ export class AiMeterService {
           costCurrency: cost === null ? undefined : context.cost?.currency,
           caseId: currentCaseId(),
         },
+        });
+        if (outcome.reservationId) await tx.aICostReservation.updateMany({ where: { id: outcome.reservationId, status: 'RESERVED' }, data: { status: 'SETTLED', releasedAt: new Date() } });
       });
     } catch (error) {
       this.logger.warn(`usage record failed: ${error instanceof Error ? error.name : 'error'}`);

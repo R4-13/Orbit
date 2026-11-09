@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { ExternalSystemError } from '@orbit/shared';
+import { DEFAULT_MAX_OUTPUT_TOKENS, ExternalSystemError } from '@orbit/shared';
 import type {
   LLMCompletionRequest,
   LLMCompletionResult,
@@ -40,7 +40,7 @@ export class AnthropicLLMProvider implements LLMProvider {
     try {
       response = await this.client.messages.create({
         model: this.model,
-        max_tokens: request.maxTokens ?? 4096,
+        max_tokens: request.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
         ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
         system: request.systemPrompt,
         messages: request.messages.map((message) => ({

@@ -164,25 +164,29 @@ describe('Schattenplanung: Zusatzkontingent (e2e)', () => {
     expect((await quota.status(tenantId)).grants[0]!.consumed).toBe(1);
   });
 
-  it('Wiederholungen: nur mit aktivem Kontingent, nur für einen bereits geplanten Vorgang, einzeln gezählt (Art REPEAT, laufende Nummer), ohne die Grundzählung zu berühren', async () => {
-    const tenantId = await exhaustedTenant();
+  it('Wiederholungen: nur mit aktivem Kontingent und nur für einen bereits geplanten Vorgang; dieselbe Anfrage (doppelt zugestellt) zählt einmal, eine neue Anfrage ist ein neuer einzeln gezählter Versuch; die Grundzählung bleibt unberührt', async () => {
+    const tenantId = await exhaustedTenant(5); // Grundgrenze noch nicht erreicht: die erste Planung kommt aus der Grundzählung
     const c = await newCase(tenantId, 'Wiederholung');
     const never = await newCase(tenantId, 'Nie geplant');
-    expect(await shadow.recordRepeat(tenantId, c.id)).toBe('LIMIT_REACHED'); // ohne Kontingent nie
+    expect(await shadow.recordRepeat(tenantId, c.id, 'req-0')).toBe('NO_PREVIOUS_PLAN'); // keine erste Planung: keine Wiederholung
+    seedPlan();
+    expect(await shadow.record(tenantId, c.id)).toBe('RECORDED'); // Grundzählung: 6
+    expect(await shadow.recordRepeat(tenantId, c.id, 'req-1')).toBe('LIMIT_REACHED'); // ohne aktives Kontingent nie
     const created = await grant(tenantId, 3);
     await quota.activate(tenantId, created.id, 'Auftraggeber, 02.11.2026 (Test)');
-    expect(await shadow.recordRepeat(tenantId, never.id)).toBe('NO_PREVIOUS_PLAN'); // keine erste Planung: keine Wiederholung
+    expect(await shadow.recordRepeat(tenantId, never.id, 'req-1')).toBe('NO_PREVIOUS_PLAN');
 
     seedPlan();
-    expect(await shadow.record(tenantId, c.id)).toBe('RECORDED');
+    expect(await shadow.recordRepeat(tenantId, c.id, 'req-1')).toBe('RECORDED');
+    expect(await shadow.recordRepeat(tenantId, c.id, 'req-1')).toBe('ALREADY_DONE'); // doppelte Zustellung derselben Anfrage: nicht noch einmal geplant, nicht noch einmal gezählt
     seedPlan();
-    expect(await shadow.recordRepeat(tenantId, c.id)).toBe('RECORDED');
+    expect(await shadow.recordRepeat(tenantId, c.id, 'req-2')).toBe('RECORDED'); // tatsächlich neuer Versuch
     const rows = await ledger(tenantId);
-    expect(rows.map((r) => [r.kind, r.attempt])).toEqual([['FIRST', 1], ['REPEAT', 2]]);
+    expect(rows.map((r) => [r.kind, r.attempt, r.requestKey])).toEqual([['REPEAT', 2, 'req-1'], ['REPEAT', 3, 'req-2']]);
     const keys = (await prisma.forTenantId(tenantId).caseEvent.findMany({ where: { caseId: c.id, type: 'shadow.plan_proposed' }, select: { dedupeKey: true }, orderBy: { sequence: 'asc' } })).map((e) => e.dedupeKey);
-    expect(keys).toEqual(['shadow:' + c.id, `shadow:${c.id}:2`]);
-    expect((await quota.status(tenantId)).grants[0]).toMatchObject({ consumed: 2, repeats: 1, remaining: 1 });
-    expect((await quota.status(tenantId)).base.used).toBe(SHADOW_PLAN_LIMIT_PER_TENANT);
+    expect(keys).toEqual([`shadow:${c.id}`, `shadow:${c.id}:r:req-1`, `shadow:${c.id}:r:req-2`]);
+    expect((await quota.status(tenantId)).grants[0]).toMatchObject({ consumed: 2, repeats: 2, remaining: 1 });
+    expect((await quota.status(tenantId)).base.used).toBe(6); // 5 + die eine Planung der Grundzählung; Wiederholungen berühren sie nicht
   });
 
   it('Beenden: weitere Planungen werden abgelehnt, der bisherige Verbrauch bleibt; es ist höchstens ein Kontingent gleichzeitig aktiv', async () => {

@@ -34,6 +34,7 @@ export interface QuotaUnit {
   ledgerId: string;
   kind: 'FIRST' | 'REPEAT';
   attempt: number;
+  requestKey: string | null;
 }
 
 /**
@@ -149,7 +150,7 @@ export class ShadowQuotaService {
    * Nimmt eine Einheit aus dem aktiven Kontingent des Mandanten (oder nichts, wenn keines aktiv oder aufgebraucht ist). Die Einheit steht danach als RESERVED im Hauptbuch; der Aufrufer trägt das
    * Ereignis nach (`attach`) und schließt sie mit `finish` ab. Aufzurufen unter der Sperre `shadow:<Mandant>`.
    */
-  async takeInTx(tx: Prisma.TransactionClient, tenantId: string, caseId: string, kind: 'FIRST' | 'REPEAT'): Promise<{ unit: QuotaUnit } | { unit: null; reason: 'NO_ACTIVE_GRANT' | 'EXHAUSTED' }> {
+  async takeInTx(tx: Prisma.TransactionClient, tenantId: string, caseId: string, kind: 'FIRST' | 'REPEAT', requestKey: string | null = null): Promise<{ unit: QuotaUnit } | { unit: null; reason: 'NO_ACTIVE_GRANT' | 'EXHAUSTED' }> {
     const grant = await tx.shadowQuotaGrant.findFirst({ where: { tenantId, status: 'ACTIVE' }, orderBy: { createdAt: 'asc' } });
     if (!grant) return { unit: null, reason: 'NO_ACTIVE_GRANT' };
     const used = await tx.shadowQuotaLedger.count({ where: { grantId: grant.id } });
@@ -158,9 +159,9 @@ export class ShadowQuotaService {
     const planned = await tx.caseEvent.count({ where: { tenantId, caseId, type: 'shadow.plan_proposed' } });
     const attempt = planned + 1;
     if (kind === 'FIRST' && planned > 0) throw new ConflictException('Für diesen Vorgang liegt bereits eine Schattenplanung vor.');
-    const row = await tx.shadowQuotaLedger.create({ data: { tenantId, grantId: grant.id, caseId, kind, attempt, state: 'RESERVED' } });
-    await this.audit(tx, tenantId, grant.id, 'SHADOW_QUOTA_UNIT_RESERVED', { caseId, kind, attempt, consumedAfter: used + 1, amount: grant.amount });
-    return { unit: { grantId: grant.id, ledgerId: row.id, kind, attempt } };
+    const row = await tx.shadowQuotaLedger.create({ data: { tenantId, grantId: grant.id, caseId, kind, attempt, requestKey, state: 'RESERVED' } });
+    await this.audit(tx, tenantId, grant.id, 'SHADOW_QUOTA_UNIT_RESERVED', { caseId, kind, attempt, requestKey, consumedAfter: used + 1, amount: grant.amount });
+    return { unit: { grantId: grant.id, ledgerId: row.id, kind, attempt, requestKey } };
   }
 
   async attachInTx(tx: Prisma.TransactionClient, ledgerId: string, caseEventId: string): Promise<void> {

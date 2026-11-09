@@ -12,7 +12,7 @@ CREATE TABLE "ai_cost_reservations" (
   "expires_at" TIMESTAMP(3) NOT NULL,
   "released_at" TIMESTAMP(3),
   CONSTRAINT "ai_cost_reservations_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "ai_cost_reservations_status_chk" CHECK ("status" IN ('RESERVED', 'RELEASED')),
+  CONSTRAINT "ai_cost_reservations_status_chk" CHECK ("status" IN ('RESERVED', 'SETTLED', 'RELEASED')),
   CONSTRAINT "ai_cost_reservations_amount_chk" CHECK ("amount" >= 0)
 );
 CREATE INDEX "ai_cost_reservations_status_expires_at_idx" ON "ai_cost_reservations"("status", "expires_at");
@@ -48,6 +48,7 @@ CREATE TABLE "shadow_quota_ledger" (
   "case_event_id" TEXT,
   "kind" TEXT NOT NULL,
   "attempt" INTEGER NOT NULL,
+  "request_key" TEXT,
   "state" TEXT NOT NULL,
   "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMP(3) NOT NULL,
@@ -56,6 +57,7 @@ CREATE TABLE "shadow_quota_ledger" (
   CONSTRAINT "shadow_quota_ledger_state_chk" CHECK ("state" IN ('RESERVED', 'DONE', 'UNAVAILABLE'))
 );
 CREATE UNIQUE INDEX "shadow_quota_ledger_tenant_id_case_id_attempt_key" ON "shadow_quota_ledger"("tenant_id", "case_id", "attempt");
+CREATE UNIQUE INDEX "shadow_quota_ledger_tenant_id_case_id_request_key_key" ON "shadow_quota_ledger"("tenant_id", "case_id", "request_key");
 CREATE INDEX "shadow_quota_ledger_grant_id_idx" ON "shadow_quota_ledger"("grant_id");
 ALTER TABLE "shadow_quota_ledger" ADD CONSTRAINT "shadow_quota_ledger_grant_id_fkey" FOREIGN KEY ("grant_id") REFERENCES "shadow_quota_grants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

@@ -36,8 +36,13 @@ describe('Preiskatalog und Kostenrechnung', () => {
   it('schlimmster Fall: pessimistische Eingabe plus volle Ausgabegrenze – nie unter den tatsächlichen Kosten eines gewöhnlichen Aufrufs', () => {
     const request = { systemPrompt: 'x'.repeat(2_000), messages: [{ content: 'y'.repeat(8_000) }], tools: [{ name: 't' }] };
     const worst = worstCaseCost(luna, request);
-    expect(inputTokensUpperBound(request)).toBeGreaterThanOrEqual(5_000);
+    expect(inputTokensUpperBound(request)).toBeGreaterThanOrEqual(10_000); // Byte-Länge: nie unter der Zeichenzahl
     expect(worst).toBeGreaterThan(actualCost({ inputTokens: 3_000, outputTokens: 600 }, luna)!);
+    // Mehrbyte-Zeichen zählen nach Bytes (Umlaute 2, Euro 3, Emoji 4): die Schranke wächst entsprechend.
+    const umlauts = { messages: [{ content: 'ä'.repeat(1_000) }], tools: [] };
+    const emoji = { messages: [{ content: '😀'.repeat(500) }], tools: [] };
+    expect(inputTokensUpperBound(umlauts)).toBeGreaterThanOrEqual(2_000);
+    expect(inputTokensUpperBound(emoji)).toBeGreaterThanOrEqual(2_000);
     expect(worst).toBeCloseTo((inputTokensUpperBound(request) * 0.1 + DEFAULT_MAX_OUTPUT_TOKENS * 0.5) / 1_000_000, 9);
     expect(worstCaseCost(luna, { ...request, maxTokens: 100 })).toBeLessThan(worst);
   });

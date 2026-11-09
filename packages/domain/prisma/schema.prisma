@@ -288,23 +288,23 @@ enum AgentDefinitionStatus {
 model Tenant {
   aiUsageRecords            AIUsageRecord[]
   shadowQuotaGrants         ShadowQuotaGrant[]
-  id                        String          @id @default(uuid())
+  id                        String             @id @default(uuid())
   name                      String
-  slug                      String          @unique
-  status                    TenantStatus    @default(ACTIVE)
-  locale                    String          @default("de-DE")
-  timezone                  String          @default("Europe/Berlin")
+  slug                      String             @unique
+  status                    TenantStatus       @default(ACTIVE)
+  locale                    String             @default("de-DE")
+  timezone                  String             @default("Europe/Berlin")
   /// §52 DSGVO-Löschworkflow: gesetzt durch POST /tenants/me/deletion-request,
   /// Voraussetzung für POST /tenants/me/deletion-confirm. Zwei getrennte
   /// Aufrufe als bewusste Sicherheitshürde gegen versehentliche Löschung.
-  deletionRequestedAt       DateTime?       @map("deletion_requested_at")
-  deletionRequestedByUserId String?         @map("deletion_requested_by_user_id")
+  deletionRequestedAt       DateTime?          @map("deletion_requested_at")
+  deletionRequestedByUserId String?            @map("deletion_requested_by_user_id")
   /// Amendment 03 §6: Rollout-Kohorten und feingranulare Sperrarten (LOGIN, AUTOMATION, CONNECTORS, BILLING, SECURITY_QUARANTINE).
-  featureCohorts            String[]        @default([]) @map("feature_cohorts")
-  suspensionScopes          String[]        @default([]) @map("suspension_scopes")
-  lifecycleNote             String?         @map("lifecycle_note")
-  createdAt                 DateTime        @default(now()) @map("created_at")
-  updatedAt                 DateTime        @updatedAt @map("updated_at")
+  featureCohorts            String[]           @default([]) @map("feature_cohorts")
+  suspensionScopes          String[]           @default([]) @map("suspension_scopes")
+  lifecycleNote             String?            @map("lifecycle_note")
+  createdAt                 DateTime           @default(now()) @map("created_at")
+  updatedAt                 DateTime           @updatedAt @map("updated_at")
 
   users                        User[]
   roles                        Role[]
@@ -374,22 +374,22 @@ model Tenant {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  tenantId     String     @map("tenant_id")
-  email        String     @unique
-  passwordHash String     @map("password_hash")
-  firstName    String     @map("first_name")
-  lastName     String     @map("last_name")
-  status       UserStatus @default(INVITED)
+  id                     String     @id @default(uuid())
+  tenantId               String     @map("tenant_id")
+  email                  String     @unique
+  passwordHash           String     @map("password_hash")
+  firstName              String     @map("first_name")
+  lastName               String     @map("last_name")
+  status                 UserStatus @default(INVITED)
   /// Startpasswort (z. B. bei der Anlage durch den Betreiber): bis zum ersten Wechsel sind nur Passwortwechsel, Kontoabfrage und Abmelden erlaubt.
-  passwordChangeRequired Boolean @default(false) @map("password_change_required")
+  passwordChangeRequired Boolean    @default(false) @map("password_change_required")
   /// Zeitpunkt der letzten Passwortänderung (leer = seit der Anlage unverändert); Grundlage für den Ablauf (PASSWORD_MAX_AGE_DAYS).
-  passwordChangedAt DateTime? @map("password_changed_at")
+  passwordChangedAt      DateTime?  @map("password_changed_at")
   /// Hashes früherer Passwörter (neueste zuletzt, höchstens PASSWORD_HISTORY_COUNT): sie dürfen nicht wieder vergeben werden.
-  passwordHistory String[] @default([]) @map("password_history")
-  lastLoginAt  DateTime?  @map("last_login_at")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  passwordHistory        String[]   @default([]) @map("password_history")
+  lastLoginAt            DateTime?  @map("last_login_at")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
 
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   roles         UserRole[]
@@ -617,20 +617,20 @@ model Task {
 /// Metadaten zu einer in S3/MinIO abgelegten Datei (siehe ASSUMPTIONS #6).
 /// storageKey ist der Object-Key im Bucket, niemals ein direkt aufrufbarer Pfad.
 model Document {
-  id               String   @id @default(uuid())
-  tenantId         String   @map("tenant_id")
-  caseId           String?  @map("case_id")
-  fileName         String   @map("file_name")
-  mimeType         String   @map("mime_type")
-  sizeBytes        Int      @map("size_bytes")
-  storageKey       String   @map("storage_key")
-  checksum         String?
-  uploadedByUserId String?  @map("uploaded_by_user_id")
-  createdAt        DateTime @default(now()) @map("created_at")
+  id                 String    @id @default(uuid())
+  tenantId           String    @map("tenant_id")
+  caseId             String?   @map("case_id")
+  fileName           String    @map("file_name")
+  mimeType           String    @map("mime_type")
+  sizeBytes          Int       @map("size_bytes")
+  storageKey         String    @map("storage_key")
+  checksum           String?
+  uploadedByUserId   String?   @map("uploaded_by_user_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
   /// PENDING (noch nicht an den Bytes geprüft), VERIFIED oder REJECTED (Inhalt passt nicht zur angegebenen Art – die Datei wurde gelöscht). Siehe DocumentsService.verifyUpload.
-  verificationStatus String  @default("PENDING") @map("verification_status")
-  verifiedAt       DateTime? @map("verified_at")
-  verificationNote String?  @map("verification_note")
+  verificationStatus String    @default("PENDING") @map("verification_status")
+  verifiedAt         DateTime? @map("verified_at")
+  verificationNote   String?   @map("verification_note")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case   Case?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
@@ -870,29 +870,29 @@ model Contact {
 }
 
 model Lead {
-  id        String     @id @default(uuid())
-  tenantId  String     @map("tenant_id")
-  caseId    String?    @map("case_id")
-  contactId String     @map("contact_id")
-  companyId String?    @map("company_id")
-  source    LeadSource
-  status    LeadStatus @default(NEW)
-  notes     String?
+  id                 String     @id @default(uuid())
+  tenantId           String     @map("tenant_id")
+  caseId             String?    @map("case_id")
+  contactId          String     @map("contact_id")
+  companyId          String?    @map("company_id")
+  source             LeadSource
+  status             LeadStatus @default(NEW)
+  notes              String?
   /// Kennung des Leads (Deals) im CRM – nur der vom Vorgang angelegte Lead wird später ergänzt/korrigiert, nie ein anderes Objekt.
-  crmExternalId String? @map("crm_external_id")
+  crmExternalId      String?    @map("crm_external_id")
   /// NONE (kein CRM-Bezug), SYNCED (zuletzt geschriebener Stand liegt im CRM, durch Rücklesen belegt), OUT_OF_SYNC, FAILED (Schreiben/Rücklesen gescheitert, wird wiederholt), CONFLICT (im CRM wurde von Hand geändert; nichts überschrieben).
-  crmSyncState String @default("NONE") @map("crm_sync_state")
+  crmSyncState       String     @default("NONE") @map("crm_sync_state")
   /// SHA-256 über Titel und Beschreibung, die zuletzt ins CRM geschrieben wurden (Idempotenz: gleicher Stand = keine zweite Wirkung).
-  crmSyncedHash String? @map("crm_synced_hash")
-  crmSyncedTitle String? @map("crm_synced_title")
+  crmSyncedHash      String?    @map("crm_synced_hash")
+  crmSyncedTitle     String?    @map("crm_synced_title")
   /// Der Wortlaut, den ORBIT zuletzt ins CRM geschrieben hat (so, wie das CRM ihn hält) – Grundlage der Prüfung auf Handänderungen im CRM.
-  crmSyncedText String? @map("crm_synced_text")
-  crmSyncedAt DateTime? @map("crm_synced_at")
-  crmSyncError String? @map("crm_sync_error")
+  crmSyncedText      String?    @map("crm_synced_text")
+  crmSyncedAt        DateTime?  @map("crm_synced_at")
+  crmSyncError       String?    @map("crm_sync_error")
   /// Kurzer Sperrvermerk gegen gleichzeitige Abgleiche desselben Leads.
-  crmSyncLockedUntil DateTime? @map("crm_sync_locked_until")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  crmSyncLockedUntil DateTime?  @map("crm_sync_locked_until")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   case    Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
@@ -2610,14 +2610,14 @@ model AIUsageRecord {
 model AICostReservation {
   id             String    @id @default(uuid())
   targetTenantId String    @map("target_tenant_id")
-  profileKey String    @map("profile_key")
-  currency   String
-  amount     Decimal   @db.Decimal(14, 6)
-  /// RESERVED | RELEASED
-  status     String    @default("RESERVED")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  expiresAt  DateTime  @map("expires_at")
-  releasedAt DateTime? @map("released_at")
+  profileKey     String    @map("profile_key")
+  currency       String
+  amount         Decimal   @db.Decimal(14, 6)
+  /// RESERVED (Aufruf läuft oder nie abgerechnet) | SETTLED (Verbrauch gemessen, in derselben Transaktion abgerechnet) | RELEASED (nachweislich nichts berechnet)
+  status         String    @default("RESERVED")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  expiresAt      DateTime  @map("expires_at")
+  releasedAt     DateTime? @map("released_at")
 
   @@index([status, expiresAt])
   @@index([targetTenantId, status])
@@ -2656,6 +2656,8 @@ model ShadowQuotaLedger {
   /// FIRST (erste Planung des Vorgangs) | REPEAT (ausdrückliche Wiederholung für denselben Vorgang)
   kind        String
   attempt     Int
+  /// Nur bei REPEAT: Schlüssel der Wiederholungsanfrage. Dieselbe Anfrage (z. B. doppelt zugestellt) zählt nur einmal; eine neue Anfrage ist ein neuer, einzeln gezählter Versuch.
+  requestKey  String?  @map("request_key")
   /// RESERVED (Planung läuft) | DONE (Ergebnis liegt vor) | UNAVAILABLE (Planung nicht möglich, Einheit gilt trotzdem als verbraucht)
   state       String
   createdAt   DateTime @default(now()) @map("created_at")
@@ -2664,6 +2666,7 @@ model ShadowQuotaLedger {
   grant ShadowQuotaGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, caseId, attempt])
+  @@unique([tenantId, caseId, requestKey])
   @@index([grantId])
   @@map("shadow_quota_ledger")
 }

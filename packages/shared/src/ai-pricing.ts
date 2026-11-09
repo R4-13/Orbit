@@ -87,15 +87,37 @@ export function actualCost(usage: { inputTokens?: number | null; outputTokens?: 
   return (usage.inputTokens * tier.inputPerMtok + usage.outputTokens * tier.outputPerMtok) / 1_000_000;
 }
 
-/** Obere Schranke der Eingabe-Token aus der Textmenge (bewusst pessimistisch: höchstens 2 Zeichen je Token). */
-export function inputTokensUpperBound(request: { systemPrompt?: string; messages: ReadonlyArray<{ content: string }>; tools: ReadonlyArray<unknown> }): number {
-  let chars = request.systemPrompt?.length ?? 0;
-  for (const m of request.messages) chars += m.content.length;
-  if (request.tools.length > 0) chars += JSON.stringify(request.tools).length;
-  return Math.ceil(chars / 2) + 64;
+/** Länge in UTF-8-Bytes ohne Zwischenspeicher. */
+function utf8Length(text: string): number {
+  let bytes = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) {
+      bytes += 4; // Ersatzpaar: vier Bytes für zwei UTF-16-Einheiten
+      i += 1;
+    } else bytes += 3;
+  }
+  return bytes;
 }
 
-/** Ausgabegrenze, die der Anbieter-Adapter setzt, wenn der Aufrufer keine nennt (siehe `OpenAILLMProvider`/`AnthropicLLMProvider`). */
+/** Festzuschlag je Nachricht und für Rollen-/Werkzeugrahmen, den der Anbieter zusätzlich zählt (großzügig angesetzt). */
+const TOKENS_PER_MESSAGE_OVERHEAD = 16;
+const TOKENS_BASE_OVERHEAD = 256;
+
+/**
+ * Strenge Obergrenze der Eingabe-Token: die Byte-Länge des gesendeten Textes (ein Token umfasst mindestens ein Byte; das gilt für byteweise Tokenizer wie die der heutigen Anbieter) plus Festzuschläge für
+ * den Nachrichtenrahmen. Bewusst deutlich über dem tatsächlichen Verbrauch (deutscher Text liegt bei etwa 3–4 Zeichen je Token): die Reservierung ist eine Schranke, keine Schätzung.
+ */
+export function inputTokensUpperBound(request: { systemPrompt?: string; messages: ReadonlyArray<{ content: string }>; tools: ReadonlyArray<unknown> }): number {
+  let bytes = request.systemPrompt ? utf8Length(request.systemPrompt) : 0;
+  for (const m of request.messages) bytes += utf8Length(m.content) + TOKENS_PER_MESSAGE_OVERHEAD;
+  if (request.tools.length > 0) bytes += utf8Length(JSON.stringify(request.tools));
+  return bytes + TOKENS_BASE_OVERHEAD;
+}
+
+/** Ausgabegrenze, die die Anbieter-Adapter (`OpenAILLMProvider`, `AnthropicLLMProvider`) als `max_completion_tokens`/`max_tokens` senden, wenn der Aufrufer keine nennt: Einzige Quelle für Adapter und Reservierung. Bei Denkmodellen zählen Denk-Token innerhalb dieser Grenze. */
 export const DEFAULT_MAX_OUTPUT_TOKENS = 4096;
 
 /**

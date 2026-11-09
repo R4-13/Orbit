@@ -75,8 +75,8 @@ interface Setup {
 
 function build(setup: Setup) {
   const platformDefault = new MockLLMProvider();
-  const recorded: Array<{ ctx: Record<string, unknown>; ok: boolean }> = [];
-  const meter = { record: jest.fn(async (ctx: Record<string, unknown>, outcome: { ok: boolean }) => void recorded.push({ ctx, ok: outcome.ok })) } as unknown as AiMeterService;
+  const recorded: Array<{ ctx: Record<string, unknown>; ok: boolean; reservationId?: string }> = [];
+  const meter = { record: jest.fn(async (ctx: Record<string, unknown>, outcome: { ok: boolean; reservationId?: string }) => void recorded.push({ ctx, ok: outcome.ok, reservationId: outcome.reservationId })) } as unknown as AiMeterService;
   const registry = {
     tenantRegion: () => 'EU',
     routingSnapshot: jest.fn(async () => ({ environment: 'test', profile: null, route: null, models: new Map(), connections: new Map(), health: new Map(), ...setup.snapshot })),
@@ -91,7 +91,7 @@ function build(setup: Setup) {
   const costGuard = {
     reserveCall: jest.fn(async (_tenantId: string, _profileKey: string, estimate: { amount: number; currency: string } | null) => {
       if (setup.budgetExceeded) throw new AiProviderUnavailableError('Kostenlimit erreicht.', { mode: 'COST_LIMIT', reasons: ['COST_LIMIT_HARD'] });
-      return { release: async () => void released.push(estimate ? `${estimate.currency}:${estimate.amount.toFixed(6)}` : 'unbekannt') };
+      return { id: 'res-1', release: async () => void released.push(estimate ? `${estimate.currency}:${estimate.amount.toFixed(6)}` : 'unbekannt') };
     }),
   } as unknown as AiCostGuardrailService;
   const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, costGuard, control, platformDefault, ENV);
@@ -268,7 +268,8 @@ describe('AiProviderResolverService', () => {
       expect((await resolved.provider.complete(REQUEST)).text).toBe('alpha:m-a');
       expect(setup.costGuard.reserveCall).toHaveBeenCalledWith('t7', 'COMPLEX_REASONING', null); // Modell ohne Preis im Register und im Katalog: der Wächter entscheidet (unbekannter Preis)
       expect(setup.recorded).toHaveLength(1);
-      expect(setup.released).toEqual(['unbekannt']); // die Reservierung wird nach dem Aufruf freigegeben
+      expect(setup.recorded[0]!.reservationId).toBe('res-1'); // der Verbrauch wird unter der Kennung der Reservierung abgerechnet (eine Transaktion im Meter)
+      expect(setup.released).toEqual([]); // erfolgreiche Aufrufe werden nicht „freigegeben“, sondern abgerechnet
     });
 
     it('BYOK ist ausgenommen: der Mandant trägt seine Kosten selbst, ein Plattform-Limit darf ihn nicht blockieren', async () => {

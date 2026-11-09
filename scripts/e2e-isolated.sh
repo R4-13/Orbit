@@ -9,6 +9,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 set -a; source "$ROOT/.env"; set +a
+# Docker Desktop veröffentlicht die Ports zeitweise nur über IPv4 (`localhost` löst zuerst auf ::1 auf und hängt: Prisma „P1001“). Mit E2E_HOST=127.0.0.1 ersetzt der Lauf den Host in den Adressen.
+if [ -n "${E2E_HOST:-}" ]; then DATABASE_URL="${DATABASE_URL//localhost/$E2E_HOST}"; DATABASE_URL_APP="${DATABASE_URL_APP//localhost/$E2E_HOST}"; fi
 # Live-Läufe mit echtem Modell (LIVE_AI=1): die lokale KI-Konfiguration überschreibt die Werte aus .env.
 if [ "${LIVE_AI:-}" = "1" ] && [ -f "$ROOT/.env.llm.local" ]; then set -a; source "$ROOT/.env.llm.local"; set +a; fi
 
@@ -48,7 +50,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' orbit-redis-e2e 2>/dev/null)" != 
   docker run -d --name orbit-redis-e2e -p 16379:6379 redis:7-alpine >/dev/null
   echo "[e2e] Test-Redis orbit-redis-e2e gestartet (Port 16379)."
 fi
-export REDIS_URL="redis://localhost:${E2E_REDIS_PORT:-16379}/${E2E_REDIS_DB:-0}"
+export REDIS_URL="redis://${E2E_HOST:-localhost}:${E2E_REDIS_PORT:-16379}/${E2E_REDIS_DB:-0}"
 export E2E_ISOLATED=1
 # Zielabdeckung (Anliegenliste im Plan): Skript-Tests mit festen Plänen kennen sie nicht; Live-Läufe mit echtem Modell prüfen sie (LIVE_AI=1). Ausdrücklich überschreibbar.
 export PLAN_REQUIRE_OUTCOMES="${PLAN_REQUIRE_OUTCOMES:-$([ "${LIVE_AI:-}" = "1" ] && echo true || echo false)}"
