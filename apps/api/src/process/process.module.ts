@@ -44,6 +44,7 @@ import { AppointmentSlotsService } from './reference/appointment-slots.service';
 import { ReferenceProcessTools } from './reference/reference-process.tools';
 import { RequestAnalysisService } from './reference/request-analysis.service';
 import { ShadowPlanService } from './shadow-plan.service';
+import { ShadowQuotaService } from './shadow-quota.service';
 import { HandoffComposerService } from './reference/handoff-composer.service';
 import { LeadSyncService } from './lead-sync.service';
 import { SupplementService } from './supplement.service';
@@ -93,6 +94,7 @@ import { ReplyRoutingService } from './reply-routing.service';
     CaseOrchestrationService,
     HumanInteractionService,
     ShadowPlanService,
+    ShadowQuotaService,
     HandoffComposerService,
     LeadSyncService,
     SupplementService,
@@ -126,6 +128,7 @@ import { ReplyRoutingService } from './reply-routing.service';
     CaseOrchestrationService,
     HumanInteractionService,
     ShadowPlanService,
+    ShadowQuotaService,
     LeadSyncService,
     SupplementService,
     FamilyReplyService,

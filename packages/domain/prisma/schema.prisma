@@ -287,6 +287,7 @@ enum AgentDefinitionStatus {
 
 model Tenant {
   aiUsageRecords            AIUsageRecord[]
+  shadowQuotaGrants         ShadowQuotaGrant[]
   id                        String          @id @default(uuid())
   name                      String
   slug                      String          @unique
@@ -2602,6 +2603,69 @@ model AIUsageRecord {
   @@index([profileKey, createdAt])
   @@index([providerKey, createdAt])
   @@map("ai_usage_records")
+}
+
+/// Reservierung des schlimmsten Falls für einen laufenden, plattformfinanzierten KI-Aufruf (Pilotvorbereitung, Kostenkontrolle): ein durchgesetztes Kostenlimit rechnet Verbrauch PLUS offene Reservierungen,
+/// bevor ein weiterer Aufruf beginnt. Plattformtabelle (RLS über app.platform_scope); verwaiste Reservierungen verfallen von selbst (`expiresAt`).
+model AICostReservation {
+  id             String    @id @default(uuid())
+  targetTenantId String    @map("target_tenant_id")
+  profileKey String    @map("profile_key")
+  currency   String
+  amount     Decimal   @db.Decimal(14, 6)
+  /// RESERVED | RELEASED
+  status     String    @default("RESERVED")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  releasedAt DateTime? @map("released_at")
+
+  @@index([status, expiresAt])
+  @@index([targetTenantId, status])
+  @@map("ai_cost_reservations")
+}
+
+/// Zusätzliches, ausdrücklich beschlossenes Kontingent an Schattenplanungen für einen Mandanten (Prüfplan D9). Der bisherige Zähler bleibt unberührt; ein Kontingent wirkt nur im Zustand ACTIVE
+/// und nur, wenn die feste Grundgrenze erreicht ist. Ausgangszustand: INACTIVE.
+model ShadowQuotaGrant {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  amount      Int
+  purpose     String
+  /// Wer hat das Kontingent beschlossen (Name/Rolle und Datum der Entscheidung, Freitext).
+  decidedBy   String    @map("decided_by")
+  /// INACTIVE | ACTIVE | REVOKED
+  status      String    @default("INACTIVE")
+  activatedAt DateTime? @map("activated_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledger ShadowQuotaLedger[]
+
+  @@index([tenantId, status])
+  @@map("shadow_quota_grants")
+}
+
+/// Jede Einheit des Zusatzkontingents genau einmal: Reservierung vor der Planung, Ergebnis danach. Zählt dauerhaft (keine Verknüpfung zum Vorgang, damit das Löschen von Testvorgängen den Verbrauch nicht zurücksetzt).
+model ShadowQuotaLedger {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  grantId     String   @map("grant_id")
+  caseId      String   @map("case_id")
+  caseEventId String?  @map("case_event_id")
+  /// FIRST (erste Planung des Vorgangs) | REPEAT (ausdrückliche Wiederholung für denselben Vorgang)
+  kind        String
+  attempt     Int
+  /// RESERVED (Planung läuft) | DONE (Ergebnis liegt vor) | UNAVAILABLE (Planung nicht möglich, Einheit gilt trotzdem als verbraucht)
+  state       String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  grant ShadowQuotaGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, caseId, attempt])
+  @@index([grantId])
+  @@map("shadow_quota_ledger")
 }
 
 /// Verschlüsselte Plattform-Secrets (Amendment 03 §20). Nie im Klartext zurückgegeben; Zugriff nur über PlatformSecretVaultService.

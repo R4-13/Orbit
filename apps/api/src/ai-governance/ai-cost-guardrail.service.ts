@@ -20,8 +20,10 @@ import { PlatformAuditService } from '../platform/audit/platform-audit.service';
 
 /** Plattformfinanzierte Aufrufe: nur sie zählen gegen die Limits. Mit eigenem Schlüssel (BYOK) trägt der Mandant die Kosten selbst. */
 const PLATFORM_PAID_SOURCES = ['ORBIT_MANAGED', 'ENV_BOOTSTRAP'];
-/** Die Durchsetzung liest einen kurz zwischengespeicherten Stand – ein KI-Aufruf löst keine Abfrage über den ganzen Monat aus. */
-const ENFORCEMENT_CACHE_MS = 30_000;
+/** Eine Reservierung verfällt von selbst, falls ein Prozess zwischen Beginn und Ende eines Aufrufs stirbt (der Anbieter-Client bricht spätestens nach zehn Minuten ab). */
+const RESERVATION_TTL_MS = 12 * 60_000;
+/** Erledigte und verfallene Reservierungen werden beiläufig nach einer Woche entfernt. */
+const RESERVATION_KEEP_MS = 7 * 24 * 3_600_000;
 
 export interface CostLimitView {
   id: string;
@@ -45,6 +47,19 @@ export interface CostLimitEvaluation extends CostLimitView {
   state: CostLimitState;
   /** Aufrufe im Monat ohne Kostenprofil: ihr Betrag ist unbekannt und steckt nicht in `spent`. */
   unmeasuredRequests: number;
+  /** Schlimmster Fall der gerade laufenden Aufrufe, der für die Durchsetzung zu `spent` hinzugerechnet wird. */
+  reserved: number;
+}
+
+/** Geschätzter schlimmster Fall eines Aufrufs; `null` = Preis des Modells unbekannt. */
+export interface CallEstimate {
+  amount: number;
+  currency: string;
+}
+
+/** Eine offene Reservierung für einen laufenden Aufruf; `release` gibt sie frei (nachdem der tatsächliche Verbrauch gemessen wurde). */
+export interface CostTicket {
+  release(): Promise<void>;
 }
 
 export interface CostAnomaly {
@@ -83,16 +98,10 @@ const definitionOf = (view: CostLimitView): CostLimitDefinition => ({ scope: vie
  */
 @Injectable()
 export class AiCostGuardrailService {
-  private enforcement?: { at: number; exceeded: CostLimitView[] };
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: PlatformAuditService,
   ) {}
-
-  invalidate(): void {
-    this.enforcement = undefined;
-  }
 
   // ── Lesen und Bewerten ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -101,22 +110,36 @@ export class AiCostGuardrailService {
     return Promise.all(rows.map((row) => this.evaluate(toView(row), now)));
   }
 
+  private scopeWhere(view: CostLimitView): { tenantId?: string; profileKey?: string } {
+    return { ...(view.scope === 'TENANT' && view.targetTenantId ? { tenantId: view.targetTenantId } : {}), ...(view.scope === 'PROFILE' && view.profileKey ? { profileKey: view.profileKey } : {}) };
+  }
+
+  /** Gemessene Kosten des Monats (nur Aufrufe mit Kostenprofil in der Währung des Limits). */
+  private async spentOf(tx: Prisma.TransactionClient, view: CostLimitView, now: Date): Promise<{ spent: number; unmeasured: number }> {
+    const scoped: Prisma.AIUsageRecordWhereInput = { createdAt: { gte: costPeriodStart(now) }, source: { in: PLATFORM_PAID_SOURCES }, ...this.scopeWhere(view) };
+    const [measured, unmeasured] = await Promise.all([
+      tx.aIUsageRecord.aggregate({ where: { ...scoped, estimatedCost: { not: null }, costCurrency: view.currency }, _sum: { estimatedCost: true } }),
+      tx.aIUsageRecord.count({ where: { ...scoped, estimatedCost: null } }),
+    ]);
+    return { spent: Number(measured._sum.estimatedCost?.toString() ?? 0), unmeasured };
+  }
+
+  private reservationScope(view: CostLimitView): { targetTenantId?: string; profileKey?: string } {
+    const scope = this.scopeWhere(view);
+    return { ...(scope.tenantId ? { targetTenantId: scope.tenantId } : {}), ...(scope.profileKey ? { profileKey: scope.profileKey } : {}) };
+  }
+
+  /** Summe der offenen, nicht verfallenen Reservierungen im Geltungsbereich des Limits. */
+  private async reservedOf(tx: Prisma.TransactionClient, view: CostLimitView, now: Date): Promise<number> {
+    const sum = await tx.aICostReservation.aggregate({ where: { status: 'RESERVED', expiresAt: { gt: now }, currency: view.currency, ...this.reservationScope(view) }, _sum: { amount: true } });
+    return Number(sum._sum.amount?.toString() ?? 0);
+  }
+
   private async evaluate(view: CostLimitView, now: Date): Promise<CostLimitEvaluation> {
     const periodStart = costPeriodStart(now);
-    const scoped: Prisma.AIUsageRecordWhereInput = {
-      createdAt: { gte: periodStart },
-      source: { in: PLATFORM_PAID_SOURCES },
-      ...(view.scope === 'TENANT' && view.targetTenantId ? { tenantId: view.targetTenantId } : {}),
-      ...(view.scope === 'PROFILE' && view.profileKey ? { profileKey: view.profileKey } : {}),
-    };
-    const [measured, unmeasured] = await this.prisma.withPlatformScope((tx) =>
-      Promise.all([
-        tx.aIUsageRecord.aggregate({ where: { ...scoped, estimatedCost: { not: null }, costCurrency: view.currency }, _sum: { estimatedCost: true } }),
-        tx.aIUsageRecord.count({ where: { ...scoped, estimatedCost: null } }),
-      ]),
-    );
-    const spent = Number(measured._sum.estimatedCost?.toString() ?? 0);
-    return { ...view, periodStart: periodStart.toISOString(), spent: Math.round(spent * 1e6) / 1e6, state: costLimitState(spent, view), unmeasuredRequests: unmeasured };
+    const { spent, unmeasured, reserved } = await this.prisma.withPlatformScope(async (tx) => ({ ...(await this.spentOf(tx, view, now)), reserved: await this.reservedOf(tx, view, now) }));
+    const round = (value: number) => Math.round(value * 1e6) / 1e6;
+    return { ...view, periodStart: periodStart.toISOString(), spent: round(spent), state: costLimitState(spent, view), unmeasuredRequests: unmeasured, reserved: round(reserved) };
   }
 
   /** Ungewöhnliche Nutzung je Mandant: letzte 24 Stunden gegen den Tagesdurchschnitt der sieben Tage davor (nur plattformfinanzierte Aufrufe). */
@@ -149,31 +172,69 @@ export class AiCostGuardrailService {
 
   // ── Durchsetzung (nur Hard-Limit, nur wenn ausdrücklich durchgesetzt) ──────────────────────────────────────────
 
+  private unavailable(limit: Pick<CostLimitView, 'scope'>, profileKey: string, reason: string, extra: Record<string, unknown> = {}): AiProviderUnavailableError {
+    return new AiProviderUnavailableError('Das Kostenlimit für die KI-Nutzung ist erreicht oder lässt sich nicht sicher prüfen. Neue KI-Aufrufe sind vorübergehend nicht möglich; laufende Vorgänge warten.', {
+      mode: 'COST_LIMIT',
+      profileKey,
+      reasons: [reason],
+      limitScope: limit.scope,
+      ...extra,
+    });
+  }
+
+  private async enforcedLimitsFor(tenantId: string, profileKey: string): Promise<CostLimitView[]> {
+    const rows = await this.prisma.withPlatformScope((tx) => tx.aICostLimit.findMany({ where: { hardEnforced: true } }));
+    return rows.map(toView).filter((limit) => costLimitApplies(limit, { tenantId, profileKey }));
+  }
+
   /**
-   * Vor jedem plattformfinanzierten KI-Aufruf: ist ein durchgesetztes Hard-Limit, das für diesen Aufruf gilt, erreicht, wird der Aufruf ehrlich abgewiesen
-   * (`AiProviderUnavailableError`, Grund `COST_LIMIT_HARD`) – die bestehenden Aufrufer behandeln das als „KI vorübergehend nicht verfügbar“.
+   * Nur Prüfung ohne Reservierung (Verbrauch allein, ohne Zwischenspeicher): ist ein durchgesetztes Hard-Limit, das für diesen Aufruf gilt, erreicht, wird ehrlich abgewiesen
+   * (`AiProviderUnavailableError`, Grund `COST_LIMIT_HARD`). Der Aufrufweg nutzt `reserveCall`, das zusätzlich die laufenden Aufrufe und den schlimmsten Fall des neuen Aufrufs einrechnet.
    */
   async assertWithinBudget(tenantId: string, profileKey: string): Promise<void> {
-    const exceeded = await this.exceededHardLimits();
-    const hit = exceeded.find((limit) => costLimitApplies(limit, { tenantId, profileKey }));
-    if (hit) {
-      throw new AiProviderUnavailableError('Das Kostenlimit für die KI-Nutzung ist erreicht. Neue KI-Aufrufe sind vorübergehend nicht möglich; laufende Vorgänge warten.', {
-        mode: 'COST_LIMIT',
-        profileKey,
-        reasons: ['COST_LIMIT_HARD'],
-        limitScope: hit.scope,
-      });
+    const limits = await this.enforcedLimitsFor(tenantId, profileKey);
+    const now = new Date();
+    for (const limit of limits) {
+      const { spent } = await this.prisma.withPlatformScope((tx) => this.spentOf(tx, limit, now));
+      if (costLimitState(spent, limit) === 'HARD_EXCEEDED') throw this.unavailable(limit, profileKey, 'COST_LIMIT_HARD');
     }
   }
 
-  private async exceededHardLimits(): Promise<CostLimitView[]> {
-    if (this.enforcement && Date.now() - this.enforcement.at < ENFORCEMENT_CACHE_MS) return this.enforcement.exceeded;
-    const rows = await this.prisma.withPlatformScope((tx) => tx.aICostLimit.findMany({ where: { hardEnforced: true } }));
-    const now = new Date();
-    const evaluated = await Promise.all(rows.map((row) => this.evaluate(toView(row), now)));
-    const exceeded = evaluated.filter((e) => e.state === 'HARD_EXCEEDED');
-    this.enforcement = { at: Date.now(), exceeded };
-    return exceeded;
+  /**
+   * Vor jedem plattformfinanzierten KI-Aufruf: gilt für den Aufruf ein durchgesetztes Hard-Limit, wird atomar (eine Sperre für alle Prozesse, API und Worker) geprüft, ob Verbrauch des Monats
+   * PLUS die offenen Reservierungen laufender Aufrufe PLUS der schlimmste Fall dieses Aufrufs das Limit überschreiten würde – dann beginnt der Aufruf nicht (Grund `COST_LIMIT_HARD`). Sonst wird der
+   * schlimmste Fall reserviert; die Reservierung gibt der Aufrufer nach der Messung des tatsächlichen Verbrauchs frei. Ist der Preis des Modells unbekannt (`estimate` leer) oder weicht die Währung
+   * ab, wird nicht geraten, sondern abgewiesen (`COST_PRICE_UNKNOWN`, `COST_CURRENCY_MISMATCH`). Gilt kein durchgesetztes Limit, passiert nichts (kein Zusatzaufwand).
+   */
+  async reserveCall(tenantId: string, profileKey: string, estimate: CallEstimate | null): Promise<CostTicket | undefined> {
+    const applicable = await this.enforcedLimitsFor(tenantId, profileKey);
+    if (applicable.length === 0) return undefined;
+    const reservationId = await this.prisma.withPlatformScope(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('orbit:ai-cost-reserve'))`;
+      const now = new Date();
+      // Limits unter der Sperre neu lesen: eine zwischenzeitliche Änderung gilt sofort.
+      const limits = (await tx.aICostLimit.findMany({ where: { hardEnforced: true } })).map(toView).filter((limit) => costLimitApplies(limit, { tenantId, profileKey }));
+      if (limits.length === 0) return null;
+      for (const limit of limits) {
+        if (!estimate) throw this.unavailable(limit, profileKey, 'COST_PRICE_UNKNOWN');
+        if (estimate.currency !== limit.currency) throw this.unavailable(limit, profileKey, 'COST_CURRENCY_MISMATCH', { limitCurrency: limit.currency, priceCurrency: estimate.currency });
+        const { spent } = await this.spentOf(tx, limit, now);
+        const reserved = await this.reservedOf(tx, limit, now);
+        const hard = limit.hardAmount as number;
+        if (spent + reserved + estimate.amount > hard) {
+          throw this.unavailable(limit, profileKey, 'COST_LIMIT_HARD', { spent: Math.round(spent * 1e6) / 1e6, reserved: Math.round(reserved * 1e6) / 1e6, requested: Math.round(estimate.amount * 1e6) / 1e6, hardAmount: hard });
+        }
+      }
+      await tx.aICostReservation.deleteMany({ where: { OR: [{ status: 'RELEASED', releasedAt: { lt: new Date(now.getTime() - RESERVATION_KEEP_MS) } }, { expiresAt: { lt: new Date(now.getTime() - RESERVATION_KEEP_MS) } }] } });
+      const created = await tx.aICostReservation.create({ data: { targetTenantId: tenantId, profileKey, currency: (estimate as CallEstimate).currency, amount: (estimate as CallEstimate).amount, expiresAt: new Date(now.getTime() + RESERVATION_TTL_MS) } });
+      return created.id;
+    });
+    if (reservationId === null) return undefined;
+    return { release: () => this.releaseReservation(reservationId) };
+  }
+
+  private async releaseReservation(id: string): Promise<void> {
+    await this.prisma.withPlatformScope((tx) => tx.aICostReservation.updateMany({ where: { id, status: 'RESERVED' }, data: { status: 'RELEASED', releasedAt: new Date() } }));
   }
 
   // ── Schreiben (auditiert, versioniert) ───────────────────────────────────────────────────────────────────────────
@@ -208,7 +269,6 @@ export class AiCostGuardrailService {
       await this.audit.record({ eventType: 'PLATFORM_AI_COST_LIMIT_CHANGED', actor: { userId: actor.userId, roles: actor.platformRoles }, targetType: 'AICostLimit', targetId: after.id, targetTenantId: definition.targetTenantId ?? undefined, reason: input.reason, before: toView(before), after: toView(after) }, tx);
       return toView(after);
     });
-    this.invalidate();
     return view;
   }
 
@@ -220,7 +280,6 @@ export class AiCostGuardrailService {
       if (deleted.count !== 1) throw new ConflictException('Das Limit wurde zwischenzeitlich geändert. Bitte neu laden.');
       await this.audit.record({ eventType: 'PLATFORM_AI_COST_LIMIT_CHANGED', actor: { userId: actor.userId, roles: actor.platformRoles }, targetType: 'AICostLimit', targetId: id, targetTenantId: before.targetTenantId ?? undefined, reason: input.reason, before: toView(before), after: null }, tx);
     });
-    this.invalidate();
   }
 }
 

@@ -87,13 +87,15 @@ function build(setup: Setup) {
   const prisma = { forTenantId: () => ({ aIProviderConnection: { findUnique: async () => setup.tenantConnection ?? null } }) } as unknown as PrismaService;
   const encryption = { decrypt: () => 'sk-tenant-key' } as unknown as CredentialEncryptionService;
   const control = { killSwitchEngaged: jest.fn(async () => setup.killSwitch === true), flagEnabled: jest.fn(async () => setup.byokEnabled !== false) } as unknown as PlatformControlService;
+  const released: string[] = [];
   const costGuard = {
-    assertWithinBudget: jest.fn(async () => {
+    reserveCall: jest.fn(async (_tenantId: string, _profileKey: string, estimate: { amount: number; currency: string } | null) => {
       if (setup.budgetExceeded) throw new AiProviderUnavailableError('Kostenlimit erreicht.', { mode: 'COST_LIMIT', reasons: ['COST_LIMIT_HARD'] });
+      return { release: async () => void released.push(estimate ? `${estimate.currency}:${estimate.amount.toFixed(6)}` : 'unbekannt') };
     }),
   } as unknown as AiCostGuardrailService;
   const service = new AiProviderResolverService(prisma, encryption, registry, adapters, vault, meter, costGuard, control, platformDefault, ENV);
-  return { service, adapters, platformDefault, meter, recorded, registry, vault, costGuard };
+  return { service, adapters, platformDefault, meter, recorded, registry, vault, costGuard, released };
 }
 
 const profile = { id: 'p1', profileKey: 'COMPLEX_REASONING', version: 1, purpose: 'x', requiredCapabilities: ['chat', 'tool_use'], fallbackMode: 'APPROVED_CROSS_PROVIDER_FALLBACK', maxLatencyMs: null, requiredDataPolicyRefs: [], lifecycle: 'PUBLISHED', publishedAt: new Date(), createdByUserId: null, createdAt: new Date() } as unknown as RoutingSnapshot['profile'];
@@ -256,7 +258,7 @@ describe('AiProviderResolverService', () => {
     it('Umgebungs-Bootstrap (plattformfinanziert) wird ebenso geprüft; der Mock bleibt unverpackt und unbegrenzt', async () => {
       const bootstrap = build({ budgetExceeded: true });
       expect((await bootstrap.service.resolveProfile('t1', 'COMPLEX_REASONING')).source).toBe('ENV_BOOTSTRAP'); // Mock: keine Wirkung, keine Kosten
-      expect(bootstrap.costGuard.assertWithinBudget).not.toHaveBeenCalled();
+      expect(bootstrap.costGuard.reserveCall).not.toHaveBeenCalled();
     });
 
     it('ist kein Hard-Limit erreicht, läuft der Aufruf ganz normal und gemessen; der Mandant und das Profil werden geprüft', async () => {
@@ -264,8 +266,9 @@ describe('AiProviderResolverService', () => {
       setup.adapters.register('adapter-alpha', () => stubAdapter('alpha', 'm-a').adapter);
       const resolved = await setup.service.resolveProfile('t7', 'COMPLEX_REASONING');
       expect((await resolved.provider.complete(REQUEST)).text).toBe('alpha:m-a');
-      expect(setup.costGuard.assertWithinBudget).toHaveBeenCalledWith('t7', 'COMPLEX_REASONING');
+      expect(setup.costGuard.reserveCall).toHaveBeenCalledWith('t7', 'COMPLEX_REASONING', null); // Modell ohne Preis im Register und im Katalog: der Wächter entscheidet (unbekannter Preis)
       expect(setup.recorded).toHaveLength(1);
+      expect(setup.released).toEqual(['unbekannt']); // die Reservierung wird nach dem Aufruf freigegeben
     });
 
     it('BYOK ist ausgenommen: der Mandant trägt seine Kosten selbst, ein Plattform-Limit darf ihn nicht blockieren', async () => {
@@ -273,7 +276,7 @@ describe('AiProviderResolverService', () => {
       const setup = build({ tenantConnection: connected, budgetExceeded: true, ...managed({}) });
       const resolved = await setup.service.resolveProfile('t1', 'COMPLEX_REASONING');
       expect(resolved.source).toBe('BYOK');
-      expect(setup.costGuard.assertWithinBudget).not.toHaveBeenCalled();
+      expect(setup.costGuard.reserveCall).not.toHaveBeenCalled();
     });
   });
 

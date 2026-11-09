@@ -2,6 +2,16 @@ import type { LLMCompletionRequest, LLMCompletionResult, LLMProvider, ProviderVa
 import { classifyLlmError } from '@orbit/shared';
 import type { AiMeterService, MeterContext } from './ai-meter.service';
 
+/** Eine offene Kostenreservierung für einen laufenden Aufruf. */
+export interface BudgetTicket {
+  release(): Promise<void>;
+  /** Reservierter schlimmster Fall (Obergrenze der Kosten dieses Aufrufs). */
+  readonly amount: number;
+}
+
+/** Prüft vor einem externen Aufruf das Kostenlimit und reserviert den schlimmsten Fall; wirft einen ehrlichen Fehler, wenn der Aufruf nicht beginnen darf. */
+export type BudgetGate = (request: LLMCompletionRequest) => Promise<BudgetTicket | undefined>;
+
 /** Fehlerklassen, bei denen ein anderer – ausdrücklich freigegebener – Kandidat die Anfrage sinnvoll übernehmen kann. */
 const FAILOVER_CLASSES = new Set(['RATE_LIMITED', 'AUTH', 'TIMEOUT', 'PROVIDER_ERROR']);
 
@@ -16,8 +26,8 @@ export class MeteredLLMProvider implements LLMProvider {
     private readonly inner: LLMProvider,
     private readonly meter: AiMeterService,
     private readonly context: MeterContext,
-    /** Vorabprüfung vor jedem externen Aufruf (z. B. durchgesetztes Kostenlimit); wirft einen ehrlichen Fehler, ruft den Anbieter dann nicht auf und misst nichts. */
-    private readonly guard?: () => Promise<void>,
+    /** Vorabprüfung vor jedem externen Aufruf (durchgesetztes Kostenlimit, einschließlich laufender Aufrufe); wirft einen ehrlichen Fehler, ruft den Anbieter dann nicht auf und misst nichts. */
+    private readonly budget?: BudgetGate,
   ) {
     if (inner.validateConfiguration) this.validateConfiguration = () => (inner.validateConfiguration as () => Promise<ProviderValidationResult>)();
   }
@@ -31,15 +41,18 @@ export class MeteredLLMProvider implements LLMProvider {
   }
 
   async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
-    await this.guard?.();
+    const ticket = await this.budget?.(request);
     const startedAt = Date.now();
     try {
       const result = await this.inner.complete(request);
-      await this.meter.record(this.context, { ok: true, latencyMs: Date.now() - startedAt, usage: result.usage });
+      await this.meter.record(this.context, { ok: true, latencyMs: Date.now() - startedAt, usage: result.usage, worstCase: ticket?.amount });
       return result;
     } catch (error) {
       await this.meter.record(this.context, { ok: false, latencyMs: Date.now() - startedAt, error });
       throw error;
+    } finally {
+      // Erst NACH der Messung freigeben: der Verbrauch ist dann schon gezählt, es gibt kein Fenster, in dem der Aufruf unberücksichtigt bliebe.
+      await ticket?.release().catch(() => undefined);
     }
   }
 }

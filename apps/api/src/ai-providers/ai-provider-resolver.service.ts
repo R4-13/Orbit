@@ -5,18 +5,21 @@ import {
   AiProviderUnavailableError,
   FEATURE_FLAGS,
   KILL_SWITCHES,
+  costProfileOf,
   effectiveHealth,
   evaluateCandidate,
   planFallbackChain,
+  worstCaseCost,
   type AiProfileKey,
   type HealthState,
+  type ModelCostProfile,
 } from '@orbit/shared';
 import { PlatformControlService } from '../platform-control/platform-control.service';
 import { AiAdapterRegistry } from '../ai-governance/ai-adapter-registry.service';
 import { AiCostGuardrailService } from '../ai-governance/ai-cost-guardrail.service';
 import { AiMeterService, type MeterContext } from '../ai-governance/ai-meter.service';
 import { AiRegistryService, type ModelWithProvider } from '../ai-governance/ai-registry.service';
-import { FailoverLLMProvider, MeteredLLMProvider } from '../ai-governance/metered-llm-provider';
+import { FailoverLLMProvider, MeteredLLMProvider, type BudgetGate } from '../ai-governance/metered-llm-provider';
 import { PlatformSecretVaultService } from '../ai-governance/platform-secret-vault.service';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { ORBIT_ENV } from '../config/env.token';
@@ -162,10 +165,10 @@ export class AiProviderResolverService {
           routeId: route.id,
           source: 'ORBIT_MANAGED',
           trackHealth: true,
-          cost: model.costInputPerMtok !== null && model.costOutputPerMtok !== null ? { inputPerMtok: Number(model.costInputPerMtok), outputPerMtok: Number(model.costOutputPerMtok), currency: model.costCurrency } : null,
+          cost: model.costInputPerMtok !== null && model.costOutputPerMtok !== null ? { inputPerMtok: Number(model.costInputPerMtok), outputPerMtok: Number(model.costOutputPerMtok), currency: model.costCurrency } : costProfileOf(model.providerKey, model.providerModelId),
         };
         // Der Mock-Adapter verursacht keine externe Nutzung und bleibt unverpackt (Tests/Simulation erkennen ihn weiterhin).
-        const wrapped = adapter instanceof MockLLMProvider ? adapter : new MeteredLLMProvider(adapter, this.meter, context, () => this.costGuard.assertWithinBudget(tenantId, profileKey));
+        const wrapped = adapter instanceof MockLLMProvider ? adapter : new MeteredLLMProvider(adapter, this.meter, context, this.budgetGate(tenantId, profileKey, context.cost ?? null));
         usable.push({ model, degraded: verdict.degraded || usable.length > 0 || modelId !== route.primaryModelId, adapter: wrapped });
       } catch {
         allReasons.push(`${model.providerKey}/${model.providerModelId}:SECRET_UNAVAILABLE`);
@@ -194,7 +197,18 @@ export class AiProviderResolverService {
     const llm: LLMProvider = this.platformDefault;
     const providerKey = llm.providerName.toLowerCase();
     if (llm instanceof MockLLMProvider) return { provider: llm, source: 'ENV_BOOTSTRAP', providerKey, modelId: undefined, degraded: false };
-    const context: MeterContext = { tenantId, profileKey, providerKey, modelId: llm.modelName, source: 'ENV_BOOTSTRAP', trackHealth: true };
-    return { provider: new MeteredLLMProvider(llm, this.meter, context, () => this.costGuard.assertWithinBudget(tenantId, profileKey)), source: 'ENV_BOOTSTRAP', providerKey, modelId: llm.modelName, degraded: false };
+    // Der Preis des Umgebungs-Standards: Überschreibung aus der Umgebung (`LLM_COST_*`), sonst der Preiskatalog mit Quelle und Prüfdatum; unbekannt = kein Preis (ein durchgesetztes Limit weist dann ab).
+    const cost = costProfileOf(providerKey, llm.modelName, { inputPerMtok: this.env.LLM_COST_INPUT_PER_MTOK, outputPerMtok: this.env.LLM_COST_OUTPUT_PER_MTOK, currency: this.env.LLM_COST_CURRENCY });
+    const context: MeterContext = { tenantId, profileKey, providerKey, modelId: llm.modelName, source: 'ENV_BOOTSTRAP', trackHealth: true, cost };
+    return { provider: new MeteredLLMProvider(llm, this.meter, context, this.budgetGate(tenantId, profileKey, cost)), source: 'ENV_BOOTSTRAP', providerKey, modelId: llm.modelName, degraded: false };
+  }
+
+  /** Das Tor vor jedem plattformfinanzierten Aufruf: schlimmster Fall des Aufrufs gegen Verbrauch und laufende Aufrufe (siehe `AiCostGuardrailService.reserveCall`). */
+  private budgetGate(tenantId: string, profileKey: AiProfileKey, cost: ModelCostProfile | null): BudgetGate {
+    return async (request) => {
+      const estimate = cost ? { amount: worstCaseCost(cost, request), currency: cost.currency } : null;
+      const ticket = await this.costGuard.reserveCall(tenantId, profileKey, estimate);
+      return ticket ? { release: () => ticket.release(), amount: estimate?.amount ?? 0 } : undefined;
+    };
   }
 }

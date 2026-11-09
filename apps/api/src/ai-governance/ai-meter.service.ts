@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { OrbitEnv } from '@orbit/config';
-import { applyHealthOutcome, classifyLlmError, estimateCost, type HealthState, type LlmErrorClass } from '@orbit/shared';
+import { actualCost, applyHealthOutcome, classifyLlmError, type HealthState, type LlmErrorClass, type ModelCostProfile } from '@orbit/shared';
 import { currentCaseId } from '../common/case-context';
 import { ORBIT_ENV } from '../config/env.token';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,8 +12,8 @@ export interface MeterContext {
   modelId?: string;
   routeId?: string;
   source: 'ORBIT_MANAGED' | 'BYOK' | 'ENV_BOOTSTRAP';
-  /** Kostenprofil je 1 Mio. Token (nur wenn im Modellregister gepflegt). */
-  cost?: { inputPerMtok: number | null; outputPerMtok: number | null; currency: string } | null;
+  /** Kostenprofil je 1 Mio. Token (Modellregister, Preiskatalog oder Umgebung); leer = Preis unbekannt. */
+  cost?: ModelCostProfile | null;
   /** Gesundheit nur für Plattformverbindungen führen – BYOK-Schlüssel gehören dem Mandanten und sagen nichts über die Plattform aus. */
   trackHealth: boolean;
 }
@@ -23,6 +23,8 @@ export interface MeterOutcome {
   latencyMs: number;
   usage?: { inputTokens?: number; outputTokens?: number };
   error?: unknown;
+  /** Reservierter schlimmster Fall: gilt als obere Schranke, wenn ein erfolgreicher Aufruf keinen Verbrauch meldet (nie als 0 unterstellt). */
+  worstCase?: number;
 }
 
 /**
@@ -41,7 +43,8 @@ export class AiMeterService {
   async record(context: MeterContext, outcome: MeterOutcome): Promise<void> {
     const errorClass: LlmErrorClass | undefined = outcome.ok ? undefined : classifyLlmError(outcome.error);
     try {
-      const cost = context.cost ? estimateCost(outcome.usage ?? {}, { inputPerMtok: context.cost.inputPerMtok, outputPerMtok: context.cost.outputPerMtok }) : null;
+      const measured = context.cost ? actualCost(outcome.usage, context.cost) : null;
+      const cost = measured ?? (outcome.ok && context.cost && outcome.worstCase !== undefined ? outcome.worstCase : null);
       await this.prisma.forTenantId(context.tenantId).aIUsageRecord.create({
         data: {
           tenantId: context.tenantId,

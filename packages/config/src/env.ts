@@ -137,6 +137,10 @@ export const envSchema = z.object({
   LIVE_UPGRADE_MAX_AGE_DAYS: z.coerce.number().int().min(1).max(90).default(7),
   /** Optional. Reasoning models (e.g. gpt-6-luna) only accept function tools on Chat Completions with 'none'. Unset = send nothing. */
   OPENAI_REASONING_EFFORT: z.enum(['none', 'minimal', 'low', 'medium', 'high']).optional(),
+  /** Optional: Preis des Umgebungs-Standardmodells je 1 Mio. Token, falls er vom Preiskatalog (packages/shared/src/ai-pricing.ts) abweicht. Nur vollständig (Eingabe, Ausgabe, Währung) wirksam; sonst gilt der Katalog. */
+  LLM_COST_INPUT_PER_MTOK: z.coerce.number().positive().optional(),
+  LLM_COST_OUTPUT_PER_MTOK: z.coerce.number().positive().optional(),
+  LLM_COST_CURRENCY: z.string().length(3).optional(),
 
   // Semantic triage thresholds (Amendment 02 §14.3) — configurable defaults to be calibrated on an evaluation catalogue, not product constants.
   TRIAGE_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.6),

@@ -6,8 +6,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CapabilityRegistryService } from './capability-registry.service';
 import { CASE_EVENT_TYPES, CaseEventsService } from './case-events.service';
 import { PlannerService } from './planner.service';
+import { ShadowQuotaService, type QuotaUnit } from './shadow-quota.service';
 
-export type ShadowOutcome = 'RECORDED' | 'DISABLED' | 'UNAVAILABLE' | 'LIMIT_REACHED' | 'ALREADY_DONE';
+export type ShadowOutcome = 'RECORDED' | 'DISABLED' | 'UNAVAILABLE' | 'LIMIT_REACHED' | 'ALREADY_DONE' | 'NO_PREVIOUS_PLAN';
+
+interface Reserved {
+  eventId: string;
+  unit: QuotaUnit | null;
+}
 
 /**
  * Schattenbetrieb des Vorgangs-Agenten (Konzept Flexible Autonomie §9 Schritt 1, Addendum ADD-5.1): zu einem Vorgang, den der bisherige Weg bearbeitet, plant der freie Planer **mit** – ohne
@@ -29,6 +35,7 @@ export class ShadowPlanService {
     private readonly capabilities: CapabilityRegistryService,
     private readonly events: CaseEventsService,
     private readonly prisma: PrismaService,
+    private readonly quota: ShadowQuotaService,
   ) {}
 
   /** Ohne Rückgabewert und ohne Ausnahme – für den Aufruf aus dem Eingang ohne Warten (`void`). */
@@ -47,46 +54,67 @@ export class ShadowPlanService {
     return typeof category === 'string' ? category : undefined;
   }
 
-  /** Atomar: vorhandene Planung → `ALREADY_DONE`; Grenze erreicht → Ablehnung ohne Verbrauch; sonst Reservierung samt Audit-Eintrag (Rückgabe: Kennung des Ereignisses). */
-  private async reserve(tenantId: string, caseId: string): Promise<'ALREADY_DONE' | 'LIMIT_REACHED' | string> {
+  /**
+   * Atomar: vorhandene Planung → `ALREADY_DONE`; Grundgrenze erreicht → die Einheit kommt aus dem aktiven Zusatzkontingent (Hauptbuch), sonst Ablehnung ohne Verbrauch; sonst Reservierung samt Audit-Eintrag.
+   * Eine ausdrückliche Wiederholung (`repeat`) braucht immer ein aktives Kontingent und berührt die Grundzählung nie.
+   */
+  private async reserve(tenantId: string, caseId: string, repeat: boolean): Promise<'ALREADY_DONE' | 'LIMIT_REACHED' | 'NO_PREVIOUS_PLAN' | Reserved> {
     return this.prisma.inTenantTransaction(tenantId, async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`shadow:${tenantId}`}))`;
-      if (await tx.caseEvent.findFirst({ where: { caseId, dedupeKey: `shadow:${caseId}` }, select: { id: true } })) return 'ALREADY_DONE' as const;
-      const used = Math.max(
-        await tx.caseEvent.count({ where: { tenantId, type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED } }),
-        await tx.auditLog.count({ where: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED' } }),
-      );
-      if (used >= SHADOW_PLAN_LIMIT_PER_TENANT) {
+      const first = await tx.caseEvent.findFirst({ where: { caseId, dedupeKey: `shadow:${caseId}` }, select: { id: true } });
+      if (repeat ? !first : first) return repeat ? ('NO_PREVIOUS_PLAN' as const) : ('ALREADY_DONE' as const);
+
+      const used = await this.quota.baseUsedInTx(tx, tenantId);
+      let unit: QuotaUnit | null = null;
+      let refusal: string | null = null;
+      if (repeat || used >= SHADOW_PLAN_LIMIT_PER_TENANT) {
+        const taken = await this.quota.takeInTx(tx, tenantId, caseId, repeat ? 'REPEAT' : 'FIRST');
+        if (taken.unit) unit = taken.unit;
+        else refusal = taken.reason === 'EXHAUSTED' ? 'Das Zusatzkontingent ist aufgebraucht.' : 'Es ist kein Zusatzkontingent aktiv.';
+      }
+      if (!unit && (repeat || used >= SHADOW_PLAN_LIMIT_PER_TENANT)) {
         await this.events.appendInTx(tx, tenantId, caseId, {
           type: CASE_EVENT_TYPES.SHADOW_PLAN_REFUSED,
-          payload: { stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht.`, limit: SHADOW_PLAN_LIMIT_PER_TENANT, used },
-          dedupeKey: `shadow-refused:${caseId}`,
+          payload: { stage: 'DONE', available: false, reason: `Die Obergrenze von ${SHADOW_PLAN_LIMIT_PER_TENANT} Schattenplanungen je Mandant ist erreicht. ${refusal ?? ''}`.trim(), limit: SHADOW_PLAN_LIMIT_PER_TENANT, used },
+          dedupeKey: `shadow-refused:${caseId}${repeat ? ':repeat' : ''}`,
         });
         return 'LIMIT_REACHED' as const;
       }
-      const reserved = await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED, payload: { stage: 'RESERVED', available: null }, dedupeKey: `shadow:${caseId}` });
-      await tx.auditLog.create({ data: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: reserved.event.id } } });
-      return reserved.event.id;
+      const dedupeKey = unit && unit.attempt > 1 ? `shadow:${caseId}:${unit.attempt}` : `shadow:${caseId}`;
+      const reserved = await this.events.appendInTx(tx, tenantId, caseId, { type: CASE_EVENT_TYPES.SHADOW_PLAN_PROPOSED, payload: { stage: 'RESERVED', available: null, ...(unit ? { quota: { grantId: unit.grantId, kind: unit.kind, attempt: unit.attempt } } : {}) }, dedupeKey });
+      if (unit) await this.quota.attachInTx(tx, unit.ledgerId, reserved.event.id);
+      else await tx.auditLog.create({ data: { tenantId, eventType: 'SHADOW_PLAN_CONSUMED', actorType: 'SYSTEM', entityType: 'case', entityId: caseId, payload: { caseEventId: reserved.event.id } } });
+      return { eventId: reserved.event.id, unit };
     });
   }
 
   async record(tenantId: string, caseId: string, intentSummary?: string): Promise<ShadowOutcome> {
+    return this.plan(tenantId, caseId, intentSummary, false);
+  }
+
+  /** Ausdrückliche Wiederholung der Planung für einen Vorgang (nur aus einem aktiven Zusatzkontingent, einzeln gezählt). */
+  async recordRepeat(tenantId: string, caseId: string, intentSummary?: string): Promise<ShadowOutcome> {
+    return this.plan(tenantId, caseId, intentSummary, true);
+  }
+
+  private async plan(tenantId: string, caseId: string, intentSummary: string | undefined, repeat: boolean): Promise<ShadowOutcome> {
     if (!(await this.platformControl.flagEnabled(FEATURE_FLAGS.PLANNER_SHADOW, tenantId))) return 'DISABLED';
 
     // 1. Zählen und Reservieren in EINEM Schritt unter einer Sperre je Mandant: wer an der Grenze scheitert, verbraucht nichts (früher schrieb auch der abgelehnte Versuch einen Verbrauchs-Eintrag – der
     //    Zähler stand dann bei 61 von 60, obwohl genau 60 Planungen liefen), und zwei gleichzeitige Aufrufe können die Grenze nicht gemeinsam überschreiten.
     //    Die Zählung ist **dauerhaft**: jede verbrauchte Planung hinterlässt zusätzlich einen Audit-Eintrag, der das Löschen des Vorgangs überlebt – wer Testvorgänge löscht, setzt den Zähler nicht zurück.
     //    Maßgeblich ist der größere der beiden Werte. Ein zweiter Aufruf für denselben Vorgang findet das Ereignis (dedupeKey) und plant nicht noch einmal.
-    const reservation = await this.reserve(tenantId, caseId);
-    if (reservation === 'ALREADY_DONE') return 'ALREADY_DONE';
-    if (reservation === 'LIMIT_REACHED') return 'LIMIT_REACHED';
-    const eventId = reservation;
+    const reservation = await this.reserve(tenantId, caseId, repeat);
+    if (reservation === 'ALREADY_DONE' || reservation === 'LIMIT_REACHED' || reservation === 'NO_PREVIOUS_PLAN') return reservation;
+    const { eventId, unit } = reservation;
+    const quotaInfo = unit ? { quota: { grantId: unit.grantId, kind: unit.kind, attempt: unit.attempt } } : {};
     const finish = (payload: Record<string, unknown>) =>
       this.prisma.forTenantId(tenantId).caseEvent.update({ where: { id: eventId }, data: { payload: payload as Prisma.InputJsonValue } });
 
     const proposed = await this.planner.shadowPropose(tenantId, caseId, intentSummary);
     if (proposed.status === 'UNAVAILABLE') {
-      await finish({ stage: 'DONE', available: false, reason: proposed.reason });
+      await finish({ stage: 'DONE', available: false, reason: proposed.reason, ...quotaInfo });
+      if (unit) await this.quota.finish(tenantId, unit.ledgerId, 'UNAVAILABLE');
       return 'UNAVAILABLE';
     }
     const category = await this.categoryOf(tenantId, caseId);
@@ -107,7 +135,9 @@ export class ShadowPlanService {
       valid: proposed.validation.valid,
       issueCodes: proposed.validation.issues.map((i) => i.code),
       rating,
+      ...quotaInfo,
     });
+    if (unit) await this.quota.finish(tenantId, unit.ledgerId, 'DONE');
     return 'RECORDED';
   }
 }

@@ -25,8 +25,10 @@ function build(options: { flag?: boolean; propose?: unknown; duplicate?: boolean
       caseEvent: { update },
     }),
   };
-  const service = new ShadowPlanService(platformControl as never, planner as never, capabilities as never, events as never, prisma as never);
-  return { service, platformControl, planner, events, update, audit, lock };
+  // Ohne Zusatzkontingent (Standard): die Grundzählung entscheidet, ein Kontingent gibt es nicht.
+  const quota = { baseUsedInTx: jest.fn(async () => Math.max(options.used ?? 0, options.audited ?? 0)), takeInTx: jest.fn(async () => ({ unit: null, reason: 'NO_ACTIVE_GRANT' })), attachInTx: jest.fn(), finish: jest.fn() };
+  const service = new ShadowPlanService(platformControl as never, planner as never, capabilities as never, events as never, prisma as never, quota as never);
+  return { service, platformControl, planner, events, update, audit, lock, quota };
 }
 
 const node = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, inputs: {}, preconditions: [], optional: false, onFailure: 'REVIEW', config: {}, evidenceRefs: [], ...extra });
@@ -82,6 +84,20 @@ describe('ShadowPlanService – der Plan wird bewertet, nichts wird ausgeführt 
     expect(input.type).toBe(CASE_EVENT_TYPES.SHADOW_PLAN_REFUSED); // eigener Ereignistyp: zählt nicht als Planung
     expect(input.payload).toMatchObject({ available: false, limit: SHADOW_PLAN_LIMIT_PER_TENANT });
     expect(audit.create).not.toHaveBeenCalled(); // kein Verbrauchs-Eintrag (früher: Zähler 61 von 60)
+  });
+
+  it('an der Grundgrenze wird das Zusatzkontingent gefragt – ohne aktives Kontingent bleibt es bei der Ablehnung, und die Begründung nennt es', async () => {
+    const { service, quota, events } = build({ flag: true, used: SHADOW_PLAN_LIMIT_PER_TENANT, propose: proposed(goodProposal) });
+    expect(await service.record('t1', 'c1')).toBe('LIMIT_REACHED');
+    expect(quota.takeInTx).toHaveBeenCalledTimes(1);
+    const [, , , input] = events.appendInTx.mock.calls[0] as unknown as [unknown, string, string, { payload: { reason: string } }];
+    expect(input.payload.reason).toContain('kein Zusatzkontingent aktiv');
+  });
+
+  it('unterhalb der Grundgrenze wird das Zusatzkontingent nie berührt', async () => {
+    const { service, quota } = build({ flag: true, used: 5, propose: proposed(goodProposal) });
+    expect(await service.record('t1', 'c1')).toBe('RECORDED');
+    expect(quota.takeInTx).not.toHaveBeenCalled();
   });
 
   it('verbrauchte Planungen zählen dauerhaft: auch wenn die Vorgänge (und ihre Ereignisse) gelöscht wurden, hält der Audit-Zähler die Obergrenze', async () => {

@@ -157,3 +157,6 @@ export function isReservedFlagKey(key: string): boolean {
  * Freigabe zur aktiven Einführung. Eine Erhöhung ist eine ausdrückliche Entscheidung.
  */
 export const SHADOW_PLAN_LIMIT_PER_TENANT = 60;
+
+/** Höchstmenge eines einzelnen Zusatzkontingents (ein Kontingent ist eine ausdrückliche Entscheidung, keine Dauereinrichtung). */
+export const SHADOW_QUOTA_MAX_PER_GRANT = 100;

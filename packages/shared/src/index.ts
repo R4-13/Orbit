@@ -6,6 +6,7 @@ export * from './platform-control';
 export * from './runtime-health';
 export * from './runtime-alerts';
 export * from './cost-guardrails';
+export * from './ai-pricing';
 export * from './support-session';
 export * from './policy';
 export * from './policy-groups';
