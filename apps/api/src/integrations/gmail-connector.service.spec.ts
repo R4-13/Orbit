@@ -410,25 +410,72 @@ describe('GmailConnectorService', () => {
       ]);
     });
 
-    it('fetches attachment bytes for messages that have them', async () => {
+    /** Eine Nachricht mit den genannten Anhangsteilen; der Abruf jedes Anhangs liefert die nächste Antwort aus `attachmentResponses`. */
+    function mailWith(parts: Array<{ mimeType: string; filename: string; attachmentId: string; size?: number }>, attachmentResponses: Response[]) {
       fetchMock
         .mockResolvedValueOnce({ ok: true, json: async () => ({ messages: [{ id: 'msg_1' }] }) })
         .mockResolvedValueOnce({
           ok: true,
-          json: async () => ({
-            id: 'msg_1',
-            payload: {
-              headers: [],
-              mimeType: 'multipart/mixed',
-              parts: [{ mimeType: 'application/pdf', filename: 'rechnung.pdf', body: { attachmentId: 'att_1' } }],
-            },
-          }),
-        })
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ data: 'YXR0YWNobWVudC1ieXRlcw' }) });
+          json: async () => ({ id: 'msg_1', payload: { headers: [], mimeType: 'multipart/mixed', parts: parts.map((p) => ({ mimeType: p.mimeType, filename: p.filename, body: { attachmentId: p.attachmentId, ...(p.size !== undefined ? { size: p.size } : {}) } })) } }),
+        });
+      for (const response of attachmentResponses) fetchMock.mockResolvedValueOnce(response);
+    }
+    const attachmentJson = (bytes: string | Buffer) => new Response(JSON.stringify({ data: Buffer.from(bytes).toString('base64url') }));
+    const MB = 1024 * 1024;
+
+    it('fetches attachment bytes for messages that have them', async () => {
+      mailWith([{ mimeType: 'application/pdf', filename: 'rechnung.pdf', attachmentId: 'att_1', size: 1024 }], [attachmentJson('%PDF-1.4 inhalt')]);
 
       const emails = await service.listMessages('tenant_1', 10);
 
-      expect(emails[0]!.attachments).toEqual([{ fileName: 'rechnung.pdf', mimeType: 'application/pdf', contentBase64: 'YXR0YWNobWVudC1ieXRlcw' }]);
+      expect(emails[0]!.attachments).toEqual([{ fileName: 'rechnung.pdf', mimeType: 'application/pdf', contentBase64: Buffer.from('%PDF-1.4 inhalt').toString('base64') }]);
+      expect(emails[0]!.heldAttachments).toBeUndefined();
+    });
+
+    it('Anhangsfreigabe VOR dem Abruf: zu groß, Programm oder nicht freigegebene Art werden gar nicht erst abgerufen und nur als Vermerk geführt', async () => {
+      mailWith(
+        [
+          { mimeType: 'application/pdf', filename: 'scan.pdf', attachmentId: 'big', size: 6 * MB },
+          { mimeType: 'application/octet-stream', filename: 'setup.exe', attachmentId: 'exe', size: 1000 },
+          { mimeType: 'application/vnd.ms-excel', filename: 'tabelle.xls', attachmentId: 'xls', size: 1000 },
+          { mimeType: 'application/pdf', filename: 'ok.pdf', attachmentId: 'ok', size: 100 },
+        ],
+        [attachmentJson('%PDF-1.4 ok')],
+      );
+
+      const [email] = await service.listMessages('tenant_1', 10);
+
+      expect(fetchMock).toHaveBeenCalledTimes(3); // Liste, Nachricht, genau EIN Anhang
+      expect(String(fetchMock.mock.calls[2]![0])).toContain('/attachments/ok');
+      expect(email!.attachments.map((a) => a.fileName)).toEqual(['ok.pdf']);
+      expect(email!.heldAttachments!.map((h) => [h.fileName, h.reason])).toEqual([['scan.pdf', 'TOO_LARGE'], ['setup.exe', 'BLOCKED_EXTENSION'], ['tabelle.xls', 'TYPE_NOT_ALLOWED']]);
+      expect(JSON.stringify(email!.heldAttachments)).not.toContain('contentBase64'); // nie Inhalt
+    });
+
+    it('Abbruch WÄHREND des Abrufs: meldet die Kopfzeile eine zu große Antwort oder wächst der Körper darüber hinaus, wird nichts weiter gelesen und der Anhang zurückgehalten (auch wenn Gmail keine Größe nannte)', async () => {
+      const declaredTooBig = new Response(JSON.stringify({ data: 'QQ' }), { headers: { 'content-length': String(50 * MB) } });
+      const grows = new Response(JSON.stringify({ data: 'A'.repeat(8 * MB) })); // ohne Kopfzeile über die Grenze hinaus
+      mailWith(
+        [
+          { mimeType: 'application/pdf', filename: 'a.pdf', attachmentId: 'a' },
+          { mimeType: 'application/pdf', filename: 'b.pdf', attachmentId: 'b' },
+        ],
+        [declaredTooBig, grows],
+      );
+
+      const [email] = await service.listMessages('tenant_1', 10);
+
+      expect(email!.attachments).toEqual([]);
+      expect(email!.heldAttachments!.map((h) => [h.fileName, h.reason])).toEqual([['a.pdf', 'TOO_LARGE'], ['b.pdf', 'TOO_LARGE']]);
+    });
+
+    it('NACH dem Abruf: ein Programm in PDF-Verkleidung wird zurückgehalten', async () => {
+      mailWith([{ mimeType: 'application/pdf', filename: 'rechnung.pdf', attachmentId: 'x', size: 4 }], [attachmentJson(Buffer.from([0x4d, 0x5a, 0x90, 0x00]))]);
+
+      const [email] = await service.listMessages('tenant_1', 10);
+
+      expect(email!.attachments).toEqual([]);
+      expect(email!.heldAttachments).toMatchObject([{ fileName: 'rechnung.pdf', reason: 'SIGNATURE_MISMATCH' }]);
     });
 
     it('returns an empty array when the mailbox has no messages, without calling messages.get', async () => {

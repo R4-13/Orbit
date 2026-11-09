@@ -7,6 +7,7 @@ export * from './runtime-health';
 export * from './runtime-alerts';
 export * from './cost-guardrails';
 export * from './ai-pricing';
+export * from './attachment-policy';
 export * from './support-session';
 export * from './policy';
 export * from './policy-groups';

@@ -4,7 +4,7 @@ import type { LLMCompletionRequest, LLMProvider } from '@orbit/agent-core';
 import { MockLLMProvider } from '@orbit/agent-core';
 import type { OrbitEnv } from '@orbit/config';
 import type { Case, IntakeEventStatus, IntakeRelevance, Prisma } from '@orbit/domain';
-import { NotFoundError, categoryLabel, ValidationFailedError, triageFixtureForScenario, type SimulatedTriageScenario, type TriageResult } from '@orbit/shared';
+import { NotFoundError, categoryLabel, screenAttachments, ValidationFailedError, triageFixtureForScenario, type HeldAttachment, type SimulatedTriageScenario, type TriageResult } from '@orbit/shared';
 import { LLM_PROVIDER } from '../agent/agent.tokens';
 import { AiProviderResolverService } from '../ai-providers/ai-provider-resolver.service';
 import { AuditService } from '../audit/audit.service';
@@ -33,6 +33,7 @@ import type { NormalizedIntakeEvent } from './channel-event.types';
 import type { IncomingEmailDto } from './dto/incoming-email.dto';
 import { ExecutionEvidenceService } from './execution-evidence.service';
 import { AttachmentTextService } from '../documents/attachment-text.service';
+import { HeldAttachmentService } from './held-attachment.service';
 import { SUBMIT_TRIAGE_TOOL, SemanticTriageService, type TriageOutcome } from './semantic-triage.service';
 import { deriveAppliedRelevance, routeForCategory, type DomainRoute } from './triage-decision';
 
@@ -140,6 +141,7 @@ export class IntakeService {
     private readonly corrections: FactCorrectionService,
     private readonly supplements: SupplementService,
     private readonly familyReply: FamilyReplyService,
+    private readonly heldAttachments: HeldAttachmentService,
     @Inject(OCR_PROVIDER) private readonly ocr: OcrProvider,
   ) {}
 
@@ -181,12 +183,31 @@ export class IntakeService {
     });
   }
 
-  async handleIntakeEvent(tenantId: string, actorUserId: string | undefined, event: NormalizedIntakeEvent): Promise<IntakeResult> {
+  async handleIntakeEvent(tenantId: string, actorUserId: string | undefined, rawEvent: NormalizedIntakeEvent): Promise<IntakeResult> {
+    const event = this.applyAttachmentPolicy(rawEvent);
     const persisted = await this.persistIntake(tenantId, actorUserId, event);
     return this.withFinalStatus(tenantId, await this.processIntake(tenantId, actorUserId, event, persisted));
   }
 
+  /**
+   * Anhangsfreigabe auch an der Aufnahme (jeder Kanal, nicht nur Gmail): was die Freigabe nicht zulässt, wird nicht gespeichert und nicht weitergereicht – der Eingang trägt nur den Vermerk.
+   * Die übrigen Anhänge behalten ihre Reihenfolge (Dokument und Textauszug passen weiter zueinander).
+   */
+  private applyAttachmentPolicy(event: NormalizedIntakeEvent): NormalizedIntakeEvent {
+    const attachments = event.attachments ?? [];
+    if (attachments.length === 0) return event;
+    const verdicts = screenAttachments(attachments.map((a) => ({ fileName: a.fileName, mimeType: a.mimeType, bytes: Buffer.from(a.contentBase64, 'base64') })));
+    if (verdicts.every((v) => v === null)) return event;
+    return {
+      ...event,
+      attachments: attachments.filter((_, i) => verdicts[i] === null),
+      heldAttachments: [...(event.heldAttachments ?? []), ...verdicts.filter((v): v is HeldAttachment => v !== null)],
+    };
+  }
+
   private async withFinalStatus(tenantId: string, result: IntakeResult): Promise<IntakeResult> {
+    // Zurückgehaltene Anhänge: sobald der Eingang einen Vorgang hat, bekommt eine Person die Aufgabe (genau einmal, wirft nie).
+    await this.heldAttachments.handOverSafely(tenantId, result.intakeEventId);
     const final = await this.prisma.forTenantId(tenantId).intakeEvent.findUnique({ where: { id: result.intakeEventId }, select: { status: true } });
     return { ...result, intakeStatus: final?.status };
   }
@@ -229,6 +250,7 @@ export class IntakeService {
     const documents = intake.documentIds.map((id) => stored.find((d) => d.id === id)).filter((d): d is NonNullable<typeof d> => d !== undefined);
     const sender = (intake.senderRef ?? {}) as { address?: string; displayName?: string };
     const hints = ((intake.metadata ?? {}) as { hints?: NormalizedIntakeEvent['hints'] }).hints;
+    const heldAttachments = ((intake.metadata ?? {}) as { heldAttachments?: HeldAttachment[] }).heldAttachments;
     const event: NormalizedIntakeEvent = {
       tenantId,
       connectionId: intake.connectionId ?? undefined,
@@ -248,6 +270,7 @@ export class IntakeService {
       references: message.references,
       direction: message.direction,
       ...(hints ? { hints } : {}),
+      ...(heldAttachments && heldAttachments.length > 0 ? { heldAttachments } : {}),
     };
     return { event, documentIds: intake.documentIds };
   }
@@ -255,10 +278,12 @@ export class IntakeService {
   /** Ergänzt die Anhänge um ihren Textauszug (BPF-02). Ein Fehler beim Lesen hält den Eingang nie auf. */
   private async withAttachmentText(tenantId: string, event: NormalizedIntakeEvent, documentIds: readonly string[]): Promise<NormalizedIntakeEvent> {
     const attachments = event.attachments ?? [];
-    if (attachments.length === 0 || documentIds.length === 0) return event;
+    // Zurückgehaltene Anhänge sind für die Triage als „nicht gelesen“ sichtbar (nie geraten); sie haben kein Dokument und keinen Inhalt.
+    const held = (event.heldAttachments ?? []).map((h) => ({ fileName: h.fileName, mimeType: h.mimeType, contentBase64: '', textExcerpt: { status: 'UNSUPPORTED' as const, note: `nicht verarbeitet (${h.note}); eine Person prüft den Anhang im Postfach` } }));
+    if (attachments.length === 0 || documentIds.length === 0) return held.length > 0 ? { ...event, attachments: [...attachments, ...held] } : event;
     try {
       const excerpts = await this.attachmentTexts.forDocuments(tenantId, documentIds);
-      return { ...event, attachments: attachments.map((a, i) => ({ ...a, textExcerpt: excerpts[i]?.result })) };
+      return { ...event, attachments: [...attachments.map((a, i) => ({ ...a, textExcerpt: excerpts[i]?.result })), ...held] };
     } catch {
       return event;
     }
@@ -361,7 +386,7 @@ export class IntakeService {
     });
     await scoped.intakeEvent.update({
       where: { id: intakeEvent.id },
-      data: { metadata: { execution, ...(event.hints ? { hints: event.hints } : {}) } as unknown as Prisma.InputJsonValue },
+      data: { metadata: { execution, ...(event.hints ? { hints: event.hints } : {}), ...(event.heldAttachments && event.heldAttachments.length > 0 ? { heldAttachments: event.heldAttachments } : {}) } as unknown as Prisma.InputJsonValue },
     });
 
     return { inboundEmailId: inboundEmail.id, intakeEventId: intakeEvent.id, documentIds };

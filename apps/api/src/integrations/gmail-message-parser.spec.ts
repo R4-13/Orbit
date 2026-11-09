@@ -140,7 +140,7 @@ describe('listAttachmentRefs', () => {
       },
     };
 
-    expect(listAttachmentRefs(message)).toEqual([{ filename: 'rechnung.pdf', mimeType: 'application/pdf', attachmentId: 'att_1' }]);
+    expect(listAttachmentRefs(message)).toEqual([{ filename: 'rechnung.pdf', mimeType: 'application/pdf', attachmentId: 'att_1', sizeBytes: 1024 }]);
   });
 
   it('returns an empty array for a message with no attachments', () => {

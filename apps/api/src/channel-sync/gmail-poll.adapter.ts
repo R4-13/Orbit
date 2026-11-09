@@ -117,6 +117,7 @@ export class GmailPollAdapter implements ChannelPollAdapter {
       subject: email.subject,
       content: email.bodyText,
       attachments: email.attachments,
+      ...(email.heldAttachments && email.heldAttachments.length > 0 ? { heldAttachments: email.heldAttachments as NormalizedIntakeEvent['heldAttachments'] } : {}),
       threadId: email.threadId,
       rfcMessageId: email.rfcMessageId,
       inReplyTo: email.inReplyTo,

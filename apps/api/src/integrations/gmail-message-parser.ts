@@ -50,6 +50,8 @@ export interface GmailAttachmentRef {
   filename: string;
   mimeType: string;
   attachmentId: string;
+  /** Größe in Bytes laut Gmail (Teil der Nachricht, vor dem Abruf bekannt). */
+  sizeBytes: number | null;
 }
 
 function decodeBase64Url(data: string): string {
@@ -184,5 +186,6 @@ export function listAttachmentRefs(message: GmailMessage): GmailAttachmentRef[] 
     filename: part.filename as string,
     mimeType: part.mimeType ?? 'application/octet-stream',
     attachmentId: (part.body as { attachmentId: string }).attachmentId,
+    sizeBytes: typeof part.body?.size === 'number' ? part.body.size : null,
   }));
 }

@@ -1,4 +1,5 @@
 import type { IntakeChannel } from '@orbit/domain';
+import type { HeldAttachment } from '@orbit/shared';
 import type { AttachmentText } from '../documents/attachment-text';
 
 /**
@@ -43,6 +44,8 @@ export interface NormalizedIntakeEvent {
   subject?: string;
   content?: string;
   attachments?: AttachmentReference[];
+  /** Anhänge, die die Anhangsfreigabe nicht zur Verarbeitung zuließ (nur Metadaten): nicht gespeichert, nicht gelesen, mit sichtbarer Aufgabe für eine Person. */
+  heldAttachments?: HeldAttachment[];
   /**
    * Amendment 02 §5.1 — provider conversation id and RFC 5322 headers: the strong keys for case
    * correlation (§13.1). Channel-neutral naming; a non-mail channel supplies its own equivalents.

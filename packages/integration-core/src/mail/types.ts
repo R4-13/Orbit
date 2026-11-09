@@ -22,6 +22,8 @@ export interface InboundEmail {
   bodyText: string;
   receivedAt: Date;
   attachments: EmailAttachment[];
+  /** Anhänge, die nach der Anhangsfreigabe NICHT abgerufen wurden (nur Metadaten, nie Inhalt): Name, Art, Größe, Grund. */
+  heldAttachments?: Array<{ fileName: string; mimeType: string; sizeBytes: number | null; reason: string; note: string }>;
   /** Provider conversation id (e.g. Gmail threadId) and RFC 5322 headers for case correlation. */
   threadId?: string;
   rfcMessageId?: string;
